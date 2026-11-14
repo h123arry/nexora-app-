@@ -26,6 +26,12 @@ describe('verification authority rules', () => {
       await setDoc(doc(adminDb, 'publicProfiles', 'alice'), {
         id: 'alice', username: 'alice', name: 'Alice', isVerified: true,
       });
+      await setDoc(doc(adminDb, 'users', 'bob'), {
+        id: 'bob', username: 'bob', name: 'Bob', isVerified: false,
+      });
+      await setDoc(doc(adminDb, 'publicProfiles', 'bob'), {
+        id: 'bob', username: 'bob', name: 'Bob', isVerified: false,
+      });
     });
 
     const db = env.authenticatedContext('alice', {
@@ -36,6 +42,12 @@ describe('verification authority rules', () => {
 
     await assertFails(updateDoc(doc(db, 'users', 'alice'), { isVerified: false }));
     await assertFails(updateDoc(doc(db, 'publicProfiles', 'alice'), { isVerified: false }));
+
+    const verifiedBobDb = env.authenticatedContext('bob', {
+      email: 'bob@example.test', email_verified: true, phone_number_verified: false,
+    }).firestore();
+    await assertFails(updateDoc(doc(verifiedBobDb, 'users', 'bob'), { isVerified: true }));
+    await assertFails(updateDoc(doc(verifiedBobDb, 'publicProfiles', 'bob'), { isVerified: true }));
 
     await assertSucceeds(updateDoc(doc(db, 'users', 'alice'), { name: 'Alice Updated' }));
     await assertSucceeds(updateDoc(doc(db, 'publicProfiles', 'alice'), { name: 'Alice Updated' }));
