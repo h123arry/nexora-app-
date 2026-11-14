@@ -177,6 +177,9 @@ export const listMyOriginAttributionCases = onCall({ maxInstances: 10 }, async r
           status: data.status,
           responseNote: data.responseNote || null,
           disputeReason: data.disputeReason || null,
+          reviewOutcome: data.reviewOutcome || null,
+          reviewNote: data.reviewNote || null,
+          reviewedAt: data.reviewedAt?.toMillis?.() || null,
           createdAt: data.createdAt?.toMillis?.() || null,
           updatedAt: data.updatedAt?.toMillis?.() || null,
         };
