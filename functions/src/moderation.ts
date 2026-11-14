@@ -1,8 +1,10 @@
 import { createHash } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { consumeModerationReportQuota } from './moderationPolicy.js';
+import { shouldOpenImpersonationCase } from './identityVerificationPolicy.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -110,6 +112,53 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
     });
     return false;
   });
+  // Independent impersonation reports open a private reviewer case; reports never auto-enforce.
+  if (!duplicate && targetType === 'user' && category === 'impersonation' && normalizedTargetId !== reporterId) {
+    const reporterKey = createHash('sha256').update(reporterId).digest('hex').slice(0, 40);
+    const signalRef = db.collection('identityImpersonationSignals').doc(normalizedTargetId)
+      .collection('reporters').doc(reporterKey);
+    await db.runTransaction(async transaction => {
+      const existingSignal = await transaction.get(signalRef);
+      if (!existingSignal.exists) transaction.create(signalRef, {
+        reporterId, reportId, createdAt: FieldValue.serverTimestamp(),
+      });
+    });
+    const recentSignals = await db.collection('identityImpersonationSignals').doc(normalizedTargetId)
+      .collection('reporters')
+      .where('createdAt', '>=', Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000))
+      .limit(4)
+      .get();
+    if (shouldOpenImpersonationCase(recentSignals.size)) {
+      const caseRef = db.collection('identityImpersonationCases').doc(normalizedTargetId);
+      await db.runTransaction(async transaction => {
+        const existingCase = await transaction.get(caseRef);
+        const verified = await transaction.get(db.collection('verifiedIdentities').doc(normalizedTargetId));
+        const reportIds = recentSignals.docs.map(signal => signal.get('reportId')).filter((id): id is string => typeof id === 'string');
+        if (existingCase.exists) {
+          if (existingCase.get('status') === 'open') transaction.update(caseRef, {
+            independentReportCount: recentSignals.size, reportIds, updatedAt: FieldValue.serverTimestamp(),
+          });
+          else if (existingCase.get('status') === 'dismissed') transaction.update(caseRef, {
+            status: 'open', independentReportCount: recentSignals.size, reportIds,
+            reopenedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+            reviewerId: FieldValue.delete(), reviewNote: FieldValue.delete(), reviewedAt: FieldValue.delete(),
+          });
+          return;
+        }
+        transaction.create(caseRef, {
+          userId: normalizedTargetId, status: 'open', category: 'impersonation',
+          independentReportCount: recentSignals.size, reportIds,
+          hasVerifiedIdentity: verified.exists && verified.get('status') === 'verified',
+          verifiedDisplayName: verified.exists ? verified.get('displayName') || null : null,
+          openedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+        });
+        transaction.create(db.collection('identityVerificationAuditEvents').doc(), {
+          userId: normalizedTargetId, event: 'impersonation_case_opened',
+          independentReportCount: recentSignals.size, createdAt: FieldValue.serverTimestamp(),
+        });
+      });
+    }
+  }
   return { accepted: true, duplicate, reportId };
 });
 
