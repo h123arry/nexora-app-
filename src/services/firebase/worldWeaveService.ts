@@ -276,6 +276,7 @@ export interface WorldWeaveActivity {
   actorUid: string;
   targetUid?: string;
   action: 'member_left' | 'member_removed' | 'ownership_transferred' | string;
+  chapterTitle?: string;
   createdAt?: unknown;
 }
 
