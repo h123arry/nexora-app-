@@ -140,7 +140,7 @@ async function deleteUserSubcollections(userId: string): Promise<number> {
   return deleted;
 }
 
-async function deleteStoragePrefix(prefix: string): Promise<number> {
+async function deleteStoragePrefix(prefix: string, onBatch?: () => Promise<void>): Promise<number> {
   let deleted = 0;
   let pageToken: string | undefined;
   do {
@@ -150,13 +150,14 @@ async function deleteStoragePrefix(prefix: string): Promise<number> {
       const batch = files.slice(offset, offset + PAGE_SIZE);
       await Promise.all(batch.map(file => file.delete()));
       deleted += batch.length;
+      await onBatch?.();
     }
     pageToken = page[2]?.nextPageToken;
   } while (pageToken);
   return deleted;
 }
 
-async function cleanSharedChats(userId: string): Promise<{ deletedDocuments: number; deletedFiles: number }> {
+async function cleanSharedChats(userId: string, onBatch?: () => Promise<void>): Promise<{ deletedDocuments: number; deletedFiles: number }> {
   let deletedDocuments = 0;
   let deletedFiles = 0;
   while (true) {
@@ -167,8 +168,8 @@ async function cleanSharedChats(userId: string): Promise<{ deletedDocuments: num
     if (chats.empty) return { deletedDocuments, deletedFiles };
     for (const chat of chats.docs) {
       const messageQuery = chat.ref.collection('messages').where('senderId', '==', userId);
-      deletedDocuments += await deleteQuery(messageQuery, async () => undefined);
-      deletedFiles += await deleteStoragePrefix(`chats/${chat.id}/audio/${userId}/`);
+      deletedDocuments += await deleteQuery(messageQuery, async () => { await onBatch?.(); });
+      deletedFiles += await deleteStoragePrefix(`chats/${chat.id}/audio/${userId}/`, onBatch);
       await chat.ref.update({
         participants: FieldValue.arrayRemove(userId),
         [`deletedParticipants.${userId}`]: FieldValue.serverTimestamp(),
@@ -178,28 +179,28 @@ async function cleanSharedChats(userId: string): Promise<{ deletedDocuments: num
   }
 }
 
-async function deleteOwnedDocuments(userId: string): Promise<{ deletedDocuments: number; deletedFiles: number }> {
-  let deleted = await deleteUserOwnedDocuments(db, userId);
+async function deleteOwnedDocuments(userId: string, onBatch?: () => Promise<void>): Promise<{ deletedDocuments: number; deletedFiles: number }> {
+  let deleted = await deleteUserOwnedDocuments(db, userId, onBatch);
   deleted += await deleteQuery(
     db.collection('follows').where('followerId', '==', userId),
-    async () => undefined,
+    async () => { await onBatch?.(); },
   );
   deleted += await deleteQuery(
     db.collection('follows').where('followingId', '==', userId),
-    async () => undefined,
+    async () => { await onBatch?.(); },
   );
   deleted += await deleteQuery(
     db.collection('usernames').where('userId', '==', userId),
-    async () => undefined,
+    async () => { await onBatch?.(); },
   );
-  const chatCleanup = await cleanSharedChats(userId);
+  const chatCleanup = await cleanSharedChats(userId, onBatch);
   return { deletedDocuments: deleted + chatCleanup.deletedDocuments, deletedFiles: chatCleanup.deletedFiles };
 }
 
-async function deleteStorageObjects(userId: string): Promise<number> {
+async function deleteStorageObjects(userId: string, onBatch?: () => Promise<void>): Promise<number> {
   let deleted = 0;
   for (const prefix of accountStoragePrefixes(userId)) {
-    deleted += await deleteStoragePrefix(prefix);
+    deleted += await deleteStoragePrefix(prefix, onBatch);
   }
   return deleted;
 }
@@ -210,7 +211,8 @@ export async function processAccountDeletion(requestId: string, userId: string):
   let progress: CleanupProgress = { stage: 'claimed', deletedDocuments: 0, deletedFiles: 0 };
   try {
     progress.stage = 'owned-documents';
-    const ownedCleanup = await deleteOwnedDocuments(userId);
+    const heartbeat = async () => updateProgress(requestId, leaseId, progress);
+    const ownedCleanup = await deleteOwnedDocuments(userId, heartbeat);
     progress.deletedDocuments += ownedCleanup.deletedDocuments;
     progress.deletedFiles += ownedCleanup.deletedFiles;
     await updateProgress(requestId, leaseId, progress);
@@ -220,7 +222,7 @@ export async function processAccountDeletion(requestId: string, userId: string):
     await updateProgress(requestId, leaseId, progress);
 
     progress.stage = 'storage';
-    progress.deletedFiles += await deleteStorageObjects(userId);
+    progress.deletedFiles += await deleteStorageObjects(userId, heartbeat);
     await updateProgress(requestId, leaseId, progress);
 
     progress.stage = 'identity';
