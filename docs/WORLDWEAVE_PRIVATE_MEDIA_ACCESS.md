@@ -2,11 +2,11 @@
 
 ## New upload behavior
 
-For private WorldWeaves, media moments now persist:
+For all new WorldWeave media moments, public and private, media moments now persist:
 - the canonical owner-scoped `storagePath`;
 - an empty `mediaUrl` (no permanent Firebase download URL is written to Firestore).
 
-The upload helper can complete without resolving a download URL. Public WorldWeaves retain their existing public media URL behavior.
+The upload helper completes without resolving a download URL. Public and private WorldWeaves both use the same short-lived URL resolver; access checks differ by visibility.
 
 ## Access resolver
 
@@ -21,11 +21,11 @@ The trusted `resolveWorldWeaveMomentMediaUrl` callable:
 8. re-checks the experience immediately before returning the signed URL;
 9. returns a signed read URL that expires after 10 minutes.
 
-The callable does not return private storage paths or membership records. A removed contributor cannot request a new signed URL. A URL already issued remains usable only until its short expiry.
+The callable does not return storage paths or membership records. A removed contributor cannot request a new signed URL. A URL already issued remains usable only until its short expiry.
 
 ## Client behavior
 
-The WorldWeave client requests a temporary URL only when a member explicitly loads media without a persisted download URL. The URL stays in component memory and is not written back to Firestore. If the URL expires, the viewer can request a fresh one while they remain authorized.
+The WorldWeave client requests a temporary URL only when a viewer explicitly loads media without a persisted download URL. The URL stays in component memory and is not written back to Firestore. If the URL expires, the viewer can request a fresh one while they remain authorized.
 
 ## Important legacy limitation
 
