@@ -32,7 +32,9 @@
     "mobile:doctor": "cap doctor",
     "mobile:open:android": "npm run mobile:sync && cap open android",
     "mobile:open:ios": "npm run mobile:sync && cap open ios",
-    "mobile:build:android": "npm run mobile:sync && cd android && ./gradlew assembleDebug"
+    "mobile:build:android": "npm run mobile:sync && cd android && ./gradlew assembleDebug",
+    "mobile:assets": "capacitor-assets generate --iconBackgroundColor '#090714' --iconBackgroundColorDark '#090714' --splashBackgroundColor '#090714' --splashBackgroundColorDark '#090714'",
+    "mobile:build:ios": "npm run mobile:sync && xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -63,7 +65,8 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3",
-    "@capacitor/cli": "^8.6.0"
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/assets": "^3.0.5"
   },
   "overrides": {
     "@grpc/grpc-js": "^1.13.6"
