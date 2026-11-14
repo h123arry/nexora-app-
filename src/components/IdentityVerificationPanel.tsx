@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { CheckCircle2, Clock3, ShieldCheck, AlertCircle, ExternalLink } from 'lucide-react';
-import { functions } from '../services/firebase/config';
+import { functions } from '../lib/firebase';
 
 type IdentityType = 'individual' | 'creator' | 'public_figure' | 'organization';
 type Application = {
