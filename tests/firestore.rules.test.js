@@ -147,6 +147,30 @@ const publicProfile = (uid) => ({
     await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'worldWeaves', 'private-weave', 'moments', 'alice-moment')));
   });
 
+  it('keeps WorldWeave activity immutable and visible only to current contributors', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'worldWeaves', 'activity-weave'), {
+        id: 'activity-weave', ownerId: 'alice', ownerName: 'Alice', title: 'Shared story',
+        description: '', visibility: 'private', participantIds: ['alice', 'bob'],
+        memberCount: 2, momentCount: 0, createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
+      await setDoc(doc(adminDb, 'worldWeaves', 'activity-weave', 'activity', 'event-1'), {
+        id: 'event-1', actorUid: 'alice', targetUid: 'bob', action: 'member_removed', createdAt: Timestamp.now()
+      });
+    });
+
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'worldWeaves', 'activity-weave', 'activity', 'event-1')));
+    await assertSucceeds(getDocs(collection(dbFor('bob'), 'worldWeaves', 'activity-weave', 'activity')));
+    await assertFails(getDoc(doc(dbFor('charlie'), 'worldWeaves', 'activity-weave', 'activity', 'event-1')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'worldWeaves', 'activity-weave', 'activity', 'forged'), {
+      id: 'forged', actorUid: 'alice', targetUid: 'charlie', action: 'ownership_transferred', createdAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'worldWeaves', 'activity-weave', 'activity', 'event-1'), {
+      action: 'member_joined'
+    }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'worldWeaves', 'activity-weave', 'activity', 'event-1')));
+  });
+
   it('caps WorldWeave membership at 500 contributors for public joins and accepted invitations', async () => {
     const members = ['alice', ...Array.from({ length: 499 }, (_, index) => 'member-' + index)];
     await seed(async adminDb => {
