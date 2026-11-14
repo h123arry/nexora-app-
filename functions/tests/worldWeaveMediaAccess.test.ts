@@ -73,7 +73,7 @@ before(async () => {
 
 after(async () => {
   await db.recursiveDelete(weave);
-  await db.doc('users/media-owner').delete().catch(() => undefined);
+  await db.recursiveDelete(db.doc('users/media-owner'));
   await deleteApp(app);
 });
 
