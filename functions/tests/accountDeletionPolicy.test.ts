@@ -7,6 +7,20 @@ import { accountStoragePrefixes, deleteUserOwnedDocuments } from '../src/account
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-engagement' }, 'account-deletion-policy-tests');
 const db = getFirestore(app);
 
+async function cleanupIdentityFixtures(): Promise<void> {
+  for (const collection of [
+    'identityVerificationApplications', 'identityVerificationPrivateSignals',
+    'verifiedIdentities', 'identityImpersonationCases',
+  ]) {
+    await db.collection(collection).doc('identity-delete-test').delete();
+  }
+  for (const targetId of ['identity-delete-test', 'other-target']) {
+    const reporters = await db.collection('identityImpersonationSignals').doc(targetId).collection('reporters').get();
+    for (const reporter of reporters.docs) await reporter.ref.delete();
+  }
+  await db.collection('identityVerificationAuditEvents').doc('identity-delete-audit').delete();
+}
+
 async function cleanupOriginFixtures(): Promise<void> {
   for (const userId of ['account-delete-test', 'account-delete-other']) {
     const origins = await db.collection('mediaOrigins').where('ownerUid', '==', userId).get();
@@ -21,6 +35,7 @@ async function cleanupOriginFixtures(): Promise<void> {
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Account deletion policy tests require the Firestore Emulator.');
   await cleanupOriginFixtures();
+  await cleanupIdentityFixtures();
   for (const collection of ['mediaAssets', 'academyProgress', 'academyLessonNotes', 'posts']) {
     const rows = await db.collection(collection).where('ownerId', '==', 'account-delete-test').get();
     for (const row of rows.docs) await row.ref.delete();
@@ -30,6 +45,7 @@ before(async () => {
 });
 after(async () => {
   await cleanupOriginFixtures();
+  await cleanupIdentityFixtures();
   for (const collection of ['mediaAssets', 'academyProgress', 'academyLessonNotes', 'posts']) {
     for (const userId of ['account-delete-test', 'account-delete-other']) {
       const rows = await db.collection(collection).where('ownerId', '==', userId).get();
@@ -55,7 +71,7 @@ describe('account deletion data and storage scope', () => {
     await db.collection('mediaOrigins').doc('keep-origin').set({ assetId: 'keep-origin', ownerUid: 'account-delete-other' });
 
     const deleted = await deleteUserOwnedDocuments(db, 'account-delete-test');
-    assert.equal(deleted, 7);
+    assert.equal(deleted, 6);
     assert.equal((await db.collection('mediaAssets').doc('delete-media').get()).exists, false);
     assert.equal((await db.collection('academyProgress').doc('delete-progress').get()).exists, false);
     assert.equal((await db.collection('academyLessonNotes').doc('delete-note').get()).exists, false);
