@@ -204,19 +204,18 @@ export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: st
   if (weaveData.ownerId !== user.uid && !participants.includes(user.uid)) {
     throw new Error('Join this WorldWeave before adding a media moment.');
   }
-  const isPrivateWeave = weaveData.visibility === 'private';
   const momentRef = doc(collection(db, 'worldWeaves', weaveId, 'moments'));
   let uploaded: Awaited<ReturnType<typeof uploadMediaFile>> | null = null;
   try {
     uploaded = await uploadMediaFile({
       file, userId: user.uid, mediaId: momentRef.id,
       metadata: { purpose: 'worldweave', weaveId, momentId: momentRef.id },
-      onProgress, resolveDownloadUrl: !isPrivateWeave,
+      onProgress, resolveDownloadUrl: false,
     });
     const batch = writeBatch(db);
     batch.set(momentRef, { weaveId, authorId: user.uid, authorName: author.name.slice(0, 80),
       authorUsername: author.username.slice(0, 40), authorAvatar: author.avatar || '', text: text.trim(),
-      mediaType, mediaUrl: isPrivateWeave ? '' : uploaded.downloadUrl, storagePath: uploaded.storagePath, ...(chapterId ? { chapterId } : {}), createdAt: serverTimestamp() });
+      mediaType, mediaUrl: '', storagePath: uploaded.storagePath, ...(chapterId ? { chapterId } : {}), createdAt: serverTimestamp() });
     batch.update(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp(), lastMomentId: momentRef.id });
     await batch.commit();
   } catch (error) {
