@@ -18,6 +18,7 @@ const owner = 'weave-discovery-owner';
 const blockedOwner = 'weave-discovery-blocked';
 const privateOwner = 'weave-discovery-private';
 const updatedAt = Timestamp.fromDate(new Date('2026-11-13T12:00:00.000Z'));
+const hiddenUpdatedAt = Timestamp.fromDate(new Date('2026-11-14T07:00:00.000Z'));
 
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'WorldWeave discovery tests require the Firestore Emulator.');
@@ -53,12 +54,12 @@ before(async () => {
   batch.set(root.doc('blocked-discovery-hidden'), {
     id: 'blocked-discovery-hidden', ownerId: blockedOwner, title: 'Blocked owner story',
     description: 'Do not show across a block.', visibility: 'public',
-    participantIds: [blockedOwner], memberCount: 1, momentCount: 0, createdAt: updatedAt, updatedAt,
+    participantIds: [blockedOwner], memberCount: 1, momentCount: 0, createdAt: updatedAt, updatedAt: hiddenUpdatedAt,
   });
   batch.set(root.doc('private-owner-hidden'), {
     id: 'private-owner-hidden', ownerId: privateOwner, title: 'Private account story',
     description: 'Requires an existing follow.', visibility: 'public',
-    participantIds: [privateOwner], memberCount: 1, momentCount: 0, createdAt: updatedAt, updatedAt,
+    participantIds: [privateOwner], memberCount: 1, momentCount: 0, createdAt: updatedAt, updatedAt: hiddenUpdatedAt,
   });
   await batch.commit();
 });
