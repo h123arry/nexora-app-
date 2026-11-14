@@ -109,3 +109,35 @@ export function buildIdentityReviewNotification(
     priority: 8,
   };
 }
+
+export type IdentityCaseDecision = 'dismiss' | 'place_on_hold' | 'clear_hold' | 'confirm_impersonation';
+
+export function buildIdentityCaseNotification(
+  userId: string,
+  decision: IdentityCaseDecision,
+  eventId: string,
+  timestamp: string,
+) {
+  if (!userId || userId.length > 128 || userId.includes('/') || !eventId || eventId.length > 128 || eventId.includes('/')) {
+    throw new Error('A valid identity case notification target is required.');
+  }
+  const contentByDecision: Record<IdentityCaseDecision, string> = {
+    dismiss: 'NEXORA reviewed an impersonation report involving your account and dismissed the case. Your identity verification was not changed.',
+    place_on_hold: 'A senior NEXORA reviewer has temporarily placed your public identity badge on hold while an impersonation concern is investigated. Your account is not suspended.',
+    clear_hold: 'NEXORA completed its review and restored your public identity badge.',
+    confirm_impersonation: 'NEXORA completed an identity review and revoked the public identity verification associated with this account. See your identity settings for the review outcome.',
+  };
+  return {
+    id: `identity_case_${eventId}`,
+    type: 'system' as const,
+    userId: 'nexora-system',
+    username: 'nexora',
+    actorName: 'NEXORA',
+    avatar: '',
+    targetId: userId,
+    content: contentByDecision[decision],
+    timestamp,
+    isRead: false,
+    priority: 8,
+  };
+}
