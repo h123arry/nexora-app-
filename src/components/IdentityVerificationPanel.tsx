@@ -50,6 +50,7 @@ export default function IdentityVerificationPanel({ initialDisplayName }: Props)
   useEffect(() => { void refresh(); }, [refresh, initialDisplayName]);
 
   const canApply = !application || ['rejected', 'needs_more_info', 'revoked'].includes(application.status);
+  const evidenceCount = evidenceLinks.split('\n').map(value => value.trim()).filter(Boolean).length;
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
@@ -124,9 +125,9 @@ export default function IdentityVerificationPanel({ initialDisplayName }: Props)
           <label className="block space-y-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Official evidence links (one HTTPS URL per line, up to 5)</span>
             <textarea value={evidenceLinks} onChange={event => setEvidenceLinks(event.target.value)} rows={4} required placeholder={'https://official-website.example\nhttps://verified-social-profile.example'} className="w-full resize-y rounded-xl border border-white/10 bg-[#121027] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-400/60" />
-            <span className="flex items-center gap-1 text-[10px] text-zinc-500"><ExternalLink className="h-3 w-3" /> Public links only. Do not upload passports, IDs, or private documents.</span>
+            <span className="flex items-center gap-1 text-[10px] text-zinc-500"><ExternalLink className="h-3 w-3" /> Public links only. Do not upload passports, IDs, or private documents. {evidenceCount}/5 links</span>
           </label>
-          <button type="submit" disabled={submitting} className="w-full rounded-xl bg-violet-600 px-4 py-3 text-xs font-black text-white transition hover:bg-violet-500 disabled:opacity-50">
+          <button type="submit" disabled={submitting || displayName.trim().length < 2 || evidenceSummary.trim().length < 20 || evidenceCount < 1 || evidenceCount > 5} className="w-full rounded-xl bg-violet-600 px-4 py-3 text-xs font-black text-white transition hover:bg-violet-500 disabled:opacity-50">
             {submitting ? 'Submitting…' : application ? 'Resubmit for review' : 'Submit identity application'}
           </button>
         </form>
