@@ -1,0 +1,92 @@
+name: Deploy NEXORA Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_staging_deploy:
+        description: Confirm deployment to the isolated NEXORA staging Firebase project
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: nexora-staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: inputs.confirm_staging_deploy == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: nexora-staging
+    env:
+      NEXORA_ENV: staging
+      NODE_ENV: staging
+      NEXORA_STAGING_PROJECT_ID: ${{ vars.NEXORA_STAGING_PROJECT_ID }}
+      GCLOUD_PROJECT: ${{ vars.NEXORA_STAGING_PROJECT_ID }}
+      FIRESTORE_DATABASE_ID: ${{ vars.FIRESTORE_DATABASE_ID }}
+      FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+      STAGING_APP_URL: ${{ vars.STAGING_APP_URL }}
+      VITE_NEXORA_ENV: staging
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      VITE_FIREBASE_PROJECT_ID: ${{ vars.NEXORA_STAGING_PROJECT_ID }}
+      VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+      VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXORA_STAGING_PROJECT_ID }}.firebaseapp.com
+      VITE_FIREBASE_DATABASE_ID: ${{ vars.FIRESTORE_DATABASE_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
+      APP_URL: ${{ vars.STAGING_APP_URL }}
+    steps:
+      - name: Check out reviewed release commit
+        uses: actions/checkout@v4
+
+      - name: Require staging project and HTTPS origins
+        run: |
+          test -n "$NEXORA_STAGING_PROJECT_ID"
+          test "$NEXORA_STAGING_PROJECT_ID" != "nexora-prod-voiceharrison"
+          case "$STAGING_APP_URL" in https://*) ;; *) echo "STAGING_APP_URL must use HTTPS"; exit 1 ;; esac
+          case "$VITE_API_BASE_URL" in https://*) ;; *) echo "VITE_API_BASE_URL must use HTTPS"; exit 1 ;; esac
+
+      - name: Authenticate to Google Cloud using Workload Identity Federation
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_STAGING_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_STAGING_SERVICE_ACCOUNT }}
+          project_id: ${{ vars.NEXORA_STAGING_PROJECT_ID }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+
+      - name: Install application and Functions dependencies
+        run: |
+          npm ci --no-audit --no-fund
+          npm ci --prefix functions --no-audit --no-fund
+
+      - name: Validate isolated staging configuration
+        run: npm run validate:staging
+
+      - name: Run staging guardrail tests
+        run: npm run test:staging-config
+
+      - name: Type-check application and build Functions
+        run: |
+          npm run lint
+          npm run functions:build
+
+      - name: Build staging web bundle
+        run: npm run build:web
+
+      - name: Deploy only Firebase staging resources
+        run: npx --yes firebase-tools@15.33.0 deploy --only functions,firestore,storage --project "$NEXORA_STAGING_PROJECT_ID" --non-interactive
