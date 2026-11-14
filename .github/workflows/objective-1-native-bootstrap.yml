@@ -96,6 +96,9 @@ jobs:
       - name: Generate iOS project when not already present
         run: if [ ! -d ios ]; then npx cap add ios; fi
 
+      - name: Generate native app icons and splash screens from the existing NEXORA logo
+        run: npm run mobile:assets
+
       - name: Synchronize the existing web application into both native shells
         run: npx cap sync
 
