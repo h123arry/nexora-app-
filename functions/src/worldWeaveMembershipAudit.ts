@@ -70,12 +70,14 @@ export const auditWorldWeaveMembershipV2 = onCall(
       const issues: string[] = [];
       if (!ownerId) issues.push('missing_or_invalid_owner');
       if (rawParticipants.length !== validParticipants.length) issues.push('invalid_legacy_participant_ids');
+      if (rawParticipants.length > 500) issues.push('legacy_membership_over_500');
       if (validParticipants.length !== uniqueParticipants.length) issues.push('duplicate_legacy_participant_ids');
       if (ownerId && !uniqueParticipants.includes(ownerId)) issues.push('owner_missing_from_legacy_participants');
       if (count !== null && count !== uniqueParticipants.length) issues.push('legacy_member_count_mismatch');
       if (membersSnapshot.size > 500) issues.push('member_sample_truncated');
       if (memberConflicts.length) issues.push('membership_record_conflicts');
       if (data.membershipSchemaVersion === 2 && membersSnapshot.empty) issues.push('v2_has_no_member_records');
+      if (data.membershipSchemaVersion !== 2 && membersSnapshot.size > 0) issues.push('existing_membership_records_require_reconciliation');
       return {
         weaveId: snapshot.id,
         schemaVersion: data.membershipSchemaVersion === 2 ? 2 : 1,
