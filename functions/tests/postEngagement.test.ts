@@ -10,11 +10,12 @@ const db = getFirestore(app);
 
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Engagement tests require the Firestore Emulator.');
+  const fixtureUsers = ['author', 'alice', ...Array.from({ length: 12 }, (_, index) => `user-${index}`)];
+  const fixturePosts = ['public-post', 'restricted-post'];
   await Promise.all([
-    db.recursiveDelete(db.collection('posts')),
-    db.recursiveDelete(db.collection('users')),
-    db.recursiveDelete(db.collection('notifications')),
-    db.recursiveDelete(db.collection('publicProfiles')),
+    ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
+    ...fixtureUsers.map(id => db.recursiveDelete(db.doc(`users/${id}`))),
+    ...fixtureUsers.filter(id => id !== 'author').map(id => db.doc(`publicProfiles/${id}`).delete()),
   ]);
   await db.doc('publicProfiles/alice').set({ username: 'alice', avatar: 'https://example.test/alice.png' });
   for (let index = 0; index < 12; index += 1) {
@@ -24,11 +25,12 @@ before(async () => {
   await db.doc('posts/restricted-post').set({ id: 'restricted-post', userId: 'author', audience: 'followers', likes: 3 });
 });
 after(async () => {
+  const fixtureUsers = ['author', 'alice', ...Array.from({ length: 12 }, (_, index) => `user-${index}`)];
+  const fixturePosts = ['public-post', 'restricted-post'];
   await Promise.all([
-    db.recursiveDelete(db.collection('posts')),
-    db.recursiveDelete(db.collection('users')),
-    db.recursiveDelete(db.collection('notifications')),
-    db.recursiveDelete(db.collection('publicProfiles')),
+    ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
+    ...fixtureUsers.map(id => db.recursiveDelete(db.doc(`users/${id}`))),
+    ...fixtureUsers.filter(id => id !== 'author').map(id => db.doc(`publicProfiles/${id}`).delete()),
   ]);
   await deleteApp(app);
 });
