@@ -12,7 +12,7 @@ import { deletePublicPostComment } from './postCommentDeletion.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
-import { setCircleMemberRole, moderateCircleMember, listCircleBans } from './communityGovernance.js';
+import { setCircleMemberRole, moderateCircleMember, listCircleBans, listCircleMutes } from './communityGovernance.js';
 import { submitCircleReport, listCircleReports, resolveCircleReport } from './communityReports.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary, getReferralInvitePreview } from './referrals.js';
@@ -508,6 +508,18 @@ export const listCommunityBans = onCall({ maxInstances: 10 }, async request => {
   }
 });
 
+export const listCommunityMutes = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to review Circle mutes.');
+  try {
+    return await listCircleMutes(adminDb, request.auth.uid, request.data?.communityId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid Circle')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only active Circle managers')) throw new HttpsError('permission-denied', message);
+    throw new HttpsError('internal', 'The Circle mute list could not be loaded. Please retry.');
+  }
+});
+
 export const moderateCommunityMember = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to moderate Circle members.');
   try {
@@ -518,16 +530,17 @@ export const moderateCommunityMember = onCall({ maxInstances: 10 }, async reques
       request.data?.targetUid,
       request.data?.action,
       request.data?.reason,
+      request.data?.durationMinutes,
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
-    if (message.includes('valid member') || message.includes('valid Circle')) {
+    if (message.includes('valid member') || message.includes('valid Circle') || message.includes('mute duration')) {
       throw new HttpsError('invalid-argument', message);
     }
     if (message.includes('Only active Circle managers') || message.includes('equal or higher role')) {
       throw new HttpsError('permission-denied', message);
     }
-    if (message.includes('not an active Circle member') || message.includes('not banned') || message.includes('existing Circle member')) {
+    if (message.includes('not an active Circle member') || message.includes('not banned') || message.includes('already banned') || message.includes('active Circle mute')) {
       throw new HttpsError('failed-precondition', message);
     }
     throw new HttpsError('internal', 'The Circle moderation action could not be completed. Please retry.');

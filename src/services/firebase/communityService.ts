@@ -452,6 +452,14 @@ export const CommunityService = {
 
 
 
+
+  async listMutedMembers(communityId: string): Promise<Array<{ userId: string; name: string; username: string; reason: string; mutedAt: string; expiresAt: string }>> {
+    if (!communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
+    const list = httpsCallable(functions, 'listCommunityMutes');
+    const result = await list({ communityId });
+    return Array.isArray(result.data) ? result.data as Array<{ userId: string; name: string; username: string; reason: string; mutedAt: string; expiresAt: string }> : [];
+  },
+
   async listBannedMembers(communityId: string): Promise<Array<{ userId: string; name: string; username: string; reason: string; bannedAt: string }>> {
     if (!communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
     const list = httpsCallable(functions, 'listCommunityBans');
@@ -462,15 +470,17 @@ export const CommunityService = {
   async moderateMember(
     communityId: string,
     targetUid: string,
-    action: 'remove' | 'ban' | 'unban',
+    action: 'remove' | 'ban' | 'unban' | 'mute' | 'unmute',
     reason: string,
+    durationMinutes = 60,
   ): Promise<void> {
     if (!communityId || communityId.includes('/') || !targetUid || targetUid.includes('/')
-      || typeof reason !== 'string' || reason.trim().length < 3 || reason.trim().length > 500) {
+      || typeof reason !== 'string' || reason.trim().length < 3 || reason.trim().length > 500
+      || (action === 'mute' && (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 10080))) {
       throw new Error('A valid Circle member and moderation reason are required.');
     }
     const moderate = httpsCallable(functions, 'moderateCommunityMember');
-    await moderate({ communityId, targetUid, action, reason: reason.trim() });
+    await moderate({ communityId, targetUid, action, reason: reason.trim(), durationMinutes });
   },
 
 

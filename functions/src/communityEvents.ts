@@ -1,5 +1,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { randomUUID } from 'node:crypto';
+import { isCircleMuteActive } from './communityGovernance.js';
 
 const ID_LIMIT = 150;
 const TITLE_LIMIT = 120;
@@ -9,15 +10,7 @@ function validId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= ID_LIMIT && !value.includes('/');
 }
 
-async function requireMember(db: Firestore, communityId: string, uid: string): Promise<void> {
-  const [community, member] = await Promise.all([
-    db.collection('communities').doc(communityId).get(),
-    db.collection('communities').doc(communityId).collection('members').doc(uid).get(),
-  ]);
-  if (!community.exists || !member.exists || member.get('status') !== 'active') {
-    throw new Error('Join this Circle to participate in events.');
-  }
-}
+
 
 export async function createCircleEvent(
   db: Firestore, uid: string, communityId: string, title: string, startsAt: string, location = '',
@@ -30,12 +23,24 @@ export async function createCircleEvent(
     || startDate.getTime() <= Date.now() || cleanLocation.length > LOCATION_LIMIT) {
     throw new Error('Add an event title, a future date and a valid location.');
   }
-  await requireMember(db, communityId, uid);
+  const communityRef = db.collection('communities').doc(communityId);
+  const memberRef = communityRef.collection('members').doc(uid);
+  const muteRef = communityRef.collection('mutes').doc(uid);
   const eventId = randomUUID();
-  await db.collection('communities').doc(communityId).collection('events').doc(eventId).create({
-    id: eventId, communityId, title: cleanTitle, startsAt: startDate,
-    location: cleanLocation, createdBy: uid, attendeeCount: 0, status: 'scheduled',
-    createdAt: new Date(),
+  const eventRef = communityRef.collection('events').doc(eventId);
+  await db.runTransaction(async transaction => {
+    const [community, member, mute] = await Promise.all([
+      transaction.get(communityRef), transaction.get(memberRef), transaction.get(muteRef),
+    ]);
+    if (!community.exists || !member.exists || member.get('status') !== 'active') {
+      throw new Error('Join this Circle to participate in events.');
+    }
+    if (isCircleMuteActive(mute.data())) throw new Error('Your Circle posting access is temporarily muted.');
+    transaction.create(eventRef, {
+      id: eventId, communityId, title: cleanTitle, startsAt: startDate,
+      location: cleanLocation, createdBy: uid, attendeeCount: 0, status: 'scheduled',
+      createdAt: new Date(),
+    });
   });
   return { eventId };
 }
