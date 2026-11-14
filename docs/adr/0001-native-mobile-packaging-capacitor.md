@@ -105,3 +105,11 @@ These findings are compatibility work items, not evidence that the features are 
 ### Known native capability gaps
 
 Native Google OAuth, native push, native camera/gallery plugin integration, native share/deep-link handling, and secure native token storage are not claimed complete by the Capacitor shell. These require platform adapters and physical-device verification in subsequent release objectives. The app's web-only popup and web push implementations are not used as substitutes.
+
+## Native API and hosting compatibility update — 2026-11-14
+
+- The existing Express API is the canonical remote API for native builds. A Cloud Run multi-stage image is now defined for the existing React/Express application; it does not introduce a second backend or duplicate business logic.
+- Web builds use same-origin relative API paths. Native builds require `VITE_API_BASE_URL` to point to the staging/production Express service over HTTPS.
+- The Express server now handles CORS preflight and allows only same-origin requests, Capacitor iOS/Android WebView origins, and explicitly configured HTTPS origins. This is not a replacement for Firebase ID-token verification.
+- The staging deployment workflow is designed to deploy Firestore/Storage rules, Functions, and the Express/React container to Cloud Run. It prints the service URL and checks both health and Firebase readiness.
+- Cloud Run deployment, Firebase project creation, WIF setup, IAM, and live readiness are not claimed complete until the owner provisions the cloud resources and the protected workflow succeeds.
