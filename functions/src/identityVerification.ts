@@ -19,7 +19,7 @@ function requireIdentityReviewer(request: Request): string {
   const uid = requireUid(request);
   const token = request.auth?.token || {};
   const role = typeof token.role === 'string' ? token.role : '';
-  if (token.moderator !== true && token.admin !== true && !['senior_moderator', 'admin', 'founder'].includes(role)) {
+  if (token.moderator !== true && token.admin !== true && !['moderator', 'senior_moderator', 'admin', 'founder'].includes(role)) {
     throw new HttpsError('permission-denied', 'Identity review access is required.');
   }
   return uid;
