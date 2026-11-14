@@ -8,6 +8,8 @@ const valid = {
   parentAssetIds: ['source_1', 'source_2'],
   parentLineageAncestors: [[], ['root_1']],
   parentLineageDepths: [0, 1],
+  parentOwnerUids: ['creator_1', 'creator_2'],
+  parentPermissionSnapshots: ['owner_remix', 'allow_with_attribution'],
 };
 
 test('records multi-source lineage and bounded ancestor closure', () => {
@@ -18,6 +20,10 @@ test('records multi-source lineage and bounded ancestor closure', () => {
   assert.equal(record.lineageState, 'recorded');
   assert.equal(record.event.eventType, 'remix_created');
   assert.equal(record.event.contributionRole, 'remixer');
+  assert.deepEqual(record.event.parentAttribution, [
+    { sourceAssetId: 'source_1', creatorUid: 'creator_1', permissionSnapshot: 'owner_remix' },
+    { sourceAssetId: 'source_2', creatorUid: 'creator_2', permissionSnapshot: 'allow_with_attribution' },
+  ]);
 });
 
 test('rejects self-parenting, duplicate parents, malformed IDs and excessive parent count', () => {

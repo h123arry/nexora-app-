@@ -4,6 +4,8 @@ export type RemixLineageInput = {
   parentAssetIds: string[];
   parentLineageAncestors: string[][];
   parentLineageDepths: number[];
+  parentOwnerUids: string[];
+  parentPermissionSnapshots: Array<'owner_remix' | 'allow_with_attribution'>;
 };
 
 const SAFE_LINEAGE_ID = /^[A-Za-z0-9_-]{1,128}$/;
@@ -28,7 +30,10 @@ export function buildRemixLineageRecord(input: RemixLineageInput) {
     throw new Error('An asset cannot be its own source.');
   }
   if (input.parentLineageAncestors.length !== input.parentAssetIds.length
-    || input.parentLineageDepths.length !== input.parentAssetIds.length) {
+    || input.parentLineageDepths.length !== input.parentAssetIds.length
+    || input.parentOwnerUids.length !== input.parentAssetIds.length
+    || input.parentPermissionSnapshots.length !== input.parentAssetIds.length
+    || input.parentOwnerUids.some(uid => !SAFE_LINEAGE_ID.test(uid))) {
     throw new Error('Source lineage information is incomplete.');
   }
 
@@ -73,6 +78,11 @@ export function buildRemixLineageRecord(input: RemixLineageInput) {
       contributionRole: 'remixer' as const,
       disclosureSource: 'platform_observed' as const,
       parentAssetIds: [...input.parentAssetIds],
+      parentAttribution: input.parentAssetIds.map((sourceAssetId, index) => ({
+        sourceAssetId,
+        creatorUid: input.parentOwnerUids[index],
+        permissionSnapshot: input.parentPermissionSnapshots[index],
+      })),
       schemaVersion: 1 as const,
     },
   };
