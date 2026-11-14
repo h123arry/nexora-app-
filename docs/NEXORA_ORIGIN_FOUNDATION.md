@@ -131,10 +131,10 @@ This is an initial upload-provenance foundation only. Remix lineage, creator dec
 
 ### O3 — Attribution and creator controls
 - Initial backend increment: creators can set a per-asset remix policy (`closed` by default or `allow_with_attribution`) through an authenticated callable; changes append an owner-private audit event.
-- Cross-account remix requests are rejected unless every source creator explicitly opted in. Accepted lineage events snapshot each source asset, creator account, and permission basis; same-owner remix remains available.
+- Creator opt-in is necessary but not sufficient for cross-account remix. The current callable has no canonical asset-to-post visibility mapping, so cross-account lineage is now explicitly fail-closed; same-account remix remains available. Re-enable cross-account remix only after authoritative checks cover both-direction blocks, private-account follower approval, source-post visibility, and deletion/hidden/unavailable states.
 - Source media must still exist, be processed, and match its server-recorded owner. Clients cannot write permission or attribution records directly.
 - Creator controls are now exposed in the existing Create publishing flow and NEXORA Studio export panel. Both default to closed; opting in updates only newly uploaded media after the server reports the asset as uploaded/ready, then calls the owner-authenticated policy endpoint. A failed verification or policy update blocks publishing rather than silently claiming the permission was saved.
-- Remaining O3 work: pre-remix attribution preview, correction requests, disputes, moderation hooks, and explicit block/private/deleted-source integration before public-facing remix entry points. The current UI is a creator declaration, not proof of authorship or rights ownership.
+- Remaining O3 work: implement the canonical source-post/media relationship, authoritative block and privacy checks, pre-remix attribution preview, correction requests, disputes, moderation hooks, and cross-account emulator tests. No public cross-account remix entry point may be exposed before these checks are complete. The current UI is a creator declaration, not proof of authorship or rights ownership.
 
 ### O4 — Credential interoperability
 - Add bounded C2PA manifest extraction and cryptographic validation.
