@@ -84,7 +84,7 @@ describe('public WorldWeave discovery', () => {
     const first = result.results[0];
     assert.equal(first.ownerId, owner);
     assert.equal(first.title.startsWith('Community memories'), true);
-    assert.equal(first.memberCount, undefined);
+    assert.equal(typeof first.memberCount, 'number');
     assert.equal(first.participantIds, undefined);
     assert.equal(first.inviteSecret, undefined);
     assert.equal(first.storagePath, undefined);
