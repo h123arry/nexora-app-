@@ -215,7 +215,7 @@ export async function leaveWorldWeave(weaveId: string): Promise<void> {
   const user = requireUser();
   if (!weaveId || weaveId.length > 128 || weaveId.includes('/')) throw new Error('Choose a valid WorldWeave.');
   const action = httpsCallable(functions, 'leaveWorldWeave');
-  await action({ weaveId, actorUid: user.uid });
+  await action({ weaveId });
 }
 
 export async function removeWorldWeaveContributor(weaveId: string, memberId: string): Promise<void> {
@@ -224,7 +224,7 @@ export async function removeWorldWeaveContributor(weaveId: string, memberId: str
     throw new Error('Choose a valid contributor.');
   }
   const action = httpsCallable(functions, 'removeWorldWeaveContributor');
-  await action({ weaveId, memberId, actorUid: user.uid });
+  await action({ weaveId, memberId });
 }
 
 export async function transferWorldWeaveOwnership(weaveId: string, memberId: string): Promise<void> {
