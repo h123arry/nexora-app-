@@ -41,7 +41,7 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
         setIdentityType(next.identityType);
         setDisplayName(next.displayName);
         setEvidenceSummary(next.evidenceSummary);
-        setEvidenceLinks(next.evidenceUrls.join('\\n'));
+        setEvidenceLinks(next.evidenceUrls.join('\n'));
       } else {
         setIdentityType('creator');
         setDisplayName(initialDisplayName);
