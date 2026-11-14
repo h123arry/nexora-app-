@@ -52,3 +52,48 @@ export function verifyPaystackWebhookSignature(
   }
   return false;
 }
+
+
+export interface BankLookupQuotaDecision {
+  allowed: boolean;
+  windowStartedAt: number;
+  attempts: number;
+  retryAfterMs: number;
+}
+
+export function advanceBankLookupQuota(
+  state: { windowStartedAt?: unknown; attempts?: unknown } | null | undefined,
+  nowMs: number,
+  maxAttempts = 10,
+  windowMs = 15 * 60 * 1000,
+): BankLookupQuotaDecision {
+  const denied = (retryAfterMs: number): BankLookupQuotaDecision => ({
+    allowed: false,
+    windowStartedAt: Number.isSafeInteger(state?.windowStartedAt) ? state!.windowStartedAt as number : nowMs,
+    attempts: Number.isSafeInteger(state?.attempts) ? state!.attempts as number : maxAttempts,
+    retryAfterMs,
+  });
+  if (!Number.isSafeInteger(nowMs) || nowMs < 0 || !Number.isSafeInteger(maxAttempts)
+    || maxAttempts < 1 || !Number.isSafeInteger(windowMs) || windowMs < 1) {
+    return denied(windowMs > 0 ? windowMs : 15 * 60 * 1000);
+  }
+  if (!state || (state.windowStartedAt === undefined && state.attempts === undefined)) {
+    return { allowed: true, windowStartedAt: nowMs, attempts: 1, retryAfterMs: 0 };
+  }
+  const startedAt = state.windowStartedAt;
+  const attempts = state.attempts;
+  if (!Number.isSafeInteger(startedAt) || !Number.isSafeInteger(attempts)
+    || (startedAt as number) < 0 || (attempts as number) < 1
+    || (attempts as number) > maxAttempts || (startedAt as number) > nowMs) {
+    return denied(windowMs);
+  }
+  const elapsed = nowMs - (startedAt as number);
+  if (elapsed >= windowMs) {
+    return { allowed: true, windowStartedAt: nowMs, attempts: 1, retryAfterMs: 0 };
+  }
+  if ((attempts as number) >= maxAttempts) {
+    return { allowed: false, windowStartedAt: startedAt as number, attempts: attempts as number,
+      retryAfterMs: windowMs - elapsed };
+  }
+  return { allowed: true, windowStartedAt: startedAt as number, attempts: (attempts as number) + 1, retryAfterMs: 0 };
+}

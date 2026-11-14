@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from '../src/paystackPayoutPolicy.ts';
+import { advanceBankLookupQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from '../src/paystackPayoutPolicy.ts';
 
 const body = Buffer.from('{"event":"transfer.success","data":{"reference":"nxp_example","amount":125000,"currency":"NGN"}}');
 const webhookSecret = ['whsec','test','placeholder'].join('_');
@@ -34,4 +34,27 @@ test('legacy Paystack signature is accepted only when HMAC matches', () => {
   const signature = createHmac('sha512', secretKey).update(body).digest('hex');
   assert.equal(verifyPaystackWebhookSignature(body, { 'x-paystack-signature': signature }, '', secretKey), true);
   assert.equal(verifyPaystackWebhookSignature(body, { 'x-paystack-signature': '0'.repeat(128) }, '', secretKey), false);
+});
+
+
+test('bank lookup quota permits ten attempts and blocks the eleventh', () => {
+  let state = advanceBankLookupQuota(null, 10_000);
+  for (let i = 1; i < 10; i += 1) state = advanceBankLookupQuota(state, 10_000 + i);
+  assert.equal(state.allowed, true);
+  assert.equal(state.attempts, 10);
+  const blocked = advanceBankLookupQuota(state, 10_100);
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.retryAfterMs, 15 * 60 * 1000 - 100);
+});
+
+test('bank lookup quota resets only after expiry and rejects malformed state', () => {
+  const expired = advanceBankLookupQuota(
+    { windowStartedAt: 5_000, attempts: 10 },
+    5_000 + 15 * 60 * 1000,
+  );
+  assert.equal(expired.allowed, true);
+  assert.equal(expired.attempts, 1);
+  assert.equal(advanceBankLookupQuota({ windowStartedAt: 'bad', attempts: 2 }, 10_000).allowed, false);
+  assert.equal(advanceBankLookupQuota({ windowStartedAt: 1, attempts: 99 }, 10_000).allowed, false);
+  assert.equal(advanceBankLookupQuota(null, -1).allowed, false);
 });
