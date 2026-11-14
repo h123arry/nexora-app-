@@ -173,3 +173,13 @@ This is an initial upload-provenance foundation only. Remix lineage, creator dec
 ## Completion criteria
 
 Origin is not complete until each shipped stage has real UI integration, trusted server behavior, restrictive rules, durable persistence, cross-account tests, retry/deletion handling, accessible mobile UI, passing CI, and explicit external/staging gates. Documentation or a UI badge alone does not count as implementation.
+
+
+## O3 attribution correction baseline
+
+- Added owner-only attribution preview for an asset's immutable recorded lineage.
+- Added private correction cases tied to a derivative's recorded lineage event. The derivative creator submits a reason; only the attributed source creator can accept or reject it.
+- The original requester can dispute a decided case. Case history remains separate from the immutable lineage event; accepting a correction does not silently rewrite provenance.
+- Added a private case inbox scoped to the requester and attributed source creator.
+- This is a workflow baseline, not a complete moderation adjudication system. Staff review queues, notifications, evidence attachments, and policy-based outcomes remain follow-up work.
+- Cross-account remix remains fail-closed until canonical source-post binding, both-direction block checks, private-account/follower authorization, and hidden/deleted-source checks are integrated.
