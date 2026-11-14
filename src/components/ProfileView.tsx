@@ -7,6 +7,7 @@ import { User, Post } from '../types';
 import { recordCreatorProfileVisit } from '../services/analytics/creatorAudience';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import { ProfileService } from '../services/firebase/profileService';
+import IdentityVerificationPanel from './IdentityVerificationPanel';
 import { getCreatorCommunityAsset } from '../content/creatorCommunityAssets';
 import NexoraBranding from './NexoraBranding';
 import CreatorGiftGallery from './CreatorGiftGallery';
@@ -1701,6 +1702,8 @@ export default function ProfileView({
                       </div>
                       <span className="text-[8px] font-mono bg-violet-500/25 text-violet-300 px-2 py-1 rounded-full font-extrabold uppercase">ACTIVE</span>
                     </div>
+
+                    {isOwnProfile && isLoggedIn && <IdentityVerificationPanel initialDisplayName={currentUser.name || ''} />}
 
                     {/* Section 1: Identity & Switcher Vault */}
                     <div className="space-y-1.5">
