@@ -352,8 +352,7 @@ service cloud.firestore {
           'savedCollections', 'updatedAt'
         ])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
-        && true;
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne']);
       allow delete: if false;
 
       match /searchHistory/{searchId} {
@@ -535,8 +534,7 @@ service cloud.firestore {
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['interestDNA'])
           || !request.resource.data.keys().hasAny(['interestDNA']))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
-        && true;
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne']);
       allow delete: if false;
     }
 
