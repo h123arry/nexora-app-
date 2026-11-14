@@ -518,6 +518,12 @@ const publicProfile = (uid) => ({
       id: 'alice-message', chatId: 'blocked-direct', senderId: 'alice', content: 'hello',
       status: 'sent', timestamp: new Date().toISOString()
     }));
+
+    // This test file shares one emulator lifecycle across nested tests.
+    // Remove the seeded block preference so later chat tests start unblocked.
+    await seed(async adminDb => {
+      await deleteDoc(doc(adminDb, 'users', 'alice', 'settings', 'preferences'));
+    });
   });
 
   it('restricts chat reads and writes to participants and binds message authorship to Firebase UID', async () => {
