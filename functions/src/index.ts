@@ -43,6 +43,7 @@ export { getStudioExportMp4Url, cleanupExpiredStudioMp4Exports } from './studioM
 export { cleanupDeletedWorldWeaveMoment, cleanupUnpublishedWorldWeaveMedia } from './worldWeaveCleanup.js';
 export { leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership } from './worldWeaveGovernance.js';
 export { setWorldWeaveMomentReaction } from './worldWeaveReactions.js';
+export { toggleWorldWeaveMomentPin, cleanupDeletedWorldWeaveMomentPin } from './worldWeavePins.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';
 export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAnalytics } from './creatorAudienceAnalytics.js';
 export { createCommunityPost } from './communityPosts.js';
