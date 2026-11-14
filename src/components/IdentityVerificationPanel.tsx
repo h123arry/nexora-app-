@@ -93,6 +93,14 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
         </div>
       ) : null}
 
+      {!loading && application?.status === 'under_review' ? (
+        <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-3">
+          <div className="flex items-center gap-2 text-sm font-bold text-amber-200"><ShieldCheck className="h-4 w-4" /> Temporary identity review hold</div>
+          <p className="mt-1 text-xs text-zinc-400">A senior NEXORA reviewer has temporarily paused your public identity badge while an impersonation concern is investigated. Your account is not suspended, and you do not need to submit another application. You will be notified when the review is resolved.</p>
+          {application.reviewNote ? <p className="mt-2 text-xs text-zinc-300">{application.reviewNote}</p> : null}
+        </div>
+      ) : null}
+
       {!loading && application?.status === 'pending_review' ? (
         <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-3">
           <div className="flex items-center gap-2 text-sm font-bold text-amber-200"><Clock3 className="h-4 w-4" /> Application under review</div>
