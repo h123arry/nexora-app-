@@ -104,5 +104,18 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string, on
       if (rows.size < PAGE_SIZE) break;
     }
   }
+  // Retain security audit events for accountability, but remove the deleted account identifier.
+  while (true) {
+    const rows = await db.collection('securityAuditEvents').where('userId', '==', userId).limit(PAGE_SIZE).get();
+    if (rows.empty) break;
+    const batch = db.batch();
+    rows.docs.forEach(row => batch.update(row.ref, {
+      userId: FieldValue.delete(),
+      accountDeleted: true,
+    }));
+    await batch.commit();
+    await onBatch?.();
+    if (rows.size < PAGE_SIZE) break;
+  }
   return deleted;
 }
