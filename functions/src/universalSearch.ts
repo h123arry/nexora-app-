@@ -105,6 +105,10 @@ export async function syncUniversalSearchRecord(
     (kind === 'update' && status !== 'deleted' && parent?.status !== 'suspended');
   if (!isEligible) { await ref.delete().catch(() => undefined); return; }
   const record = publicRecord(kind, id, sourcePath, data, parent);
+  if (record.ownerId) {
+    const verifiedIdentity = await db.collection('verifiedIdentities').doc(record.ownerId).get();
+    record.verified = verifiedIdentity.exists && verifiedIdentity.get('status') === 'verified';
+  }
   if (record.title.length < 2 || record.searchKeys.length === 0) { await ref.delete().catch(() => undefined); return; }
   await ref.set(record);
 }
