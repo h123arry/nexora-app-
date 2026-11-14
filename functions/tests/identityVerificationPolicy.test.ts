@@ -40,3 +40,12 @@ test('identity applications cannot bypass active review or already-approved stat
   assert.equal(canReviewIdentityApplication('pending_review'), true);
   assert.equal(canReviewIdentityApplication('approved'), false);
 });
+
+test('identity collision keys normalize names and equivalent HTTPS evidence URLs', async () => {
+  const { normalizeIdentityName, normalizeIdentityEvidenceUrl } = await import('../src/identityVerificationPolicy.ts');
+  assert.equal(normalizeIdentityName('  NEXORA   Creator '), normalizeIdentityName('nexora-creator'));
+  assert.equal(
+    normalizeIdentityEvidenceUrl('https://Example.com/official?b=2&a=1#about'),
+    normalizeIdentityEvidenceUrl('https://example.com/official?a=1&b=2'),
+  );
+});
