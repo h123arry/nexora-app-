@@ -59,6 +59,7 @@ import { addPostCommentReply } from './services/firebase/postReplyService';
 import { setPostCommentLike } from './services/firebase/postCommentReactionService';
 import { deletePostComment } from './services/firebase/postCommentDeletionService';
 import { uploadMediaFile } from './services/firebase/storageService';
+import { setOriginRemixPolicy, type OriginRemixPolicy } from './services/originRemixPolicyService';
 import { normalizeMediaAssetId } from './utils/mediaAssetReference';
 
 import Sidebar from './components/Sidebar';
@@ -2358,7 +2359,7 @@ export default function App() {
               key={currentUser.id}
               currentUser={currentUser}
               onClose={() => setIsNexoraStudioOpen(false)}
-              onPublish={async (video, caption, onProgress, signal) => {
+              onPublish={async (video, caption, onProgress, signal, remixPolicy: OriginRemixPolicy = 'closed') => {
                 const file = new File([video], `nexora-studio-${Date.now()}.webm`, { type: video.type || 'video/webm' });
                 const uploaded = await uploadMediaFile({
                   file,
@@ -2367,6 +2368,9 @@ export default function App() {
                   onProgress,
                   signal,
                 });
+                if (remixPolicy === 'allow_with_attribution') {
+                  await setOriginRemixPolicy(uploaded.mediaId, currentUser.id, remixPolicy, signal);
+                }
                 const postId = handleAddPost(caption || 'Created with NEXORA Studio', undefined, undefined, undefined, uploaded.downloadUrl, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, { mediaAssetId: uploaded.mediaId });
                 if (!postId) throw new Error('The video uploaded, but the post could not be created. Your Studio draft is still saved.');
                 setIsNexoraStudioOpen(false);
