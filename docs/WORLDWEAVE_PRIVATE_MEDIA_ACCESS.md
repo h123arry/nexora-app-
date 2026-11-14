@@ -23,7 +23,7 @@ The callable does not return private storage paths or membership records. A remo
 
 ## Client behavior
 
-The WorldWeave client requests a temporary URL only when a member explicitly loads private media. The URL stays in component memory and is not written back to Firestore.
+The WorldWeave client requests a temporary URL only when a member explicitly loads media without a persisted download URL. The URL stays in component memory and is not written back to Firestore. If the URL expires, the viewer can request a fresh one while they remain authorized.
 
 ## Important legacy limitation
 
