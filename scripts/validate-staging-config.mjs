@@ -8,6 +8,7 @@ const required = [
   'FIRESTORE_DATABASE_ID',
   'FIREBASE_STORAGE_BUCKET',
   'STAGING_APP_URL',
+  'VITE_API_BASE_URL',
   'VITE_NEXORA_ENV',
   'VITE_FIREBASE_PROJECT_ID',
   'VITE_FIREBASE_APP_ID',
@@ -45,6 +46,7 @@ const productionProjectId = 'nexora-prod-voiceharrison';
 const databaseId = process.env.FIRESTORE_DATABASE_ID.trim();
 const bucket = process.env.FIREBASE_STORAGE_BUCKET.trim();
 const appUrl = process.env.STAGING_APP_URL.trim();
+const apiBaseUrl = process.env.VITE_API_BASE_URL.trim();
 const browserProjectId = process.env.VITE_FIREBASE_PROJECT_ID.trim();
 const browserDatabaseId = process.env.VITE_FIREBASE_DATABASE_ID.trim();
 const browserBucket = process.env.VITE_FIREBASE_STORAGE_BUCKET.trim();
@@ -91,6 +93,18 @@ if (parsedAppUrl.protocol !== 'https:' || !parsedAppUrl.hostname
   || ['localhost', '127.0.0.1', '::1'].includes(parsedAppUrl.hostname)) {
   fail('STAGING_APP_URL must be a non-local HTTPS staging URL.');
 }
+let parsedApiBaseUrl;
+try {
+  parsedApiBaseUrl = new URL(apiBaseUrl);
+} catch {
+  fail('VITE_API_BASE_URL must be a valid non-local HTTPS URL.');
+}
+if (parsedApiBaseUrl.protocol !== 'https:' || !parsedApiBaseUrl.hostname
+  || parsedApiBaseUrl.username || parsedApiBaseUrl.password
+  || parsedApiBaseUrl.search || parsedApiBaseUrl.hash
+  || ['localhost', '127.0.0.1', '::1'].includes(parsedApiBaseUrl.hostname)) {
+  fail('VITE_API_BASE_URL must be a non-local HTTPS origin without credentials, query, or fragment.');
+}
 const emulatorVariables = ['FIRESTORE_EMULATOR_HOST', 'FIREBASE_AUTH_EMULATOR_HOST', 'FIREBASE_STORAGE_EMULATOR_HOST', 'VITE_USE_FIREBASE_EMULATORS'];
 if (emulatorVariables.some((name) => process.env[name]?.trim())) {
   fail('Staging validation refuses Firebase emulator configuration.');
@@ -108,5 +122,6 @@ console.log(JSON.stringify({
   appIdMatchesSenderId: true,
   appCheckSiteKeyConfigured: Boolean(process.env.VITE_FIREBASE_APPCHECK_SITE_KEY?.trim()),
   appUrl: parsedAppUrl.origin,
+  apiBaseUrl: parsedApiBaseUrl.origin,
   note: 'This validates configuration shape, App Check client-key presence, and target separation only; it does not prove Firebase access, deployed rules/Functions, or Console-side App Check enforcement.',
 }, null, 2));
