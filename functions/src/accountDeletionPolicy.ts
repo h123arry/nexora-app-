@@ -64,12 +64,14 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string): P
   // Identity reporter signals are nested below a target account and also retain
   // a reporter UID. Remove both directions when either account is deleted.
   const targetSignals = db.collection('identityImpersonationSignals').doc(userId);
-  const targetReporterSignals = await targetSignals.collection('reporters').get();
-  if (!targetReporterSignals.empty) {
+  while (true) {
+    const targetReporterSignals = await targetSignals.collection('reporters').limit(PAGE_SIZE).get();
+    if (targetReporterSignals.empty) break;
     const batch = db.batch();
     targetReporterSignals.docs.forEach(document => batch.delete(document.ref));
     await batch.commit();
     deleted += targetReporterSignals.size;
+    if (targetReporterSignals.size < PAGE_SIZE) break;
   }
   const targetSignalDocument = await targetSignals.get();
   if (targetSignalDocument.exists) {
@@ -91,25 +93,24 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string): P
 
   // Retain the security audit trail, but remove direct account identifiers and
   // free-text review notes so deletion does not leave identity-review PII behind.
-  const auditRefs = new Map<string, FirebaseFirestore.DocumentReference>();
   for (const field of ['userId', 'reviewerId', 'actorId']) {
-    const matches = await db.collection('identityVerificationAuditEvents')
-      .where(field, '==', userId)
-      .get();
-    matches.docs.forEach(document => auditRefs.set(document.id, document.ref));
-  }
-  for (let offset = 0; offset < auditRefs.size; offset += PAGE_SIZE) {
-    const batch = db.batch();
-    [...auditRefs.values()].slice(offset, offset + PAGE_SIZE).forEach(reference => {
-      batch.update(reference, {
+    while (true) {
+      const matches = await db.collection('identityVerificationAuditEvents')
+        .where(field, '==', userId)
+        .limit(PAGE_SIZE)
+        .get();
+      if (matches.empty) break;
+      const batch = db.batch();
+      matches.docs.forEach(document => batch.update(document.ref, {
         userId: FieldValue.delete(),
         reviewerId: FieldValue.delete(),
         actorId: FieldValue.delete(),
         reviewNote: FieldValue.delete(),
         accountDeleted: true,
-      });
-    });
-    await batch.commit();
+      }));
+      await batch.commit();
+      if (matches.size < PAGE_SIZE) break;
+    }
   }
   return deleted;
 }
