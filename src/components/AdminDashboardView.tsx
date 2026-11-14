@@ -46,6 +46,7 @@ export default function AdminDashboardView({
   const [accessState, setAccessState] = useState<'checking' | 'granted' | 'denied'>('checking');
   const [canManageUsers, setCanManageUsers] = useState(false);
   const [canManageRoles, setCanManageRoles] = useState(false);
+  const [canReviewIdentity, setCanReviewIdentity] = useState(false);
   const [userDirectoryUnavailable, setUserDirectoryUnavailable] = useState(false);
   
   // Analytics timeframe
@@ -134,6 +135,7 @@ export default function AdminDashboardView({
       setAccessState(granted ? 'granted' : 'denied');
       setCanManageUsers(claims.admin === true || ['admin', 'founder'].includes(role));
       setCanManageRoles(claims.founder === true || role === 'founder');
+      setCanReviewIdentity(claims.admin === true || claims.founder === true || ['senior_moderator', 'admin', 'founder'].includes(role));
       if (granted) void loadData();
     }).catch(() => setAccessState('denied'));
   }, []);
@@ -630,7 +632,7 @@ export default function AdminDashboardView({
                         </a>
                       ))}
                     </div>
-                    <textarea
+                    {canReviewIdentity ? <textarea
                       value={identityReviewNotes[application.userId] || ''}
                       onChange={event => setIdentityReviewNotes(previous => ({ ...previous, [application.userId]: event.target.value }))}
                       rows={2}
@@ -638,12 +640,12 @@ export default function AdminDashboardView({
                       aria-label={`Review note for ${application.displayName}`}
                       placeholder="Reviewer note (required when rejecting or requesting more information)"
                       className="w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white outline-none focus:border-violet-400/50"
-                    />
-                    <div className="flex flex-wrap gap-2">
+                    /> : <p className="rounded-lg border border-white/10 bg-black/20 p-3 text-[10px] text-zinc-400">Read-only review access. Only senior moderators, administrators, and the founder can make identity decisions.</p>}
+                    {canReviewIdentity && <div className="flex flex-wrap gap-2">
                       <button type="button" onClick={() => void handleIdentityReview(application.userId, 'approved')} className="rounded-lg bg-emerald-600/90 px-3 py-2 text-[10px] font-black text-white hover:bg-emerald-500">Approve identity</button>
                       <button type="button" onClick={() => void handleIdentityReview(application.userId, 'needs_more_info')} className="rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-[10px] font-bold text-amber-200 hover:bg-amber-400/10">Request more evidence</button>
                       <button type="button" onClick={() => void handleIdentityReview(application.userId, 'rejected')} className="rounded-lg border border-rose-400/20 bg-rose-400/5 px-3 py-2 text-[10px] font-bold text-rose-200 hover:bg-rose-400/10">Reject</button>
-                    </div>
+                    </div>}
                   </article>
                 );
               })}
