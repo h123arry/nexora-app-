@@ -9,7 +9,7 @@ import {
   MAX_WORLDWEAVE_MEMBERS, listWorldWeaveContributors, leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership, subscribeToWorldWeaveActivity,
   toggleWorldWeaveMomentPin, fetchWorldWeavePinnedMoments, subscribeToWorldWeaveMomentReplies, addWorldWeaveMomentReply, deleteWorldWeaveMomentReply,
   subscribeToWorldWeaveChapters, createWorldWeaveChapter, updateWorldWeaveChapter,
-  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, type WorldWeaveReply, type WorldWeaveChapter, setWorldWeaveMomentReaction,
+  resolveWorldWeaveMomentMediaUrl, type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, type WorldWeaveReply, type WorldWeaveChapter, setWorldWeaveMomentReaction,
 } from '../services/firebase/worldWeaveService';
 
 interface Props { currentUser: User; }
@@ -29,6 +29,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [selectedContributorId, setSelectedContributorId] = useState('');
   const [activity, setActivity] = useState<WorldWeaveActivity[]>([]);
   const [pinnedMoments, setPinnedMoments] = useState<WorldWeaveMoment[]>([]);
+  const [resolvedMediaUrls, setResolvedMediaUrls] = useState<Record<string, string>>({});
+  const [loadingMediaMomentId, setLoadingMediaMomentId] = useState('');
   const [expandedReplyMomentId, setExpandedReplyMomentId] = useState<string | null>(null);
   const [momentReplies, setMomentReplies] = useState<WorldWeaveReply[]>([]);
   const [replyDraft, setReplyDraft] = useState('');
@@ -74,6 +76,11 @@ export default function WorldWeaveView({ currentUser }: Props) {
     const stopInvites = subscribeToMyWorldWeaveInvites(currentUser.id, items => { if (active) setInvitations(items); }, err => { if (active) setError(err.message); });
     return () => { active = false; stopMine(); stopPublic(); stopInvites(); };
   }, [currentUser.id]);
+
+  useEffect(() => {
+    setResolvedMediaUrls({});
+    setLoadingMediaMomentId('');
+  }, [selected?.id]);
 
   useEffect(() => {
     if (!selected || selected.ownerId !== currentUser.id) { setSentInvitations([]); return; }
@@ -181,6 +188,19 @@ export default function WorldWeaveView({ currentUser }: Props) {
     if (!term) return weaves;
     return weaves.filter(item => [item.title, item.description, item.ownerName].some(value => value.toLowerCase().includes(term)));
   }, [weaves, discoveryQuery]);
+
+  const handleLoadMomentMedia = async (moment: WorldWeaveMoment) => {
+    if (!selected || !moment.storagePath || loadingMediaMomentId) return;
+    setLoadingMediaMomentId(moment.id); setError('');
+    try {
+      const url = await resolveWorldWeaveMomentMediaUrl(selected.id, moment.id);
+      setResolvedMediaUrls(current => ({ ...current, [moment.id]: url }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'This media is no longer available to your account.');
+    } finally {
+      setLoadingMediaMomentId('');
+    }
+  };
 
   const handleJoinPublic = async () => {
     if (!selected) return;
@@ -488,7 +508,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
           <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold text-white">Pinned story moments</h2><span className="text-[10px] text-slate-500">{pinnedMoments.length}/3 featured</span></div>
           {pinnedMoments.length === 0 ? <p className="text-xs text-slate-500">The owner can pin up to three defining moments to the story.</p> : <div className="grid gap-3 md:grid-cols-3">
             {pinnedMoments.map(moment => <article key={moment.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#090e1b]">
-              {moment.mediaType === 'image' && moment.mediaUrl && <img src={moment.mediaUrl} alt="Pinned WorldWeave moment" loading="lazy" className="h-28 w-full object-cover"/>}
+              {moment.mediaType === 'image' && (moment.mediaUrl || resolvedMediaUrls[moment.id]) && <img src={moment.mediaUrl || resolvedMediaUrls[moment.id]} alt="Pinned WorldWeave moment" loading="lazy" className="h-28 w-full object-cover"/>}
+              {!moment.mediaUrl && !resolvedMediaUrls[moment.id] && moment.storagePath && <button type="button" disabled={loadingMediaMomentId === moment.id} onClick={() => void handleLoadMomentMedia(moment)} className="w-full rounded-lg border border-violet-400/20 px-2 py-2 text-[10px] font-semibold text-violet-200 disabled:opacity-40">{loadingMediaMomentId === moment.id ? 'Securing media…' : 'Load private image'}</button>}
               <div className="p-3"><p className="text-[10px] font-bold text-violet-200">{moment.authorName}</p><p className="mt-1 line-clamp-3 text-xs leading-5 text-slate-300">{moment.text || (moment.mediaType === 'video' ? 'Featured video moment' : moment.mediaType === 'audio' ? 'Featured voice note' : 'Featured story moment')}</p></div>
             </article>)}
           </div>}
@@ -523,9 +544,10 @@ export default function WorldWeaveView({ currentUser }: Props) {
                 <span className="absolute left-[12px] top-6 h-3.5 w-3.5 rounded-full border-2 border-[#0b1221] bg-violet-400 shadow-[0_0_14px_rgba(139,92,246,.7)]"/>
                 <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><img src={moment.authorAvatar || '/logo.svg'} alt="" className="h-8 w-8 rounded-full object-cover"/><div className="min-w-0"><p className="truncate text-xs font-bold text-white">{moment.authorName}</p><p className="text-[10px] text-slate-500">@{moment.authorUsername} · {timeLabel(moment.createdAt)}</p>{moment.chapterId && chapters.find(chapter => chapter.id === moment.chapterId) && <span className="mt-1 inline-flex rounded-full border border-violet-400/20 bg-violet-500/10 px-2 py-0.5 text-[9px] font-semibold text-violet-200">{chapters.find(chapter => chapter.id === moment.chapterId)?.title}</span>}</div></div>{(moment.authorId === currentUser.id || selected.ownerId === currentUser.id) && <button type="button" disabled={busy} onClick={() => void handleDeleteMoment(moment)} aria-label="Remove moment" title="Remove moment" className="rounded-lg p-2 text-slate-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"><Trash2 size={14}/></button>}</div>
                 {moment.text && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-200">{moment.text}</p>}
-                {moment.mediaType === 'image' && moment.mediaUrl && <img src={moment.mediaUrl} alt="WorldWeave contribution" loading="lazy" className="mt-3 max-h-[520px] w-full rounded-2xl object-cover"/>}
-                {moment.mediaType === 'video' && moment.mediaUrl && <video src={moment.mediaUrl} controls playsInline preload="metadata" className="mt-3 max-h-[520px] w-full rounded-2xl bg-black"/>}
-                {moment.mediaType === 'audio' && moment.mediaUrl && <div className="mt-3 rounded-2xl border border-violet-400/15 bg-violet-500/[.06] p-3"><div className="mb-2 flex items-center gap-2 text-xs font-semibold text-violet-200"><Mic size={14}/> Voice note</div><audio src={moment.mediaUrl} controls preload="metadata" className="w-full"/></div>}
+                {moment.mediaType === 'image' && (moment.mediaUrl || resolvedMediaUrls[moment.id]) && <img src={moment.mediaUrl || resolvedMediaUrls[moment.id]} alt="WorldWeave contribution" loading="lazy" className="mt-3 max-h-[520px] w-full rounded-2xl object-cover"/>}
+                {moment.mediaType === 'video' && (moment.mediaUrl || resolvedMediaUrls[moment.id]) && <video src={moment.mediaUrl || resolvedMediaUrls[moment.id]} controls playsInline preload="metadata" className="mt-3 max-h-[520px] w-full rounded-2xl bg-black"/>}
+                {moment.mediaType === 'audio' && (moment.mediaUrl || resolvedMediaUrls[moment.id]) && <div className="mt-3 rounded-2xl border border-violet-400/15 bg-violet-500/[.06] p-3"><div className="mb-2 flex items-center gap-2 text-xs font-semibold text-violet-200"><Mic size={14}/> Voice note</div><audio src={moment.mediaUrl || resolvedMediaUrls[moment.id]} controls preload="metadata" className="w-full"/></div>}
+                {!moment.mediaUrl && !resolvedMediaUrls[moment.id] && moment.storagePath && <button type="button" disabled={loadingMediaMomentId === moment.id} onClick={() => void handleLoadMomentMedia(moment)} className="mt-3 rounded-xl border border-violet-400/20 px-3 py-2 text-xs font-semibold text-violet-200 disabled:opacity-40">{loadingMediaMomentId === moment.id ? 'Securing media…' : 'Load private media'}</button>}
                 {selected.ownerId === currentUser.id && <button type="button" disabled={busy || (!(selected.pinnedMomentIds || []).includes(moment.id) && (selected.pinnedMomentIds || []).length >= 3)} onClick={() => void handleToggleMomentPin(moment)} className="mt-3 rounded-full border border-violet-400/20 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-500/10 disabled:opacity-40">{(selected.pinnedMomentIds || []).includes(moment.id) ? 'Unpin from story' : 'Pin to story'}</button>}
                 {isMember && <div className="mt-3 border-t border-white/5 pt-3">
                   <button type="button" onClick={() => { setExpandedReplyMomentId(current => current === moment.id ? null : moment.id); setReplyDraft(''); }} className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:border-violet-400/30 hover:bg-violet-500/10">💬 {moment.replyCount || 0} replies {expandedReplyMomentId === moment.id ? '· Close' : '· View'}</button>
