@@ -26,6 +26,7 @@ import CreatorGiftEarningsPanel from './CreatorGiftEarningsPanel';
 import CreatorEconomyExpansionPanel from './CreatorEconomyExpansionPanel';
 import CreatorMembershipPanel from './CreatorMembershipPanel';
 import { buildCreatorAchievements } from '../services/analytics/creatorAchievements';
+import { ProfileService } from '../services/firebase/profileService';
 import ContentSeriesPanel from './ContentSeriesPanel';
 import ReferralGrowthPanel from './ReferralGrowthPanel';
 
@@ -49,6 +50,7 @@ export default function CreatorDashboardView({
   
   // Real Local state for Optimistic UI and responsiveness
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
+  const [hasVerifiedIdentity, setHasVerifiedIdentity] = useState(false);
   const [drafts, setDrafts] = useState<any[]>([]);
   const [isDraftsLoading, setIsDraftsLoading] = useState(true);
   const [studioTemplates, setStudioTemplates] = useState<CreatorStudioTemplate[]>([]);
@@ -100,6 +102,14 @@ export default function CreatorDashboardView({
 
   // Local storage auto-save ref
   const lastDraftSaveRef = useRef<{ caption: string; tags: string; type: 'video' | 'image' | 'text'; url: string } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void ProfileService.getPublicIdentityVerification(currentUser.id).then(identity => {
+      if (active) setHasVerifiedIdentity(Boolean(identity));
+    });
+    return () => { active = false; };
+  }, [currentUser.id]);
 
   useEffect(() => {
     setLocalPosts(posts.filter(post => post.userId === currentUser.id));
@@ -663,8 +673,8 @@ export default function CreatorDashboardView({
   }, [localPosts, uploadedMedia, mediaSearch, mediaTypeFilter]);
 
   const achievementsList = useMemo(
-    () => buildCreatorAchievements(localPosts, currentUser.reputationPoints, currentUser.isVerified === true),
-    [localPosts, currentUser.reputationPoints, currentUser.isVerified],
+    () => buildCreatorAchievements(localPosts, currentUser.reputationPoints, hasVerifiedIdentity),
+    [localPosts, currentUser.reputationPoints, hasVerifiedIdentity],
   );
 
   return (
