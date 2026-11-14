@@ -5,7 +5,7 @@ import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirebaseProjectId, resolveFirestoreDatabaseId, PRODUCTION_FIREBASE_PROJECT_ID } from './runtimeConfig.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
-import { calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from './paystackPayoutPolicy.js';
+import { advanceBankLookupQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from './paystackPayoutPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const PAYSTACK_SECRET_KEY = defineSecret('PAYSTACK_SECRET_KEY');
@@ -65,8 +65,33 @@ function normalizeAccountName(value: string): string {
   return value.toLocaleUpperCase('en-NG').replace(/[^A-Z0-9]/g, '');
 }
 
-export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY] }, async request => {
+// Bank-account name resolution is a sensitive, billable lookup. Enforce a durable
+// per-account quota in Firestore so callers cannot reset it by changing devices.
+const BANK_LOOKUP_WINDOW_MS = 15 * 60 * 1000;
+const BANK_LOOKUP_MAX_ATTEMPTS = 10;
+async function consumeBankLookupQuota(uid: string): Promise<void> {
+  const ref = db.collection('ngnBankLookupRateLimits').doc(uid);
+  const now = Date.now();
+  let retryAfterMs = 0;
+  await db.runTransaction(async tx => {
+    const snapshot = await tx.get(ref);
+    const decision = advanceBankLookupQuota(snapshot.data() || {}, now, BANK_LOOKUP_MAX_ATTEMPTS, BANK_LOOKUP_WINDOW_MS);
+    if (!decision.allowed) {
+      retryAfterMs = decision.retryAfterMs;
+      return;
+    }
+    tx.set(ref, { windowStartedAt: decision.windowStartedAt, attempts: decision.attempts,
+      expiresAt: now + BANK_LOOKUP_WINDOW_MS * 2, updatedAt: FieldValue.serverTimestamp() });
+  });
+  if (retryAfterMs > 0) {
+    throw new HttpsError('resource-exhausted', 'Too many bank-account verification attempts. Try again after the rate limit resets.',
+      { retryAfterSeconds: Math.ceil(retryAfterMs / 1000) });
+  }
+}
+
+export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 3 }, async request => {
   requireUser(request);
+  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
   const secret = PAYSTACK_SECRET_KEY.value();
   const mode = providerMode(secret);
   const policy = await payoutPolicy();
@@ -243,13 +268,14 @@ export const getNgnBanks = onCall({ secrets: [PAYSTACK_SECRET_KEY] }, async requ
   }
 });
 
-export const resolveNgnBankAccount = onCall({ secrets: [PAYSTACK_SECRET_KEY] }, async request => {
-  requireUser(request);
+export const resolveNgnBankAccount = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 5 }, async request => {
+  const uid = requireUser(request);
   const accountNumber = request.data?.accountNumber;
   const bankCode = request.data?.bankCode;
   if (typeof accountNumber !== 'string' || !/^\d{10}$/.test(accountNumber) || typeof bankCode !== 'string' || !/^[A-Za-z0-9_-]{2,12}$/.test(bankCode)) {
     throw new HttpsError('invalid-argument', 'Enter a valid 10-digit Nigerian account number and select a bank.');
   }
+  await consumeBankLookupQuota(uid);
   try {
     const result = await paystack('/bank/resolve?account_number=' + encodeURIComponent(accountNumber) + '&bank_code=' + encodeURIComponent(bankCode), 'GET');
     if (!safeText(result.account_name, 160) || String(result.account_number) !== accountNumber) throw new Error('Account details could not be verified.');
@@ -270,6 +296,7 @@ export const setCreatorPayoutBeneficiary = onCall({ secrets: [PAYSTACK_SECRET_KE
     || !/^[A-Za-z0-9_-]{2,12}$/.test(bankCode) || !safeText(expectedAccountName, 160)) {
     throw new HttpsError('invalid-argument', 'Verified account details and confirmation of the displayed account name are required.');
   }
+  await consumeBankLookupQuota(creatorId);
   try {
     const resolved = await paystack('/bank/resolve?account_number=' + encodeURIComponent(accountNumber) + '&bank_code=' + encodeURIComponent(bankCode), 'GET');
     if (!safeText(resolved.account_name, 160) || normalizeAccountName(resolved.account_name) !== normalizeAccountName(expectedAccountName)

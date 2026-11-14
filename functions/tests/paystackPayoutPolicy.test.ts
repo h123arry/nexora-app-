@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from '../src/paystackPayoutPolicy.ts';
+import { advanceBankLookupQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from '../src/paystackPayoutPolicy.ts';
 
 const body = Buffer.from('{"event":"transfer.success","data":{"reference":"nxp_example","amount":125000,"currency":"NGN"}}');
 const webhookSecret = ['whsec','test','placeholder'].join('_');
@@ -34,4 +34,26 @@ test('legacy Paystack signature is accepted only when HMAC matches', () => {
   const signature = createHmac('sha512', secretKey).update(body).digest('hex');
   assert.equal(verifyPaystackWebhookSignature(body, { 'x-paystack-signature': signature }, '', secretKey), true);
   assert.equal(verifyPaystackWebhookSignature(body, { 'x-paystack-signature': '0'.repeat(128) }, '', secretKey), false);
+});
+
+test('bank account lookup quota blocks the eleventh attempt and resets after expiry', () => {
+  const start = 1_800_000_000_000;
+  let state: { windowStartedAt?: unknown; attempts?: unknown } = {};
+  for (let attempt = 1; attempt <= 10; attempt++) {
+    const decision = advanceBankLookupQuota(state, start + attempt);
+    assert.equal(decision.allowed, true);
+    state = { windowStartedAt: decision.windowStartedAt, attempts: decision.attempts };
+  }
+  const blocked = advanceBankLookupQuota(state, start + 11);
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.attempts, 10);
+  assert.ok(blocked.retryAfterMs > 0);
+  const reset = advanceBankLookupQuota(state, start + 15 * 60 * 1000 + 1);
+  assert.equal(reset.allowed, true);
+  assert.equal(reset.attempts, 1);
+});
+
+test('bank account lookup quota resets malformed stored state safely', () => {
+  assert.deepEqual(advanceBankLookupQuota({ windowStartedAt: -1, attempts: -100 }, 1_800_000_000_000),
+    { allowed: true, windowStartedAt: 1_800_000_000_000, attempts: 1, retryAfterMs: 0 });
 });

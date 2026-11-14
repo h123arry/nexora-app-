@@ -52,3 +52,31 @@ export function verifyPaystackWebhookSignature(
   }
   return false;
 }
+
+
+export interface BankLookupQuotaDecision {
+  allowed: boolean;
+  windowStartedAt: number;
+  attempts: number;
+  retryAfterMs: number;
+}
+export function advanceBankLookupQuota(
+  state: { windowStartedAt?: unknown; attempts?: unknown },
+  nowMs: number,
+  maxAttempts = 10,
+  windowMs = 15 * 60 * 1000,
+): BankLookupQuotaDecision {
+  const startedAt = state.windowStartedAt;
+  const attempts = state.attempts;
+  const validWindow = Number.isSafeInteger(startedAt) && (startedAt as number) <= nowMs
+    && nowMs - (startedAt as number) < windowMs
+    && Number.isSafeInteger(attempts) && (attempts as number) >= 0;
+  if (!validWindow) return { allowed: true, windowStartedAt: nowMs, attempts: 1, retryAfterMs: 0 };
+  const windowStart = startedAt as number;
+  const currentAttempts = attempts as number;
+  if (currentAttempts >= maxAttempts) {
+    return { allowed: false, windowStartedAt: windowStart, attempts: currentAttempts,
+      retryAfterMs: windowMs - (nowMs - windowStart) };
+  }
+  return { allowed: true, windowStartedAt: windowStart, attempts: currentAttempts + 1, retryAfterMs: 0 };
+}
