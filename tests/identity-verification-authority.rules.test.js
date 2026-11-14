@@ -38,6 +38,9 @@ describe('verification authority rules', () => {
       await setDoc(doc(adminDb, 'identityVerificationApplications', 'bob'), {
         userId: 'bob', status: 'pending_review', evidenceUrls: ['https://example.com/bob-private-evidence'],
       });
+      await setDoc(doc(adminDb, 'identityVerificationPrivateSignals', 'alice'), {
+        userId: 'alice', status: 'pending_review', identityNameKey: 'alice creator', evidenceUrlHashes: ['private-hash'],
+      });
       await setDoc(doc(adminDb, 'verifiedIdentities', 'alice'), {
         userId: 'alice', status: 'verified', identityType: 'creator', displayName: 'Alice Creator',
       });
@@ -61,6 +64,7 @@ describe('verification authority rules', () => {
     await assertSucceeds(updateDoc(doc(db, 'users', 'alice'), { name: 'Alice Updated' }));
     await assertSucceeds(getDoc(doc(db, 'identityVerificationApplications', 'alice')));
     await assertFails(getDoc(doc(db, 'identityVerificationApplications', 'bob')));
+    await assertFails(getDoc(doc(db, 'identityVerificationPrivateSignals', 'alice')));
     await assertFails(updateDoc(doc(db, 'identityVerificationApplications', 'alice'), { status: 'approved' }));
     await assertFails(setDoc(doc(db, 'identityVerificationApplications', 'charlie'), { userId: 'charlie', status: 'approved' }));
     await assertFails(updateDoc(doc(db, 'verifiedIdentities', 'alice'), { status: 'revoked' }));
