@@ -414,12 +414,15 @@ const publicProfile = (uid) => ({
 
   it('allows users to update their public bio but blocks changes to protected account fields and other accounts', async () => {
     await seed(async (db) => {
-      await setDoc(doc(db, 'users', 'alice'), profile('alice'));
+      await setDoc(doc(db, 'users', 'alice'), { ...profile('alice'), isVerified: false });
+      await setDoc(doc(db, 'users', 'bob'), { ...profile('bob'), isVerified: true });
       await setDoc(doc(db, 'publicProfiles', 'alice'), { ...publicProfile('alice'), interestDNA: { AI: 0.9 } });
     });
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { bio: 'updated by owner' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { role: 'admin' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { email: 'attacker@example.test' }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { isVerified: true }));
+    await assertFails(updateDoc(doc(dbFor('bob'), 'users', 'bob'), { isVerified: false }));
     await assertFails(updateDoc(doc(dbFor('bob'), 'users', 'alice'), { bio: 'intrusion' }));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { bio: 'public bio' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { email: 'leak@example.test' }));
