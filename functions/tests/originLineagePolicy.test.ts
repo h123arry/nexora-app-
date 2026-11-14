@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildRemixLineageRecord } from '../src/originLineagePolicy.js';
+import { assertSameAccountRemixSources, buildRemixLineageRecord } from '../src/originLineagePolicy.js';
 
 const valid = {
   derivativeAssetId: 'derivative_1',
@@ -56,4 +56,20 @@ test('rejects oversized ancestor graphs and mismatched source metadata', () => {
     ...valid,
     parentLineageDepths: [0],
   }), /incomplete/);
+});
+
+
+test('keeps cross-account remix closed until privacy and relationship checks are authoritative', () => {
+  assert.doesNotThrow(() => assertSameAccountRemixSources({
+    derivativeOwnerUid: 'creator_1',
+    sourceOwnerUids: ['creator_1', 'creator_1'],
+  }));
+  assert.throws(() => assertSameAccountRemixSources({
+    derivativeOwnerUid: 'creator_1',
+    sourceOwnerUids: ['creator_1', 'creator_2'],
+  }), /Cross-account remix is temporarily unavailable/);
+  assert.throws(() => assertSameAccountRemixSources({
+    derivativeOwnerUid: 'creator_1',
+    sourceOwnerUids: [],
+  }), /ownership could not be verified/);
 });
