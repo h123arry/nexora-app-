@@ -35,6 +35,20 @@ export class ProfileService {
     }
   }
 
+  /** Public identity is exposed only after a server-authorized review approves the claim. */
+  static async getPublicIdentityVerification(uid: string): Promise<{ identityType: 'individual' | 'creator' | 'public_figure' | 'organization'; displayName: string } | null> {
+    if (!db || !uid) return null;
+    try {
+      const snap = await getDoc(doc(db, 'verifiedIdentities', uid));
+      if (!snap.exists() || snap.data().status !== 'verified') return null;
+      const data = snap.data();
+      if (!['individual', 'creator', 'public_figure', 'organization'].includes(data.identityType) || typeof data.displayName !== 'string') return null;
+      return { identityType: data.identityType, displayName: data.displayName };
+    } catch {
+      return null;
+    }
+  }
+
   static async createProfile(uid: string, data: Partial<User>, email: string): Promise<User> {
     const cleanEmail = email.toLowerCase().trim();
     const defaultUsername = (cleanEmail.split('@')[0] || `user_${uid.substring(0, 5)}`).toLowerCase().replace(/[^a-z0-9_]/g, '');
