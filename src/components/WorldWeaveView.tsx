@@ -8,7 +8,7 @@ import {
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
   MAX_WORLDWEAVE_MEMBERS, listWorldWeaveContributors, leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership, subscribeToWorldWeaveActivity,
   toggleWorldWeaveMomentPin, fetchWorldWeavePinnedMoments, subscribeToWorldWeaveMomentReplies, addWorldWeaveMomentReply, deleteWorldWeaveMomentReply,
-  subscribeToWorldWeaveChapters, createWorldWeaveChapter,
+  subscribeToWorldWeaveChapters, createWorldWeaveChapter, updateWorldWeaveChapter,
   type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, type WorldWeaveReply, type WorldWeaveChapter, setWorldWeaveMomentReaction,
 } from '../services/firebase/worldWeaveService';
 
@@ -37,6 +37,9 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [chapterFilterId, setChapterFilterId] = useState('');
   const [chapterTitle, setChapterTitle] = useState('');
   const [chapterDescription, setChapterDescription] = useState('');
+  const [editingChapterId, setEditingChapterId] = useState('');
+  const [editingChapterTitle, setEditingChapterTitle] = useState('');
+  const [editingChapterDescription, setEditingChapterDescription] = useState('');
   const [discoveryQuery, setDiscoveryQuery] = useState('');
   const [selected, setSelected] = useState<WorldWeave | null>(null);
   const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
@@ -266,6 +269,21 @@ export default function WorldWeaveView({ currentUser }: Props) {
     finally { setBusy(false); }
   };
 
+  const handleUpdateChapter = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selected || selected.ownerId !== currentUser.id || !editingChapterId) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await updateWorldWeaveChapter(selected.id, editingChapterId, editingChapterTitle, editingChapterDescription);
+      setChapters(current => current.map(chapter => chapter.id === editingChapterId
+        ? { ...chapter, title: editingChapterTitle.trim(), description: editingChapterDescription.trim() }
+        : chapter));
+      setEditingChapterId('');
+      setNotice('Chapter details updated.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not update this chapter.'); }
+    finally { setBusy(false); }
+  };
+
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');
     try {
@@ -425,7 +443,14 @@ export default function WorldWeaveView({ currentUser }: Props) {
               <input value={chapterTitle} onChange={event => setChapterTitle(event.target.value)} minLength={2} maxLength={60} placeholder="Chapter title" className="w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-400/50"/>
               <textarea value={chapterDescription} onChange={event => setChapterDescription(event.target.value)} maxLength={250} rows={2} placeholder="What belongs in this chapter?" className="mt-2 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-400/50"/>
               <button disabled={busy || chapterTitle.trim().length < 2 || chapters.length >= 30} className="mt-2 w-full rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-40">Create chapter</button>
-              {chapters.length > 0 && <div className="mt-3 space-y-1.5">{chapters.map(chapter => <div key={chapter.id} className="rounded-lg border border-white/5 px-3 py-2"><p className="text-xs font-semibold text-violet-100">{chapter.position + 1}. {chapter.title}</p>{chapter.description && <p className="mt-1 text-[10px] text-slate-500">{chapter.description}</p>}</div>)}</div>}
+              {chapters.length > 0 && <div className="mt-3 space-y-2">{chapters.map(chapter => editingChapterId === chapter.id ? <form key={chapter.id} onSubmit={handleUpdateChapter} className="rounded-xl border border-violet-400/20 bg-[#070d19] p-2">
+                <input value={editingChapterTitle} onChange={event => setEditingChapterTitle(event.target.value)} minLength={2} maxLength={60} className="w-full rounded-lg border border-white/10 bg-[#0b1221] px-2 py-2 text-xs text-white"/>
+                <textarea value={editingChapterDescription} onChange={event => setEditingChapterDescription(event.target.value)} maxLength={250} rows={2} className="mt-2 w-full rounded-lg border border-white/10 bg-[#0b1221] px-2 py-2 text-xs text-white"/>
+                <div className="mt-2 flex gap-2"><button disabled={busy || editingChapterTitle.trim().length < 2} className="rounded-lg bg-violet-600 px-3 py-1.5 text-[10px] font-bold text-white disabled:opacity-40">Save</button><button type="button" onClick={() => setEditingChapterId('')} className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] text-slate-300">Cancel</button></div>
+              </form> : <div key={chapter.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 px-3 py-2">
+                <div><p className="text-xs font-semibold text-violet-100">{chapter.position + 1}. {chapter.title}</p>{chapter.description && <p className="mt-1 text-[10px] text-slate-500">{chapter.description}</p>}</div>
+                <button type="button" onClick={() => { setEditingChapterId(chapter.id); setEditingChapterTitle(chapter.title); setEditingChapterDescription(chapter.description); }} className="shrink-0 rounded-lg border border-white/10 px-2 py-1.5 text-[10px] text-slate-300 hover:border-violet-400/30">Rename</button>
+              </div>)}</div>}
             </form>
             <form onSubmit={handleInvite} className="h-fit rounded-3xl border border-white/10 bg-[#0b1221] p-4">
               <div className="mb-3 text-sm font-bold text-white">Bring someone in</div>
