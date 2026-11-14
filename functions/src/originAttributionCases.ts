@@ -126,3 +126,64 @@ export const disputeOriginAttributionCorrection = onCall({ maxInstances: 10 }, a
     throw new HttpsError('internal', 'The attribution dispute could not be submitted.');
   }
 });
+
+
+/** Owner-only preview: exposes the immutable attribution snapshot before sharing or publishing. */
+export const getMyOriginAttributionPreview = onCall({ maxInstances: 10 }, async request => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in to preview attribution.');
+  const assetId = request.data?.assetId;
+  if (typeof assetId !== 'string' || !SAFE_ID.test(assetId)) throw new HttpsError('invalid-argument', 'Choose a valid media asset.');
+  const originRef = db.collection('mediaOrigins').doc(assetId);
+  const eventRef = originRef.collection('events').doc(`derivative_${assetId}`);
+  const [origin, event] = await Promise.all([originRef.get(), eventRef.get()]);
+  if (!origin.exists || origin.get('ownerUid') !== uid) {
+    throw new HttpsError('permission-denied', 'Only the asset owner can preview its attribution.');
+  }
+  if (!event.exists) return { assetId, hasLineage: false, attribution: [] };
+  const entries = event.get('parentAttribution');
+  return {
+    assetId,
+    hasLineage: true,
+    attribution: Array.isArray(entries) ? entries.map((entry: any) => ({
+      sourceAssetId: String(entry.sourceAssetId || ''),
+      creatorUid: String(entry.creatorUid || ''),
+      permissionSnapshot: String(entry.permissionSnapshot || ''),
+    })) : [],
+  };
+});
+
+/** Returns only cases in which the caller is the requester or attributed source creator. */
+export const listMyOriginAttributionCases = onCall({ maxInstances: 10 }, async request => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError('unauthenticated', 'Sign in to view attribution cases.');
+  try {
+    const [requested, received] = await Promise.all([
+      db.collection(CASES).where('requesterUid', '==', uid).limit(50).get(),
+      db.collection(CASES).where('sourceCreatorUid', '==', uid).limit(50).get(),
+    ]);
+    const unique = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+    for (const snapshot of [...requested.docs, ...received.docs]) unique.set(snapshot.id, snapshot);
+    return {
+      cases: [...unique.values()].map(snapshot => {
+        const data = snapshot.data();
+        return {
+          id: snapshot.id,
+          derivativeAssetId: data.derivativeAssetId,
+          sourceAssetId: data.sourceAssetId,
+          requesterUid: data.requesterUid,
+          sourceCreatorUid: data.sourceCreatorUid,
+          reason: data.reason,
+          status: data.status,
+          responseNote: data.responseNote || null,
+          disputeReason: data.disputeReason || null,
+          createdAt: data.createdAt?.toMillis?.() || null,
+          updatedAt: data.updatedAt?.toMillis?.() || null,
+        };
+      }),
+    };
+  } catch (error) {
+    console.error('[NEXORA Origin] Attribution cases could not be listed.', error);
+    throw new HttpsError('unavailable', 'Attribution cases are temporarily unavailable.');
+  }
+});
