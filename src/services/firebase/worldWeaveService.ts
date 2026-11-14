@@ -388,6 +388,7 @@ export interface WorldWeaveChapter {
   title: string;
   description: string;
   position: number;
+  archived?: boolean;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -428,4 +429,26 @@ export async function updateWorldWeaveChapter(weaveId: string, chapterId: string
   }
   const action = httpsCallable(functions, 'updateWorldWeaveChapter');
   await action({ weaveId, chapterId, title: cleanTitle, description: cleanDescription });
+}
+
+export async function archiveWorldWeaveChapter(weaveId: string, chapterId: string): Promise<void> {
+  requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/')
+    || !chapterId || chapterId.length > 128 || chapterId.includes('/')) {
+    throw new Error('Choose a valid WorldWeave chapter.');
+  }
+  const action = httpsCallable(functions, 'archiveWorldWeaveChapter');
+  await action({ weaveId, chapterId });
+}
+
+export async function reorderWorldWeaveChapters(weaveId: string, chapterIds: string[]): Promise<void> {
+  requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/')
+    || !Array.isArray(chapterIds) || chapterIds.length > 30
+    || chapterIds.some(id => typeof id !== 'string' || !id || id.length > 128 || id.includes('/'))
+    || new Set(chapterIds).size !== chapterIds.length) {
+    throw new Error('Refresh the chapter list and try again.');
+  }
+  const action = httpsCallable(functions, 'reorderWorldWeaveChapters');
+  await action({ weaveId, chapterIds });
 }
