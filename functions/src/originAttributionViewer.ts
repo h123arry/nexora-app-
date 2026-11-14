@@ -1,4 +1,4 @@
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { canExposeOriginSource, isOriginAccountBlocked, isOriginPublicPost, type OriginViewerAccountSettings } from './originViewerPolicy.js';
@@ -8,10 +8,8 @@ const SAFE_ID = /^[A-Za-z0-9_-]{1,128}$/;
 const MAX_PUBLIC_SOURCES = 10;
 
 /** Returns only currently public, viewer-accessible source-post identities for a public derivative. */
-export const getPublicOriginAttribution = onCall({ maxInstances: 10 }, async request => {
-  const viewerUid = request.auth?.uid;
+export async function getPublicOriginAttributionForViewer(db: Firestore, viewerUid: string, postId: unknown) {
   if (!viewerUid) throw new HttpsError('unauthenticated', 'Sign in to view NEXORA Origin attribution.');
-  const postId = request.data?.postId;
   if (typeof postId !== 'string' || !SAFE_ID.test(postId)) throw new HttpsError('invalid-argument', 'Choose a valid post.');
   try {
     const derivativePostSnap = await db.collection('posts').doc(postId).get();
@@ -75,4 +73,9 @@ export const getPublicOriginAttribution = onCall({ maxInstances: 10 }, async req
     console.error('[NEXORA Origin] Public attribution projection failed.', error);
     throw new HttpsError('unavailable', 'Origin attribution is temporarily unavailable.');
   }
+}
+
+export const getPublicOriginAttribution = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to view NEXORA Origin attribution.');
+  return getPublicOriginAttributionForViewer(db, request.auth.uid, request.data?.postId);
 });
