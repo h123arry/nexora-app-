@@ -18,6 +18,7 @@ export interface MediaUploadOptions {
   metadata?: Record<string, string>;
   onProgress?: (progress: number) => void;
   signal?: AbortSignal;
+  resolveDownloadUrl?: boolean;
 }
 
 export interface MediaUploadResult {
@@ -134,7 +135,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
           try {
             resolve({
               mediaId,
-              downloadUrl: await getDownloadURL(task.snapshot.ref),
+              downloadUrl: options.resolveDownloadUrl === false ? '' : await getDownloadURL(task.snapshot.ref),
               storagePath,
               contentType,
               size: file.size,
