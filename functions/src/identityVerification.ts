@@ -155,7 +155,7 @@ export const listIdentityVerificationApplications = onCall({ maxInstances: 10 },
 export const listIdentityImpersonationCases = onCall({ maxInstances: 10 }, async request => {
   requireIdentityReviewer(request as Request);
   const snapshot = await db.collection('identityImpersonationCases')
-    .where('status', '==', 'open')
+    .where('status', 'in', ['open', 'on_hold'])
     .limit(50)
     .get();
   const cases = await Promise.all(snapshot.docs.map(async document => {
@@ -190,10 +190,12 @@ export const reviewIdentityImpersonationCase = onCall({ maxInstances: 10 }, asyn
   const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
   const decision = String(data.decision || '');
   const reviewNote = typeof data.reviewNote === 'string' ? data.reviewNote.trim() : '';
+  const allowedDecisions = ['dismiss', 'place_on_hold', 'clear_hold', 'confirm_impersonation'];
   if (!userId || userId.length > 128 || userId.includes('/')) throw new HttpsError('invalid-argument', 'A valid account is required.');
-  if (!['dismiss', 'confirm_impersonation'].includes(decision)) throw new HttpsError('invalid-argument', 'Choose a supported case decision.');
+  if (!allowedDecisions.includes(decision)) throw new HttpsError('invalid-argument', 'Choose a supported case decision.');
   if (reviewNote.length < 5 || reviewNote.length > 1000) throw new HttpsError('invalid-argument', 'A review note between 5 and 1000 characters is required.');
-  const reviewerId = decision === 'confirm_impersonation'
+  const requiresSeniorApproval = decision !== 'dismiss';
+  const reviewerId = requiresSeniorApproval
     ? requireIdentityApprover(request as Request)
     : requireIdentityReviewer(request as Request);
   if (reviewerId === userId) throw new HttpsError('permission-denied', 'Reviewers cannot decide cases involving their own account.');
@@ -205,32 +207,48 @@ export const reviewIdentityImpersonationCase = onCall({ maxInstances: 10 }, asyn
     const caseSnapshot = await transaction.get(caseRef);
     const verifiedSnapshot = await transaction.get(publicRef);
     const applicationSnapshot = await transaction.get(applicationRef);
-    if (!caseSnapshot.exists || caseSnapshot.get('status') !== 'open') {
-      throw new HttpsError('failed-precondition', 'This impersonation case is no longer open.');
-    }
+    if (!caseSnapshot.exists) throw new HttpsError('not-found', 'Impersonation case not found.');
+    const currentCaseStatus = String(caseSnapshot.get('status') || '');
     const now = FieldValue.serverTimestamp();
-    transaction.update(caseRef, {
-      status: decision === 'dismiss' ? 'dismissed' : 'confirmed',
-      decision,
-      reviewerId,
-      reviewNote,
-      reviewedAt: now,
-      updatedAt: now,
-    });
-    if (decision === 'confirm_impersonation' && verifiedSnapshot.exists) {
-      transaction.delete(publicRef);
-      if (applicationSnapshot.exists) transaction.update(applicationRef, {
-        status: 'revoked',
-        reviewNote,
-        reviewerId,
-        reviewedAt: now,
-        updatedAt: now,
-      });
+
+    if (decision === 'dismiss') {
+      if (currentCaseStatus !== 'open') throw new HttpsError('failed-precondition', 'Only an open case can be dismissed.');
+      transaction.update(caseRef, { status: 'dismissed', decision, reviewerId, reviewNote, reviewedAt: now, updatedAt: now });
+    } else if (decision === 'place_on_hold') {
+      if (currentCaseStatus !== 'open') throw new HttpsError('failed-precondition', 'Only an open case can be placed on hold.');
+      transaction.update(caseRef, { status: 'on_hold', decision, reviewerId, reviewNote, heldAt: now, updatedAt: now });
+      if (verifiedSnapshot.exists && verifiedSnapshot.get('status') === 'verified') {
+        transaction.update(publicRef, { status: 'under_review', updatedAt: now });
+      }
+      if (applicationSnapshot.exists && applicationSnapshot.get('status') === 'approved') {
+        transaction.update(applicationRef, { status: 'under_review', reviewNote, reviewerId, reviewedAt: now, updatedAt: now });
+      }
+    } else if (decision === 'clear_hold') {
+      if (currentCaseStatus !== 'on_hold') throw new HttpsError('failed-precondition', 'This case does not have an active identity hold.');
+      transaction.update(caseRef, { status: 'cleared', decision, reviewerId, reviewNote, reviewedAt: now, updatedAt: now });
+      if (verifiedSnapshot.exists && verifiedSnapshot.get('status') === 'under_review') {
+        transaction.update(publicRef, { status: 'verified', updatedAt: now });
+      }
+      if (applicationSnapshot.exists && applicationSnapshot.get('status') === 'under_review') {
+        transaction.update(applicationRef, { status: 'approved', reviewNote, reviewerId, reviewedAt: now, updatedAt: now });
+      }
+    } else {
+      if (!['open', 'on_hold'].includes(currentCaseStatus)) {
+        throw new HttpsError('failed-precondition', 'This impersonation case is no longer actionable.');
+      }
+      transaction.update(caseRef, { status: 'confirmed', decision, reviewerId, reviewNote, reviewedAt: now, updatedAt: now });
+      if (verifiedSnapshot.exists) transaction.delete(publicRef);
+      if (applicationSnapshot.exists && ['approved', 'under_review'].includes(String(applicationSnapshot.get('status')))) {
+        transaction.update(applicationRef, { status: 'revoked', reviewNote, reviewerId, reviewedAt: now, updatedAt: now });
+      }
     }
     transaction.create(auditRef, {
       userId,
       reviewerId,
-      event: decision === 'dismiss' ? 'impersonation_case_dismissed' : 'impersonation_confirmed',
+      event: decision === 'dismiss' ? 'impersonation_case_dismissed'
+        : decision === 'place_on_hold' ? 'identity_review_hold_placed'
+        : decision === 'clear_hold' ? 'identity_review_hold_cleared'
+        : 'impersonation_confirmed',
       reviewNote,
       createdAt: now,
     });
