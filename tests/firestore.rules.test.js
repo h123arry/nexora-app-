@@ -239,6 +239,37 @@ const publicProfile = (uid) => ({
     }));
   });
 
+  it('protects chapter records and validates moment chapter assignments', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'worldWeaves', 'chapter-rules-weave'), {
+        id: 'chapter-rules-weave', ownerId: 'alice', ownerName: 'Alice', title: 'Chapter story',
+        description: '', visibility: 'private', participantIds: ['alice', 'bob'],
+        memberCount: 2, momentCount: 0, createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
+      await setDoc(doc(adminDb, 'worldWeaves', 'chapter-rules-weave', 'chapters', 'chapter-1'), {
+        id: 'chapter-1', weaveId: 'chapter-rules-weave', title: 'Before', description: '', position: 0,
+        createdBy: 'alice', createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
+    });
+    const chapterRef = doc(dbFor('bob'), 'worldWeaves', 'chapter-rules-weave', 'chapters', 'chapter-1');
+    await assertSucceeds(getDoc(chapterRef));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'worldWeaves', 'chapter-rules-weave', 'chapters', 'chapter-1')));
+    await assertFails(getDoc(doc(dbFor('charlie'), 'worldWeaves', 'chapter-rules-weave', 'chapters', 'chapter-1')));
+    await assertFails(updateDoc(chapterRef, { title: 'Forged title' }));
+
+    const validMoment = doc(dbFor('bob'), 'worldWeaves', 'chapter-rules-weave', 'moments', 'valid-chapter-moment');
+    await assertSucceeds(setDoc(validMoment, {
+      weaveId: 'chapter-rules-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
+      authorAvatar: '', text: 'A moment in chapter one.', mediaType: 'text', chapterId: 'chapter-1',
+      createdAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'worldWeaves', 'chapter-rules-weave', 'moments', 'invalid-chapter-moment'), {
+      weaveId: 'chapter-rules-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
+      authorAvatar: '', text: 'This chapter does not exist.', mediaType: 'text', chapterId: 'missing-chapter',
+      createdAt: serverTimestamp()
+    }));
+  });
+
   it('caps WorldWeave membership at 500 contributors for public joins and accepted invitations', async () => {
     const members = ['alice', ...Array.from({ length: 499 }, (_, index) => 'member-' + index)];
     await seed(async adminDb => {

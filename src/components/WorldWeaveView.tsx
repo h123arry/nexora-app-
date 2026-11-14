@@ -8,7 +8,8 @@ import {
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
   MAX_WORLDWEAVE_MEMBERS, listWorldWeaveContributors, leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership, subscribeToWorldWeaveActivity,
   toggleWorldWeaveMomentPin, fetchWorldWeavePinnedMoments, subscribeToWorldWeaveMomentReplies, addWorldWeaveMomentReply, deleteWorldWeaveMomentReply,
-  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, type WorldWeaveReply, setWorldWeaveMomentReaction,
+  subscribeToWorldWeaveChapters, createWorldWeaveChapter, updateWorldWeaveChapter,
+  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, type WorldWeaveReply, type WorldWeaveChapter, setWorldWeaveMomentReaction,
 } from '../services/firebase/worldWeaveService';
 
 interface Props { currentUser: User; }
@@ -31,6 +32,14 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [expandedReplyMomentId, setExpandedReplyMomentId] = useState<string | null>(null);
   const [momentReplies, setMomentReplies] = useState<WorldWeaveReply[]>([]);
   const [replyDraft, setReplyDraft] = useState('');
+  const [chapters, setChapters] = useState<WorldWeaveChapter[]>([]);
+  const [selectedChapterId, setSelectedChapterId] = useState('');
+  const [chapterFilterId, setChapterFilterId] = useState('');
+  const [chapterTitle, setChapterTitle] = useState('');
+  const [chapterDescription, setChapterDescription] = useState('');
+  const [editingChapterId, setEditingChapterId] = useState('');
+  const [editingChapterTitle, setEditingChapterTitle] = useState('');
+  const [editingChapterDescription, setEditingChapterDescription] = useState('');
   const [discoveryQuery, setDiscoveryQuery] = useState('');
   const [selected, setSelected] = useState<WorldWeave | null>(null);
   const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
@@ -70,6 +79,20 @@ export default function WorldWeaveView({ currentUser }: Props) {
     if (!selected || selected.ownerId !== currentUser.id) { setSentInvitations([]); return; }
     return subscribeToWorldWeaveInvites(selected.id, setSentInvitations, err => setError(err.message));
   }, [selected?.id, selected?.ownerId, currentUser.id]);
+
+  useEffect(() => {
+    if (!selected) {
+      setChapters([]);
+      setSelectedChapterId('');
+      setChapterFilterId('');
+      return;
+    }
+    return subscribeToWorldWeaveChapters(selected.id, items => {
+      setChapters(items);
+      setSelectedChapterId(current => items.some(item => item.id === current) ? current : '');
+      setChapterFilterId(current => current && current !== '__none__' && !items.some(item => item.id === current) ? '' : current);
+    }, err => setError(err.message));
+  }, [selected?.id]);
 
   useEffect(() => {
     let active = true;
@@ -146,6 +169,12 @@ export default function WorldWeaveView({ currentUser }: Props) {
       return bTime - aTime;
     });
   }, [myWeaves, publicWeaves]);
+
+  const filteredMoments = useMemo(() => {
+    if (chapterFilterId === '__none__') return moments.filter(moment => !moment.chapterId);
+    if (chapterFilterId) return moments.filter(moment => moment.chapterId === chapterFilterId);
+    return moments;
+  }, [moments, chapterFilterId]);
 
   const visibleWeaves = useMemo(() => {
     const term = discoveryQuery.trim().toLowerCase();
@@ -227,6 +256,34 @@ export default function WorldWeaveView({ currentUser }: Props) {
     finally { setBusy(false); }
   };
 
+  const handleCreateChapter = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selected || selected.ownerId !== currentUser.id) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const chapter = await createWorldWeaveChapter(selected.id, chapterTitle, chapterDescription);
+      setChapters(current => [...current, chapter].sort((a, b) => a.position - b.position));
+      setChapterTitle(''); setChapterDescription('');
+      setNotice('Chapter created. You can assign new moments to it.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not create this chapter.'); }
+    finally { setBusy(false); }
+  };
+
+  const handleUpdateChapter = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selected || selected.ownerId !== currentUser.id || !editingChapterId) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await updateWorldWeaveChapter(selected.id, editingChapterId, editingChapterTitle, editingChapterDescription);
+      setChapters(current => current.map(chapter => chapter.id === editingChapterId
+        ? { ...chapter, title: editingChapterTitle.trim(), description: editingChapterDescription.trim() }
+        : chapter));
+      setEditingChapterId('');
+      setNotice('Chapter details updated.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not update this chapter.'); }
+    finally { setBusy(false); }
+  };
+
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');
     try {
@@ -257,8 +314,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
     setBusy(true); setError(''); setNotice(''); setProgress(0);
     const author = { id: currentUser.id, name: currentUser.name, username: currentUser.username, avatar: currentUser.avatar };
     try {
-      if (momentFile) await addWorldWeaveMediaMoment(selected.id, author, momentFile, momentText, setProgress);
-      else await addWorldWeaveTextMoment(selected.id, author, momentText);
+      if (momentFile) await addWorldWeaveMediaMoment(selected.id, author, momentFile, momentText, setProgress, selectedChapterId || undefined);
+      else await addWorldWeaveTextMoment(selected.id, author, momentText, selectedChapterId || undefined);
       setMomentText(''); setMomentFile(null); setNotice('Moment added to the shared timeline.');
       const input = document.getElementById('worldweave-media') as HTMLInputElement | null;
       if (input) input.value = '';
@@ -368,6 +425,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
         {isMember && <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           <form onSubmit={handleMoment} className="rounded-3xl border border-white/10 bg-[#0b1221] p-4 md:p-5">
             <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white"><Plus size={16} className="text-violet-300"/> Add your perspective</div>
+            {chapters.length > 0 && <select value={selectedChapterId} onChange={event => setSelectedChapterId(event.target.value)} className="mb-3 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white"><option value="">Add to the main story (no chapter)</option>{chapters.map(chapter => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}</select>}
             <textarea value={momentText} onChange={e => setMomentText(e.target.value)} maxLength={2000} rows={3} placeholder="What happened from where you stood?" className="w-full resize-y rounded-2xl border border-white/10 bg-[#070d19] p-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60"/>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <label htmlFor="worldweave-media" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-300 hover:border-violet-400/50"><Camera size={15}/> Add photo, video or voice note<input id="worldweave-media" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/ogg,audio/aac" className="hidden" onChange={e => setMomentFile(e.target.files?.[0] || null)}/></label>
@@ -379,6 +437,21 @@ export default function WorldWeaveView({ currentUser }: Props) {
           </form>
           {selected.ownerId === currentUser.id && (
           <div className="space-y-3">
+            <form onSubmit={handleCreateChapter} className="rounded-3xl border border-violet-400/20 bg-[#0b1221] p-4">
+              <div className="mb-2 text-sm font-bold text-white">Organize the story</div>
+              <p className="mb-3 text-xs leading-5 text-slate-400">Create chapters such as Before, During, After, and Reflections. Up to 30 chapters.</p>
+              <input value={chapterTitle} onChange={event => setChapterTitle(event.target.value)} minLength={2} maxLength={60} placeholder="Chapter title" className="w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-400/50"/>
+              <textarea value={chapterDescription} onChange={event => setChapterDescription(event.target.value)} maxLength={250} rows={2} placeholder="What belongs in this chapter?" className="mt-2 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-400/50"/>
+              <button disabled={busy || chapterTitle.trim().length < 2 || chapters.length >= 30} className="mt-2 w-full rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-40">Create chapter</button>
+              {chapters.length > 0 && <div className="mt-3 space-y-2">{chapters.map(chapter => editingChapterId === chapter.id ? <form key={chapter.id} onSubmit={handleUpdateChapter} className="rounded-xl border border-violet-400/20 bg-[#070d19] p-2">
+                <input value={editingChapterTitle} onChange={event => setEditingChapterTitle(event.target.value)} minLength={2} maxLength={60} className="w-full rounded-lg border border-white/10 bg-[#0b1221] px-2 py-2 text-xs text-white"/>
+                <textarea value={editingChapterDescription} onChange={event => setEditingChapterDescription(event.target.value)} maxLength={250} rows={2} className="mt-2 w-full rounded-lg border border-white/10 bg-[#0b1221] px-2 py-2 text-xs text-white"/>
+                <div className="mt-2 flex gap-2"><button disabled={busy || editingChapterTitle.trim().length < 2} className="rounded-lg bg-violet-600 px-3 py-1.5 text-[10px] font-bold text-white disabled:opacity-40">Save</button><button type="button" onClick={() => setEditingChapterId('')} className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] text-slate-300">Cancel</button></div>
+              </form> : <div key={chapter.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 px-3 py-2">
+                <div><p className="text-xs font-semibold text-violet-100">{chapter.position + 1}. {chapter.title}</p>{chapter.description && <p className="mt-1 text-[10px] text-slate-500">{chapter.description}</p>}</div>
+                <button type="button" onClick={() => { setEditingChapterId(chapter.id); setEditingChapterTitle(chapter.title); setEditingChapterDescription(chapter.description); }} className="shrink-0 rounded-lg border border-white/10 px-2 py-1.5 text-[10px] text-slate-300 hover:border-violet-400/30">Rename</button>
+              </div>)}</div>}
+            </form>
             <form onSubmit={handleInvite} className="h-fit rounded-3xl border border-white/10 bg-[#0b1221] p-4">
               <div className="mb-3 text-sm font-bold text-white">Bring someone in</div>
               <p className="mb-3 text-xs leading-5 text-slate-400">Invite another NEXORA member to add their own perspective.</p>
@@ -431,6 +504,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
                 : event.action === 'member_left' ? actor + ' left the WorldWeave'
                 : event.action === 'moment_pinned' ? actor + ' pinned a moment to the story'
                 : event.action === 'moment_unpinned' ? actor + ' unpinned a moment from the story'
+                : event.action === 'chapter_created' ? actor + ' created chapter ' + String(event.chapterTitle || '')
+                : event.action === 'chapter_updated' ? actor + ' updated chapter ' + String(event.chapterTitle || '')
                 : 'A membership update occurred';
               return <div key={event.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 px-3 py-2">
                 <span className="text-xs text-slate-300">{description}</span>
@@ -440,13 +515,13 @@ export default function WorldWeaveView({ currentUser }: Props) {
           </div>}
         </section>}
         <section className="space-y-4">
-          <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-white">The shared timeline</h2><span className="text-xs text-slate-500">Latest 100 · chronological</span></div>
+          <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold text-white">The shared timeline</h2><p className="mt-1 text-[10px] text-slate-500">{chapters.length} chapters · latest 100 moments</p></div><select value={chapterFilterId} onChange={event => setChapterFilterId(event.target.value)} className="rounded-xl border border-white/10 bg-[#0b1221] px-3 py-2 text-xs text-white"><option value="">All chapters</option><option value="__none__">Unchaptered moments</option>{chapters.map(chapter => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}</select></div>
           {hasMoreMoments && <div className="flex justify-center"><button type="button" disabled={loadingOlder} onClick={() => void handleLoadOlderMoments()} className="rounded-xl border border-violet-400/20 bg-violet-500/[.06] px-4 py-2.5 text-xs font-semibold text-violet-100 disabled:opacity-40">{loadingOlder ? 'Loading older moments…' : 'Load older moments'}</button></div>}
-          {moments.length === 0 ? <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-400">No moments yet. The first perspective starts the story.</div> :
+          {filteredMoments.length === 0 ? <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-400">{moments.length === 0 ? 'No moments yet. The first perspective starts the story.' : 'No moments in this chapter yet.'}</div> :
             <div className="relative space-y-4 before:absolute before:bottom-4 before:left-[19px] before:top-4 before:w-px before:bg-violet-400/20">
-              {moments.map(moment => <motion.article key={moment.id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="relative ml-1 rounded-3xl border border-white/10 bg-[#0b1221] p-4 pl-12 md:p-5 md:pl-14">
+              {filteredMoments.map(moment => <motion.article key={moment.id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="relative ml-1 rounded-3xl border border-white/10 bg-[#0b1221] p-4 pl-12 md:p-5 md:pl-14">
                 <span className="absolute left-[12px] top-6 h-3.5 w-3.5 rounded-full border-2 border-[#0b1221] bg-violet-400 shadow-[0_0_14px_rgba(139,92,246,.7)]"/>
-                <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><img src={moment.authorAvatar || '/logo.svg'} alt="" className="h-8 w-8 rounded-full object-cover"/><div className="min-w-0"><p className="truncate text-xs font-bold text-white">{moment.authorName}</p><p className="text-[10px] text-slate-500">@{moment.authorUsername} · {timeLabel(moment.createdAt)}</p></div></div>{(moment.authorId === currentUser.id || selected.ownerId === currentUser.id) && <button type="button" disabled={busy} onClick={() => void handleDeleteMoment(moment)} aria-label="Remove moment" title="Remove moment" className="rounded-lg p-2 text-slate-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"><Trash2 size={14}/></button>}</div>
+                <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><img src={moment.authorAvatar || '/logo.svg'} alt="" className="h-8 w-8 rounded-full object-cover"/><div className="min-w-0"><p className="truncate text-xs font-bold text-white">{moment.authorName}</p><p className="text-[10px] text-slate-500">@{moment.authorUsername} · {timeLabel(moment.createdAt)}</p>{moment.chapterId && chapters.find(chapter => chapter.id === moment.chapterId) && <span className="mt-1 inline-flex rounded-full border border-violet-400/20 bg-violet-500/10 px-2 py-0.5 text-[9px] font-semibold text-violet-200">{chapters.find(chapter => chapter.id === moment.chapterId)?.title}</span>}</div></div>{(moment.authorId === currentUser.id || selected.ownerId === currentUser.id) && <button type="button" disabled={busy} onClick={() => void handleDeleteMoment(moment)} aria-label="Remove moment" title="Remove moment" className="rounded-lg p-2 text-slate-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"><Trash2 size={14}/></button>}</div>
                 {moment.text && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-200">{moment.text}</p>}
                 {moment.mediaType === 'image' && moment.mediaUrl && <img src={moment.mediaUrl} alt="WorldWeave contribution" loading="lazy" className="mt-3 max-h-[520px] w-full rounded-2xl object-cover"/>}
                 {moment.mediaType === 'video' && moment.mediaUrl && <video src={moment.mediaUrl} controls playsInline preload="metadata" className="mt-3 max-h-[520px] w-full rounded-2xl bg-black"/>}

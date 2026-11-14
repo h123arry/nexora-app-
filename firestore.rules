@@ -1291,6 +1291,14 @@ service cloud.firestore {
       );
       allow delete: if weaveOwner();
 
+      match /chapters/{chapterId} {
+        allow get, list: if signedIn()
+          && (get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('visibility', 'private') == 'public'
+            || request.auth.uid in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', [])
+            || request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', ''));
+        allow create, update, delete: if false;
+      }
+
       match /activity/{eventId} {
         // Membership activity is visible only to current contributors and the owner.
         // Events are created exclusively by trusted Functions; clients cannot forge history.
@@ -1314,7 +1322,7 @@ service cloud.firestore {
         allow create: if canContribute()
           && request.resource.data.keys().hasOnly([
             'weaveId', 'authorId', 'authorName', 'authorUsername', 'authorAvatar',
-            'text', 'mediaType', 'mediaUrl', 'storagePath', 'createdAt'
+            'text', 'mediaType', 'mediaUrl', 'storagePath', 'createdAt', 'chapterId'
           ])
           && request.resource.data.weaveId == weaveId
           && request.resource.data.authorId == request.auth.uid
@@ -1326,6 +1334,9 @@ service cloud.firestore {
           && request.resource.data.authorAvatar.size() <= 2048
           && request.resource.data.text is string
           && request.resource.data.text.size() <= 2000
+          && (!request.resource.data.keys().hasAny(['chapterId'])
+            || (request.resource.data.chapterId is string
+              && exists(/databases/$(database)/documents/worldWeaves/$(weaveId)/chapters/$(request.resource.data.chapterId))))
           && ((request.resource.data.mediaType == 'text'
               && !request.resource.data.keys().hasAny(['mediaUrl', 'storagePath']))
             || (request.resource.data.mediaType in ['image', 'video', 'audio']

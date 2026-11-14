@@ -22,6 +22,7 @@ export interface WorldWeaveMoment {
   mediaUrl?: string; storagePath?: string; createdAt?: unknown;
   reactionCounts?: Partial<Record<WorldWeaveReaction, number>>;
   replyCount?: number;
+  chapterId?: string;
 }
 function requireUser() {
   const user = auth.currentUser;
@@ -162,7 +163,7 @@ export async function declineWorldWeaveInvite(weaveId: string): Promise<void> {
   const user = requireUser();
   await deleteDoc(doc(db, 'worldWeaves', weaveId, 'invites', user.uid));
 }
-export async function addWorldWeaveTextMoment(weaveId: string, author: { id: string; name: string; username: string; avatar: string }, text: string): Promise<void> {
+export async function addWorldWeaveTextMoment(weaveId: string, author: { id: string; name: string; username: string; avatar: string }, text: string, chapterId?: string): Promise<void> {
   const user = requireUser(); const cleanText = text.trim();
   if (user.uid !== author.id) throw new Error('The signed-in account must own this contribution.');
   if (!cleanText || cleanText.length > 2000) throw new Error('A moment must contain 1 to 2,000 characters.');
@@ -170,12 +171,12 @@ export async function addWorldWeaveTextMoment(weaveId: string, author: { id: str
   const batch = writeBatch(db);
   batch.set(momentRef, { weaveId, authorId: user.uid,
     authorName: author.name.slice(0, 80), authorUsername: author.username.slice(0, 40), authorAvatar: author.avatar || '',
-    text: cleanText, mediaType: 'text', createdAt: serverTimestamp() });
+    text: cleanText, mediaType: 'text', ...(chapterId ? { chapterId } : {}), createdAt: serverTimestamp() });
   batch.update(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp(), lastMomentId: momentRef.id });
   await batch.commit();
 }
 export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: string; name: string; username: string; avatar: string },
-  file: File, text: string, onProgress?: (progress: number) => void): Promise<void> {
+  file: File, text: string, onProgress?: (progress: number) => void, chapterId?: string): Promise<void> {
   const user = requireUser();
   if (user.uid !== author.id) throw new Error('The signed-in account must own this contribution.');
   if (!file || file.size <= 0) throw new Error('Choose a photo or video first.');
@@ -189,7 +190,7 @@ export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: st
     const batch = writeBatch(db);
     batch.set(momentRef, { weaveId, authorId: user.uid, authorName: author.name.slice(0, 80),
       authorUsername: author.username.slice(0, 40), authorAvatar: author.avatar || '', text: text.trim(),
-      mediaType, mediaUrl: uploaded.downloadUrl, storagePath: uploaded.storagePath, createdAt: serverTimestamp() });
+      mediaType, mediaUrl: uploaded.downloadUrl, storagePath: uploaded.storagePath, ...(chapterId ? { chapterId } : {}), createdAt: serverTimestamp() });
     batch.update(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp(), lastMomentId: momentRef.id });
     await batch.commit();
   } catch (error) {
@@ -275,6 +276,7 @@ export interface WorldWeaveActivity {
   actorUid: string;
   targetUid?: string;
   action: 'member_left' | 'member_removed' | 'ownership_transferred' | string;
+  chapterTitle?: string;
   createdAt?: unknown;
 }
 
@@ -378,4 +380,52 @@ export async function deleteWorldWeaveMomentReply(weaveId: string, momentId: str
   }
   const action = httpsCallable(functions, 'deleteWorldWeaveMomentReply');
   await action({ weaveId, momentId, replyId });
+}
+
+export interface WorldWeaveChapter {
+  id: string;
+  weaveId: string;
+  title: string;
+  description: string;
+  position: number;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+
+export function subscribeToWorldWeaveChapters(
+  weaveId: string,
+  onItems: (items: WorldWeaveChapter[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  requireUser();
+  return onSnapshot(
+    query(collection(db, 'worldWeaves', weaveId, 'chapters'), orderBy('position', 'asc'), limit(30)),
+    snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveChapter))),
+    onError,
+  );
+}
+
+export async function createWorldWeaveChapter(weaveId: string, title: string, description: string): Promise<WorldWeaveChapter> {
+  requireUser();
+  const cleanTitle = title.trim();
+  const cleanDescription = description.trim();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/') || cleanTitle.length < 2 || cleanTitle.length > 60 || cleanDescription.length > 250) {
+    throw new Error('Enter a chapter title and a description of up to 250 characters.');
+  }
+  const action = httpsCallable(functions, 'createWorldWeaveChapter');
+  const result = await action({ weaveId, title: cleanTitle, description: cleanDescription });
+  const data = result.data as { chapterId: string; title: string; description: string; position: number };
+  return { id: data.chapterId, weaveId, title: data.title, description: data.description, position: data.position };
+}
+
+export async function updateWorldWeaveChapter(weaveId: string, chapterId: string, title: string, description: string): Promise<void> {
+  requireUser();
+  const cleanTitle = title.trim();
+  const cleanDescription = description.trim();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/') || !chapterId || chapterId.length > 128 || chapterId.includes('/')
+    || cleanTitle.length < 2 || cleanTitle.length > 60 || cleanDescription.length > 250) {
+    throw new Error('Enter a valid chapter title and description.');
+  }
+  const action = httpsCallable(functions, 'updateWorldWeaveChapter');
+  await action({ weaveId, chapterId, title: cleanTitle, description: cleanDescription });
 }
