@@ -37,6 +37,8 @@ jobs:
           java-version: '21'
           verify-signature: true
 
+      - name: Resolve updated root dependency lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Install web dependencies
         run: npm ci --no-audit --no-fund
 
@@ -123,3 +125,12 @@ jobs:
       # independent CI checks so missing owner-verified metadata does not hide them.
       - name: Validate deployment metadata
         run: npm run validate:deployment
+
+      - name: Upload resolved root dependency lockfile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexora-root-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 1
