@@ -413,7 +413,8 @@ export async function createWorldWeaveChapter(weaveId: string, title: string, de
   }
   const action = httpsCallable(functions, 'createWorldWeaveChapter');
   const result = await action({ weaveId, title: cleanTitle, description: cleanDescription });
-  return result.data as WorldWeaveChapter;
+  const data = result.data as { chapterId: string; title: string; description: string; position: number };
+  return { id: data.chapterId, weaveId, title: data.title, description: data.description, position: data.position };
 }
 
 export async function updateWorldWeaveChapter(weaveId: string, chapterId: string, title: string, description: string): Promise<void> {
