@@ -79,9 +79,14 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build
 
+      - name: Rebase generated files onto the latest Objective 1 branch
+        run: |
+          git stash push --include-untracked -m "objective-1 generated native projects"
+          git fetch origin release/objective-1-capacitor-staging-foundation
+          git rebase origin/release/objective-1-capacitor-staging-foundation
+          git stash pop
+
       - name: Commit generated native projects and lockfile
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           rm -f .github/workflows/objective-1-native-bootstrap.yml
           git config user.name "github-actions[bot]"
@@ -89,8 +94,8 @@ jobs:
           git add package-lock.json android ios
           git add -u .github/workflows/objective-1-native-bootstrap.yml
           if git diff --cached --quiet; then
-            echo "No generated native changes to commit."
-            exit 1
+            echo "Native projects and lockfile are already committed."
+            exit 0
           fi
           git commit -m "Generate Capacitor Android and iOS projects"
           git push origin HEAD:release/objective-1-capacitor-staging-foundation
