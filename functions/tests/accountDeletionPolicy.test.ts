@@ -7,6 +7,22 @@ import { accountStoragePrefixes, deleteUserOwnedDocuments } from '../src/account
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-engagement' }, 'account-deletion-policy-tests');
 const db = getFirestore(app);
 
+async function cleanupIdentityFixtures(): Promise<void> {
+  for (const userId of ['identity-delete-test', 'identity-delete-other']) {
+    const signal = db.collection('identityImpersonationSignals').doc(userId);
+    const reporters = await signal.collection('reporters').get();
+    for (const reporter of reporters.docs) await reporter.ref.delete();
+    await signal.delete().catch(() => undefined);
+    for (const collection of ['identityVerificationApplications', 'identityVerificationPrivateSignals', 'verifiedIdentities', 'identityImpersonationCases']) {
+      await db.collection(collection).doc(userId).delete().catch(() => undefined);
+    }
+  }
+  const audit = await db.collection('identityVerificationAuditEvents').where('userId', '==', 'identity-delete-test').get();
+  for (const row of audit.docs) await row.ref.delete();
+  const reporterRows = await db.collectionGroup('reporters').where('reporterId', '==', 'identity-delete-test').get();
+  for (const row of reporterRows.docs) await row.ref.delete();
+}
+
 async function cleanupOriginFixtures(): Promise<void> {
   for (const userId of ['account-delete-test', 'account-delete-other']) {
     const origins = await db.collection('mediaOrigins').where('ownerUid', '==', userId).get();
@@ -21,6 +37,7 @@ async function cleanupOriginFixtures(): Promise<void> {
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Account deletion policy tests require the Firestore Emulator.');
   await cleanupOriginFixtures();
+  await cleanupIdentityFixtures();
   for (const collection of ['mediaAssets', 'academyProgress', 'academyLessonNotes', 'posts']) {
     const rows = await db.collection(collection).where('ownerId', '==', 'account-delete-test').get();
     for (const row of rows.docs) await row.ref.delete();
@@ -30,6 +47,7 @@ before(async () => {
 });
 after(async () => {
   await cleanupOriginFixtures();
+  await cleanupIdentityFixtures();
   for (const collection of ['mediaAssets', 'academyProgress', 'academyLessonNotes', 'posts']) {
     for (const userId of ['account-delete-test', 'account-delete-other']) {
       const rows = await db.collection(collection).where('ownerId', '==', userId).get();
@@ -66,6 +84,52 @@ describe('account deletion data and storage scope', () => {
     assert.equal((await db.collection('academyProgress').doc('keep-progress').get()).exists, true);
     assert.equal((await db.collection('mediaOrigins').doc('keep-origin').get()).exists, true);
     assert.equal(await deleteUserOwnedDocuments(db, 'account-delete-test'), 0);
+  });
+
+  it('removes private identity evidence and reporter signals while redacting, not deleting, audit history', async () => {
+    await db.collection('identityVerificationApplications').doc('identity-delete-test').set({
+      userId: 'identity-delete-test', status: 'pending_review', evidenceUrls: ['https://example.test/private']
+    });
+    await db.collection('identityVerificationPrivateSignals').doc('identity-delete-test').set({
+      userId: 'identity-delete-test', evidenceUrlHashes: ['private-hash']
+    });
+    await db.collection('verifiedIdentities').doc('identity-delete-test').set({
+      userId: 'identity-delete-test', status: 'verified', displayName: 'Private Identity'
+    });
+    await db.collection('identityImpersonationCases').doc('identity-delete-test').set({
+      userId: 'identity-delete-test', status: 'open'
+    });
+    await db.collection('identityImpersonationSignals').doc('identity-delete-test')
+      .collection('reporters').doc('reporter-hash').set({
+        reporterId: 'identity-delete-other', reportId: 'report-target'
+      });
+    await db.collection('identityImpersonationSignals').doc('identity-delete-other')
+      .collection('reporters').doc('deleted-reporter-hash').set({
+        reporterId: 'identity-delete-test', reportId: 'report-reporter'
+      });
+    await db.collection('identityVerificationAuditEvents').doc('identity-delete-audit').set({
+      userId: 'identity-delete-test', reviewerId: 'identity-delete-test', actorId: 'identity-delete-test',
+      reviewNote: 'private reviewer note', event: 'identity_reviewed'
+    });
+    await db.collection('identityVerificationApplications').doc('identity-delete-other').set({
+      userId: 'identity-delete-other', status: 'pending_review'
+    });
+
+    await deleteUserOwnedDocuments(db, 'identity-delete-test');
+
+    for (const collection of ['identityVerificationApplications', 'identityVerificationPrivateSignals', 'verifiedIdentities', 'identityImpersonationCases']) {
+      assert.equal((await db.collection(collection).doc('identity-delete-test').get()).exists, false);
+    }
+    assert.equal((await db.collection('identityImpersonationSignals').doc('identity-delete-test').collection('reporters').get()).size, 0);
+    assert.equal((await db.collection('identityImpersonationSignals').doc('identity-delete-other').collection('reporters').get()).size, 0);
+    const audit = await db.collection('identityVerificationAuditEvents').doc('identity-delete-audit').get();
+    assert.equal(audit.exists, true);
+    assert.equal(audit.get('accountDeleted'), true);
+    assert.equal(audit.get('reviewNote'), undefined);
+    assert.equal(audit.get('userId'), undefined);
+    assert.equal(audit.get('reviewerId'), undefined);
+    assert.equal(audit.get('actorId'), undefined);
+    assert.equal((await db.collection('identityVerificationApplications').doc('identity-delete-other').get()).exists, true);
   });
 
   it('includes processed media renditions in the account storage deletion scope', () => {
