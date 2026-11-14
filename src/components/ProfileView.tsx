@@ -2872,7 +2872,7 @@ export default function ProfileView({
                         <img src={item.avatar} alt={item.name} className="w-9 h-9 rounded-xl object-cover" />
                         <div>
                           <p className="text-xs font-bold text-white flex items-center gap-1">
-                            {item.name} {item.isVerified && <PurpleVerifiedBadge className="w-3.5 h-3.5" />}
+                            {item.name}
                           </p>
                           <p className="text-[10px] text-zinc-500 font-mono">@{item.username}</p>
                         </div>
