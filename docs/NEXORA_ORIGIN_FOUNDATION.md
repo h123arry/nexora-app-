@@ -149,9 +149,10 @@ This is an initial upload-provenance foundation only. Remix lineage, creator dec
 - Native O4 integration coverage now includes an upstream CAI-signed fixture that validates as well-formed but untrusted, an ordinary image with no credential, and a tampered-byte test that requires the SDK to report an invalid asset binding. The owner-only attribution preview now exposes the bounded credential state and allow-listed validation codes with an explicit explanation that C2PA does not prove truth or rights ownership. Remaining O4 validation: add a trusted fixture anchored in the approved production trust list, an invalid-signature fixture with a deterministic expected state, malformed-manifest and unsupported-format fixtures, and a post-transcode binding assertion; configure and review the production trust-anchor policy before surfacing a verified badge. No signing or credential-minting key has been introduced.
 
 ### O5 — Creator insights and fair recognition
-- Expose measured lineage events in creator analytics with sample sizes and metric definitions.
-- Detect suspicious self-remix loops, copied chains, and reward farming.
-- Keep all financial rewards outside Origin until separately approved and audited.
+- Added an owner-authenticated creator-insights callable and a Creator Dashboard panel for recorded remix activity.
+- The first increment reports attributed source uses, distinct remixers, remixes created by the account, self-remix uses, deep lineage uses (depth 6+), and repeated source reuse patterns.
+- Metrics are explicitly scoped to the latest 500 platform remix events and display the sample size/cap; they are not lifetime totals. The query returns aggregates only and does not expose other creators' identities.
+- Repeated-use and deep-lineage patterns are review signals, not findings of copying, fraud, or rights violations. No financial rewards or ranking boosts are calculated from these metrics.
 
 ### O6 — Cross-feature integration
 - Integrate supported Create, Lensverse, Studio, posts, Giftverse media, and Discovery surfaces.

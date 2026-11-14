@@ -13,11 +13,7 @@ export const MAX_REMIX_PARENTS = 5;
 export const MAX_LINEAGE_DEPTH = 8;
 export const MAX_LINEAGE_ANCESTORS = 40;
 
-/**
- * Cross-account remix remains closed until the server can prove both-direction
- * block state, accepted follower access for private creators, and source-post
- * visibility/deletion state. Creator opt-in alone is not sufficient authority.
- */
+/** Validates lineage graph shape only; callers must separately enforce authoritative source access. */
 export function assertSameAccountRemixSources(input: { derivativeOwnerUid: string; sourceOwnerUids: string[] }): void {
   if (!input.derivativeOwnerUid || !Array.isArray(input.sourceOwnerUids) || input.sourceOwnerUids.length === 0) {
     throw new Error('Remix source ownership could not be verified.');
