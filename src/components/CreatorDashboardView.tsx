@@ -30,6 +30,7 @@ import { ProfileService } from '../services/firebase/profileService';
 import ContentSeriesPanel from './ContentSeriesPanel';
 import ReferralGrowthPanel from './ReferralGrowthPanel';
 import OriginAttributionInbox from './OriginAttributionInbox';
+import OriginCreatorInsightsPanel from './OriginCreatorInsightsPanel';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -798,7 +799,7 @@ export default function CreatorDashboardView({
           {activeTab === 'assets' && <CreatorCommunityAssetLibrary currentUser={currentUser} onUpdateProfile={onUpdateProfile} />}
           {activeTab === 'series' && <ContentSeriesPanel currentUser={currentUser} posts={posts} />}
           {activeTab === 'growth' && <ReferralGrowthPanel currentUser={currentUser} />}
-          {activeTab === 'origin' && <OriginAttributionInbox />}
+          {activeTab === 'origin' && <><OriginCreatorInsightsPanel /><OriginAttributionInbox /></>}
 
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (

@@ -89,6 +89,7 @@ export function buildRemixLineageRecord(input: RemixLineageInput) {
       assetId: input.derivativeAssetId,
       actorUid: input.ownerUid,
       eventType: 'remix_created' as const,
+      lineageDepth: depth,
       contributionRole: 'remixer' as const,
       disclosureSource: 'platform_observed' as const,
       parentAssetIds: [...input.parentAssetIds],
