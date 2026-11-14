@@ -38,6 +38,7 @@ export { scheduleCreatorPost, cancelCreatorScheduledPost, listCreatorScheduledPo
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { recordMyRemixLineage } from './originLineage.js';
 export { requestMyOriginAttributionCorrection, respondToOriginAttributionCorrection, disputeOriginAttributionCorrection, getMyOriginAttributionPreview, listMyOriginAttributionCases } from './originAttributionCases.js';
+export { getOriginAttributionDisputeQueue, resolveOriginAttributionDispute, deliverOriginAttributionCaseNotifications } from './originCaseOperations.js';
 export { setMyOriginRemixPolicy } from './originPermissions.js';
 export { getPublicPostPlayback } from './publicMediaPlayback.js';
 export { getStudioExportMp4Url, cleanupExpiredStudioMp4Exports } from './studioMp4Export.js';
@@ -46,7 +47,7 @@ export { leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnersh
 export { setWorldWeaveMomentReaction } from './worldWeaveReactions.js';
 export { toggleWorldWeaveMomentPin, cleanupDeletedWorldWeaveMomentPin } from './worldWeavePins.js';
 export { addWorldWeaveMomentReply, deleteWorldWeaveMomentReply } from './worldWeaveReplies.js';
-export { createWorldWeaveChapter, updateWorldWeaveChapter } from './worldWeaveChapters.js';
+export { createWorldWeaveChapter, updateWorldWeaveChapter, archiveWorldWeaveChapter, reorderWorldWeaveChapters } from './worldWeaveChapters.js';
 export { backfillWorldWeaveMembershipV2 } from './worldWeaveMembershipBackfill.js';
 export { auditWorldWeaveMembershipV2 } from './worldWeaveMembershipAudit.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';

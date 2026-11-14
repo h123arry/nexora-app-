@@ -8,7 +8,7 @@ import {
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
   MAX_WORLDWEAVE_MEMBERS, listWorldWeaveContributors, leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership, subscribeToWorldWeaveActivity,
   toggleWorldWeaveMomentPin, fetchWorldWeavePinnedMoments, subscribeToWorldWeaveMomentReplies, addWorldWeaveMomentReply, deleteWorldWeaveMomentReply,
-  subscribeToWorldWeaveChapters, createWorldWeaveChapter, updateWorldWeaveChapter,
+  subscribeToWorldWeaveChapters, createWorldWeaveChapter, updateWorldWeaveChapter, archiveWorldWeaveChapter, reorderWorldWeaveChapters,
   type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, type WorldWeaveReply, type WorldWeaveChapter, setWorldWeaveMomentReaction,
 } from '../services/firebase/worldWeaveService';
 
@@ -256,6 +256,35 @@ export default function WorldWeaveView({ currentUser }: Props) {
     finally { setBusy(false); }
   };
 
+  const handleArchiveChapter = async (chapter: WorldWeaveChapter) => {
+    if (!selected || selected.ownerId !== currentUser.id || chapter.archived
+      || !window.confirm('Archive "' + chapter.title + '"? Existing moments will remain in this chapter history.')) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await archiveWorldWeaveChapter(selected.id, chapter.id);
+      setChapters(current => current.map(item => item.id === chapter.id ? { ...item, archived: true } : item));
+      setSelectedChapterId(current => current === chapter.id ? '' : current);
+      setNotice('Chapter archived. Its historical moments remain available.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not archive this chapter.'); }
+    finally { setBusy(false); }
+  };
+
+  const handleReorderChapter = async (chapterId: string, direction: -1 | 1) => {
+    if (!selected || selected.ownerId !== currentUser.id || busy) return;
+    const ordered = [...chapters].sort((a, b) => a.position - b.position);
+    const index = ordered.findIndex(item => item.id === chapterId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= ordered.length) return;
+    [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await reorderWorldWeaveChapters(selected.id, ordered.map(item => item.id));
+      setChapters(ordered.map((item, position) => ({ ...item, position })));
+      setNotice('Chapter order updated.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not reorder chapters. Refresh and try again.'); }
+    finally { setBusy(false); }
+  };
+
   const handleCreateChapter = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!selected || selected.ownerId !== currentUser.id) return;
@@ -425,7 +454,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
         {isMember && <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           <form onSubmit={handleMoment} className="rounded-3xl border border-white/10 bg-[#0b1221] p-4 md:p-5">
             <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white"><Plus size={16} className="text-violet-300"/> Add your perspective</div>
-            {chapters.length > 0 && <select value={selectedChapterId} onChange={event => setSelectedChapterId(event.target.value)} className="mb-3 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white"><option value="">Add to the main story (no chapter)</option>{chapters.map(chapter => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}</select>}
+            {chapters.length > 0 && <select value={selectedChapterId} onChange={event => setSelectedChapterId(event.target.value)} className="mb-3 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white"><option value="">Add to the main story (no chapter)</option>{chapters.filter(chapter => !chapter.archived).map(chapter => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}</select>}
             <textarea value={momentText} onChange={e => setMomentText(e.target.value)} maxLength={2000} rows={3} placeholder="What happened from where you stood?" className="w-full resize-y rounded-2xl border border-white/10 bg-[#070d19] p-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60"/>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
               <label htmlFor="worldweave-media" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-300 hover:border-violet-400/50"><Camera size={15}/> Add photo, video or voice note<input id="worldweave-media" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/ogg,audio/aac" className="hidden" onChange={e => setMomentFile(e.target.files?.[0] || null)}/></label>
@@ -437,21 +466,29 @@ export default function WorldWeaveView({ currentUser }: Props) {
           </form>
           {selected.ownerId === currentUser.id && (
           <div className="space-y-3">
-            <form onSubmit={handleCreateChapter} className="rounded-3xl border border-violet-400/20 bg-[#0b1221] p-4">
+            <section className="rounded-3xl border border-violet-400/20 bg-[#0b1221] p-4">
               <div className="mb-2 text-sm font-bold text-white">Organize the story</div>
               <p className="mb-3 text-xs leading-5 text-slate-400">Create chapters such as Before, During, After, and Reflections. Up to 30 chapters.</p>
+              <form onSubmit={handleCreateChapter}>
               <input value={chapterTitle} onChange={event => setChapterTitle(event.target.value)} minLength={2} maxLength={60} placeholder="Chapter title" className="w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-400/50"/>
               <textarea value={chapterDescription} onChange={event => setChapterDescription(event.target.value)} maxLength={250} rows={2} placeholder="What belongs in this chapter?" className="mt-2 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-400/50"/>
               <button disabled={busy || chapterTitle.trim().length < 2 || chapters.length >= 30} className="mt-2 w-full rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-40">Create chapter</button>
-              {chapters.length > 0 && <div className="mt-3 space-y-2">{chapters.map(chapter => editingChapterId === chapter.id ? <form key={chapter.id} onSubmit={handleUpdateChapter} className="rounded-xl border border-violet-400/20 bg-[#070d19] p-2">
+              </form>
+              {chapters.length > 0 && <div className="mt-3 space-y-2">{[...chapters].sort((a, b) => a.position - b.position).map(chapter => editingChapterId === chapter.id ? <form key={chapter.id} onSubmit={handleUpdateChapter} className="rounded-xl border border-violet-400/20 bg-[#070d19] p-2">
                 <input value={editingChapterTitle} onChange={event => setEditingChapterTitle(event.target.value)} minLength={2} maxLength={60} className="w-full rounded-lg border border-white/10 bg-[#0b1221] px-2 py-2 text-xs text-white"/>
                 <textarea value={editingChapterDescription} onChange={event => setEditingChapterDescription(event.target.value)} maxLength={250} rows={2} className="mt-2 w-full rounded-lg border border-white/10 bg-[#0b1221] px-2 py-2 text-xs text-white"/>
                 <div className="mt-2 flex gap-2"><button disabled={busy || editingChapterTitle.trim().length < 2} className="rounded-lg bg-violet-600 px-3 py-1.5 text-[10px] font-bold text-white disabled:opacity-40">Save</button><button type="button" onClick={() => setEditingChapterId('')} className="rounded-lg border border-white/10 px-3 py-1.5 text-[10px] text-slate-300">Cancel</button></div>
-              </form> : <div key={chapter.id} className="flex items-center justify-between gap-2 rounded-lg border border-white/5 px-3 py-2">
-                <div><p className="text-xs font-semibold text-violet-100">{chapter.position + 1}. {chapter.title}</p>{chapter.description && <p className="mt-1 text-[10px] text-slate-500">{chapter.description}</p>}</div>
-                <button type="button" onClick={() => { setEditingChapterId(chapter.id); setEditingChapterTitle(chapter.title); setEditingChapterDescription(chapter.description); }} className="shrink-0 rounded-lg border border-white/10 px-2 py-1.5 text-[10px] text-slate-300 hover:border-violet-400/30">Rename</button>
+              </form> : <div key={chapter.id} className="rounded-lg border border-white/5 px-3 py-2">
+                <div className="flex items-start justify-between gap-2"><div><p className="text-xs font-semibold text-violet-100">{chapter.position + 1}. {chapter.title} {chapter.archived && <span className="ml-1 text-[9px] font-medium uppercase tracking-wide text-slate-500">Archived</span>}</p>{chapter.description && <p className="mt-1 text-[10px] text-slate-500">{chapter.description}</p>}</div>
+                  <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                    <button type="button" disabled={busy || chapter.position === 0} onClick={() => void handleReorderChapter(chapter.id, -1)} aria-label={'Move ' + chapter.title + ' up'} className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-slate-300 disabled:opacity-30">↑</button>
+                    <button type="button" disabled={busy || chapter.position >= chapters.length - 1} onClick={() => void handleReorderChapter(chapter.id, 1)} aria-label={'Move ' + chapter.title + ' down'} className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-slate-300 disabled:opacity-30">↓</button>
+                    {!chapter.archived && <button type="button" disabled={busy} onClick={() => void handleArchiveChapter(chapter)} className="rounded-lg border border-amber-400/20 px-2 py-1 text-[10px] text-amber-200 disabled:opacity-30">Archive</button>}
+                    {!chapter.archived && <button type="button" onClick={() => { setEditingChapterId(chapter.id); setEditingChapterTitle(chapter.title); setEditingChapterDescription(chapter.description); }} className="rounded-lg border border-white/10 px-2 py-1 text-[10px] text-slate-300 hover:border-violet-400/30">Rename</button>}
+                  </div>
+                </div>
               </div>)}</div>}
-            </form>
+            </section>
             <form onSubmit={handleInvite} className="h-fit rounded-3xl border border-white/10 bg-[#0b1221] p-4">
               <div className="mb-3 text-sm font-bold text-white">Bring someone in</div>
               <p className="mb-3 text-xs leading-5 text-slate-400">Invite another NEXORA member to add their own perspective.</p>
@@ -515,7 +552,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
           </div>}
         </section>}
         <section className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold text-white">The shared timeline</h2><p className="mt-1 text-[10px] text-slate-500">{chapters.length} chapters · latest 100 moments</p></div><select value={chapterFilterId} onChange={event => setChapterFilterId(event.target.value)} className="rounded-xl border border-white/10 bg-[#0b1221] px-3 py-2 text-xs text-white"><option value="">All chapters</option><option value="__none__">Unchaptered moments</option>{chapters.map(chapter => <option key={chapter.id} value={chapter.id}>{chapter.title}</option>)}</select></div>
+          <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold text-white">The shared timeline</h2><p className="mt-1 text-[10px] text-slate-500">{chapters.length} chapters · latest 100 moments</p></div><select value={chapterFilterId} onChange={event => setChapterFilterId(event.target.value)} className="rounded-xl border border-white/10 bg-[#0b1221] px-3 py-2 text-xs text-white"><option value="">All chapters</option><option value="__none__">Unchaptered moments</option>{chapters.map(chapter => <option key={chapter.id} value={chapter.id}>{chapter.title}{chapter.archived ? ' (archived)' : ''}</option>)}</select></div>
           {hasMoreMoments && <div className="flex justify-center"><button type="button" disabled={loadingOlder} onClick={() => void handleLoadOlderMoments()} className="rounded-xl border border-violet-400/20 bg-violet-500/[.06] px-4 py-2.5 text-xs font-semibold text-violet-100 disabled:opacity-40">{loadingOlder ? 'Loading older moments…' : 'Load older moments'}</button></div>}
           {filteredMoments.length === 0 ? <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-400">{moments.length === 0 ? 'No moments yet. The first perspective starts the story.' : 'No moments in this chapter yet.'}</div> :
             <div className="relative space-y-4 before:absolute before:bottom-4 before:left-[19px] before:top-4 before:w-px before:bg-violet-400/20">

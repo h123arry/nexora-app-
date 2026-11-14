@@ -72,6 +72,9 @@ jobs:
       - name: Run Origin account-deletion cleanup tests
         run: npm run test:origin-cleanup
 
+      - name: Run Origin cross-account source access emulator tests
+        run: npm run test:origin-source-access
+
       - name: Run Storage security rules tests
         run: npm run test:storage
 

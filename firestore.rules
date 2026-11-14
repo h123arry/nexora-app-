@@ -1336,7 +1336,8 @@ service cloud.firestore {
           && request.resource.data.text.size() <= 2000
           && (!request.resource.data.keys().hasAny(['chapterId'])
             || (request.resource.data.chapterId is string
-              && exists(/databases/$(database)/documents/worldWeaves/$(weaveId)/chapters/$(request.resource.data.chapterId))))
+              && exists(/databases/$(database)/documents/worldWeaves/$(weaveId)/chapters/$(request.resource.data.chapterId))
+              && get(/databases/$(database)/documents/worldWeaves/$(weaveId)/chapters/$(request.resource.data.chapterId)).data.get('archived', false) != true))
           && ((request.resource.data.mediaType == 'text'
               && !request.resource.data.keys().hasAny(['mediaUrl', 'storagePath']))
             || (request.resource.data.mediaType in ['image', 'video', 'audio']

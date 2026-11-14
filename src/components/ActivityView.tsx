@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { collection, query, onSnapshot, orderBy, limit, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import { User, Notification } from '../types';
+import OriginAttributionInbox from './OriginAttributionInbox';
 import { Bell, Shield, Star, Award, Zap, Heart, MessageSquare, UserCheck, MoreVertical, Trash2 } from 'lucide-react';
 
 interface ActivityViewProps {
@@ -136,6 +137,7 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
 
   return (
     <div className="flex flex-col h-full bg-[#0A0A0A] text-white">
+      <OriginAttributionInbox />
       {/* Tabs */}
       <div className="flex items-center border-b border-zinc-800 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-md z-10">
         {(['All', 'Social', 'Missions', 'Rewards', 'System'] as const).map(tab => (
