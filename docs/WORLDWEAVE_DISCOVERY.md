@@ -26,6 +26,10 @@ Owner account restrictions, private-profile follow requirements, and block relat
 
 The Functions emulator tests cover authentication, query/cursor validation, strict projection fields, 20-item pagination, and exclusion of private experiences, blocked owners, and private-profile owners without an existing follow.
 
+## Client integration
+
+The WorldWeave view now uses the callable for public discovery instead of directly subscribing to the full public parent documents. Search is server-filtered, public results are cursor-paginated with a load-more control, and the user's own experiences are merged back in from their authenticated membership query. This prevents the discovery list from downloading every public participant ID array.
+
 ## Rollout
 
-This adds a callable backend capability and Firestore index reuse. It does not automatically expose a new client screen or deploy to production.
+This is an additive client/backend capability. It does not change membership authorization or deploy to production.
