@@ -6,7 +6,7 @@
     "node": "22"
   },
   "scripts": {
-    "start": "node src/index.js",
+    "start": "functions-framework --target=processMedia --port=8080",
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {
