@@ -1,3 +1,4 @@
+import { createSecureId } from '../utils/secureId';
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, BookmarkCheck, Eye, ArrowRight, Sparkle, History, Volume2, VolumeX, AlertTriangle, Layers, Trash, Star, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, CheckSquare, Square, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -93,7 +94,7 @@ export default function NotificationsView({
   // TOAST EMITTER
   // ---------------------------------------------------------------------------
   const addToast = (content: string) => {
-    const id = `toast-${Date.now()}-${Math.random()}`;
+    const id = createSecureId('toast');
     setToasts(prev => [...prev, { id, content }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));

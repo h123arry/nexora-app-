@@ -59,37 +59,49 @@ export default function SystemHubControlPanel({
   setLazyLoadImages
 }: SystemHubControlPanelProps) {
   
-  // Local telemetry states
-  const [fps, setFps] = useState(60);
-  const [latency, setLatency] = useState(1.8);
-  const [cacheSize, setCacheSize] = useState('14.2 MB');
-  const [isFlushingCache, setIsFlushingCache] = useState(false);
-  const [cacheFlushed, setCacheFlushed] = useState(false);
+  const [browserOnline, setBrowserOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : false);
   const [activeTab, setActiveTab] = useState<'ux' | 'accessibility' | 'performance' | 'trust'>('ux');
   const [hapticHumVolume, setHapticHumVolume] = useState(0.3);
   const [audioFeedbackEnabled, setAudioFeedbackEnabled] = useState(true);
-  
-  // Permission statuses
+  const showOfflineTestControls = import.meta.env.DEV || import.meta.env.VITE_NEXORA_ENV === 'staging';
+
+  // Read browser state; do not invent FPS, latency, cache size or permission values.
   const [permissions, setPermissions] = useState({
-    camera: 'granted',
-    microphone: 'granted',
-    location: 'prompt',
-    notifications: 'granted'
+    camera: 'unknown',
+    microphone: 'unknown',
+    location: 'unknown',
+    notifications: 'unknown',
   });
 
-  // FPS ticker loop (simulated realistic jitter)
   useEffect(() => {
-    const interval = setInterval(() => {
-      const baseFps = reducedMotion ? 30 : 60;
-      const jitter = Math.random() > 0.85 ? Math.floor(Math.random() * 4) + 1 : 0;
-      const calculatedFps = Math.max(28, baseFps - jitter);
-      setFps(calculatedFps);
-      
-      const newLatency = Number((1.2 + Math.random() * 0.9).toFixed(2));
-      setLatency(newLatency);
-    }, 1500);
-    return () => clearInterval(interval);
-  }, [reducedMotion]);
+    const handleOnline = () => setBrowserOnline(true);
+    const handleOffline = () => setBrowserOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const checkBrowserPermissions = async () => {
+    const next: Record<string, string> = {};
+    const permissionQueries: Array<[string, PermissionName]> = [
+      ['camera', 'camera' as PermissionName],
+      ['microphone', 'microphone' as PermissionName],
+      ['location', 'geolocation' as PermissionName],
+    ];
+    await Promise.all(permissionQueries.map(async ([key, name]) => {
+      try {
+        const result = await navigator.permissions.query({ name });
+        next[key] = result.state;
+      } catch {
+        next[key] = 'unavailable';
+      }
+    }));
+    next.notifications = typeof Notification !== 'undefined' ? Notification.permission : 'unavailable';
+    setPermissions(previous => ({ ...previous, ...next }));
+  };
 
   // Web Audio Synth Haptic Click Generator
   const playHapticHum = (frequency = 120, duration = 0.08) => {
@@ -132,21 +144,6 @@ export default function SystemHubControlPanel({
       utterance.volume = 0.8;
       window.speechSynthesis?.speak(utterance);
     } catch (e) {}
-  };
-
-  // Cache Flusher simulation
-  const handleFlushCache = () => {
-    playHapticHum(240, 0.2);
-    setIsFlushingCache(true);
-    speakAnnouncement("Flushing active media blobs and cleaning IndexedDB caches.");
-    
-    setTimeout(() => {
-      setIsFlushingCache(false);
-      setCacheFlushed(true);
-      setCacheSize('0.0 KB');
-      speakAnnouncement("Cache clean operation successfully completed.");
-      setTimeout(() => setCacheFlushed(false), 3000);
-    }, 1800);
   };
 
   // Toggle helpers with voice synthesis
@@ -301,20 +298,20 @@ export default function SystemHubControlPanel({
           } hidden md:block`}>
             <div className="flex items-center justify-between text-[9px] font-mono text-zinc-500">
               <span>LOCAL DEVICE STATUS</span>
-              <span className={`flex items-center gap-1 ${isOffline ? 'text-red-400' : 'text-emerald-400 font-bold'}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-red-400' : 'bg-emerald-400 animate-ping'}`} />
-                {isOffline ? 'OFFLINE' : 'ONLINE'}
+              <span className={`flex items-center gap-1 ${isOffline || !browserOnline ? 'text-red-400' : 'text-emerald-400 font-bold'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isOffline || !browserOnline ? 'bg-red-400' : 'bg-emerald-400'}`} />
+                {isOffline ? 'OFFLINE SIMULATION' : browserOnline ? 'BROWSER ONLINE' : 'BROWSER OFFLINE'}
               </span>
             </div>
             
             <div className="grid grid-cols-2 gap-1 mt-2.5 pt-2 border-t border-white/5 font-mono text-[10px]">
               <div>
                 <span className="block text-zinc-600 text-[8px] uppercase">Local frame sample</span>
-                <span className="font-bold text-white text-xs">{fps} FPS</span>
+                <span className="font-bold text-white text-xs">Not measured</span>
               </div>
               <div>
                 <span className="block text-zinc-600 text-[8px] uppercase">Local timing sample</span>
-                <span className="font-bold text-violet-400 text-xs">{latency}ms</span>
+                <span className="font-bold text-violet-400 text-xs">Not measured</span>
               </div>
             </div>
           </div>
@@ -689,44 +686,30 @@ export default function SystemHubControlPanel({
             {activeTab === 'performance' && (
               <div className="space-y-5 animate-fade-in text-left">
                 
-                {/* 1. Offline Mode Simulator */}
-                <div className={`p-4 rounded-2xl border ${
-                  isOffline
-                    ? isHighContrast
-                      ? 'border-2 border-white bg-black'
-                      : 'border-red-500/20 bg-red-950/20 text-red-100'
-                    : isHighContrast
-                      ? 'border border-white bg-black'
-                      : 'bg-[#10b981]/5 border-[#10b981]/15 text-[#10b981]'
-                } flex items-center justify-between gap-4`}>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      {isOffline ? <WifiOff className="w-5 h-5 text-red-400" /> : <Wifi className="w-5 h-5 text-emerald-400" />}
-                      <h4 className="text-[11px] font-sans font-black uppercase tracking-wider text-white">
-                        Offline Connection Simulator
-                      </h4>
+                {showOfflineTestControls && (
+                  <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.02] flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        {isOffline ? <WifiOff className="w-5 h-5 text-red-400" /> : <Wifi className="w-5 h-5 text-violet-400" />}
+                        <h4 className="text-[11px] font-sans font-black uppercase tracking-wider text-white">Offline simulation (staging only)</h4>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 leading-normal font-sans">
+                        {isOffline
+                          ? 'Offline simulation is active. This test toggle does not verify local data durability.'
+                          : browserOnline
+                            ? 'The browser reports a network connection. Server reachability is not measured here.'
+                            : 'The browser reports no network connection.'}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-zinc-400 leading-normal font-sans">
-                      {isOffline 
-                        ? 'Simulating disconnected state. Creations are safely stored inside local IndexedDB and local state.' 
-                        : 'Online. Interfacing live client with blockchain consensus and AI mesh servers.'}
-                    </p>
+                    <button
+                      onMouseEnter={() => speakAnnouncement(`Simulate ${isOffline ? 'online' : 'offline'} state.`)}
+                      onClick={toggleOfflineSimulator}
+                      className="px-4 py-2 text-xs font-mono font-bold rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10"
+                    >
+                      {isOffline ? 'CONNECT' : 'DISCONNECT'}
+                    </button>
                   </div>
-
-                  <button
-                    onMouseEnter={() => speakAnnouncement(`Simulate ${isOffline ? 'online' : 'offline'} state.`)}
-                    onClick={toggleOfflineSimulator}
-                    className={`px-4 py-2 text-xs font-mono font-bold rounded-xl border transition-all cursor-pointer ${
-                      isOffline
-                        ? 'bg-red-500 hover:bg-red-600 border-transparent text-white'
-                        : isHighContrast
-                          ? 'border-white hover:bg-white hover:text-black text-white'
-                          : 'bg-white/5 border-white/10 text-zinc-300 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {isOffline ? 'CONNECT' : 'DISCONNECT'}
-                  </button>
-                </div>
+                )}
 
                 {/* 2. Image pre-rendering & Lazy loading toggles */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -760,81 +743,31 @@ export default function SystemHubControlPanel({
                   } text-left flex flex-col justify-between h-28`}>
                     <div className="flex items-center justify-between text-[11px] font-sans font-black uppercase">
                       <span>IndexedDB Media Cache</span>
-                      <span className="font-mono text-cyan-400">{cacheSize}</span>
+                      <span className="font-mono text-cyan-400">Not measured</span>
                     </div>
                     
                     <p className="text-[10px] text-zinc-500 font-sans mt-1">
-                      Stores local audio voice drafts, logs, and video indexes inside browser database space.
+                      IndexedDB stores are not enumerated by this panel yet; local cache size and clearing remain unavailable.
                     </p>
 
-                    <button
-                      disabled={isFlushingCache || cacheFlushed}
-                      onClick={handleFlushCache}
-                      className={`w-full py-1.5 rounded-xl text-[10px] font-mono font-bold border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        cacheFlushed
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                          : isHighContrast
-                            ? 'border-white hover:bg-white hover:text-black'
-                            : 'bg-white/5 hover:bg-white/10 text-zinc-300 border-white/5'
-                      }`}
-                    >
-                      {isFlushingCache ? (
-                        <>
-                          <Activity className="w-3 h-3 animate-spin text-violet-400" />
-                          CLEANING MEMORY INDEX...
-                        </>
-                      ) : cacheFlushed ? (
-                        <>
-                          <Check className="w-3 h-3 text-emerald-400" />
-                          CACHES FULLY FLUSHED
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 className="w-3 h-3" />
-                          FLUSH MEDIA BLOB CACHE
-                        </>
-                      )}
-                    </button>
+                    <p className="rounded-xl border border-dashed border-white/10 p-3 text-[10px] leading-relaxed text-zinc-400">
+                      Cache inspection and clearing are not connected to the browser's actual IndexedDB stores yet. No cache size or successful flush is reported here.
+                    </p>
                   </div>
 
                 </div>
 
-                {/* 3. Performance stats log */}
-                <div className={`p-4 rounded-2xl ${
-                  isHighContrast ? 'border border-white' : 'bg-black/35 border border-white/5'
-                } space-y-2`}>
+                {/* Performance telemetry is intentionally not simulated. */}
+                <div className="rounded-2xl border border-white/5 bg-black/35 p-4 space-y-2">
                   <div className="flex items-center justify-between text-[11px] font-sans font-black text-white uppercase">
                     <span>Client Render Health</span>
-                    <span className="text-[9px] font-mono text-[#8B5CF6]">SYSTEM RE-RENDERS OPTIMIZED</span>
+                    <span className="text-[9px] font-mono text-zinc-500">NOT CONNECTED</span>
                   </div>
-                  
-                  <div className="space-y-1 text-[10px] font-mono text-zinc-400">
-                    <p className="flex justify-between">
-                      <span>Browser Canvas Thread (60Hz limit)</span>
-                      <span className="text-emerald-400 font-bold">Stable 60 FPS</span>
-                    </p>
-                    <p className="flex justify-between">
-                      <span>VOH AI API Proxies Latency</span>
-                      <span className="text-violet-400 font-bold">{latency}ms</span>
-                    </p>
-                    <p className="flex justify-between">
-                      <span>Interactive Voice Audio Chunking</span>
-                      <span className="text-white font-bold">0.02ms latency</span>
-                    </p>
-                    <p className="flex justify-between">
-                      <span>Local IndexedDB Key Size</span>
-                      <span className="text-zinc-500">12,408 bytes</span>
-                    </p>
-                  </div>
+                  <p className="text-[10px] leading-relaxed text-zinc-400">
+                    Frame rate, AI service latency, audio chunk timing and IndexedDB byte usage are not measured by this panel. No simulated performance figures are displayed.
+                  </p>
                 </div>
 
-              </div>
-            )}
-
-            {/* TAB CONTENT: PRIVACY & TRUST */}
-            {activeTab === 'trust' && (
-              <div className="space-y-5 animate-fade-in text-left">
-                
                 {/* 1. Privacy Statement Card */}
                 <div className={`p-4 rounded-2xl ${
                   isHighContrast ? 'border border-white bg-black' : 'bg-violet-600/5 border border-white/10'
@@ -842,60 +775,38 @@ export default function SystemHubControlPanel({
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-violet-400" />
                     <h4 className="text-[11px] font-sans font-black text-white uppercase tracking-wider">
-                      Zero-Knowledge Privacy Protocol
+                      Privacy & permissions
                     </h4>
                   </div>
                   <p className="text-[10px] text-zinc-400 leading-relaxed font-sans">
-                    NEXORA encrypts all microphone voices, images, drafts, and profile edits client-side before transmission. We never store or monetize personal browsing history. You are the sole controller of your interest matrix and content logs.
+                    NEXORA applies feature-specific access controls and privacy settings. Not all content is end-to-end encrypted; review each feature's privacy options and the published privacy policy before sharing sensitive information.
                   </p>
                 </div>
 
-                {/* 2. Permission simulator */}
+                {/* Browser permission status is read-only; this panel cannot grant or revoke permissions. */}
                 <div className="space-y-3">
-                  <h4 className="text-[11px] font-sans font-black text-white uppercase tracking-widest block">
-                    Browser Hardware Access Ledger
-                  </h4>
-                  
-                  <div className="space-y-2">
-                    {[
-                      { id: 'camera', label: 'Camera Capability', desc: 'Allows instant video post captures & stories recording.' },
-                      { id: 'microphone', label: 'Microphone Capability', desc: 'Used for Nexora\'s signature auto-transcribed Voice Posts.' },
-                      { id: 'location', label: 'Geolocation Pulse', desc: 'Pinpoint region coordinates for localized World Pulse reporting.' }
-                    ].map((perm) => {
-                      const isGranted = (permissions as any)[perm.id] === 'granted';
-                      return (
-                        <div
-                          key={perm.id}
-                          className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
-                            isHighContrast ? 'border-white' : 'bg-white/[0.02] border-white/5'
-                          }`}
-                        >
-                          <div>
-                            <span className="block text-[11px] font-sans font-black uppercase text-white">{perm.label}</span>
-                            <span className="block text-[9.5px] text-zinc-400 font-sans mt-0.5">{perm.desc}</span>
-                          </div>
-                          
-                          <button
-                            onMouseEnter={() => speakAnnouncement(`Toggle ${perm.label} permission.`)}
-                            onClick={() => {
-                              const current = (permissions as any)[perm.id];
-                              const next = current === 'granted' ? 'denied' : 'granted';
-                              setPermissions(p => ({ ...p, [perm.id]: next }));
-                              playHapticHum(next === 'granted' ? 240 : 120, 0.1);
-                              speakAnnouncement(`Permission for ${perm.label} switched to ${next}.`);
-                            }}
-                            className={`px-3 py-1.5 rounded-xl text-[9.5px] font-mono font-bold border transition-all cursor-pointer ${
-                              isGranted
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                                : 'bg-red-500/10 border-red-500/30 text-red-400'
-                            }`}
-                          >
-                            {isGranted ? 'GRANTED' : 'DENIED'}
-                          </button>
-                        </div>
-                      );
-                    })}
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="text-[11px] font-sans font-black text-white uppercase tracking-widest">Browser Hardware Access</h4>
+                    <button type="button" onClick={() => { void checkBrowserPermissions(); }} className="rounded-lg border border-white/10 px-3 py-1.5 text-[9px] font-mono text-zinc-300 hover:bg-white/5">
+                      CHECK STATUS
+                    </button>
                   </div>
+                  <p className="text-[10px] leading-relaxed text-zinc-400">These are read-only browser permission states. NEXORA cannot change a permission from this panel.</p>
+                  {[
+                    { id: 'camera', label: 'Camera' },
+                    { id: 'microphone', label: 'Microphone' },
+                    { id: 'location', label: 'Location' },
+                    { id: 'notifications', label: 'Notifications' },
+                  ].map(permission => {
+                    const status = (permissions as any)[permission.id] || 'unknown';
+                    const statusLabel = status === 'granted' ? 'GRANTED' : status === 'denied' ? 'DENIED' : status === 'prompt' ? 'ASK FIRST' : status === 'unavailable' ? 'UNAVAILABLE' : 'NOT CHECKED';
+                    return (
+                      <div key={permission.id} className="p-3.5 rounded-2xl border border-white/5 bg-white/[0.02] flex items-center justify-between gap-3">
+                        <span className="text-[11px] font-sans font-black uppercase text-white">{permission.label}</span>
+                        <span className={status === 'granted' ? 'text-[9.5px] font-mono font-bold text-emerald-400' : status === 'denied' ? 'text-[9.5px] font-mono font-bold text-red-400' : 'text-[9.5px] font-mono font-bold text-zinc-400'}>{statusLabel}</span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* 3. Export Data action */}
@@ -946,8 +857,8 @@ export default function SystemHubControlPanel({
 
           {/* Footer controls status */}
           <div className="pt-4 mt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[9px] font-mono text-zinc-500">
-            <span>Linked via Nexora-Core Orchestrator v3.5</span>
-            <span className="uppercase text-[#8B5CF6]">Strict security validation: active</span>
+            <span>Browser settings and accessibility controls</span>
+            <span className="uppercase text-[#8B5CF6]">Live telemetry: not connected</span>
           </div>
 
         </div>

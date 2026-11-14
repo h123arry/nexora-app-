@@ -1,3 +1,4 @@
+import { createSecureId } from '../utils/secureId';
 import React, { useRef, useState, useEffect } from 'react';
 import QuickActionsSheet from './QuickActionsSheet';
 import ShareSheet from './ShareSheet';
@@ -143,7 +144,7 @@ export default function NexoraVideoPlayer({
   }, [isReleased]);
 
   // Generate a unique player ID for this player instance to avoid any collisions
-  const playerId = useRef(`player-${post.id}-${Math.random().toString(36).substring(2, 11)}`).current;
+  const playerId = useRef(createSecureId('player')).current;
   const [isNearby, setIsNearby] = useState(false);
 
   const currentUser = (() => {
@@ -155,7 +156,7 @@ export default function NexoraVideoPlayer({
     }
   })();
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
-  const serverWatchSessionId = useRef(`vw_${post.id}_${Math.random().toString(36).slice(2, 18)}`).current;
+  const serverWatchSessionId = useRef(createSecureId('vw')).current;
 
   const resolvedUrl = useResolvedUrl(videoUrl);
   const originalResolvedUrl = videoUrl?.startsWith('db-media://') ? resolvedUrl : videoUrl;

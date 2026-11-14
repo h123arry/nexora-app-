@@ -2496,7 +2496,7 @@ export default function ProfileView({
                                 <Check className="w-5 h-5" />
                               </div>
                               <h4 className="text-xs font-bold text-emerald-400">Transmission Dispatched!</h4>
-                              <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">Your report packet has been assigned to ticket ID #{Math.floor(Math.random() * 9000) + 1000}. A technical agent node will calibrate soon.</p>
+                              <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">Support ticketing is not connected yet. Your message has not been sent or assigned a ticket.</p>
                             </div>
                           ) : (
                             <div className="space-y-3 text-xs">
@@ -2525,14 +2525,16 @@ export default function ProfileView({
                                 />
                               </div>
 
+                              <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-2 text-[10px] leading-relaxed text-amber-200/80">
+                                Support ticketing is not connected yet. Sending this form will not create a ticket; your message will be kept in the field.
+                              </p>
                               <button
                                 onClick={() => {
                                   if (!supportMessage.trim()) {
                                     alert('⚠️ Please explain the issue details.');
                                     return;
                                   }
-                                  setSupportSubmitted(true);
-                                  setSupportMessage('');
+                                  window.dispatchEvent(new CustomEvent('toast', { detail: 'Support ticketing is not connected yet. Your message was not sent.' }));
                                 }}
                                 className="w-full py-2 bg-pink-600 hover:bg-pink-500 text-white font-mono text-[9px] uppercase font-black tracking-wider rounded-lg transition-all"
                               >

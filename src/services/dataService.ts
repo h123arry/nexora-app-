@@ -1,3 +1,4 @@
+import { createSecureId } from '../utils/secureId';
 import { db, auth } from './firebase/config';
 import { handleFirestoreError, OperationType } from './firebase/errors';
 import { 
@@ -68,7 +69,7 @@ class BackgroundSyncEngine {
     const uid = auth.currentUser?.uid;
     if (!uid) throw new Error('Sign in before queueing an account action.');
     const newAction: PendingAction = {
-      id: `act-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+      id: createSecureId('act'),
       action,
       payload,
       timestamp: Date.now(),

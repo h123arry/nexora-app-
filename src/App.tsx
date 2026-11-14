@@ -781,7 +781,6 @@ export default function App() {
   const [creationInitialMode, setCreationInitialMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null>(null);
   const [creationInitialTab, setCreationInitialTab] = useState<'feed' | 'story' | 'drafts' | undefined>(undefined);
   const [creationInitialCaption, setCreationInitialCaption] = useState('');
-  const [systemSpeed, setSystemSpeed] = useState('1.8ms');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isSyncPending, setIsSyncPending] = useState(false);
 
@@ -1088,15 +1087,6 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('nexora_theme', theme);
   }, [theme]);
-
-  // 3. Dynamic Node Latency Jitter simulation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const ping = (1.5 + Math.random() * 0.8).toFixed(2);
-      setSystemSpeed(`${ping}ms`);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
 
   // 3.5. Web Offline & Pending Sync State handlers
   useEffect(() => {
@@ -2344,7 +2334,6 @@ export default function App() {
               selectedTag={selectedTag}
               setSelectedTag={setSelectedTag}
               onOpenExplore={() => navigateTo('explore')}
-              systemSpeed={systemSpeed}
               currentUserUsername={currentUser.username}
             />
           </div>

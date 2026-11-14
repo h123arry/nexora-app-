@@ -1,3 +1,4 @@
+import { secureRandomInt } from './secureId';
 const RESERVED_USERNAMES = [
   'admin',
   'support',
@@ -106,8 +107,8 @@ export function checkUsernameStatus(username: string, currentUserId?: string): U
 function generateSuggestions(base: string): string[] {
   const clean = base.replace(/[^a-z0-9]/g, '');
   const prefix = clean || 'nexora_user';
-  const randNum1 = Math.floor(10 + Math.random() * 89);
-  const randNum2 = Math.floor(100 + Math.random() * 899);
+  const randNum1 = secureRandomInt(10, 98);
+  const randNum2 = secureRandomInt(100, 998);
   
   const candidates = [
     `${prefix}_real`,

@@ -1,3 +1,4 @@
+import { createSecureId } from '../utils/secureId';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { buildWaveformPeaks, getAudioEnvelopeGain, getDuckedMusicGain } from '../utils/studioAudioPolicy';
@@ -94,7 +95,7 @@ async function inspectStudioExport(blob: Blob): Promise<{ durationSeconds: numbe
 }
 
 function makeId(): string {
-  return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `clip-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return createSecureId('clip');
 }
 
 export default function NexoraStudio({ currentUser, onClose, onPublish }: Props) {
