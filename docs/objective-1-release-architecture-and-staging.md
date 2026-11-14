@@ -80,3 +80,42 @@ Repository-side preparation is in progress. Staging is **not provisioned** until
 - Android release signing requires a protected keystore and passwords in the CI secret store; the keystore must never be committed.
 - iOS distribution requires an Apple Developer Team, App Store Connect app record, signing certificate, provisioning profile, and protected signing secrets.
 - Physical Android/iOS acceptance remains mandatory for login, OAuth, OTP, uploads, camera, microphone, notifications, deep links, background/resume, and payment journeys.
+
+## 8. Protected staging deployment workflow
+
+The repository includes `.github/workflows/deploy-staging.yml`. It is manual-only, requires an explicit confirmation input, targets the GitHub Environment `nexora-staging`, and deploys only Functions, Firestore, and Storage to the explicit staging project ID. It refuses the production project before authentication.
+
+After merging the workflow to the default branch, the repository owner must configure the GitHub Environment:
+
+**Environment variables**
+- `NEXORA_STAGING_PROJECT_ID`
+- `FIRESTORE_DATABASE_ID`
+- `FIREBASE_STORAGE_BUCKET`
+- `STAGING_APP_URL`
+- `VITE_API_BASE_URL`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APPCHECK_SITE_KEY`
+
+**Environment secrets**
+- `GCP_STAGING_WORKLOAD_IDENTITY_PROVIDER`
+- `GCP_STAGING_SERVICE_ACCOUNT`
+
+Configure Google Workload Identity Federation with GitHub OIDC. Restrict its attribute condition to this repository and the protected deployment ref. Grant the staging deploy service account only the permissions needed for the selected Firebase resources; do not grant broad Owner access and do not create a long-lived JSON key. Require owner approval for the GitHub Environment.
+
+The workflow validates the configuration and runs staging checks before invoking Firebase CLI with an explicit `--project` target. It does not deploy Hosting or the media worker; those require the separately selected hosting/runtime target and deployment procedure. The workflow is a deploy path, not proof that staging has already been provisioned.
+
+## 9. Owner-only completion items
+
+The following require account/project authority or physical devices and cannot be honestly completed by repository changes alone:
+
+1. Create the isolated staging Firebase project and register its Web App.
+2. Confirm the Firestore database ID, Storage bucket, Auth providers, authorized domains, App Check enforcement, quotas, IAM, and Functions secrets.
+3. Create the staging API/hosting origin and populate the protected GitHub Environment.
+4. Configure Workload Identity Federation and approve the protected staging environment.
+5. Confirm that `com.voiceofharrison.nexora` is the intended, available Android application ID and Apple bundle ID; register matching native apps with Firebase if native SDK plugins require them.
+6. Supply Android Play Console access and protected signing credentials; supply Apple Developer Team/App Store Connect access and signing/provisioning credentials.
+7. Execute real-device acceptance tests on Android and iOS.
+
+No production Firebase resource or store account is modified by these repository changes.
