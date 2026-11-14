@@ -128,13 +128,13 @@ async function deleteQuery(query: Query, onProgress: (count: number) => Promise<
   }
 }
 
-async function deleteUserSubcollections(userId: string): Promise<number> {
+async function deleteUserSubcollections(userId: string, onBatch?: () => Promise<void>): Promise<number> {
   const subcollections = ['memoryEvents', 'memoryState', 'settings', 'securityLogs', 'activityEvents', 'notifications', 'postLikes'];
   let deleted = 0;
   for (const name of subcollections) {
     deleted += await deleteQuery(
       db.collection('users').doc(userId).collection(name),
-      async () => undefined,
+      async () => { await onBatch?.(); },
     );
   }
   return deleted;
@@ -175,6 +175,7 @@ async function cleanSharedChats(userId: string, onBatch?: () => Promise<void>): 
         [`deletedParticipants.${userId}`]: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
+      await onBatch?.();
     }
   }
 }
@@ -218,7 +219,7 @@ export async function processAccountDeletion(requestId: string, userId: string):
     await updateProgress(requestId, leaseId, progress);
 
     progress.stage = 'user-subcollections';
-    progress.deletedDocuments += await deleteUserSubcollections(userId);
+    progress.deletedDocuments += await deleteUserSubcollections(userId, heartbeat);
     await updateProgress(requestId, leaseId, progress);
 
     progress.stage = 'storage';
