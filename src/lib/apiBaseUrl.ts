@@ -4,11 +4,14 @@ export interface ApiRuntimeConfig {
 }
 
 export function resolveApiRequestUrl(path: string, config: ApiRuntimeConfig): string {
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith('//')) {
+    throw new Error('NEXORA API paths must be relative paths, not external URLs.');
+  }
+  const relativePath = path.replace(/^\/+/, '');
   const rawBaseUrl = config.baseUrl?.trim() || '';
   if (!rawBaseUrl) {
     if (config.nativeRuntime) throw new Error('VITE_API_BASE_URL must be configured for native NEXORA builds.');
-    return normalizedPath;
+    return `/${relativePath}`;
   }
   let base: URL;
   try { base = new URL(rawBaseUrl); } catch { throw new Error('VITE_API_BASE_URL must be an absolute URL.'); }
@@ -19,15 +22,20 @@ export function resolveApiRequestUrl(path: string, config: ApiRuntimeConfig): st
   if (base.username || base.password || base.search || base.hash) {
     throw new Error('VITE_API_BASE_URL must not contain credentials, query parameters, or fragments.');
   }
-  return new URL(normalizedPath, base.toString().endsWith('/') ? base : `${base.toString()}/`).toString();
+  const baseWithSlash = base.toString().endsWith('/') ? base : new URL(`${base.toString()}/`);
+  return new URL(relativePath, baseWithSlash).toString();
 }
 
 export function isNativeRuntime(): boolean {
   if (typeof window === 'undefined') return false;
   const { protocol, hostname, port } = window.location;
-  return protocol === 'capacitor:' || (protocol === 'http:' && hostname === 'localhost' && port === '');
+  if (protocol === 'capacitor:') return true;
+  return (protocol === 'https:' || protocol === 'http:') && hostname === 'localhost' && port === '';
 }
 
 export function apiRequestUrl(path: string): string {
-  return resolveApiRequestUrl(path, { baseUrl: import.meta.env.VITE_API_BASE_URL, nativeRuntime: isNativeRuntime() });
+  return resolveApiRequestUrl(path, {
+    baseUrl: import.meta.env.VITE_API_BASE_URL,
+    nativeRuntime: isNativeRuntime(),
+  });
 }
