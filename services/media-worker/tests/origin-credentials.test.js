@@ -1,5 +1,9 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { Reader, Context } from '@contentauth/c2pa-node';
+import sharp from 'sharp';
 import { buildCredentialInspection, unsupportedCredentialInspection } from '../src/originCredentials.js';
 
 describe('NEXORA Origin C2PA credential state mapping', () => {
@@ -26,5 +30,39 @@ describe('NEXORA Origin C2PA credential state mapping', () => {
   });
   it('uses unsupported rather than fabricating a cryptographic verdict when inspection fails', () => {
     assert.equal(unsupportedCredentialInspection().state, 'unsupported');
+  });
+});
+
+
+describe('NEXORA Origin native C2PA reader integration', () => {
+  const context = new Context({
+    verify: { verifyAfterReading: true, verifyTrust: true, ocspFetch: false, remoteManifestFetch: false },
+    trust: { verifyTrustList: true },
+  });
+
+  it('reads a real CAI fixture and preserves the valid-but-untrusted distinction', async () => {
+    const fixturePath = fileURLToPath(new URL('./fixtures/c2pa-untrusted-ca.jpg', import.meta.url));
+    const reader = await Reader.fromAsset({ path: fixturePath, mimeType: 'image/jpeg' }, context);
+    assert.ok(reader, 'expected the fixture to contain an embedded C2PA manifest');
+    const manifestStore = reader.json();
+    assert.equal(manifestStore.validation_state, 'Valid');
+    const inspection = buildCredentialInspection(manifestStore);
+    assert.equal(inspection.state, 'untrusted');
+    assert.ok(inspection.validationCodes.includes('signingCredential.untrusted'));
+  });
+
+  it('returns absent for an ordinary image without an embedded credential', async () => {
+    const image = await sharp({ create: { width: 24, height: 24, channels: 3, background: '#ffffff' } }).jpeg().toBuffer();
+    const reader = await Reader.fromAsset({ buffer: image, mimeType: 'image/jpeg' }, context);
+    assert.equal(reader, null);
+    assert.equal(buildCredentialInspection(reader ? reader.json() : null).state, 'absent');
+  });
+
+  it('does not report verified after the original asset bytes are modified', async () => {
+    const fixturePath = fileURLToPath(new URL('./fixtures/c2pa-untrusted-ca.jpg', import.meta.url));
+    const bytes = await readFile(fixturePath);
+    bytes[bytes.length - 3] ^= 0x01;
+    const reader = await Reader.fromAsset({ buffer: bytes, mimeType: 'image/jpeg' }, context);
+    if (reader) assert.notEqual(buildCredentialInspection(reader.json()).state, 'verified');
   });
 });
