@@ -70,6 +70,9 @@ jobs:
       - name: Type-check application
         run: npm run lint
 
+      - name: Install isolated media worker dependencies
+        run: npm install --prefix services/media-worker --no-audit --no-fund
+
       - name: Run unit and policy tests
         run: npm run test:unit
 
