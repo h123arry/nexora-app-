@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { getFirestore, FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
@@ -31,6 +32,7 @@ export const createWorldWeaveChapter = onCall({ maxInstances: 15 }, async reques
   const weaveRef = db.collection('worldWeaves').doc(weaveId);
   const chaptersRef = weaveRef.collection('chapters');
   const chapterRef = chaptersRef.doc();
+  const activityRef = weaveRef.collection('activity').doc(randomUUID());
   return db.runTransaction(async tx => {
     const [weave, chapters] = await Promise.all([tx.get(weaveRef), tx.get(chaptersRef)]);
     if (!weave.exists) throw new HttpsError('not-found', 'This WorldWeave no longer exists.');
@@ -46,6 +48,10 @@ export const createWorldWeaveChapter = onCall({ maxInstances: 15 }, async reques
       createdBy: uid,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
+    });
+    tx.create(activityRef, {
+      id: activityRef.id, actorUid: uid, targetUid: uid, chapterId: chapterRef.id,
+      chapterTitle: title, action: 'chapter_created', createdAt: FieldValue.serverTimestamp(),
     });
     return { chapterId: chapterRef.id, title, description, position };
   });
@@ -66,11 +72,16 @@ export const updateWorldWeaveChapter = onCall({ maxInstances: 15 }, async reques
 
   const weaveRef = db.collection('worldWeaves').doc(weaveId);
   const chapterRef = weaveRef.collection('chapters').doc(chapterId);
+  const activityRef = weaveRef.collection('activity').doc(randomUUID());
   return db.runTransaction(async tx => {
     const [weave, chapter] = await Promise.all([tx.get(weaveRef), tx.get(chapterRef)]);
     if (!weave.exists || !chapter.exists) throw new HttpsError('not-found', 'This WorldWeave chapter no longer exists.');
     requireOwner(weave, uid);
     tx.update(chapterRef, { title, description, updatedAt: FieldValue.serverTimestamp() });
+    tx.create(activityRef, {
+      id: activityRef.id, actorUid: uid, targetUid: uid, chapterId,
+      chapterTitle: title, action: 'chapter_updated', createdAt: FieldValue.serverTimestamp(),
+    });
     return { chapterId, title, description };
   });
 });
