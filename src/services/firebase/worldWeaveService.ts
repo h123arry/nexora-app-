@@ -265,3 +265,24 @@ export async function listWorldWeaveContributors(weaveId: string): Promise<World
   }));
   return contributors;
 }
+
+export interface WorldWeaveActivity {
+  id: string;
+  actorUid: string;
+  targetUid?: string;
+  action: 'member_left' | 'member_removed' | 'ownership_transferred' | string;
+  createdAt?: unknown;
+}
+
+export function subscribeToWorldWeaveActivity(
+  weaveId: string,
+  onItems: (items: WorldWeaveActivity[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  requireUser();
+  return onSnapshot(
+    query(collection(db, 'worldWeaves', weaveId, 'activity'), orderBy('createdAt', 'desc'), limit(20)),
+    snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveActivity))),
+    onError,
+  );
+}
