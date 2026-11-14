@@ -14,6 +14,7 @@ import { getStudioExportValidationError } from '../utils/studioExportValidationP
 import { isStudioCloudDraftNewer } from '../utils/studioCloudDraftPolicy';
 import { getStudioCloudDraftRevision, loadStudioCloudDraft, saveStudioCloudDraft } from '../services/studioCloudDraftService';
 import { createStudioMp4Export } from '../services/studioMp4ExportService';
+import type { OriginRemixPolicy } from '../services/originRemixPolicyService';
 import { getCrossDissolveAudioGains, getCrossDissolveProgress, STUDIO_CROSS_DISSOLVE_SECONDS } from '../utils/studioTransitionPolicy';
 import { getStudioVideoLayerFrame, normalizeStudioVideoLayer, type StudioVideoLayer } from '../utils/studioVideoLayerPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
@@ -22,7 +23,7 @@ type StudioClip = StudioVideoLayer & { name: string; blob: Blob; duration: numbe
 type StudioSubtitleSegment = { id: string; text: string; start: number; end: number };
 type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; textLayers: StudioTextLayer[]; selectedTextLayerId: string | null; imageLayers: StudioImageLayer[]; selectedImageLayerId: string | null; subtitleSegments: StudioSubtitleSegment[]; selectedSubtitleSegmentId: string | null; aspectRatio: 'portrait' | 'square' | 'landscape'; visualFilter: StudioVisualFilter; transition: 'cut' | 'fade' | 'cross-dissolve'; soundtrackVolume: number; soundtrackFadeIn: number; soundtrackFadeOut: number; duckMusicUnderVoiceover: boolean; musicDuckingLevel: number; voiceoverVolume: number; voiceoverFadeIn: number; voiceoverFadeOut: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
 type StudioSnapshot = Omit<StudioProject, 'updatedAt'> & { selectedId: string | null };
-type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string, onProgress?: (progress: number) => void, signal?: AbortSignal) => Promise<void> };
+type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string, onProgress?: (progress: number) => void, signal?: AbortSignal, remixPolicy?: OriginRemixPolicy) => Promise<void> };
 
 const DB_NAME = 'nexora-studio-projects';
 const STORE_NAME = 'projects';
@@ -107,6 +108,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [voiceoverWaveform, setVoiceoverWaveform] = useState<number[]>([]);
   const [voiceoverDuration, setVoiceoverDuration] = useState(0);
   const [caption, setCaption] = useState('');
+  const [originRemixPolicy, setOriginRemixPolicy] = useState<OriginRemixPolicy>('closed');
   const [overlay, setOverlay] = useState('');
   const [textLayers, setTextLayers] = useState<StudioTextLayer[]>([]);
   const [selectedTextLayerId, setSelectedTextLayerId] = useState<string | null>(null);
@@ -207,6 +209,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         cloudRevisionRef.current,
         setCloudProgress,
         controller.signal,
+        originRemixPolicy,
       );
       cloudRevisionRef.current = result.revision;
       setCloudConflict(false);
@@ -1282,6 +1285,15 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <p className="text-[9px] text-[#827B9C]">Subtitles are separate from your post caption. Up to 30 timed segments are saved in your Studio draft and burned into export.</p>
             </div>
             <div className="space-y-2 rounded-xl border border-[#34265E] bg-[#100C20] p-3"><div className="flex items-center justify-between gap-2"><div><h2 className="text-xs font-bold">MP4 download</h2><p className="mt-1 text-[9px] text-[#827B9C]">NEXORA’s server renderer converts your verified Studio export into a compatible MP4.</p></div><button type="button" onClick={handleMp4Export} disabled={!exportBlob || mp4Exporting || rendering || publishing} className="shrink-0 rounded-lg border border-violet-400/40 px-3 py-2 text-[10px] font-bold text-violet-100 disabled:opacity-40">{mp4Exporting ? 'Preparing · ' + mp4Progress + '%' : mp4Download && mp4Download.expiresAt > Date.now() ? 'Download MP4 · ' + mp4Download.renditionHeight + 'p' : 'Prepare MP4'}</button></div>{mp4Exporting && <div className="space-y-2"><div className="h-1.5 overflow-hidden rounded-full bg-[#211A36]"><div className="h-full rounded-full bg-violet-400 transition-[width]" style={{width: mp4Progress + '%'}}/></div><button type="button" onClick={() => mp4AbortRef.current?.abort()} className="text-[9px] font-semibold text-rose-300">Cancel MP4 preparation</button></div>}</div>
+            <div className="space-y-2 rounded-xl border border-[#34265E] bg-[#100C20] p-3">
+              <h2 className="text-xs font-bold">NEXORA Origin · Remix permission</h2>
+              <p className="text-[9px] leading-relaxed text-[#A39BBF]">Control whether other creators can remix this exported video.</p>
+              <select aria-label="Studio remix permission" value={originRemixPolicy} onChange={event => setOriginRemixPolicy(event.target.value as OriginRemixPolicy)} className="w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white">
+                <option value="closed">Closed · Only me</option>
+                <option value="allow_with_attribution">Allow remixing · Attribution required</option>
+              </select>
+              <p className="text-[9px] text-[#827B9C]">{originRemixPolicy === 'closed' ? 'Cross-account remixing stays closed by default.' : 'NEXORA records the source creator and permission basis when a remix is created.'}</p>
+            </div>
             <div className="space-y-2"><label className="block text-xs font-bold">Post caption</label><textarea value={caption} onChange={event=>setCaption(event.target.value.slice(0,500))} maxLength={500} rows={3} placeholder="Write a caption for your finished video…" className="w-full resize-y rounded-xl border border-[#34265E] bg-[#100C20] p-3 text-xs text-white outline-none focus:border-violet-400"/><div className="text-right text-[10px] text-[#827B9C]">{caption.length}/500</div></div>
             <div className="mt-auto space-y-2 border-t border-[#292244] pt-3"><p aria-live="polite" className="min-h-4 text-[10px] text-[#A39BBF]">{message || 'Your edits are saved automatically on this device.'}</p><div className="flex items-center justify-between gap-2 rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2"><span className="min-w-0 text-[9px] text-[#AFA5D0]">{cloudStatus}{cloudProgress > 0 && cloudProgress < 100 ? ' · ' + cloudProgress + '%' : ''}</span><button type="button" onClick={() => void requestCloudSync()} disabled={publishing || rendering || !clips.length || cloudConflict || cloudStatus === 'Syncing cloud backup…'} className="shrink-0 text-[9px] font-bold text-violet-300 disabled:opacity-40">Sync now</button></div>{cloudConflict && <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-950/10 p-3"><p className="text-[9px] text-amber-100">This project was also edited on another device. Your local draft is safe. Choose which copy should become the latest version.</p><div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => void restoreCloudVersion()} className="rounded-lg border border-[#59458C] px-2 py-2 text-[9px] font-bold text-violet-100">Use cloud copy</button><button type="button" onClick={() => void keepThisDeviceVersion()} className="rounded-lg border border-amber-400/40 px-2 py-2 text-[9px] font-bold text-amber-100">Keep this device</button></div></div>}<button type="button" onClick={handlePublish} disabled={!exportBlob || publishing || rendering || mp4Exporting} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-3 text-xs font-black disabled:opacity-50">{publishing ? 'Uploading · ' + uploadProgress + '%' : <><Check size={14} className="mr-2 inline"/>Publish to NEXORA</>}</button>{publishing && <div className="space-y-2 rounded-lg border border-[#34265E] bg-[#080611] p-3"><div className="h-1.5 overflow-hidden rounded-full bg-[#211A36]"><div className="h-full rounded-full bg-violet-400 transition-[width]" style={{width: uploadProgress + '%'}}/></div><div className="flex items-center justify-between gap-2 text-[10px]"><span className="text-[#A39BBF]">Resumable upload · {uploadProgress}%</span><button type="button" onClick={cancelPublish} className="font-semibold text-rose-300">Cancel upload</button></div></div>}<p className="text-center text-[9px] text-[#827B9C]">Failed uploads can be retried without rendering again.</p></div>
           </aside>
