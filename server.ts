@@ -25,30 +25,6 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 app.disable('x-powered-by');
 
-// Restrict cross-origin API access to the same origin, the two Capacitor
-// WebView origins, or explicitly configured HTTPS origins. Firebase ID-token
-// verification remains the authorization boundary for protected routes.
-const allowedApiOrigins = parseAllowedApiOrigins(process.env.CORS_ALLOWED_ORIGINS);
-app.use((req, res, next) => {
-  const origin = req.get('origin');
-  if (!origin) return next();
-  const requestHost = req.get('host') || '';
-  const forwardedProtocol = req.get('x-forwarded-proto')?.split(',')[0]?.trim();
-  const requestOrigin = requestHost ? `${forwardedProtocol || req.protocol}://${requestHost}` : '';
-  if (!isAllowedApiOrigin(origin, requestOrigin, allowedApiOrigins)) {
-    return res.status(403).json({ error: 'origin_not_allowed' });
-  }
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Vary', 'Origin');
-  if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type,X-Request-Id,X-Firebase-AppCheck');
-    res.setHeader('Access-Control-Max-Age', '600');
-    return res.status(204).end();
-  }
-  next();
-});
-
 const firebaseRuntime = resolveServerFirebaseConfig();
 const firebaseProjectId = firebaseRuntime.projectId;
 const firestoreDatabaseId = firebaseRuntime.firestoreDatabaseId;
@@ -92,6 +68,30 @@ app.use((req, res, next) => {
       environment: process.env.NODE_ENV || 'development',
     }));
   });
+  next();
+});
+
+// Restrict cross-origin API access to the same origin, the two Capacitor
+// WebView origins, or explicitly configured HTTPS origins. Firebase ID-token
+// verification remains the authorization boundary for protected routes.
+const allowedApiOrigins = parseAllowedApiOrigins(process.env.CORS_ALLOWED_ORIGINS);
+app.use((req, res, next) => {
+  const origin = req.get('origin');
+  if (!origin) return next();
+  const requestHost = req.get('host') || '';
+  const forwardedProtocol = req.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const requestOrigin = requestHost ? `${forwardedProtocol || req.protocol}://${requestHost}` : '';
+  if (!isAllowedApiOrigin(origin, requestOrigin, allowedApiOrigins)) {
+    return res.status(403).json({ error: 'origin_not_allowed' });
+  }
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Vary', 'Origin');
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type,X-Request-Id,X-Firebase-AppCheck');
+    res.setHeader('Access-Control-Max-Age', '600');
+    return res.status(204).end();
+  }
   next();
 });
 
