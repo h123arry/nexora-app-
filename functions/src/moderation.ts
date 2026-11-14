@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { shouldOpenImpersonationCase } from './identityVerificationPolicy.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -112,7 +113,7 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
       .where('createdAt', '>=', Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000))
       .limit(4)
       .get();
-    if (recentSignals.size >= 3) {
+    if (shouldOpenImpersonationCase(recentSignals.size)) {
       const caseRef = db.collection('identityImpersonationCases').doc(normalizedTargetId);
       await db.runTransaction(async transaction => {
         const existingCase = await transaction.get(caseRef);
