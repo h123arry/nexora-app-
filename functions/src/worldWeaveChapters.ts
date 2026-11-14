@@ -1,4 +1,4 @@
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
@@ -12,7 +12,7 @@ function validId(value: unknown): value is string {
 function cleanText(value: unknown, max: number): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
 }
-function requireOwner(weave: FirebaseFirestore.DocumentSnapshot, uid: string) {
+function requireOwner(weave: DocumentSnapshot, uid: string) {
   if (weave.get('ownerId') !== uid) throw new HttpsError('permission-denied', 'Only the WorldWeave owner can organize story chapters.');
 }
 
