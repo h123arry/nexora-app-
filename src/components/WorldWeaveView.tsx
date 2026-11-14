@@ -504,6 +504,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
                 : event.action === 'member_left' ? actor + ' left the WorldWeave'
                 : event.action === 'moment_pinned' ? actor + ' pinned a moment to the story'
                 : event.action === 'moment_unpinned' ? actor + ' unpinned a moment from the story'
+                : event.action === 'chapter_created' ? actor + ' created chapter ' + String(event.chapterTitle || '')
+                : event.action === 'chapter_updated' ? actor + ' updated chapter ' + String(event.chapterTitle || '')
                 : 'A membership update occurred';
               return <div key={event.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 px-3 py-2">
                 <span className="text-xs text-slate-300">{description}</span>
