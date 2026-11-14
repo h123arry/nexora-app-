@@ -495,6 +495,33 @@ const publicProfile = (uid) => ({
     await assertSucceeds(updateDoc(bobMessage, { reactionUsers: { bob: ['❤️'] } }));
   });
 
+  it('enforces blocks in both directions for direct chat creation and message sends', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'users', 'blocker', 'settings', 'preferences'), {
+        privacy: { allowDms: true }, notifications: {}, appearance: {}, content: {}, feed: {}, security: {},
+        messaging: { blockedUserIds: ['blocked'], mutedChatIds: [] }
+      });
+      await setDoc(doc(adminDb, 'chats', 'blocked-direct'), {
+        id: 'blocked-direct', participants: ['blocker', 'blocked'], lastMessage: ''
+      });
+    });
+
+    await assertFails(setDoc(doc(dbFor('blocked'), 'chats', 'blocked-to-blocker'), {
+      id: 'blocked-to-blocker', participants: ['blocked', 'blocker'], lastMessage: ''
+    }));
+    await assertFails(setDoc(doc(dbFor('blocker'), 'chats', 'blocker-to-blocked'), {
+      id: 'blocker-to-blocked', participants: ['blocker', 'blocked'], lastMessage: ''
+    }));
+    await assertFails(setDoc(doc(dbFor('blocked'), 'chats', 'blocked-direct', 'messages', 'blocked-message'), {
+      id: 'blocked-message', chatId: 'blocked-direct', senderId: 'blocked', content: 'hello',
+      status: 'sent', timestamp: new Date().toISOString()
+    }));
+    await assertFails(setDoc(doc(dbFor('blocker'), 'chats', 'blocked-direct', 'messages', 'blocker-message'), {
+      id: 'blocker-message', chatId: 'blocked-direct', senderId: 'blocker', content: 'hello',
+      status: 'sent', timestamp: new Date().toISOString()
+    }));
+  });
+
   it('restricts chat reads and writes to participants and binds message authorship to Firebase UID', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'chats', 'chat-1'), { id: 'chat-1', participants: ['alice', 'bob'], lastMessage: '' });
@@ -554,8 +581,8 @@ const publicProfile = (uid) => ({
       timestamp: new Date().toISOString()
     }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { lastMessage: 'blocked sender metadata' }));
-    await assertSucceeds(setDoc(doc(dbFor('bob'), 'chats', 'chat-1', 'messages', 'm-from-blocker'), {
-      id: 'm-from-blocker', chatId: 'chat-1', senderId: 'bob', content: 'blocker can still send', status: 'sent',
+    await assertFails(setDoc(doc(dbFor('bob'), 'chats', 'chat-1', 'messages', 'm-from-blocker'), {
+      id: 'm-from-blocker', chatId: 'chat-1', senderId: 'bob', content: 'blocker cannot send in reverse', status: 'sent',
       timestamp: new Date().toISOString()
     }));
     await seed(async (db) => {

@@ -22,10 +22,13 @@ service cloud.firestore {
         && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
     }
     function recipientAllowsDirectMessage(recipientId) {
-      let settingsPath = /databases/$(database)/documents/users/$(recipientId)/settings/preferences;
-      return !exists(settingsPath)
-        || (get(settingsPath).data.get('privacy', {}).get('allowDms', true) == true
-          && !(request.auth.uid in get(settingsPath).data.get('messaging', {}).get('blockedUserIds', [])));
+      let recipientSettingsPath = /databases/$(database)/documents/users/$(recipientId)/settings/preferences;
+      let senderSettingsPath = /databases/$(database)/documents/users/$(request.auth.uid)/settings/preferences;
+      let recipientSettings = exists(recipientSettingsPath) ? get(recipientSettingsPath).data : {};
+      let senderSettings = exists(senderSettingsPath) ? get(senderSettingsPath).data : {};
+      return recipientSettings.get('privacy', {}).get('allowDms', true) == true
+        && !(request.auth.uid in recipientSettings.get('messaging', {}).get('blockedUserIds', []))
+        && !(recipientId in senderSettings.get('messaging', {}).get('blockedUserIds', []));
     }
     function recipientAllowsMessage(chatId) {
       let participants = get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
