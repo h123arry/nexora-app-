@@ -55,7 +55,7 @@ describe('account deletion data and storage scope', () => {
     await db.collection('mediaOrigins').doc('keep-origin').set({ assetId: 'keep-origin', ownerUid: 'account-delete-other' });
 
     const deleted = await deleteUserOwnedDocuments(db, 'account-delete-test');
-    assert.equal(deleted, 6);
+    assert.equal(deleted, 7);
     assert.equal((await db.collection('mediaAssets').doc('delete-media').get()).exists, false);
     assert.equal((await db.collection('academyProgress').doc('delete-progress').get()).exists, false);
     assert.equal((await db.collection('academyLessonNotes').doc('delete-note').get()).exists, false);
