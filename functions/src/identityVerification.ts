@@ -78,6 +78,28 @@ export const getMyIdentityVerificationApplication = onCall({ maxInstances: 10 },
   } };
 });
 
+export const listIdentityVerificationApplications = onCall({ maxInstances: 10 }, async request => {
+  requireIdentityReviewer(request as Request);
+  const snapshot = await db.collection('identityVerificationApplications')
+    .where('status', '==', 'pending_review')
+    .limit(50)
+    .get();
+  return {
+    applications: snapshot.docs.map(document => {
+      const data = document.data();
+      return {
+        userId: document.id,
+        identityType: data.identityType,
+        displayName: data.displayName,
+        evidenceSummary: data.evidenceSummary,
+        evidenceUrls: data.evidenceUrls,
+        version: data.version,
+        submittedAt: data.submittedAt?.toDate?.()?.toISOString?.() || null,
+      };
+    }),
+  };
+});
+
 export const reviewIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {
   const reviewerId = requireIdentityReviewer(request as Request);
   const data = request.data || {};
