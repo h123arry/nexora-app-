@@ -1,4 +1,5 @@
 import { createHmac, randomUUID } from 'node:crypto';
+import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https';
@@ -16,18 +17,41 @@ class PaystackApiError extends Error {
 }
 type TransferStatus = 'processing' | 'submission_unknown' | 'awaiting_provider_approval' | 'success' | 'failed' | 'reversed';
 
+type PayoutCallableRequest = {
+  auth?: { uid: string; token?: Record<string, unknown> } | null;
+  rawRequest: { headers: { authorization?: string } };
+};
 function requireUser(request: { auth?: { uid: string; token?: Record<string, unknown> } | null }): string {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to continue.');
   return request.auth.uid;
 }
-function recentlyAuthenticated(request: { auth?: { token?: Record<string, unknown> } | null }): boolean {
-  const authTime = request.auth?.token?.auth_time;
-  const now = Date.now() / 1000;
-  return typeof authTime === 'number' && Number.isSafeInteger(authTime) && authTime <= now && now - authTime <= 300;
+async function verifyPayoutSession(request: PayoutCallableRequest, requireRecent = false) {
+  const uid = requireUser(request);
+  const authorization = request.rawRequest.headers.authorization || '';
+  const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+  if (!token) throw new HttpsError('unauthenticated', 'A current authenticated session is required.');
+  let decoded;
+  try {
+    decoded = await getAuth(getFirebaseAdminApp()).verifyIdToken(token, true);
+  } catch {
+    throw new HttpsError('unauthenticated', 'Your session is expired or has been revoked. Sign in again.');
+  }
+  if (decoded.uid !== uid) throw new HttpsError('unauthenticated', 'The authenticated session no longer matches this account.');
+  if (requireRecent) {
+    const authTime = decoded.auth_time;
+    const now = Date.now() / 1000;
+    if (!Number.isSafeInteger(authTime) || authTime > now || now - authTime > 300) {
+      throw new HttpsError('failed-precondition', 'Sign in again before this sensitive payout action.');
+    }
+  }
+  return decoded;
 }
-function isFinance(request: { auth?: { token?: Record<string, unknown> } | null }): boolean {
-  const token = request.auth?.token || {};
-  return token.finance_admin === true || token.admin === true || token.role === 'finance_admin' || token.role === 'founder';
+async function requireFinance(request: PayoutCallableRequest, requireRecent = false): Promise<string> {
+  const token = await verifyPayoutSession(request, requireRecent);
+  if (token.finance_admin !== true && token.admin !== true && token.role !== 'finance_admin' && token.role !== 'founder') {
+    throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  }
+  return token.uid;
 }
 function safeCounter(value: unknown): number {
   if (value === undefined) return 0;
@@ -97,8 +121,7 @@ async function consumeBankLookupQuota(uid: string): Promise<void> {
 }
 
 export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 3 }, async request => {
-  requireUser(request);
-  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  await requireFinance(request);
   const secret = PAYSTACK_SECRET_KEY.value();
   const mode = providerMode(secret);
   const policy = await payoutPolicy();
@@ -130,8 +153,7 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
 });
 
 export const getNgnPayoutPolicyForFinance = onCall({ secrets: [PAYSTACK_SECRET_KEY, PAYSTACK_WEBHOOK_SECRET], maxInstances: 3 }, async request => {
-  requireUser(request);
-  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  await requireFinance(request);
   const policy = await payoutPolicy();
   let credentialsVerified = false;
   let ngnBalanceKobo: number | null = null;
@@ -157,8 +179,7 @@ export const getNgnPayoutPolicyForFinance = onCall({ secrets: [PAYSTACK_SECRET_K
 });
 
 export const getNgnPayoutOtpQueue = onCall({ maxInstances: 3 }, async request => {
-  requireUser(request);
-  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  await requireFinance(request);
   const snapshot = await db.collection('creatorPayoutRequests').where('status', '==', 'awaiting_provider_approval')
     .orderBy('createdAt', 'asc').limit(50).get();
   return { records: snapshot.docs.map(doc => {
@@ -170,9 +191,7 @@ export const getNgnPayoutOtpQueue = onCall({ maxInstances: 3 }, async request =>
 });
 
 export const finalizeNgnPayoutTransfer = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 3 }, async request => {
-  const actorId = requireUser(request);
-  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
-  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Re-authenticate before approving a provider transfer.');
+  const actorId = await requireFinance(request, true);
   const reference = request.data?.reference;
   const otp = request.data?.otp;
   if (!safeText(reference, 80) || typeof otp !== 'string' || !/^\d{4,8}$/.test(otp)) {
@@ -206,8 +225,7 @@ export const finalizeNgnPayoutTransfer = onCall({ secrets: [PAYSTACK_SECRET_KEY]
 });
 
 export const getCreatorPayoutComplianceQueue = onCall({ maxInstances: 3 }, async request => {
-  requireUser(request);
-  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  await requireFinance(request);
   const snapshot = await db.collection('creatorPayoutBeneficiaries').where('status', '==', 'verified').orderBy('updatedAt', 'desc').limit(100).get();
   const rows = await Promise.all(snapshot.docs.map(async doc => {
     const beneficiary = doc.data();
@@ -224,9 +242,7 @@ export const getCreatorPayoutComplianceQueue = onCall({ maxInstances: 3 }, async
 });
 
 export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY, PAYSTACK_WEBHOOK_SECRET], maxInstances: 2 }, async request => {
-  const actorId = requireUser(request);
-  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
-  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Re-authenticate before changing payout controls.');
+  const actorId = await requireFinance(request, true);
   const { enabled, koboPerNex, liveSettlementApproved, minimumNex, maximumNex, providerBusinessVerified, settlementFundingVerified, complianceApproved, webhookVerified, liveTestTransferVerified } = request.data || {};
   const providerFeeBufferKobo = request.data?.providerFeeBufferKobo ?? 0;
   const liveEvidenceReference = request.data?.liveEvidenceReference;
@@ -293,9 +309,9 @@ export const resolveNgnBankAccount = onCall({ secrets: [PAYSTACK_SECRET_KEY], ma
 });
 
 export const setCreatorPayoutBeneficiary = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 5 }, async request => {
-  const creatorId = requireUser(request);
-  if (request.auth?.token?.email_verified !== true) throw new HttpsError('failed-precondition', 'Verify your NEXORA email before adding a withdrawal account.');
-  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Sign in again before changing your withdrawal account.');
+  const verifiedSession = await verifyPayoutSession(request, true);
+  const creatorId = verifiedSession.uid;
+  if (verifiedSession.email_verified !== true) throw new HttpsError('failed-precondition', 'Verify your NEXORA email before adding a withdrawal account.');
   const accountNumber = request.data?.accountNumber;
   const bankCode = request.data?.bankCode;
   const expectedAccountName = request.data?.confirmedAccountName;
@@ -345,9 +361,7 @@ export const setCreatorPayoutBeneficiary = onCall({ secrets: [PAYSTACK_SECRET_KE
 });
 
 export const reviewCreatorPayoutCompliance = onCall({ maxInstances: 3 }, async request => {
-  const actorId = requireUser(request);
-  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
-  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Re-authenticate before changing payout controls.');
+  const actorId = await requireFinance(request, true);
   const creatorId = request.data?.creatorId;
   const beneficiaryRef = request.data?.beneficiaryRef;
   const decision = request.data?.decision;
@@ -534,7 +548,8 @@ export const paystackPayoutWebhook = onRequest({ secrets: [PAYSTACK_SECRET_KEY, 
 });
 
 export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 5 }, async request => {
-  const creatorId = requireUser(request);
+  const verifiedSession = await verifyPayoutSession(request, true);
+  const creatorId = verifiedSession.uid;
   const amountNex = request.data?.amountNex;
   const idempotencyKey = request.data?.idempotencyKey;
   if (!Number.isSafeInteger(amountNex) || !safeText(idempotencyKey, 120) || idempotencyKey.length < 12) {
@@ -548,8 +563,7 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
     throw new HttpsError('failed-precondition', 'NGN withdrawals are not enabled for this provider environment.');
   }
   if (amountNex < policy.minimumNex || amountNex > policy.maximumNex) throw new HttpsError('invalid-argument', 'The withdrawal amount is outside the approved limits.');
-  if (request.auth?.token?.email_verified !== true) throw new HttpsError('failed-precondition', 'Verify your email before withdrawing.');
-  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Sign in again before requesting a withdrawal.');
+  if (verifiedSession.email_verified !== true) throw new HttpsError('failed-precondition', 'Verify your email before withdrawing.');
   const [beneficiarySnap, complianceSnap] = await Promise.all([
     db.collection('creatorPayoutBeneficiaries').doc(creatorId).get(), db.collection('creatorPayoutCompliance').doc(creatorId).get(),
   ]);
