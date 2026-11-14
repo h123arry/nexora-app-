@@ -105,10 +105,6 @@ export async function syncUniversalSearchRecord(
     (kind === 'update' && status !== 'deleted' && parent?.status !== 'suspended');
   if (!isEligible) { await ref.delete().catch(() => undefined); return; }
   const record = publicRecord(kind, id, sourcePath, data, parent);
-  if (record.ownerId) {
-    const verifiedIdentity = await db.collection('verifiedIdentities').doc(record.ownerId).get();
-    record.verified = verifiedIdentity.exists && verifiedIdentity.get('status') === 'verified';
-  }
   if (record.title.length < 2 || record.searchKeys.length === 0) { await ref.delete().catch(() => undefined); return; }
   await ref.set(record);
 }
@@ -209,7 +205,8 @@ export async function searchNexoraContent(
     ...(Array.isArray(viewerData?.messaging?.blockedUserIds) ? viewerData.messaging.blockedUserIds : []),
     ...(Array.isArray(viewerData?.feed?.blockedCreatorIds) ? viewerData.feed.blockedCreatorIds : []),
   ].filter((item): item is string => typeof item === 'string'));
-  const ownerPolicyCache = new Map<string, Promise<{privateProfile:boolean; blocks:string[]; restricted:boolean}>>();
+  const ownerPolicyCache = new Map<string, Promise<{privateProfile:boolean; blocks:string[]; restricted:boolean; verified:boolean}>>();
+  const ownerVerified = new Map<string, boolean>();
   const parentPolicyCache = new Map<string, Promise<{exists:boolean; data:Record<string, unknown>}>>();
   const readParentPolicy = (collectionName: string, id: string) => {
     const key = collectionName + '/' + id;
@@ -246,7 +243,8 @@ export async function searchNexoraContent(
           db.collection('users').doc(ownerId).get(),
           db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
           db.collection('accountStatus').doc(ownerId).get(),
-        ]).then(([ownerProfile, ownerSettings, ownerStatus]) => {
+          db.collection('verifiedIdentities').doc(ownerId).get(),
+        ]).then(([ownerProfile, ownerSettings, ownerStatus, verifiedIdentity]) => {
           const profile = ownerProfile.data() || {};
           const privacy = ownerSettings.data() || {};
           const restriction = ownerStatus.data() || {};
@@ -258,11 +256,13 @@ export async function searchNexoraContent(
               ...(Array.isArray(privacy?.feed?.blockedCreatorIds) ? privacy.feed.blockedCreatorIds : []),
             ],
             restricted: hasActiveAccountRestriction(profile, restriction),
+            verified: verifiedIdentity.exists && verifiedIdentity.get('status') === 'verified',
           };
         });
         ownerPolicyCache.set(ownerId, policy);
       }
       const visibility = await policy;
+      ownerVerified.set(ownerId, visibility.verified);
       if (visibility.restricted || visibility.blocks.includes(viewerUid)) return null;
       if (visibility.privateProfile && !followedIds.has(ownerId)) {
         const follow = await db.collection('follows').doc(viewerUid + '_' + ownerId).get();
@@ -281,7 +281,7 @@ export async function searchNexoraContent(
     hits.push({
       id: candidate.id, kind: data.kind, title: String(data.title || ''), subtitle: String(data.subtitle || ''),
       excerpt: String(data.excerpt || ''), image: String(data.image || ''), targetId: String(data.targetId || ''),
-      targetPath: String(data.targetPath || ''), ownerId: String(data.ownerId || ''), verified: data.verified === true,
+      targetPath: String(data.targetPath || ''), ownerId: String(data.ownerId || ''), verified: ownerVerified.get(ownerId) === true,
       createdAt: asDate(data.createdAt).toISOString(),
       score: score + (followedIds.has(String(data.targetId || '')) || (ownerId && followedIds.has(ownerId)) ? 3 : 0)
         + Math.min(4, (Array.isArray(data.tags) ? data.tags : []).reduce((sum: number, tag: unknown) => sum + (interests[normalizeSearchText(tag)] || 0) * 0.35, 0)),
