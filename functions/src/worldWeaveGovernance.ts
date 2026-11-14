@@ -5,7 +5,6 @@ import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
-const MAX_MEMBERS = 500;
 
 function requireId(value: unknown, label: string): string {
   if (typeof value !== 'string' || !ID_PATTERN.test(value)) {
@@ -31,24 +30,6 @@ function mapError(error: unknown): never {
     throw new HttpsError('failed-precondition', message);
   }
   throw new HttpsError('internal', 'WorldWeave membership could not be updated. Try again.');
-}
-
-async function recordMembershipChange(
-  weaveId: string,
-  actorUid: string,
-  targetUid: string,
-  action: 'member_left' | 'member_removed' | 'ownership_transferred',
-  previousOwnerId?: string,
-) {
-  const ref = db.collection('worldWeaves').doc(weaveId).collection('activity').doc(randomUUID());
-  await ref.create({
-    id: ref.id,
-    actorUid,
-    targetUid,
-    action,
-    ...(previousOwnerId ? { previousOwnerId } : {}),
-    createdAt: FieldValue.serverTimestamp(),
-  });
 }
 
 /** A contributor may leave; the owner must transfer ownership before leaving. */
