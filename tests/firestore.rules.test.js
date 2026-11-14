@@ -423,6 +423,8 @@ const publicProfile = (uid) => ({
     await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { email: 'attacker@example.test' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { isVerified: true }));
     await assertFails(updateDoc(doc(dbFor('bob'), 'users', 'bob'), { isVerified: false }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { isVerified: true }));
+    await assertFails(updateDoc(doc(dbFor('bob'), 'publicProfiles', 'bob'), { isVerified: false }));
     await assertFails(updateDoc(doc(dbFor('bob'), 'users', 'alice'), { bio: 'intrusion' }));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { bio: 'public bio' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { email: 'leak@example.test' }));
