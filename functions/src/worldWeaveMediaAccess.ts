@@ -18,14 +18,18 @@ function ids(value: unknown): string[] {
 export function canReadWorldWeaveMedia(input: {
   uid: string;
   ownerId: string;
+  authorId?: string;
   visibility: unknown;
   participantIds: unknown;
   viewerBlockedIds?: unknown;
   ownerBlockedIds?: unknown;
+  authorBlockedIds?: unknown;
 }): boolean {
-  if (!input.uid || !input.ownerId || input.uid === input.ownerId) return Boolean(input.uid && input.ownerId);
-  if (ids(input.viewerBlockedIds).includes(input.ownerId)
-    || ids(input.ownerBlockedIds).includes(input.uid)) return false;
+  if (!input.uid || !input.ownerId) return false;
+  const blockedByViewer = ids(input.viewerBlockedIds);
+  if (blockedByViewer.includes(input.ownerId) || (input.authorId && blockedByViewer.includes(input.authorId))
+    || ids(input.ownerBlockedIds).includes(input.uid) || ids(input.authorBlockedIds).includes(input.uid)) return false;
+  if (input.uid === input.ownerId) return true;
   if (input.visibility === 'public') return true;
   if (input.visibility !== 'private') return false;
   return ids(input.participantIds).includes(input.uid);
@@ -65,15 +69,18 @@ export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, asyn
     throw new HttpsError('failed-precondition', 'This moment does not have a valid private media asset.');
   }
 
-  const [viewerSettingsSnapshot, ownerSettingsSnapshot] = await Promise.all([
+  const [viewerSettingsSnapshot, ownerSettingsSnapshot, authorSettingsSnapshot] = await Promise.all([
     db.collection('users').doc(uid).collection('settings').doc('preferences').get(),
     db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
+    db.collection('users').doc(authorId).collection('settings').doc('preferences').get(),
   ]);
   const viewerSettings = viewerSettingsSnapshot.data() || {};
   const ownerSettings = ownerSettingsSnapshot.data() || {};
+  const authorSettings = authorSettingsSnapshot.data() || {};
   if (!canReadWorldWeaveMedia({
     uid,
     ownerId,
+    authorId,
     visibility: weave.get('visibility'),
     participantIds: weave.get('participantIds'),
     viewerBlockedIds: [
@@ -83,6 +90,10 @@ export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, asyn
     ownerBlockedIds: [
       ...ids(ownerSettings?.privacy?.blockedUserIds),
       ...ids(ownerSettings?.messaging?.blockedUserIds),
+    ],
+    authorBlockedIds: [
+      ...ids(authorSettings?.privacy?.blockedUserIds),
+      ...ids(authorSettings?.messaging?.blockedUserIds),
     ],
   })) {
     throw new HttpsError('permission-denied', 'You no longer have access to this WorldWeave media.');
