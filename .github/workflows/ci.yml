@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: nexora-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -37,8 +37,6 @@ jobs:
           java-version: '21'
           verify-signature: true
 
-      - name: Resolve updated root dependency lockfile
-        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Install web dependencies
         run: npm ci --no-audit --no-fund
 
@@ -126,28 +124,4 @@ jobs:
       - name: Validate deployment metadata
         run: npm run validate:deployment
 
-      - name: Upload resolved root dependency lockfile
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: nexora-root-package-lock
-          path: package-lock.json
-          if-no-files-found: error
-          retention-days: 1
 
-      - name: Commit the validated dependency lockfile to this trusted PR branch
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'objective-2/devsecops-automation'
-        run: |
-          cp package-lock.json /tmp/nexora-package-lock.json
-          git fetch origin "$GITHUB_HEAD_REF"
-          git checkout -B "$GITHUB_HEAD_REF" FETCH_HEAD
-          cp /tmp/nexora-package-lock.json package-lock.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          if git diff --cached --quiet; then
-            echo "Dependency lockfile is already current."
-            exit 0
-          fi
-          git commit -m "security: lock patched Capacitor asset dependencies"
-          git push origin "HEAD:refs/heads/$GITHUB_HEAD_REF"
