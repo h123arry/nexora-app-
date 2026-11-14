@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, X, Users, MessageSquare, Briefcase, Bookmark, Cpu, Globe, ArrowRight, Sparkles, Hash, Clock, Trash2, Plus, Shield, ShieldCheck, Heart, Play, Radio, ChevronRight } from 'lucide-react';
+import { Search, X, Users, MessageSquare, Briefcase, Bookmark, Cpu, Globe, ArrowRight, Sparkles, Hash, Clock, Trash2, Plus, Shield, Heart, Play, Radio, ChevronRight } from 'lucide-react';
 import { User, Post, Chat } from '../types';
 import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
 import { searchNexora, type NexoraSearchResult } from '../services/firebase/universalSearchService';
@@ -555,7 +555,6 @@ export default function UniversalSearchModal({
                             <div className="flex-1 min-w-0">
                               <h5 className="text-sm font-sans font-bold text-white truncate flex items-center gap-1.5">
                                 <span className="truncate">{u.name}</span>
-                                {u.isVerified && <ShieldCheck className="w-3.5 h-3.5 text-violet-400 shrink-0" />}
                               </h5>
                               <p className="text-xs text-zinc-400 truncate">@{u.username}</p>
                               {u.bio && <p className="text-xs text-zinc-300 truncate mt-0.5">{u.bio}</p>}
