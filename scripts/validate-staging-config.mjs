@@ -2,10 +2,13 @@
 
 const required = [
   'NEXORA_ENV',
+  'NODE_ENV',
+  'GCLOUD_PROJECT',
   'NEXORA_STAGING_PROJECT_ID',
   'FIRESTORE_DATABASE_ID',
   'FIREBASE_STORAGE_BUCKET',
   'STAGING_APP_URL',
+  'VITE_NEXORA_ENV',
   'VITE_FIREBASE_PROJECT_ID',
   'VITE_FIREBASE_APP_ID',
   'VITE_FIREBASE_API_KEY',
@@ -22,9 +25,19 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
-if (process.env.NEXORA_ENV.trim() !== 'staging') {
-  console.error('NEXORA_ENV must be exactly staging for staging validation.');
+const fail = (message) => {
+  console.error(message);
   process.exit(1);
+};
+
+if (process.env.NEXORA_ENV.trim() !== 'staging') {
+  fail('NEXORA_ENV must be exactly staging for staging validation.');
+}
+if (process.env.NODE_ENV.trim() !== 'staging') {
+  fail('NODE_ENV must be exactly staging for staging validation.');
+}
+if (process.env.VITE_NEXORA_ENV.trim() !== 'staging') {
+  fail('VITE_NEXORA_ENV must be exactly staging for staging validation.');
 }
 
 const projectId = process.env.NEXORA_STAGING_PROJECT_ID.trim();
@@ -35,39 +48,52 @@ const appUrl = process.env.STAGING_APP_URL.trim();
 const browserProjectId = process.env.VITE_FIREBASE_PROJECT_ID.trim();
 const browserDatabaseId = process.env.VITE_FIREBASE_DATABASE_ID.trim();
 const browserBucket = process.env.VITE_FIREBASE_STORAGE_BUCKET.trim();
+const authDomain = process.env.VITE_FIREBASE_AUTH_DOMAIN.trim();
+const senderId = process.env.VITE_FIREBASE_MESSAGING_SENDER_ID.trim();
+const appId = process.env.VITE_FIREBASE_APP_ID.trim();
 
 if (!/^[a-z][a-z0-9-]{4,29}$/.test(projectId)) {
-  console.error('NEXORA_STAGING_PROJECT_ID is not a valid Firebase project ID.');
-  process.exit(1);
+  fail('NEXORA_STAGING_PROJECT_ID is not a valid Firebase project ID.');
 }
-if (projectId === productionProjectId || browserProjectId === productionProjectId) {
-  console.error('Refusing to validate staging configuration against the production Firebase project.');
-  process.exit(1);
+if (projectId === productionProjectId || browserProjectId === productionProjectId
+  || process.env.GCLOUD_PROJECT.trim() === productionProjectId) {
+  fail('Refusing to validate staging configuration against the production Firebase project.');
+}
+if (process.env.GCLOUD_PROJECT.trim() !== projectId) {
+  fail('GCLOUD_PROJECT must match NEXORA_STAGING_PROJECT_ID.');
 }
 if (browserProjectId !== projectId) {
-  console.error('VITE_FIREBASE_PROJECT_ID must match NEXORA_STAGING_PROJECT_ID.');
-  process.exit(1);
+  fail('VITE_FIREBASE_PROJECT_ID must match NEXORA_STAGING_PROJECT_ID.');
 }
 if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(databaseId)) {
-  console.error('FIRESTORE_DATABASE_ID contains unsupported characters.');
-  process.exit(1);
+  fail('FIRESTORE_DATABASE_ID contains unsupported characters.');
 }
 if (!bucket.includes(projectId) || !browserBucket.includes(projectId)) {
-  console.error('Firebase Storage buckets must belong to the declared staging project.');
-  process.exit(1);
+  fail('Firebase Storage buckets must belong to the declared staging project.');
 }
 if (browserDatabaseId !== databaseId) {
-  console.error('VITE_FIREBASE_DATABASE_ID must match FIRESTORE_DATABASE_ID.');
-  process.exit(1);
+  fail('VITE_FIREBASE_DATABASE_ID must match FIRESTORE_DATABASE_ID.');
 }
-if (!/^https:\/\//i.test(appUrl) || /localhost|127\.0\.0\.1/i.test(appUrl)) {
-  console.error('STAGING_APP_URL must be a non-local HTTPS staging URL.');
-  process.exit(1);
+if (authDomain !== `${projectId}.firebaseapp.com`) {
+  fail('VITE_FIREBASE_AUTH_DOMAIN must match the declared staging Firebase project.');
+}
+if (!appId.startsWith(`1:${senderId}:web:`)) {
+  fail('VITE_FIREBASE_APP_ID must be a Web App registered to VITE_FIREBASE_MESSAGING_SENDER_ID.');
+}
+let parsedAppUrl;
+try {
+  parsedAppUrl = new URL(appUrl);
+} catch {
+  fail('STAGING_APP_URL must be a valid non-local HTTPS URL.');
+}
+if (parsedAppUrl.protocol !== 'https:' || !parsedAppUrl.hostname
+  || parsedAppUrl.username || parsedAppUrl.password
+  || ['localhost', '127.0.0.1', '::1'].includes(parsedAppUrl.hostname)) {
+  fail('STAGING_APP_URL must be a non-local HTTPS staging URL.');
 }
 const emulatorVariables = ['FIRESTORE_EMULATOR_HOST', 'FIREBASE_AUTH_EMULATOR_HOST', 'FIREBASE_STORAGE_EMULATOR_HOST', 'VITE_USE_FIREBASE_EMULATORS'];
 if (emulatorVariables.some((name) => process.env[name]?.trim())) {
-  console.error('Staging validation refuses Firebase emulator configuration.');
-  process.exit(1);
+  fail('Staging validation refuses Firebase emulator configuration.');
 }
 
 console.log(JSON.stringify({
@@ -78,7 +104,9 @@ console.log(JSON.stringify({
   browserProjectId,
   browserDatabaseId,
   browserStorageBucket: browserBucket,
+  authDomain,
+  appIdMatchesSenderId: true,
   appCheckSiteKeyConfigured: Boolean(process.env.VITE_FIREBASE_APPCHECK_SITE_KEY?.trim()),
-  appUrl,
+  appUrl: parsedAppUrl.origin,
   note: 'This validates configuration shape, App Check client-key presence, and target separation only; it does not prove Firebase access, deployed rules/Functions, or Console-side App Check enforcement.',
 }, null, 2));
