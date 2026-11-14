@@ -104,6 +104,7 @@ export const deliverOriginAttributionCaseNotifications = onDocumentWritten(
       batch.set(ref, {
         id: notificationId,
         type: 'origin_attribution',
+        userId: 'system',
         username: 'NEXORA Origin',
         avatar: '/logo.svg',
         content,
