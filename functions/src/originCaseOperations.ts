@@ -17,9 +17,10 @@ function requireReviewer(request: { auth?: { uid: string; token: Record<string, 
 export const getOriginAttributionDisputeQueue = onCall({ maxInstances: 5 }, async request => {
   requireReviewer(request);
   try {
-    const snapshot = await db.collection(CASES).where('status', '==', 'disputed')
-      .orderBy('disputedAt', 'desc').limit(100).get();
-    return { cases: snapshot.docs.map(item => {
+    const snapshot = await db.collection(CASES).where('status', '==', 'disputed').limit(100).get();
+    const ordered = snapshot.docs.sort((left, right) =>
+      (right.get('disputedAt')?.toMillis?.() || 0) - (left.get('disputedAt')?.toMillis?.() || 0));
+    return { cases: ordered.map(item => {
       const data = item.data();
       return {
         id: item.id,
