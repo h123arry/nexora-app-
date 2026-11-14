@@ -90,3 +90,14 @@ test('identity review notifications give applicants clear decision-specific next
   assert.match(buildIdentityReviewNotification('creator-1', 'revoked', 5, '2026-11-14T00:00:00.000Z').content, /revoked/);
   assert.throws(() => buildIdentityReviewNotification('../bad', 'approved', 1, 'now'), /valid identity review/);
 });
+
+test('identity case notifications accurately distinguish holds, restoration, and revocation', async () => {
+  const { buildIdentityCaseNotification } = await import('../src/identityVerificationPolicy.ts');
+  const hold = buildIdentityCaseNotification('creator-2', 'place_on_hold', 'event-1', '2026-11-14T00:00:00.000Z');
+  assert.equal(hold.id, 'identity_case_event-1');
+  assert.match(hold.content, /account is not suspended/);
+  assert.match(buildIdentityCaseNotification('creator-2', 'clear_hold', 'event-2', 'now').content, /restored/);
+  assert.match(buildIdentityCaseNotification('creator-2', 'confirm_impersonation', 'event-3', 'now').content, /revoked/);
+  assert.match(buildIdentityCaseNotification('creator-2', 'dismiss', 'event-4', 'now').content, /dismissed the case/);
+  assert.throws(() => buildIdentityCaseNotification('creator-2', 'dismiss', 'bad/id', 'now'), /valid identity case/);
+});
