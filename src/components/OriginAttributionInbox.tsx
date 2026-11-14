@@ -51,7 +51,7 @@ export default function OriginAttributionInbox() {
 
   const runAction = async (caseId: string, action: 'respond' | 'dispute', decision?: 'accepted' | 'rejected') => {
     const note = (notes[caseId] || '').trim();
-    if (note.length < 10) { setError('Add a clear explanation of at least 10 characters.'); return; }
+    if (note.length < (action === 'dispute' ? 20 : 10)) { setError(action === 'dispute' ? 'A dispute explanation must contain at least 20 characters.' : 'Add a clear explanation of at least 10 characters.'); return; }
     setBusy(caseId); setError(''); setNotice('');
     try {
       if (action === 'respond') {
