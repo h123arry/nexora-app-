@@ -330,6 +330,7 @@ export default function NotificationsView({
       if (activeCategory === 'followers') return n.type === 'follow';
       if (activeCategory === 'profile_views') return n.type === 'profile_view';
       if (activeCategory === 'system') return n.type === 'system';
+      if (activeCategory === 'origin') return n.type === 'origin_attribution';
       if (activeCategory === 'communities') return n.type === 'community';
       if (activeCategory === 'live') return n.type === 'pulse_alert' && n.content.includes('LIVE');
       if (activeCategory === 'verification') return n.type === 'reputation_milestone' && n.content.includes('Verification');
@@ -394,6 +395,8 @@ export default function NotificationsView({
         return <Eye className="w-4 h-4 text-cyan-400" />;
       case 'mention':
         return <AtSign className="w-4 h-4 text-violet-400" />;
+      case 'origin_attribution':
+        return <Scale className="w-4 h-4 text-violet-300" />;
       case 'system':
         return <ShieldAlert className="w-4 h-4 text-rose-400 animate-pulse" />;
       case 'reputation_milestone':
@@ -723,6 +726,7 @@ export default function NotificationsView({
             { id: 'live', label: 'Live Streams' },
             { id: 'communities', label: 'Communities' },
             { id: 'creator', label: 'Creator Milestones' },
+            { id: 'origin', label: 'Origin & Attribution' },
             { id: 'system', label: 'Security & Core' }
           ].map((tab) => {
             const isActive = activeCategory === tab.id;
