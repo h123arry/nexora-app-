@@ -26,7 +26,7 @@ function memberIds(value: unknown): string[] {
 function mapError(error: unknown): never {
   if (error instanceof HttpsError) throw error;
   const message = error instanceof Error ? error.message : 'WorldWeave membership could not be updated.';
-  if (message.includes('Only') || message.includes('cannot') || message.includes('must be') || message.includes('no longer')) {
+  if (message.includes('Only') || message.includes('cannot') || message.includes('must be') || message.includes('no longer') || message.startsWith('The owner') || message.startsWith('The new owner') || message.startsWith('The target') || message.startsWith('You are not') || message.startsWith('This WorldWeave')) {
     throw new HttpsError('failed-precondition', message);
   }
   throw new HttpsError('internal', 'WorldWeave membership could not be updated. Try again.');
