@@ -27,7 +27,7 @@
     "test:voh-security": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore,auth,storage --project demo-nexora-voh \"npx tsx --test tests/voh-api-security.test.ts\"",
     "test:staging-config": "node --test tests/staging-config-validator.test.mjs",
     "test:origin-cleanup": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-origin-cleanup \"npx tsx --test functions/tests/accountDeletionPolicy.test.ts\"",
-    "test:origin-source-access": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-origin-source \"npx tsx --test functions/tests/originSourceAccess.test.ts functions/tests/originAttributionViewer.test.ts\"",
+    "test:origin-source-access": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-origin-source \"npx tsx --test functions/tests/originSourceAccess.test.ts\"",
     "build:web": "vite build",
     "mobile:sync": "npm run build:web && cap sync",
     "mobile:doctor": "cap doctor",
@@ -35,7 +35,8 @@
     "mobile:open:ios": "npm run mobile:sync && cap open ios",
     "mobile:build:android": "npm run mobile:sync && cd android && ./gradlew assembleDebug",
     "mobile:assets": "capacitor-assets generate --iconBackgroundColor '#090714' --iconBackgroundColorDark '#090714' --splashBackgroundColor '#090714' --splashBackgroundColorDark '#090714'",
-    "mobile:build:ios": "npm run mobile:sync && xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build"
+    "mobile:build:ios": "npm run mobile:sync && xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build",
+    "test:origin-viewer": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-origin-viewer \"npx tsx --test functions/tests/originAttributionViewer.test.ts\""
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
