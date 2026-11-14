@@ -38,6 +38,7 @@ export { getNgnPayoutProviderStatus, getNgnPayoutPolicyForFinance, getNgnPayoutO
 export { scheduleCreatorPost, cancelCreatorScheduledPost, listCreatorScheduledPosts, publishDueCreatorPosts } from './creatorScheduling.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { recordMyRemixLineage } from './originLineage.js';
+export { getMyOriginCreatorInsights } from './originCreatorInsights.js';
 export { requestMyOriginAttributionCorrection, respondToOriginAttributionCorrection, disputeOriginAttributionCorrection, getMyOriginAttributionPreview, listMyOriginAttributionCases } from './originAttributionCases.js';
 export { getOriginAttributionDisputeQueue, resolveOriginAttributionDispute, deliverOriginAttributionCaseNotifications } from './originCaseOperations.js';
 export { setMyOriginRemixPolicy } from './originPermissions.js';
