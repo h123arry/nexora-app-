@@ -637,7 +637,7 @@ export default function AdminDashboardView({
             <section className="space-y-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.03] p-4">
               <div>
                 <h3 className="text-sm font-black uppercase tracking-widest text-amber-200">Impersonation escalation cases ({impersonationCases.length})</h3>
-                <p className="mt-1 text-[11px] text-zinc-400">Opened after three independent user reports within 24 hours. Reports are triage signals, not proof. No account action occurs without human review.</p>
+                <p className="mt-1 text-[11px] text-zinc-400">Opened after three independent user reports within 24 hours. Reports are triage signals, not proof. No badge change occurs from reports alone. Senior reviewers may apply a temporary identity hold while they investigate.</p>
               </div>
               {impersonationCases.length === 0 && <p className="text-xs text-zinc-500">No open impersonation escalation cases.</p>}
               {impersonationCases.map(item => {
@@ -648,7 +648,7 @@ export default function AdminDashboardView({
                       <p className="text-xs font-bold text-white">{item.verifiedDisplayName || (subject ? '@' + subject.username : item.userId)}</p>
                       <p className="text-[10px] text-amber-200">{item.independentReportCount} independent reports · {item.hasVerifiedIdentity ? 'Has public identity verification' : 'No public identity badge'}</p>
                     </div>
-                    <span className="rounded-full border border-amber-400/20 px-2 py-1 text-[9px] uppercase text-amber-200">Human review required</span>
+                    <span className="rounded-full border border-amber-400/20 px-2 py-1 text-[9px] uppercase text-amber-200">{item.status === 'on_hold' ? 'Temporary identity hold active' : 'Human review required'}</span>
                   </div>
                   <div className="space-y-2">
                     {item.reports.map((report, index) => <div key={index} className="rounded-lg border border-white/5 bg-black/30 p-2">
@@ -659,10 +659,12 @@ export default function AdminDashboardView({
                   {canReviewIdentity ? <>
                     <textarea value={impersonationCaseNotes[item.userId] || ''} onChange={event => setImpersonationCaseNotes(previous => ({ ...previous, [item.userId]: event.target.value }))} rows={2} maxLength={1000} aria-label={`Impersonation review note for ${item.userId}`} placeholder="Record the evidence reviewed and your decision (minimum 5 characters)." className="w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white outline-none focus:border-amber-400/50" />
                     <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'dismiss')} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-zinc-200">Dismiss case</button>
-                      {canReviewIdentity && <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'confirm_impersonation')} className="rounded-lg bg-rose-600 px-3 py-2 text-[10px] font-black text-white hover:bg-rose-500">Confirm impersonation and revoke identity</button>}
+                      {item.status === 'open' && <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'dismiss')} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-zinc-200">Dismiss case</button>}
+                      {item.status === 'open' && canManageRoles && <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'place_on_hold')} className="rounded-lg border border-amber-400/30 px-3 py-2 text-[10px] font-bold text-amber-200">Place identity on temporary hold</button>}
+                      {item.status === 'on_hold' && canManageRoles && <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'clear_hold')} className="rounded-lg border border-emerald-400/30 px-3 py-2 text-[10px] font-bold text-emerald-200">Clear hold and restore badge</button>}
+                      {canManageRoles && <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'confirm_impersonation')} className="rounded-lg bg-rose-600 px-3 py-2 text-[10px] font-black text-white hover:bg-rose-500">Confirm impersonation and revoke identity</button>}
                     </div>
-                    {!canReviewIdentity && <p className="text-[10px] text-zinc-500">Only senior moderators, administrators, and the founder can confirm impersonation or revoke an identity badge.</p>}
+                    {!canReviewIdentity && <p className="text-[10px] text-zinc-500">Only senior moderators, administrators, and the founder can place or clear an identity hold, or confirm impersonation.</p>}
                   </> : <p className="text-[10px] text-zinc-500">Read-only. A reviewer must assess this case manually.</p>}
                 </article>;
               })}
