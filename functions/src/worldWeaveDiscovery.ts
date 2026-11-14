@@ -6,7 +6,7 @@ const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const PAGE_SIZE = 20;
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 
-type DiscoveryCursor = { v: 1; query: string; updatedAtMs: number; id: string };
+type DiscoveryCursor = { v: 1; query: string; updatedAtSeconds: number; updatedAtNanoseconds: number; id: string };
 
 function normalize(value: unknown): string {
   return typeof value === 'string'
@@ -81,7 +81,7 @@ export const discoverPublicWorldWeaves = onCall({ maxInstances: 10 }, async requ
     .orderBy(FieldPath.documentId(), 'desc')
     .limit(PAGE_SIZE + 1);
   if (cursor) {
-    pageQuery = pageQuery.startAfter(Timestamp.fromMillis(cursor.updatedAtMs), cursor.id);
+    pageQuery = pageQuery.startAfter(new Timestamp(cursor.updatedAtSeconds, cursor.updatedAtNanoseconds), cursor.id);
   }
   const snapshot = await pageQuery.get();
   const hasMore = snapshot.docs.length > PAGE_SIZE;
