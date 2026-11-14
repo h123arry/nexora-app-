@@ -122,6 +122,15 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
             independentReportCount: recentSignals.size,
             updatedAt: FieldValue.serverTimestamp(),
           });
+          else if (existingCase.get('status') === 'dismissed') transaction.update(caseRef, {
+            status: 'open',
+            independentReportCount: recentSignals.size,
+            reopenedAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+            reviewerId: FieldValue.delete(),
+            reviewNote: FieldValue.delete(),
+            reviewedAt: FieldValue.delete(),
+          });
           return;
         }
         transaction.create(caseRef, {
