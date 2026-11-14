@@ -210,6 +210,35 @@ const publicProfile = (uid) => ({
     }));
   });
 
+  it('restricts WorldWeave reply reads to contributors and reserves reply writes and counts for trusted Functions', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'worldWeaves', 'reply-rules-weave'), {
+        id: 'reply-rules-weave', ownerId: 'alice', ownerName: 'Alice', title: 'Reply story',
+        description: '', visibility: 'private', participantIds: ['alice', 'bob'],
+        memberCount: 2, momentCount: 1, createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
+      await setDoc(doc(adminDb, 'worldWeaves', 'reply-rules-weave', 'moments', 'moment-1'), {
+        id: 'moment-1', weaveId: 'reply-rules-weave', authorId: 'alice', text: 'A moment.', mediaType: 'text', replyCount: 1
+      });
+      await setDoc(doc(adminDb, 'worldWeaves', 'reply-rules-weave', 'moments', 'moment-1', 'replies', 'reply-1'), {
+        id: 'reply-1', weaveId: 'reply-rules-weave', momentId: 'moment-1',
+        authorId: 'bob', authorName: 'Bob', authorUsername: 'bob', text: 'I was there too.', createdAt: Timestamp.now()
+      });
+    });
+    const replyPath = ['worldWeaves', 'reply-rules-weave', 'moments', 'moment-1', 'replies', 'reply-1'];
+    await assertSucceeds(getDoc(doc(dbFor('alice'), ...replyPath)));
+    await assertSucceeds(getDocs(collection(dbFor('bob'), 'worldWeaves', 'reply-rules-weave', 'moments', 'moment-1', 'replies')));
+    await assertFails(getDoc(doc(dbFor('charlie'), ...replyPath)));
+    await assertFails(setDoc(doc(dbFor('bob'), 'worldWeaves', 'reply-rules-weave', 'moments', 'moment-1', 'replies', 'forged'), {
+      id: 'forged', weaveId: 'reply-rules-weave', momentId: 'moment-1',
+      authorId: 'bob', authorName: 'Bob', authorUsername: 'bob', text: 'Forged', createdAt: serverTimestamp()
+    }));
+    await assertFails(deleteDoc(doc(dbFor('bob'), ...replyPath)));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'worldWeaves', 'reply-rules-weave', 'moments', 'moment-1'), {
+      replyCount: 500
+    }));
+  });
+
   it('caps WorldWeave membership at 500 contributors for public joins and accepted invitations', async () => {
     const members = ['alice', ...Array.from({ length: 499 }, (_, index) => 'member-' + index)];
     await seed(async adminDb => {
