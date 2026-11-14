@@ -50,7 +50,13 @@ function stringIds(...values: unknown[]): Set<string> {
 }
 
 function hasActiveRestriction(profile: Record<string, unknown> | null | undefined, status: Record<string, unknown> | null | undefined): boolean {
-  if (profile?.isBanned === true || profile?.isSuspended === true || profile?.isSeedProfile === true) return true;
+  if (profile?.isSeedProfile === true) return true;
+  // The accountStatus document is the current authority when present. Legacy profile
+  // flags must not turn an expired temporary suspension into a permanent restriction.
+  const hasAuthoritativeStatus = !!status
+    && (Object.prototype.hasOwnProperty.call(status, 'banned')
+      || Object.prototype.hasOwnProperty.call(status, 'suspended'));
+  if (!hasAuthoritativeStatus) return profile?.isBanned === true || profile?.isSuspended === true;
   if (status?.banned !== true && status?.suspended !== true) return false;
   const rawExpiry = status.expiresAt as { toDate?: () => Date } | Date | number | string | null | undefined;
   const expiry = rawExpiry instanceof Date ? rawExpiry

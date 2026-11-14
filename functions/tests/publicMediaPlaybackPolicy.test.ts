@@ -43,4 +43,8 @@ test('rejects unavailable source posts and restricted accounts', () => {
   assert.equal(canViewPublicPostMedia({ ...base, viewerStatus: { suspended: true } }), false);
   assert.equal(canViewPublicPostMedia({ ...base, ownerStatus: { suspended: true, expiresAt: new Date(Date.now() + 60_000) } }), false);
   assert.equal(canViewPublicPostMedia({ ...base, ownerStatus: { suspended: true, expiresAt: new Date(Date.now() - 60_000) } }), true);
+  assert.equal(canViewPublicPostMedia({ ...base, ownerProfile: { isSuspended: true }, ownerStatus: { suspended: false } }), true);
+  assert.equal(canViewPublicPostMedia({ ...base, ownerProfile: { isSuspended: true }, ownerStatus: { suspended: true, expiresAt: new Date(Date.now() - 60_000) } }), true);
+  assert.equal(canViewPublicPostMedia({ ...base, ownerProfile: { isSuspended: true }, ownerStatus: { suspended: true, expiresAt: new Date(Date.now() + 60_000) } }), false);
+  assert.equal(canViewPublicPostMedia({ ...base, ownerProfile: { isSeedProfile: true }, ownerStatus: { suspended: false } }), false);
 });
