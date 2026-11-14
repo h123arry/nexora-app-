@@ -37,10 +37,18 @@ export { getNgnPayoutProviderStatus, getNgnPayoutPolicyForFinance, getNgnPayoutO
 export { scheduleCreatorPost, cancelCreatorScheduledPost, listCreatorScheduledPosts, publishDueCreatorPosts } from './creatorScheduling.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { recordMyRemixLineage } from './originLineage.js';
+export { requestMyOriginAttributionCorrection, respondToOriginAttributionCorrection, disputeOriginAttributionCorrection, getMyOriginAttributionPreview, listMyOriginAttributionCases } from './originAttributionCases.js';
 export { setMyOriginRemixPolicy } from './originPermissions.js';
 export { getPublicPostPlayback } from './publicMediaPlayback.js';
 export { getStudioExportMp4Url, cleanupExpiredStudioMp4Exports } from './studioMp4Export.js';
 export { cleanupDeletedWorldWeaveMoment, cleanupUnpublishedWorldWeaveMedia } from './worldWeaveCleanup.js';
+export { leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership } from './worldWeaveGovernance.js';
+export { setWorldWeaveMomentReaction } from './worldWeaveReactions.js';
+export { toggleWorldWeaveMomentPin, cleanupDeletedWorldWeaveMomentPin } from './worldWeavePins.js';
+export { addWorldWeaveMomentReply, deleteWorldWeaveMomentReply } from './worldWeaveReplies.js';
+export { createWorldWeaveChapter, updateWorldWeaveChapter } from './worldWeaveChapters.js';
+export { backfillWorldWeaveMembershipV2 } from './worldWeaveMembershipBackfill.js';
+export { auditWorldWeaveMembershipV2 } from './worldWeaveMembershipAudit.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';
 export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAnalytics } from './creatorAudienceAnalytics.js';
 export { createCommunityPost } from './communityPosts.js';
