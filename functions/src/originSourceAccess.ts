@@ -1,5 +1,5 @@
 import type { Firestore, Transaction } from 'firebase-admin/firestore';
-import { assertOriginSourceAccess } from './originSourceAccessPolicy.js';
+import { assertOriginSourceAccess, type OriginSourceAccountSettings } from './originSourceAccessPolicy.js';
 /** Resolve one canonical public source post and evaluate server-owned account settings. */
 export async function assertCrossAccountOriginSourceAccess(
   db: Firestore, transaction: Transaction,
@@ -17,8 +17,8 @@ export async function assertCrossAccountOriginSourceAccess(
   const sourcePost = sourcePostsSnap.docs[0].data();
   assertOriginSourceAccess({
     derivativeOwnerUid, sourceOwnerUid,
-    derivativeSettings: derivativeSettingsSnap.exists ? derivativeSettingsSnap.data() : null,
-    sourceSettings: sourceSettingsSnap.exists ? sourceSettingsSnap.data() : null,
+    derivativeSettings: derivativeSettingsSnap.exists ? derivativeSettingsSnap.data() as OriginSourceAccountSettings : null,
+    sourceSettings: sourceSettingsSnap.exists ? sourceSettingsSnap.data() as OriginSourceAccountSettings : null,
     sourcePost,
   });
   if (sourcePost.userId !== sourceOwnerUid && sourcePost.authorId !== sourceOwnerUid)
