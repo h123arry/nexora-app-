@@ -210,3 +210,80 @@ export async function deleteWorldWeaveMoment(weaveId: string, moment: WorldWeave
   // A trusted Firestore delete trigger removes the Storage object and its
   // mediaAssets record. Completed media assets are intentionally not client-deletable.
 }
+
+export async function leaveWorldWeave(weaveId: string): Promise<void> {
+  requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/')) throw new Error('Choose a valid WorldWeave.');
+  const action = httpsCallable(functions, 'leaveWorldWeave');
+  await action({ weaveId });
+}
+
+export async function removeWorldWeaveContributor(weaveId: string, memberId: string): Promise<void> {
+  requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/') || !memberId || memberId.length > 128 || memberId.includes('/')) {
+    throw new Error('Choose a valid contributor.');
+  }
+  const action = httpsCallable(functions, 'removeWorldWeaveContributor');
+  await action({ weaveId, memberId });
+}
+
+export async function transferWorldWeaveOwnership(weaveId: string, memberId: string): Promise<void> {
+  requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/') || !memberId || memberId.length > 128 || memberId.includes('/')) {
+    throw new Error('Choose a valid new owner.');
+  }
+  const action = httpsCallable(functions, 'transferWorldWeaveOwnership');
+  await action({ weaveId, memberId });
+}
+
+export interface WorldWeaveContributor {
+  userId: string;
+  name: string;
+  username: string;
+  avatar: string;
+  role: 'owner' | 'contributor';
+}
+
+export async function listWorldWeaveContributors(weaveId: string): Promise<WorldWeaveContributor[]> {
+  const user = requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/')) throw new Error('Choose a valid WorldWeave.');
+  const snapshot = await getDoc(doc(db, 'worldWeaves', weaveId));
+  if (!snapshot.exists()) throw new Error('This WorldWeave no longer exists.');
+  const data = snapshot.data();
+  const ids = Array.isArray(data.participantIds) ? [...new Set(data.participantIds.filter((id): id is string => typeof id === 'string'))] : [];
+  if (data.ownerId !== user.uid && !ids.includes(user.uid)) throw new Error('Join this WorldWeave before viewing its contributors.');
+  if (typeof data.ownerId === 'string' && !ids.includes(data.ownerId)) ids.unshift(data.ownerId);
+  const contributors = await Promise.all(ids.slice(0, 100).map(async userId => {
+    const profile = await getDoc(doc(db, 'publicProfiles', userId));
+    const value = profile.data() || {};
+    return {
+      userId,
+      name: String(value.name || value.username || 'NEXORA member').slice(0, 80),
+      username: String(value.username || '').slice(0, 40),
+      avatar: String(value.avatar || '').slice(0, 2048),
+      role: (data.ownerId === userId ? 'owner' : 'contributor') as 'owner' | 'contributor',
+    };
+  }));
+  return contributors;
+}
+
+export interface WorldWeaveActivity {
+  id: string;
+  actorUid: string;
+  targetUid?: string;
+  action: 'member_left' | 'member_removed' | 'ownership_transferred' | string;
+  createdAt?: unknown;
+}
+
+export function subscribeToWorldWeaveActivity(
+  weaveId: string,
+  onItems: (items: WorldWeaveActivity[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  requireUser();
+  return onSnapshot(
+    query(collection(db, 'worldWeaves', weaveId, 'activity'), orderBy('createdAt', 'desc'), limit(20)),
+    snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveActivity))),
+    onError,
+  );
+}
