@@ -133,7 +133,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       }
     }).catch(err => { if (active) setError(err instanceof Error ? err.message : 'Could not load contributors.'); });
     return () => { active = false; };
-  }, [selected?.id, selected?.ownerId, selected?.participantIds?.length]);
+  }, [selected?.id, selected?.ownerId, selectedIsMember]);
 
   useEffect(() => {
     let active = true;
@@ -144,7 +144,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     fetchWorldWeavePinnedMoments(selected.id).then(items => { if (active) setPinnedMoments(items); })
       .catch(err => { if (active) setError(err instanceof Error ? err.message : 'Could not load pinned moments.'); });
     return () => { active = false; };
-  }, [selected?.id, selected?.ownerId, selected?.pinnedMomentIds?.join('|'), currentUser.id]);
+  }, [selected?.id, selected?.ownerId, selected?.pinnedMomentIds?.join('|'), selectedIsMember, currentUser.id]);
 
   useEffect(() => {
     if (!selected || !expandedReplyMomentId) {
@@ -160,7 +160,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       return;
     }
     return subscribeToWorldWeaveActivity(selected.id, setActivity, err => setError(err.message));
-  }, [selected?.id, selected?.ownerId, selected?.participantIds?.length, currentUser.id]);
+  }, [selected?.id, selected?.ownerId, selectedIsMember, currentUser.id]);
 
   useEffect(() => {
     if (!selected) { setMoments([]); setHasMoreMoments(false); return; }
@@ -627,7 +627,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       <div className="flex items-center justify-between"><div><h2 className="text-lg font-bold text-white">Experiences unfolding</h2><p className="mt-1 text-xs text-slate-500">Your contributions and public stories from the NEXORA community</p></div><span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-slate-400">{visibleWeaves.length} shown</span></div>
       <input value={discoveryQuery} onChange={event => setDiscoveryQuery(event.target.value)} placeholder="Search experiences, descriptions or hosts…" aria-label="Search WorldWeave experiences" className="w-full rounded-2xl border border-white/10 bg-[#0b1221] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-400/50"/>
       {loading && <div className="py-10 text-center text-sm text-slate-400">Loading WorldWeaves…</div>}
-      {!loading && weaves.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center"><Globe2 className="mx-auto mb-3 text-violet-300" size={28}/><p className="font-semibold text-white">Your next great story starts here.</p><p className="mt-2 text-sm text-slate-400">Create an experience and invite the people who saw it differently.</p></div>}
+      {!loading && !loadingDiscovery && weaves.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center"><Globe2 className="mx-auto mb-3 text-violet-300" size={28}/><p className="font-semibold text-white">Your next great story starts here.</p><p className="mt-2 text-sm text-slate-400">Create an experience and invite the people who saw it differently.</p></div>}
       {!loading && weaves.length > 0 && visibleWeaves.length === 0 && <div className="rounded-2xl border border-white/10 p-6 text-center text-sm text-slate-400">No experiences match that search. Try another title or host.</div>}
       {loadingDiscovery && <p className="py-3 text-center text-xs text-slate-500">Finding public experiences…</p>}
       <div className="grid gap-4 md:grid-cols-2">
