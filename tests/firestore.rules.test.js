@@ -250,6 +250,10 @@ const publicProfile = (uid) => ({
         id: 'chapter-1', weaveId: 'chapter-rules-weave', title: 'Before', description: '', position: 0,
         createdBy: 'alice', createdAt: Timestamp.now(), updatedAt: Timestamp.now()
       });
+      await setDoc(doc(adminDb, 'worldWeaves', 'chapter-rules-weave', 'chapters', 'chapter-archived'), {
+        id: 'chapter-archived', weaveId: 'chapter-rules-weave', title: 'Old chapter', description: '', position: 1,
+        archived: true, createdBy: 'alice', createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
     });
     const chapterRef = doc(dbFor('bob'), 'worldWeaves', 'chapter-rules-weave', 'chapters', 'chapter-1');
     await assertSucceeds(getDoc(chapterRef));
@@ -266,6 +270,11 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('bob'), 'worldWeaves', 'chapter-rules-weave', 'moments', 'invalid-chapter-moment'), {
       weaveId: 'chapter-rules-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
       authorAvatar: '', text: 'This chapter does not exist.', mediaType: 'text', chapterId: 'missing-chapter',
+      createdAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'worldWeaves', 'chapter-rules-weave', 'moments', 'archived-chapter-moment'), {
+      weaveId: 'chapter-rules-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
+      authorAvatar: '', text: 'Archived chapters cannot receive new moments.', mediaType: 'text', chapterId: 'chapter-archived',
       createdAt: serverTimestamp()
     }));
   });
