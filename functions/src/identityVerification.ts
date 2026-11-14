@@ -10,6 +10,7 @@ import {
   validateIdentityApplicationInput,
   canApplyIdentityImpersonationDecision,
   isSeniorIdentityImpersonationDecision,
+  buildIdentityReviewNotification,
 } from './identityVerificationPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
@@ -308,6 +309,16 @@ export const reviewIdentityVerificationApplication = onCall({ maxInstances: 10 }
     } else if (isRevocation) {
       transaction.delete(publicRef);
     }
+    const notification = buildIdentityReviewNotification(
+      userId,
+      decision,
+      Number(application.get('version') || 1),
+      new Date().toISOString(),
+    );
+    transaction.create(db.collection('users').doc(userId).collection('notifications').doc(notification.id), {
+      ...notification,
+      createdAt: now,
+    });
     transaction.create(auditRef, {
       userId,
       reviewerId,
