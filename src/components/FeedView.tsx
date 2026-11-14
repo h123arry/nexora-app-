@@ -1148,11 +1148,7 @@ export default function FeedView({
       }
       
       if (reasons.length === 0) {
-        if (postItem.isVerified) {
-          reasons.push("This item is from a verified creator and is eligible for the current feed.");
-        } else {
-          reasons.push(`This item is eligible for the ${feedTab} feed based on its current post metadata and your active feed controls.`);
-        }
+        reasons.push(`This item is eligible for the ${feedTab} feed based on its current post metadata and your active feed controls.`);
       }
       
       return reasons;
