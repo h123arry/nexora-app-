@@ -1,4 +1,4 @@
-import type { Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { deleteOwnedOriginRecord } from './originCleanup.js';
 
 const PAGE_SIZE = 200;
@@ -21,6 +21,10 @@ export const ACCOUNT_OWNED_COLLECTIONS: ReadonlyArray<{ name: string; field: str
   { name: 'mediaOrigins', field: 'ownerUid' },
   { name: 'academyProgress', field: 'userId' },
   { name: 'academyLessonNotes', field: 'userId' },
+  { name: 'identityVerificationApplications', field: 'userId' },
+  { name: 'identityVerificationPrivateSignals', field: 'userId' },
+  { name: 'verifiedIdentities', field: 'userId' },
+  { name: 'identityImpersonationCases', field: 'userId' },
 ];
 
 export function accountStoragePrefixes(userId: string): string[] {
@@ -54,6 +58,45 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string): P
       await batch.commit();
       deleted += snapshot.size;
       if (snapshot.size < PAGE_SIZE) break;
+    }
+  }
+  // Reporter signals are nested under the reported account; remove both target- and reporter-owned rows.
+  const targetSignals = db.collection('identityImpersonationSignals').doc(userId);
+  while (true) {
+    const rows = await targetSignals.collection('reporters').limit(PAGE_SIZE).get();
+    if (rows.empty) break;
+    const batch = db.batch();
+    rows.docs.forEach(row => batch.delete(row.ref));
+    await batch.commit();
+    deleted += rows.size;
+    if (rows.size < PAGE_SIZE) break;
+  }
+  if ((await targetSignals.get()).exists) {
+    await targetSignals.delete();
+    deleted += 1;
+  }
+  while (true) {
+    const rows = await db.collectionGroup('reporters').where('reporterId', '==', userId).limit(PAGE_SIZE).get();
+    if (rows.empty) break;
+    const batch = db.batch();
+    rows.docs.forEach(row => batch.delete(row.ref));
+    await batch.commit();
+    deleted += rows.size;
+    if (rows.size < PAGE_SIZE) break;
+  }
+
+  // Keep audit history but remove account identifiers and free-text review notes.
+  for (const field of ['userId', 'reviewerId', 'actorId']) {
+    while (true) {
+      const rows = await db.collection('identityVerificationAuditEvents').where(field, '==', userId).limit(PAGE_SIZE).get();
+      if (rows.empty) break;
+      const batch = db.batch();
+      rows.docs.forEach(row => batch.update(row.ref, {
+        userId: FieldValue.delete(), reviewerId: FieldValue.delete(), actorId: FieldValue.delete(),
+        reviewNote: FieldValue.delete(), accountDeleted: true,
+      }));
+      await batch.commit();
+      if (rows.size < PAGE_SIZE) break;
     }
   }
   return deleted;

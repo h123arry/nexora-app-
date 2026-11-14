@@ -37,6 +37,8 @@ export async function savePostToDbDirect(post: any) {
     throw new Error('Only public posts can be published until secure private-audience access is implemented.');
   }
   sanitizedPost.audience = 'public';
+  // Contact-verification state is never a post-authored/public badge claim.
+  delete sanitizedPost.isVerified;
   cacheManager.setPost(post.id, sanitizedPost);
   try {
     return await setDoc(doc(db, path, post.id), sanitizedPost);

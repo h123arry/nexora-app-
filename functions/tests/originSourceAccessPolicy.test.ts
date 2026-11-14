@@ -12,12 +12,15 @@ test('rejects absent, non-public, private and unavailable source content',()=>{
  for(const patch of [
   {sourcePost:null},{sourcePost:{audience:'followers'}},
   {sourceSettings:{privacy:{isPrivateAccount:true}}},
+  {sourceSettings:{privacy:{isPrivate:true}}},
   {sourcePost:{audience:'public',deleted:true}},
   {sourcePost:{audience:'public',status:'hidden'}},
   {sourcePost:{audience:'public',moderationStatus:'restricted'}},
  ]) assert.throws(()=>assertOriginSourceAccess({...base,...patch}));
 });
 test('rejects blocks in both directions from messaging and feed settings',()=>{
+ assert.throws(()=>assertOriginSourceAccess({...base,derivativeSettings:{privacy:{blockedUserIds:['source']}}}),/blocked/);
+ assert.throws(()=>assertOriginSourceAccess({...base,sourceSettings:{privacy:{blockedUserIds:['remixer']}}}),/blocked/);
  assert.throws(()=>assertOriginSourceAccess({...base,derivativeSettings:{messaging:{blockedUserIds:['source']}}}),/blocked/);
  assert.throws(()=>assertOriginSourceAccess({...base,sourceSettings:{messaging:{blockedUserIds:['remixer']}}}),/blocked/);
  assert.throws(()=>assertOriginSourceAccess({...base,derivativeSettings:{feed:{blockedCreatorIds:['source']}}}),/blocked/);

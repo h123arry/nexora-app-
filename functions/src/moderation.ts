@@ -1,10 +1,13 @@
 import { createHash } from 'node:crypto';
+import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { consumeModerationReportQuota } from './moderationPolicy.js';
+import { shouldOpenImpersonationCase } from './identityVerificationPolicy.js';
 
 const app = getFirebaseAdminApp();
+const auth = getAuth(app);
 const db = getFirestore(app, resolveFirestoreDatabaseId());
 
 const targetTypes = new Set(['post', 'comment', 'user', 'community', 'message']);
@@ -12,19 +15,27 @@ const categories = new Set(['spam', 'harassment', 'threats', 'impersonation', 'h
 const reviewRoles = new Set(['moderator', 'senior_moderator', 'admin', 'founder']);
 const actions = new Set(['dismiss', 'warn', 'restrict_posting', 'restrict_messaging', 'suspend', 'ban']);
 
-type CallableRequest = { auth?: { uid: string; token: Record<string, unknown> }; data?: Record<string, unknown> };
+type CallableRequest = { auth?: { uid: string; token: Record<string, unknown> }; data?: Record<string, unknown>; rawRequest: { headers: { authorization?: string } } };
 
 function requireAuth(request: CallableRequest): string {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to continue.');
   return request.auth.uid;
 }
 
-function requireReviewer(request: CallableRequest): string {
+async function requireReviewer(request: CallableRequest): Promise<string> {
   const uid = requireAuth(request);
-  const token = request.auth?.token || {};
-  const role = typeof token.role === 'string' ? token.role : '';
-  const isReviewer = token.moderator === true || token.admin === true || reviewRoles.has(role);
-  if (!isReviewer) throw new HttpsError('permission-denied', 'Moderation access is required.');
+  const authorization = request.rawRequest.headers.authorization || '';
+  const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+  if (!token) throw new HttpsError('unauthenticated', 'A current authenticated session is required.');
+  let claims;
+  try {
+    claims = await auth.verifyIdToken(token, true);
+  } catch {
+    throw new HttpsError('unauthenticated', 'Your session is expired or has been revoked. Sign in again.');
+  }
+  const role = typeof claims.role === 'string' ? claims.role : '';
+  const isReviewer = claims.moderator === true || claims.admin === true || reviewRoles.has(role);
+  if (claims.uid !== uid || !isReviewer) throw new HttpsError('permission-denied', 'Moderation access is required.');
   return uid;
 }
 
@@ -70,13 +81,23 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
   const reportId = stableReportId(reporterId, targetType, normalizedTargetId);
   const reportRef = db.collection('moderationReports').doc(reportId);
   const quotaRef = db.collection('moderationReportQuotas').doc(reporterId);
+  const isImpersonationReport = targetType === 'user' && category === 'impersonation' && normalizedTargetId !== reporterId;
+  const reporterKey = isImpersonationReport ? createHash('sha256').update(reporterId).digest('hex').slice(0, 40) : '';
+  const signalRef = isImpersonationReport
+    ? db.collection('identityImpersonationSignals').doc(normalizedTargetId).collection('reporters').doc(reporterKey)
+    : null;
   const duplicate = await db.runTransaction(async (transaction) => {
-    const [existing, quotaSnapshot] = await Promise.all([
-      transaction.get(reportRef),
-      transaction.get(quotaRef),
-    ]);
-    // Duplicate retries remain idempotent and do not consume quota.
-    if (existing.exists) return true;
+    const existing = await transaction.get(reportRef);
+    const quotaSnapshot = await transaction.get(quotaRef);
+    const existingSignal = signalRef ? await transaction.get(signalRef) : null;
+    // Duplicate retries remain idempotent and do not consume quota. Repair a missing
+    // private signal for a legacy impersonation report without charging quota again.
+    if (existing.exists) {
+      if (signalRef && existingSignal && !existingSignal.exists) transaction.create(signalRef, {
+        reporterId, reportId, createdAt: FieldValue.serverTimestamp(),
+      });
+      return true;
+    }
 
     const quota = consumeModerationReportQuota(
       quotaSnapshot.exists ? quotaSnapshot.data() : null,
@@ -88,20 +109,15 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
 
     const now = FieldValue.serverTimestamp();
     transaction.create(reportRef, {
-      reporterId,
-      targetType,
-      targetId: normalizedTargetId,
-      category,
+      reporterId, targetType, targetId: normalizedTargetId, category,
       explanation: typeof explanation === 'string' ? explanation.trim() : '',
-      status: 'pending',
-      policyVersion: '2026-10',
-      createdAt: now,
-      updatedAt: now,
+      status: 'pending', policyVersion: '2026-10', createdAt: now, updatedAt: now,
     });
     transaction.set(quotaRef, {
-      windowStartedAtMs: quota.windowStartedAtMs,
-      attempts: quota.attempts,
-      updatedAt: now,
+      windowStartedAtMs: quota.windowStartedAtMs, attempts: quota.attempts, updatedAt: now,
+    });
+    if (signalRef && existingSignal && !existingSignal.exists) transaction.create(signalRef, {
+      reporterId, reportId, createdAt: now,
     });
     const auditRef = db.collection('moderationAuditEvents').doc();
     transaction.create(auditRef, {
@@ -110,11 +126,52 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
     });
     return false;
   });
+  // Independent impersonation reports open a private reviewer case; reports never auto-enforce.
+  if (isImpersonationReport) {
+    const reporterSignals = db.collection('identityImpersonationSignals').doc(normalizedTargetId).collection('reporters');
+    const caseRef = db.collection('identityImpersonationCases').doc(normalizedTargetId);
+    const verifiedRef = db.collection('verifiedIdentities').doc(normalizedTargetId);
+    await db.runTransaction(async transaction => {
+      // Read the live threshold query inside the transaction so concurrent third-party reports
+      // cannot all observe a sub-threshold snapshot and leave the case unopened.
+      const [recentSignals, existingCase, verified] = await Promise.all([
+        transaction.get(reporterSignals
+          .where('createdAt', '>=', Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000))
+          .limit(4)),
+        transaction.get(caseRef),
+        transaction.get(verifiedRef),
+      ]);
+      if (!shouldOpenImpersonationCase(recentSignals.size)) return;
+      const reportIds = recentSignals.docs.map(signal => signal.get('reportId')).filter((id): id is string => typeof id === 'string');
+      if (existingCase.exists) {
+        if (existingCase.get('status') === 'open') transaction.update(caseRef, {
+          independentReportCount: recentSignals.size, reportIds, updatedAt: FieldValue.serverTimestamp(),
+        });
+        else if (existingCase.get('status') === 'dismissed') transaction.update(caseRef, {
+          status: 'open', independentReportCount: recentSignals.size, reportIds,
+          reopenedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+          reviewerId: FieldValue.delete(), reviewNote: FieldValue.delete(), reviewedAt: FieldValue.delete(),
+        });
+        return;
+      }
+      transaction.create(caseRef, {
+        userId: normalizedTargetId, status: 'open', category: 'impersonation',
+        independentReportCount: recentSignals.size, reportIds,
+        hasVerifiedIdentity: verified.exists && verified.get('status') === 'verified',
+        verifiedDisplayName: verified.exists ? verified.get('displayName') || null : null,
+        openedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+      });
+      transaction.create(db.collection('identityVerificationAuditEvents').doc(), {
+        userId: normalizedTargetId, event: 'impersonation_case_opened',
+        independentReportCount: recentSignals.size, createdAt: FieldValue.serverTimestamp(),
+      });
+    });
+  }
   return { accepted: true, duplicate, reportId };
 });
 
 export const reviewModerationReport = onCall({ maxInstances: 10 }, async (request) => {
-  const reviewerId = requireReviewer(request);
+  const reviewerId = await requireReviewer(request);
   const data = request.data || {};
   const reportId = data.reportId;
   const action = data.action;
