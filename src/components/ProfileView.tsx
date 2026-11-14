@@ -6,6 +6,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { User, Post } from '../types';
 import { recordCreatorProfileVisit } from '../services/analytics/creatorAudience';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
+import { ProfileService } from '../services/firebase/profileService';
 import { getCreatorCommunityAsset } from '../content/creatorCommunityAssets';
 import NexoraBranding from './NexoraBranding';
 import CreatorGiftGallery from './CreatorGiftGallery';
@@ -266,6 +267,7 @@ export default function ProfileView({
     } catch { return []; }
   });
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [identityVerification, setIdentityVerification] = useState<{ identityType: 'individual' | 'creator' | 'public_figure' | 'organization'; displayName: string } | null>(null);
   const [allContentFilter, setAllContentFilter] = useState<'all' | 'videos' | 'photos' | 'posts' | 'pinned'>('all');
   const [showAllContentDropdown, setShowAllContentDropdown] = useState(false);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
@@ -299,6 +301,25 @@ export default function ProfileView({
       }
     }
   };
+
+  useEffect(() => {
+    let active = true;
+    setIdentityVerification(null);
+    if (currentUser.id) {
+      void ProfileService.getPublicIdentityVerification(currentUser.id).then(result => {
+        if (active) setIdentityVerification(result);
+      });
+    }
+    return () => { active = false; };
+  }, [currentUser.id]);
+
+  const identityBadgeType = identityVerification?.identityType === 'organization'
+    ? 'organization'
+    : identityVerification?.identityType === 'public_figure'
+      ? 'figure'
+      : identityVerification?.identityType === 'creator'
+        ? 'creator'
+        : 'default';
 
   useEffect(() => {
     if (!isLoggedIn || isOwnProfile || !currentUser.id) return;
@@ -1276,7 +1297,7 @@ export default function ProfileView({
                     <h1 className={`text-xl sm:text-2xl font-black leading-tight tracking-tight ${!currentUser.name ? 'text-violet-400/70 italic text-base' : 'text-white'}`}>
                       {currentUser.name || (isOwnProfile ? 'Set your display name' : 'Member')}
                     </h1>
-                    {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" type="founder" />}
+                    {identityVerification && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" type={identityBadgeType} />}
                     {profileBadgeAsset && <img src={profileBadgeAsset.path} alt="Creator badge" title={profileBadgeAsset.title} className="h-5 w-5 shrink-0 object-contain" />}
                   </div>
                   <p className={`text-xs sm:text-sm font-bold font-mono tracking-wider mt-0.5 ${!currentUser.username ? 'text-violet-400/60 italic' : 'text-violet-400/90'}`}>
@@ -1673,7 +1694,7 @@ export default function ProfileView({
                         <img src={currentUser.avatar} className="w-10 h-10 rounded-xl object-cover border border-white/10" alt="" />
                         <div className="leading-tight">
                           <p className="text-xs font-bold text-white flex items-center gap-1">
-                            {currentUser.name} {currentUser.isVerified && <PurpleVerifiedBadge className="w-3.5 h-3.5" />}
+                            {currentUser.name} {identityVerification && <PurpleVerifiedBadge className="w-3.5 h-3.5" type={identityBadgeType} />}
                           </p>
                           <p className="text-[10px] font-mono text-violet-400">@{currentUser.username}</p>
                         </div>
