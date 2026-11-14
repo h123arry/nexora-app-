@@ -39,7 +39,7 @@ export function accountStoragePrefixes(userId: string): string[] {
   ];
 }
 
-export async function deleteUserOwnedDocuments(db: Firestore, userId: string): Promise<number> {
+export async function deleteUserOwnedDocuments(db: Firestore, userId: string, onBatch?: () => Promise<void>): Promise<number> {
   if (!userId) throw new Error('A valid account ID is required for data cleanup.');
   let deleted = 0;
   for (const target of ACCOUNT_OWNED_COLLECTIONS) {
@@ -49,6 +49,7 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string): P
       if (target.name === 'mediaOrigins') {
         for (const document of snapshot.docs) {
           deleted += await deleteOwnedOriginRecord(db, document.id, userId);
+          await onBatch?.();
         }
         if (snapshot.size < PAGE_SIZE) break;
         continue;
@@ -57,6 +58,7 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string): P
       snapshot.docs.forEach(document => batch.delete(document.ref));
       await batch.commit();
       deleted += snapshot.size;
+      await onBatch?.();
       if (snapshot.size < PAGE_SIZE) break;
     }
   }
@@ -69,11 +71,13 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string): P
     rows.docs.forEach(row => batch.delete(row.ref));
     await batch.commit();
     deleted += rows.size;
+    await onBatch?.();
     if (rows.size < PAGE_SIZE) break;
   }
   if ((await targetSignals.get()).exists) {
     await targetSignals.delete();
     deleted += 1;
+    await onBatch?.();
   }
   while (true) {
     const rows = await db.collectionGroup('reporters').where('reporterId', '==', userId).limit(PAGE_SIZE).get();
@@ -96,6 +100,7 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string): P
         reviewNote: FieldValue.delete(), accountDeleted: true,
       }));
       await batch.commit();
+      await onBatch?.();
       if (rows.size < PAGE_SIZE) break;
     }
   }
