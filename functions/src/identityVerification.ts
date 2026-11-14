@@ -152,6 +152,81 @@ export const listIdentityVerificationApplications = onCall({ maxInstances: 10 },
   return { applications };
 });
 
+export const listIdentityImpersonationCases = onCall({ maxInstances: 10 }, async request => {
+  requireIdentityReviewer(request as Request);
+  const snapshot = await db.collection('identityImpersonationCases')
+    .where('status', '==', 'open')
+    .limit(50)
+    .get();
+  return {
+    cases: snapshot.docs.map(document => {
+      const data = document.data();
+      return {
+        userId: document.id,
+        status: data.status,
+        category: data.category,
+        independentReportCount: data.independentReportCount || 0,
+        hasVerifiedIdentity: data.hasVerifiedIdentity === true,
+        verifiedDisplayName: data.verifiedDisplayName || null,
+        openedAt: data.openedAt?.toDate?.()?.toISOString?.() || null,
+      };
+    }),
+  };
+});
+
+export const reviewIdentityImpersonationCase = onCall({ maxInstances: 10 }, async request => {
+  const data = request.data || {};
+  const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
+  const decision = String(data.decision || '');
+  const reviewNote = typeof data.reviewNote === 'string' ? data.reviewNote.trim() : '';
+  if (!userId || userId.length > 128 || userId.includes('/')) throw new HttpsError('invalid-argument', 'A valid account is required.');
+  if (!['dismiss', 'confirm_impersonation'].includes(decision)) throw new HttpsError('invalid-argument', 'Choose a supported case decision.');
+  if (reviewNote.length < 5 || reviewNote.length > 1000) throw new HttpsError('invalid-argument', 'A review note between 5 and 1000 characters is required.');
+  const reviewerId = decision === 'confirm_impersonation'
+    ? requireIdentityApprover(request as Request)
+    : requireIdentityReviewer(request as Request);
+  if (reviewerId === userId) throw new HttpsError('permission-denied', 'Reviewers cannot decide cases involving their own account.');
+  const caseRef = db.collection('identityImpersonationCases').doc(userId);
+  const publicRef = db.collection('verifiedIdentities').doc(userId);
+  const applicationRef = db.collection('identityVerificationApplications').doc(userId);
+  const auditRef = db.collection('identityVerificationAuditEvents').doc();
+  await db.runTransaction(async transaction => {
+    const caseSnapshot = await transaction.get(caseRef);
+    const verifiedSnapshot = await transaction.get(publicRef);
+    const applicationSnapshot = await transaction.get(applicationRef);
+    if (!caseSnapshot.exists || caseSnapshot.get('status') !== 'open') {
+      throw new HttpsError('failed-precondition', 'This impersonation case is no longer open.');
+    }
+    const now = FieldValue.serverTimestamp();
+    transaction.update(caseRef, {
+      status: decision === 'dismiss' ? 'dismissed' : 'confirmed',
+      decision,
+      reviewerId,
+      reviewNote,
+      reviewedAt: now,
+      updatedAt: now,
+    });
+    if (decision === 'confirm_impersonation' && verifiedSnapshot.exists) {
+      transaction.delete(publicRef);
+      if (applicationSnapshot.exists) transaction.update(applicationRef, {
+        status: 'revoked',
+        reviewNote,
+        reviewerId,
+        reviewedAt: now,
+        updatedAt: now,
+      });
+    }
+    transaction.create(auditRef, {
+      userId,
+      reviewerId,
+      event: decision === 'dismiss' ? 'impersonation_case_dismissed' : 'impersonation_confirmed',
+      reviewNote,
+      createdAt: now,
+    });
+  });
+  return { accepted: true, userId, decision };
+});
+
 export const reviewIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {
   const reviewerId = requireIdentityApprover(request as Request);
   const data = request.data || {};
