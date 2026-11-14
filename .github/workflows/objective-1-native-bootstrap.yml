@@ -26,6 +26,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: release/objective-1-capacitor-staging-foundation
+          fetch-depth: 0
 
       - name: Merge the latest main release work before native generation
         run: |
