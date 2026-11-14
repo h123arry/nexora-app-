@@ -6,7 +6,8 @@ import {
   addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave, deleteWorldWeaveMoment, fetchOlderWorldWeaveMoments, updateWorldWeaveDetails,
   acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, revokeWorldWeaveInvite, subscribeToWorldWeaveInvites, subscribeToMyWorldWeaveInvites,
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
-  MAX_WORLDWEAVE_MEMBERS, type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment,
+  MAX_WORLDWEAVE_MEMBERS, listWorldWeaveContributors, leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership, subscribeToWorldWeaveActivity,
+  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity,
 } from '../services/firebase/worldWeaveService';
 
 interface Props { currentUser: User; }
@@ -22,6 +23,9 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [publicWeaves, setPublicWeaves] = useState<WorldWeave[]>([]);
   const [invitations, setInvitations] = useState<WorldWeaveInvite[]>([]);
   const [sentInvitations, setSentInvitations] = useState<WorldWeaveInvite[]>([]);
+  const [contributors, setContributors] = useState<WorldWeaveContributor[]>([]);
+  const [selectedContributorId, setSelectedContributorId] = useState('');
+  const [activity, setActivity] = useState<WorldWeaveActivity[]>([]);
   const [discoveryQuery, setDiscoveryQuery] = useState('');
   const [selected, setSelected] = useState<WorldWeave | null>(null);
   const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
@@ -61,6 +65,27 @@ export default function WorldWeaveView({ currentUser }: Props) {
     if (!selected || selected.ownerId !== currentUser.id) { setSentInvitations([]); return; }
     return subscribeToWorldWeaveInvites(selected.id, setSentInvitations, err => setError(err.message));
   }, [selected?.id, selected?.ownerId, currentUser.id]);
+
+  useEffect(() => {
+    let active = true;
+    if (!selected) { setContributors([]); setSelectedContributorId(''); return; }
+    listWorldWeaveContributors(selected.id).then(items => {
+      if (active) {
+        setContributors(items);
+        setSelectedContributorId(current => items.some(item => item.userId === current && item.role === 'contributor')
+          ? current : (items.find(item => item.role === 'contributor')?.userId || ''));
+      }
+    }).catch(err => { if (active) setError(err instanceof Error ? err.message : 'Could not load contributors.'); });
+    return () => { active = false; };
+  }, [selected?.id, selected?.ownerId, selected?.participantIds?.length]);
+
+  useEffect(() => {
+    if (!selected || (selected.ownerId !== currentUser.id && !selected.participantIds?.includes(currentUser.id))) {
+      setActivity([]);
+      return;
+    }
+    return subscribeToWorldWeaveActivity(selected.id, setActivity, err => setError(err.message));
+  }, [selected?.id, selected?.ownerId, selected?.participantIds?.length, currentUser.id]);
 
   useEffect(() => {
     if (!selected) { setMoments([]); setHasMoreMoments(false); return; }
@@ -135,6 +160,42 @@ export default function WorldWeaveView({ currentUser }: Props) {
       await revokeWorldWeaveInvite(selected.id, invite.inviteeId);
       setNotice('Invitation revoked.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not revoke this invitation.'); }
+    finally { setBusy(false); }
+  };
+
+  const handleLeaveWorldWeave = async () => {
+    if (!selected || selected.ownerId === currentUser.id || !window.confirm('Leave this WorldWeave? Your past moments will remain in the story.')) return;
+    setBusy(true); setError(''); setNotice('');
+    try { await leaveWorldWeave(selected.id); setSelected(null); setNotice('You left the WorldWeave. Your published moments remain in its history.'); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not leave this WorldWeave.'); }
+    finally { setBusy(false); }
+  };
+
+  const handleRemoveContributor = async () => {
+    if (!selected || selected.ownerId !== currentUser.id || !selectedContributorId) return;
+    const target = contributors.find(item => item.userId === selectedContributorId);
+    if (!target || target.role !== 'contributor' || !window.confirm('Remove ' + target.name + ' from this WorldWeave? Their past moments will remain.')) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await removeWorldWeaveContributor(selected.id, target.userId);
+      setSelected(current => current ? { ...current, participantIds: current.participantIds.filter(id => id !== target.userId), memberCount: Math.max(1, current.memberCount - 1) } : current);
+      setContributors(current => current.filter(item => item.userId !== target.userId));
+      setSelectedContributorId('');
+      setNotice(target.name + ' was removed. Their published moments remain in the story.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not remove this contributor.'); }
+    finally { setBusy(false); }
+  };
+
+  const handleTransferOwnership = async () => {
+    if (!selected || selected.ownerId !== currentUser.id || !selectedContributorId) return;
+    const target = contributors.find(item => item.userId === selectedContributorId);
+    if (!target || target.role !== 'contributor' || !window.confirm('Transfer ownership to ' + target.name + '? You will remain a contributor.')) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await transferWorldWeaveOwnership(selected.id, target.userId);
+      setSelected(current => current ? { ...current, ownerId: target.userId, ownerName: target.name } : current);
+      setNotice('Ownership transferred to ' + target.name + '. You remain a contributor.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not transfer ownership.'); }
     finally { setBusy(false); }
   };
 
@@ -221,6 +282,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
           <div className="mt-5 flex flex-wrap gap-4 text-xs text-slate-300"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{selected.memberCount || selected.participantIds?.length || 1}/{MAX_WORLDWEAVE_MEMBERS} contributors</span><span>{moments.length} loaded · {selected.momentCount || moments.length} moments published</span><span>Started by {selected.ownerName}</span></div>
         </section>
         {selected.ownerId === currentUser.id && <div className="flex justify-end"><button type="button" onClick={() => { setEditTitle(selected.title); setEditDescription(selected.description); setEditVisibility(selected.visibility); setEditingDetails(value => !value); }} className="rounded-xl border border-violet-400/20 px-3 py-2 text-xs font-semibold text-violet-200 hover:bg-violet-500/10">{editingDetails ? 'Close settings' : 'Edit experience'}</button></div>}
+        {selected.ownerId !== currentUser.id && isMember && <div className="flex justify-end"><button type="button" disabled={busy} onClick={() => void handleLeaveWorldWeave()} className="rounded-xl border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-200 hover:bg-red-500/10 disabled:opacity-40">Leave WorldWeave</button></div>}
         {editingDetails && selected.ownerId === currentUser.id && <form onSubmit={handleUpdateDetails} className="rounded-3xl border border-violet-400/20 bg-[#0b1221] p-4">
           <div className="grid gap-3 md:grid-cols-2"><input value={editTitle} onChange={e => setEditTitle(e.target.value)} minLength={3} maxLength={90} required className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60" aria-label="WorldWeave title"/><select value={editVisibility} onChange={e => setEditVisibility(e.target.value as 'public'|'private')} className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white"><option value="public">Public</option><option value="private">Private</option></select></div>
           <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} maxLength={500} rows={2} className="mt-3 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60" aria-label="WorldWeave description"/>
@@ -254,6 +316,19 @@ export default function WorldWeaveView({ currentUser }: Props) {
               <input value={inviteUsername} onChange={e => setInviteUsername(e.target.value)} placeholder="@username" className="w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60"/>
               <button disabled={busy || !inviteUsername.trim() || selected.memberCount >= MAX_WORLDWEAVE_MEMBERS} className="mt-2 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2.5 text-xs font-bold text-violet-100 disabled:opacity-40">Send invitation</button>
             </form>
+            <section className="rounded-3xl border border-violet-400/15 bg-[#0b1221] p-4">
+              <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-white">Contributor management</h3><span className="text-[10px] text-slate-500">{contributors.length} loaded</span></div>
+              <p className="mb-3 text-xs leading-5 text-slate-400">Remove a contributor or transfer ownership. Previous moments are preserved.</p>
+              <select value={selectedContributorId} onChange={event => setSelectedContributorId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white">
+                <option value="">Choose a contributor</option>
+                {contributors.filter(item => item.role === 'contributor').map(item => <option key={item.userId} value={item.userId}>{item.name}{item.username ? ' (@' + item.username + ')' : ''}</option>)}
+              </select>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button type="button" disabled={busy || !selectedContributorId} onClick={() => void handleRemoveContributor()} className="rounded-xl border border-red-400/20 px-2 py-2.5 text-[11px] font-bold text-red-200 disabled:opacity-40">Remove</button>
+                <button type="button" disabled={busy || !selectedContributorId} onClick={() => void handleTransferOwnership()} className="rounded-xl bg-violet-600 px-2 py-2.5 text-[11px] font-bold text-white disabled:opacity-40">Transfer ownership</button>
+              </div>
+              {selected.participantIds.length > 100 && <p className="mt-2 text-[10px] text-amber-200">Showing the first 100 contributors. Larger member directories will be paginated in Membership V2.</p>}
+            </section>
             <section className="rounded-3xl border border-white/10 bg-[#0b1221] p-4">
               <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-white">Pending invitations</h3><span className="text-[10px] text-slate-500">{sentInvitations.length}/50</span></div>
               {sentInvitations.length === 0 ? <p className="text-xs text-slate-500">No pending invitations.</p> : <div className="space-y-2">
@@ -266,6 +341,23 @@ export default function WorldWeaveView({ currentUser }: Props) {
           </div>
           )}
         </div>}
+        {isMember && <section className="rounded-3xl border border-white/10 bg-[#0b1221] p-4">
+          <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold text-white">WorldWeave activity</h2><span className="text-[10px] text-slate-500">Latest 20 events</span></div>
+          {activity.length === 0 ? <p className="text-xs text-slate-500">Membership changes will appear here.</p> : <div className="space-y-2">
+            {activity.map(event => {
+              const actor = event.actorUid === currentUser.id ? 'You' : 'A contributor';
+              const target = event.targetUid === currentUser.id ? 'you' : 'a contributor';
+              const description = event.action === 'ownership_transferred' ? actor + ' transferred ownership to ' + target
+                : event.action === 'member_removed' ? actor + ' removed ' + target
+                : event.action === 'member_left' ? actor + ' left the WorldWeave'
+                : 'A membership update occurred';
+              return <div key={event.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 px-3 py-2">
+                <span className="text-xs text-slate-300">{description}</span>
+                <time className="shrink-0 text-[10px] text-slate-500">{timeLabel(event.createdAt)}</time>
+              </div>;
+            })}
+          </div>}
+        </section>}
         <section className="space-y-4">
           <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-white">The shared timeline</h2><span className="text-xs text-slate-500">Latest 100 · chronological</span></div>
           {hasMoreMoments && <div className="flex justify-center"><button type="button" disabled={loadingOlder} onClick={() => void handleLoadOlderMoments()} className="rounded-xl border border-violet-400/20 bg-violet-500/[.06] px-4 py-2.5 text-xs font-semibold text-violet-100 disabled:opacity-40">{loadingOlder ? 'Loading older moments…' : 'Load older moments'}</button></div>}
