@@ -38,6 +38,7 @@ export { scheduleCreatorPost, cancelCreatorScheduledPost, listCreatorScheduledPo
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { recordMyRemixLineage } from './originLineage.js';
 export { requestMyOriginAttributionCorrection, respondToOriginAttributionCorrection, disputeOriginAttributionCorrection, getMyOriginAttributionPreview, listMyOriginAttributionCases } from './originAttributionCases.js';
+export { getPublicOriginAttribution } from './originAttributionViewer.js';
 export { getOriginAttributionDisputeQueue, resolveOriginAttributionDispute, deliverOriginAttributionCaseNotifications } from './originCaseOperations.js';
 export { setMyOriginRemixPolicy } from './originPermissions.js';
 export { getPublicPostPlayback } from './publicMediaPlayback.js';
