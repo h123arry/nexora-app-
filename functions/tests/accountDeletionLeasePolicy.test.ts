@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { canClaimDeletionLease, ownsDeletionLease } from '../src/accountDeletionLeasePolicy.js';
+import { canClaimDeletionLease, ownsDeletionLease } from '../src/accountDeletionLeasePolicy.ts';
 
 describe('account deletion lease policy', () => {
   it('allows pending, failed and expired processing requests to be claimed', () => {
