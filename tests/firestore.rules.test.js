@@ -492,6 +492,34 @@ const publicProfile = (uid) => ({
     await assertSucceeds(updateDoc(bobMessage, { reactionUsers: { bob: ['❤️'] } }));
   });
 
+  it('enforces blocks in both directions for direct chat creation and message sends', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'users', 'alice', 'settings', 'preferences'), {
+        privacy: { allowDms: true }, notifications: {}, appearance: {}, content: {}, feed: {}, security: {},
+        messaging: { blockedUserIds: ['bob'], mutedChatIds: [] }
+      });
+      await setDoc(doc(adminDb, 'chats', 'blocked-direct'), {
+        id: 'blocked-direct', participants: ['alice', 'bob'], lastMessage: ''
+      });
+    });
+
+    // Alice blocked Bob: neither Bob nor Alice may create or send in a direct chat.
+    await assertFails(setDoc(doc(dbFor('bob'), 'chats', 'bob-to-alice'), {
+      id: 'bob-to-alice', participants: ['bob', 'alice'], lastMessage: ''
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'alice-to-bob'), {
+      id: 'alice-to-bob', participants: ['alice', 'bob'], lastMessage: ''
+    }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'chats', 'blocked-direct', 'messages', 'bob-message'), {
+      id: 'bob-message', chatId: 'blocked-direct', senderId: 'bob', content: 'hello',
+      status: 'sent', timestamp: new Date().toISOString()
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'blocked-direct', 'messages', 'alice-message'), {
+      id: 'alice-message', chatId: 'blocked-direct', senderId: 'alice', content: 'hello',
+      status: 'sent', timestamp: new Date().toISOString()
+    }));
+  });
+
   it('restricts chat reads and writes to participants and binds message authorship to Firebase UID', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'chats', 'chat-1'), { id: 'chat-1', participants: ['alice', 'bob'], lastMessage: '' });
