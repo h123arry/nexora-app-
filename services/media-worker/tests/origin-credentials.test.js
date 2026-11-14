@@ -63,6 +63,9 @@ describe('NEXORA Origin native C2PA reader integration', () => {
     const bytes = await readFile(fixturePath);
     bytes[bytes.length - 3] ^= 0x01;
     const reader = await Reader.fromAsset({ buffer: bytes, mimeType: 'image/jpeg' }, context);
-    if (reader) assert.notEqual(buildCredentialInspection(reader.json()).state, 'verified');
+    assert.ok(reader, 'the altered image should still expose its embedded manifest for validation');
+    const inspection = buildCredentialInspection(reader.json());
+    assert.equal(inspection.state, 'invalid');
+    assert.ok(inspection.validationCodes.some(code => /asset|hash|binding|ingredient/i.test(code)));
   });
 });
