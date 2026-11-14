@@ -14,9 +14,9 @@ type Application = {
   version: number;
 };
 
-interface Props { initialDisplayName: string; }
+interface Props { initialDisplayName: string; userId: string; }
 
-export default function IdentityVerificationPanel({ initialDisplayName }: Props) {
+export default function IdentityVerificationPanel({ initialDisplayName, userId }: Props) {
   const [application, setApplication] = useState<Application | null>(null);
   const [identityType, setIdentityType] = useState<IdentityType>('creator');
   const [displayName, setDisplayName] = useState(initialDisplayName);
@@ -39,15 +39,20 @@ export default function IdentityVerificationPanel({ initialDisplayName }: Props)
         setDisplayName(next.displayName);
         setEvidenceSummary(next.evidenceSummary);
         setEvidenceLinks(next.evidenceUrls.join('\n'));
+      } else {
+        setIdentityType('creator');
+        setDisplayName(initialDisplayName);
+        setEvidenceSummary('');
+        setEvidenceLinks('');
       }
     } catch {
       setError('Could not load identity review status. Try again when your connection is stable.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [initialDisplayName]);
 
-  useEffect(() => { void refresh(); }, [refresh, initialDisplayName]);
+  useEffect(() => { void refresh(); }, [refresh, userId]);
 
   const canApply = !application || ['rejected', 'needs_more_info', 'revoked'].includes(application.status);
   const evidenceCount = evidenceLinks.split('\n').map(value => value.trim()).filter(Boolean).length;
