@@ -69,14 +69,39 @@ export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, asyn
     throw new HttpsError('failed-precondition', 'This moment does not have a valid private media asset.');
   }
 
-  const [viewerSettingsSnapshot, ownerSettingsSnapshot, authorSettingsSnapshot] = await Promise.all([
+  const [viewerSettingsSnapshot, ownerSettingsSnapshot, authorSettingsSnapshot, ownerStatusSnapshot, authorStatusSnapshot] = await Promise.all([
     db.collection('users').doc(uid).collection('settings').doc('preferences').get(),
     db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
     db.collection('users').doc(authorId).collection('settings').doc('preferences').get(),
+    db.collection('accountStatus').doc(ownerId).get(),
+    db.collection('accountStatus').doc(authorId).get(),
   ]);
   const viewerSettings = viewerSettingsSnapshot.data() || {};
   const ownerSettings = ownerSettingsSnapshot.data() || {};
   const authorSettings = authorSettingsSnapshot.data() || {};
+  const ownerStatus = ownerStatusSnapshot.data() || {};
+  const authorStatus = authorStatusSnapshot.data() || {};
+  const activeRestriction = (status: Record<string, unknown>) => {
+    if (status.banned !== true && status.suspended !== true) return false;
+    const expiry = status.expiresAt && typeof status.expiresAt === 'object' && 'toDate' in status.expiresAt
+      ? (status.expiresAt as { toDate: () => Date }).toDate().getTime()
+      : status.expiresAt instanceof Date ? status.expiresAt.getTime() : 0;
+    return expiry === 0 || expiry > Date.now();
+  };
+  if (activeRestriction(ownerStatus) || activeRestriction(authorStatus)) {
+    throw new HttpsError('permission-denied', 'This WorldWeave media is unavailable.');
+  }
+  if (weave.get('visibility') === 'public') {
+    const ownerPrivate = ownerSettings?.privacy?.isPrivate === true;
+    const authorPrivate = authorSettings?.privacy?.isPrivate === true;
+    const followChecks: Promise<FirebaseFirestore.DocumentSnapshot>[] = [];
+    if (ownerPrivate && uid !== ownerId) followChecks.push(db.collection('follows').doc(uid + '_' + ownerId).get());
+    if (authorPrivate && uid !== authorId) followChecks.push(db.collection('follows').doc(uid + '_' + authorId).get());
+    const followSnapshots = await Promise.all(followChecks);
+    if (followSnapshots.some(snapshot => !snapshot.exists)) {
+      throw new HttpsError('permission-denied', 'Follow the private account before viewing this public WorldWeave media.');
+    }
+  }
   if (!canReadWorldWeaveMedia({
     uid,
     ownerId,
