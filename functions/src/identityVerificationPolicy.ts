@@ -58,3 +58,7 @@ export function normalizeIdentityEvidenceUrl(value: string): string {
   url.searchParams.sort();
   return url.toString();
 }
+
+export function shouldOpenImpersonationCase(independentReporterCount: number): boolean {
+  return Number.isInteger(independentReporterCount) && independentReporterCount >= 3;
+}
