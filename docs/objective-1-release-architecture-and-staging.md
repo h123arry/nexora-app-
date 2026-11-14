@@ -1,0 +1,170 @@
+# Objective 1 — Release architecture and staging boundary
+
+This runbook records the release architecture and the exact owner-operated actions still required. It separates repository validation from remote Firebase provisioning.
+
+## 1. Native distribution decision
+
+NEXORA will retain its existing React 19 + Vite + TypeScript application and use Ionic Capacitor for Android and iOS packaging. See [ADR 0001](./adr/0001-native-mobile-packaging-capacitor.md).
+
+The repository now declares Capacitor 8.6.x dependencies, a `capacitor.config.ts`, native build scripts, and a secure API-origin adapter. A one-time macOS workflow regenerates the lockfile, creates Android/iOS projects, syncs the existing web build, and compiles unsigned platform shells. Its final CI result and generated commits are the acceptance evidence. No remote development server URL is configured in release builds.
+
+## 2. Environment contract
+
+| Environment | Web mode | Firebase target | Emulator use |
+|---|---|---|---|
+| Local | local | demo-nexora-local | Required |
+| Emulator | emulator | demo project | Required |
+| Staging | staging | Owner-created staging project | Forbidden |
+| Production | production | nexora-prod-voiceharrison | Forbidden |
+
+Native builds must set `VITE_API_BASE_URL` to the environment's HTTPS API origin. The staging validator requires this value and rejects HTTP, local, credential-bearing, query-bearing, and fragment-bearing URLs. Staging must use the same non-production Firebase project ID in `NEXORA_STAGING_PROJECT_ID`, `GCLOUD_PROJECT`, and `VITE_FIREBASE_PROJECT_ID`. Server and browser Firestore database IDs and Storage buckets must match. The Auth domain must belong to the staging project, and the Web App ID must match the configured messaging sender ID.
+
+The staging validator checks these relationships, requires HTTPS, App Check site-key configuration, and refuses emulator variables or the production project. It validates configuration shape only; it cannot prove remote resources or Firebase Console settings.
+
+## 3. Owner-operated staging provisioning
+
+The repository currently has no verified staging Firebase project. The project owner must:
+
+1. Create a dedicated Firebase project for staging. Never reuse the production project.
+2. Register a separate Firebase Web App.
+3. Create the intended Firestore database and Storage bucket.
+4. Enable only the authentication providers intended for the staging test.
+5. Configure authorized domains, App Check, quotas, IAM, and required APIs.
+6. Create an HTTPS staging hosting/API origin.
+7. Populate the hosting secret/environment manager from `.env.staging.example`; do not commit real values.
+8. Deploy Firestore rules, indexes, Storage rules, and Functions from the same reviewed commit.
+9. Configure scheduled exports, retention, restore access, monitoring, alert ownership, and rollback owner.
+10. Run the staging validator and record the project ID, database ID, bucket, hosting URL, release SHA, and timestamps. Never record secrets or personal test-account data in the evidence.
+
+Run:
+
+```bash
+npm run validate:staging
+npm run test:staging-config
+```
+
+## 4. Production protection
+
+- `.firebaserc` default remains the local demo project.
+- Production deployments require an explicit production target and owner-approved change window.
+- Staging validation refuses the production project.
+- Local/emulator configuration refuses the production project and requires emulator routing.
+- Never use production credentials for local development or staging tests.
+
+## 5. Acceptance criteria
+
+- [x] Capacitor selected as the native packaging architecture.
+- [x] Architecture decision and migration sequence documented.
+- [x] Staging configuration contract documented.
+- [x] Staging validator checks server/browser project, database, bucket, Auth domain, App ID/sender, HTTPS origin, and emulator isolation.
+- [x] Capacitor packages and config declared in the existing app.
+- [ ] Lockfile regenerated and verified by `npm ci`.
+- [ ] Android and iOS projects generated, committed, and compiled by CI.
+- [x] API-origin adapter added for native private-media requests.
+- [x] PWA service-worker registration guarded from native builds.
+- [x] Web Push prevented from being treated as native push.
+- [x] Native Google popup sign-in fails clearly until OAuth adapter exists.
+- [ ] Owner creates and provisions the staging Firebase project.
+- [ ] Staging resources deployed and live two-account smoke test passed.
+- [ ] Backup restore and monitoring evidence recorded.
+
+## 6. Current honest status
+
+Repository-side preparation is in progress. Staging is **not provisioned** until the owner creates the Firebase project and the live checks pass. The production Firebase project is not modified by this runbook.
+
+## 7. Native build and store boundaries
+
+- Capacitor bundle ID currently proposed as `com.voiceofharrison.nexora`; owner must verify and confirm it before creating store listings or Firebase native app registrations.
+- Native builds use the matching environment's `VITE_API_BASE_URL` and Firebase public Web App configuration. Do not package the local emulator environment for distribution.
+- Android debug compilation and iOS simulator compilation do not create signed store artifacts.
+- Android release signing requires a protected keystore and passwords in the CI secret store; the keystore must never be committed.
+- iOS distribution requires an Apple Developer Team, App Store Connect app record, signing certificate, provisioning profile, and protected signing secrets.
+- Physical Android/iOS acceptance remains mandatory for login, OAuth, OTP, uploads, camera, microphone, notifications, deep links, background/resume, and payment journeys.
+
+## 8. Protected staging deployment workflow
+
+The repository includes `.github/workflows/deploy-staging.yml`. It is manual-only, requires an explicit confirmation input, targets the GitHub Environment `nexora-staging`, and deploys only Functions, Firestore, and Storage to the explicit staging project ID. It refuses the production project before authentication.
+
+After merging the workflow to the default branch, the repository owner must configure the GitHub Environment:
+
+**Environment variables**
+- `NEXORA_STAGING_PROJECT_ID`
+- `FIRESTORE_DATABASE_ID`
+- `FIREBASE_STORAGE_BUCKET`
+- `STAGING_APP_URL`
+- `VITE_API_BASE_URL`
+- `VITE_FIREBASE_APP_ID`
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APPCHECK_SITE_KEY`
+
+**Environment secrets**
+- `GCP_STAGING_WORKLOAD_IDENTITY_PROVIDER`
+- `GCP_STAGING_SERVICE_ACCOUNT`
+
+Configure Google Workload Identity Federation with GitHub OIDC. Restrict its attribute condition to this repository and the protected deployment ref. Grant the staging deploy service account only the permissions needed for the selected Firebase resources; do not grant broad Owner access and do not create a long-lived JSON key. Require owner approval for the GitHub Environment.
+
+The workflow validates the configuration and runs staging checks before invoking Firebase CLI with an explicit `--project` target. It does not deploy Hosting or the media worker; those require the separately selected hosting/runtime target and deployment procedure. The workflow is a deploy path, not proof that staging has already been provisioned.
+
+## 9. Owner-only completion items
+
+The following require account/project authority or physical devices and cannot be honestly completed by repository changes alone:
+
+1. Create the isolated staging Firebase project and register its Web App.
+2. Confirm the Firestore database ID, Storage bucket, Auth providers, authorized domains, App Check enforcement, quotas, IAM, and Functions secrets.
+3. Create the staging API/hosting origin and populate the protected GitHub Environment.
+4. Configure Workload Identity Federation and approve the protected staging environment.
+5. Confirm that `com.voiceofharrison.nexora` is the intended, available Android application ID and Apple bundle ID; register matching native apps with Firebase if native SDK plugins require them.
+6. Supply Android Play Console access and protected signing credentials; supply Apple Developer Team/App Store Connect access and signing/provisioning credentials.
+7. Execute real-device acceptance tests on Android and iOS.
+
+No production Firebase resource or store account is modified by these repository changes.
+
+## 10. Express API hosting and native CORS
+
+The existing Express process in `server.ts` is the canonical API boundary for VOH and private chat voice media. It also serves the built React application. Objective 1 now includes:
+
+- A multi-stage Node.js 22 `Dockerfile` that builds the existing Vite/Express application and prunes development-only dependencies from the runtime image.
+- A `.dockerignore` that excludes credentials, local dependencies, test data, native build output, and unrelated tooling from the container context.
+- A protected staging workflow that deploys Firebase resources and the existing Express/React container to a dedicated Cloud Run service in `europe-west1`.
+- Cloud Run runtime environment isolation: `NEXORA_ENV=staging`, `NODE_ENV=production`, explicit staging project/database/bucket, and an immutable `RELEASE_VERSION`.
+- A post-deployment `/healthz` and `/readyz` check. Readiness must reach Firestore using the attached runtime service account.
+- Strict API CORS: same-origin browser requests, iOS `capacitor://localhost`, Android `https://localhost`, and explicitly configured HTTPS origins only. Firebase ID-token validation remains the authorization boundary.
+
+The Cloud Run container builds the web app with an empty `VITE_API_BASE_URL`, so browser API calls remain same-origin. After first deployment, the workflow prints the Cloud Run service URL; use that URL as `VITE_API_BASE_URL` for native staging builds. Do not hardcode the Cloud Run URL into source.
+
+### Additional GitHub Environment configuration
+
+Add the following variable to the protected `nexora-staging` GitHub Environment:
+
+- `GCP_STAGING_RUNTIME_SERVICE_ACCOUNT`: owner-created Cloud Run runtime service-account email. Grant only the Firebase/Firestore/Storage permissions required by the server.
+
+The deployer Workload Identity service account and the Cloud Run runtime service account are separate identities. Restrict GitHub OIDC trust to this repository and protected deployment ref. Grant the deployer only Artifact Registry Writer, Cloud Run deployment, service-account impersonation, and Firebase deployment permissions needed for this workflow. The runtime identity must not be a project Owner.
+
+The workflow creates the Artifact Registry Docker repository `nexora` in `europe-west1` if missing, pushes an immutable image tagged with the reviewed Git SHA, deploys `nexora-api-staging`, retrieves its URL, validates staging environment separation, and checks health/readiness.
+
+### External cloud prerequisites
+
+The owner must enable Artifact Registry, Cloud Run, and required Firebase APIs; create the runtime service account; grant its least-privilege data access; and configure the WIF provider/deployer identity. The workflow does not create a Firebase project, billing account, DNS record, Apple/Google store account, or signing credential.
+
+## 11. Private media worker and Eventarc staging delivery
+
+The staging deployment also builds and deploys the existing `services/media-worker` as a separate private Cloud Run service:
+
+- Worker container: Node.js 22 + FFmpeg + Sharp.
+- Startup: Functions Framework HTTP target `processMedia` on port 8080.
+- Cloud Run service: `nexora-media-worker`, private ingress, no unauthenticated invocation, 2 vCPU / 4 GiB, one concurrent media job per instance, 900-second request timeout, maximum three instances.
+- Runtime environment: staging project ID, exact `MEDIA_BUCKET`, and configured `FIRESTORE_DATABASE_ID`.
+- Eventarc trigger: `nexora-media-staging-finalized`, filtering `google.cloud.storage.object.v1.finalized` for the staging bucket. Its location must match the bucket's region or multi-region, while the destination Cloud Run service can remain in `europe-west1`.
+
+The media worker now has its own committed npm lockfile and uses `npm ci --omit=dev` in its container build. The native/container CI runs its policy tests and builds its image.
+
+### Additional protected GitHub Environment variables
+
+- `MEDIA_BUCKET_LOCATION`: exact Cloud Storage bucket location, for example `europe-west1` or `EU`; it must match the bucket.
+- `GCP_STAGING_MEDIA_RUNTIME_SERVICE_ACCOUNT`: dedicated Cloud Run worker runtime identity.
+- `GCP_STAGING_EVENTARC_SERVICE_ACCOUNT`: dedicated identity used by the Eventarc trigger to invoke the private worker.
+
+The media runtime identity needs Firestore access and bucket-scoped object read/create permissions for source and `processed/**` outputs. The Eventarc identity needs `roles/eventarc.eventReceiver` and `roles/run.invoker` on the worker. The Cloud Storage service agent needs `roles/pubsub.publisher` for Eventarc's transport. The WIF deployer needs permission to deploy Cloud Run and create the Eventarc trigger. Do not grant project Owner to runtime identities.
+
+The workflow creates the trigger only if it does not already exist. Eventarc event filters are immutable after creation; if the bucket or source location changes, remove and recreate the trigger deliberately. The worker is not exposed publicly. A real upload, Eventarc delivery, rendition verification, duplicate-event check, and playback from a second account remain staging acceptance tests after provisioning.

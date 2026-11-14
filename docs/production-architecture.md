@@ -35,3 +35,9 @@ Client-controlled profile values, post payloads, analytics events, media metadat
 ## Unsupported or externally blocked capabilities
 
 Private audience variants, production App Check enforcement, MFA/trusted devices, distributed abuse controls, durable search indexing, media transcoding/moderation/captions, push delivery, trusted transactional email, payments/payouts, live moderation, backup scheduling, monitoring destinations, and production deployment have not been verified here. They must remain unavailable or clearly labelled until their trusted implementation and provider configuration exist.
+
+## Native mobile and API hosting
+
+The same Express process remains the canonical API boundary for the native Capacitor clients. The web application uses same-origin API paths; packaged Android and iOS builds use an explicit HTTPS `VITE_API_BASE_URL` pointing to the environment's Express service. The server permits same-origin requests, the two Capacitor WebView origins, and any explicitly configured HTTPS origins. Firebase ID-token verification remains mandatory for protected API routes.
+
+A Node.js 22 multi-stage Dockerfile packages the existing Vite/Express build for Cloud Run. The staging workflow targets a dedicated Cloud Run service and Firebase project; it is not a production deployment. Native push and Google OAuth remain disabled in the native shell until their platform-specific integrations are completed and tested.

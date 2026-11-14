@@ -5,10 +5,14 @@ import { test } from 'node:test';
 const script = 'scripts/validate-staging-config.mjs';
 const requiredNames = [
   'NEXORA_ENV',
+  'NODE_ENV',
+  'GCLOUD_PROJECT',
   'NEXORA_STAGING_PROJECT_ID',
   'FIRESTORE_DATABASE_ID',
   'FIREBASE_STORAGE_BUCKET',
   'STAGING_APP_URL',
+  'VITE_API_BASE_URL',
+  'VITE_NEXORA_ENV',
   'VITE_FIREBASE_PROJECT_ID',
   'VITE_FIREBASE_APP_ID',
   'VITE_FIREBASE_API_KEY',
@@ -20,10 +24,14 @@ const requiredNames = [
 ];
 const validConfig = {
   NEXORA_ENV: 'staging',
+  NODE_ENV: 'staging',
+  GCLOUD_PROJECT: 'nexora-staging-example',
   NEXORA_STAGING_PROJECT_ID: 'nexora-staging-example',
   FIRESTORE_DATABASE_ID: 'staging-db',
   FIREBASE_STORAGE_BUCKET: 'nexora-staging-example.appspot.com',
   STAGING_APP_URL: 'https://staging.nexora.example',
+  VITE_API_BASE_URL: 'https://api-staging.nexora.example',
+  VITE_NEXORA_ENV: 'staging',
   VITE_FIREBASE_PROJECT_ID: 'nexora-staging-example',
   VITE_FIREBASE_APP_ID: '1:123456:web:staging',
   VITE_FIREBASE_API_KEY: 'public-staging-key',
@@ -56,6 +64,7 @@ test('accepts a complete, isolated non-production staging configuration', () => 
   assert.equal(output.status, 'valid');
   assert.equal(output.projectId, validConfig.NEXORA_STAGING_PROJECT_ID);
   assert.equal(output.appCheckSiteKeyConfigured, true);
+  assert.equal(output.appIdMatchesSenderId, true);
   assert.match(output.note, /does not prove Firebase access, deployed rules\/Functions, or Console-side App Check enforcement/);
 });
 
@@ -71,16 +80,23 @@ test('rejects staging configuration without the App Check site key', () => {
   assert.match(result.stderr, /Missing staging configuration: VITE_FIREBASE_APPCHECK_SITE_KEY/);
 });
 
-test('rejects a non-staging runtime mode', () => {
-  const result = runValidator({ NEXORA_ENV: 'production' });
-  assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /must be exactly staging/);
+test('rejects non-staging runtime modes in server or browser configuration', () => {
+  for (const overrides of [
+    { NEXORA_ENV: 'production' },
+    { NODE_ENV: 'production' },
+    { VITE_NEXORA_ENV: 'production' },
+  ]) {
+    const result = runValidator(overrides);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /must be exactly staging/);
+  }
 });
 
-test('rejects the production project in either server or browser configuration', () => {
+test('rejects the production project in server or browser configuration', () => {
   for (const overrides of [
     { NEXORA_STAGING_PROJECT_ID: 'nexora-prod-voiceharrison' },
     { VITE_FIREBASE_PROJECT_ID: 'nexora-prod-voiceharrison' },
+    { GCLOUD_PROJECT: 'nexora-prod-voiceharrison' },
   ]) {
     const result = runValidator(overrides);
     assert.notEqual(result.status, 0);
@@ -88,7 +104,13 @@ test('rejects the production project in either server or browser configuration',
   }
 });
 
-test('rejects mismatched server and browser project IDs', () => {
+test('rejects a server project ID that differs from the staging project', () => {
+  const result = runValidator({ GCLOUD_PROJECT: 'another-staging-project' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /GCLOUD_PROJECT must match NEXORA_STAGING_PROJECT_ID/);
+});
+
+test('rejects mismatched browser and server project IDs', () => {
   const result = runValidator({ VITE_FIREBASE_PROJECT_ID: 'another-staging-project' });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /must match NEXORA_STAGING_PROJECT_ID/);
@@ -109,22 +131,42 @@ test('rejects Storage buckets that do not belong to the staging project', () => 
   assert.match(result.stderr, /Storage buckets must belong to the declared staging project/);
 });
 
+test('rejects an Auth domain that belongs to a different Firebase project', () => {
+  const result = runValidator({ VITE_FIREBASE_AUTH_DOMAIN: 'another-project.firebaseapp.com' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /VITE_FIREBASE_AUTH_DOMAIN must match/);
+});
+
+test('rejects a Web App ID registered to a different messaging sender', () => {
+  const result = runValidator({ VITE_FIREBASE_APP_ID: '1:999999:web:wrong-project' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /VITE_FIREBASE_APP_ID must be a Web App registered/);
+});
+
 test('rejects emulator endpoints in staging configuration', () => {
   const result = runValidator({ __emulator: true });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /refuses Firebase emulator configuration/);
 });
 
-test('requires a non-local HTTPS staging URL', () => {
-  for (const url of ['http://staging.nexora.example', 'https://localhost:3000']) {
+test('requires a valid non-local HTTPS staging URL', () => {
+  for (const url of ['http://staging.nexora.example', 'https://localhost:3000', 'https://user:pass@staging.nexora.example']) {
     const result = runValidator({ STAGING_APP_URL: url });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /must be a non-local HTTPS staging URL/);
   }
 });
 
+test('rejects non-HTTPS, local, or credential-bearing API origins', () => {
+  for (const apiUrl of ['http://api-staging.nexora.example', 'https://localhost:3000', 'https://user:pass@api-staging.nexora.example', 'https://api-staging.nexora.example?token=x']) {
+    const result = runValidator({ VITE_API_BASE_URL: apiUrl });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /VITE_API_BASE_URL must be a non-local HTTPS origin/);
+  }
+});
+
 test('rejects malformed Firebase project IDs', () => {
-  const result = runValidator({ NEXORA_STAGING_PROJECT_ID: 'INVALID PROJECT ID', VITE_FIREBASE_PROJECT_ID: 'INVALID PROJECT ID' });
+  const result = runValidator({ NEXORA_STAGING_PROJECT_ID: 'INVALID PROJECT ID', VITE_FIREBASE_PROJECT_ID: 'INVALID PROJECT ID', GCLOUD_PROJECT: 'INVALID PROJECT ID' });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /not a valid Firebase project ID/);
 });

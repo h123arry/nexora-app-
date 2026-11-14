@@ -9,3 +9,23 @@ test-results/
 !.env.example
 !.env.staging.example
 !.env.production.example
+
+# Capacitor / Android / iOS generated outputs and local signing material
+android/.gradle/
+android/**/build/
+android/local.properties
+android/.idea/
+ios/App/Pods/
+ios/DerivedData/
+ios/build/
+ios/**/*.xcuserstate
+ios/**/xcuserdata/
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+*.provisionprofile
+*.cer
+*.p8
+GoogleService-Info.plist
+google-services.json

@@ -1,6 +1,7 @@
 import { getMessaging, getToken, onMessage, Messaging, deleteToken } from 'firebase/messaging';
 import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, app, db } from './config';
+import { isNativeRuntime } from '../../lib/nativeRuntime';
 
 export interface PushNotificationPayload {
   title: string;
@@ -44,6 +45,10 @@ export class PushNotificationService {
    * Initializes Push Notifications & FCM Messaging
    */
   static async init(): Promise<string | null> {
+    if (isNativeRuntime()) {
+      console.info('Native push is not configured in this build; Web Push registration is intentionally disabled inside Capacitor.');
+      return null;
+    }
     const uid = auth.currentUser?.uid;
     if (!uid) return null;
     if (this.token && this.tokenOwnerUid && this.tokenOwnerUid !== uid) {

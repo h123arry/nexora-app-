@@ -1,0 +1,218 @@
+name: Deploy NEXORA Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_staging_deploy:
+        description: Confirm deployment to the isolated NEXORA staging Firebase project and Cloud Run service
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: nexora-staging-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: inputs.confirm_staging_deploy == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: nexora-staging
+    env:
+      NEXORA_ENV: staging
+      NODE_ENV: staging
+      NEXORA_STAGING_PROJECT_ID: ${{ vars.NEXORA_STAGING_PROJECT_ID }}
+      GCLOUD_PROJECT: ${{ vars.NEXORA_STAGING_PROJECT_ID }}
+      FIRESTORE_DATABASE_ID: ${{ vars.FIRESTORE_DATABASE_ID }}
+      FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+      VITE_NEXORA_ENV: staging
+      VITE_FIREBASE_PROJECT_ID: ${{ vars.NEXORA_STAGING_PROJECT_ID }}
+      VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+      VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+      VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXORA_STAGING_PROJECT_ID }}.firebaseapp.com
+      VITE_FIREBASE_DATABASE_ID: ${{ vars.FIRESTORE_DATABASE_ID }}
+      VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
+      VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+      VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.VITE_FIREBASE_APPCHECK_SITE_KEY }}
+      VITE_FIREBASE_VAPID_KEY: ${{ vars.VITE_FIREBASE_VAPID_KEY }}
+      VITE_FIREBASE_MEASUREMENT_ID: ${{ vars.VITE_FIREBASE_MEASUREMENT_ID }}
+      GCP_STAGING_RUNTIME_SERVICE_ACCOUNT: ${{ vars.GCP_STAGING_RUNTIME_SERVICE_ACCOUNT }}
+      GCP_STAGING_MEDIA_RUNTIME_SERVICE_ACCOUNT: ${{ vars.GCP_STAGING_MEDIA_RUNTIME_SERVICE_ACCOUNT }}
+      GCP_STAGING_EVENTARC_SERVICE_ACCOUNT: ${{ vars.GCP_STAGING_EVENTARC_SERVICE_ACCOUNT }}
+      MEDIA_BUCKET_LOCATION: ${{ vars.MEDIA_BUCKET_LOCATION }}
+    steps:
+      - name: Check out reviewed release commit
+        uses: actions/checkout@v4
+
+      - name: Require an isolated staging target and runtime identity
+        run: |
+          test -n "$NEXORA_STAGING_PROJECT_ID"
+          test "$NEXORA_STAGING_PROJECT_ID" != "nexora-prod-voiceharrison"
+          test -n "$FIRESTORE_DATABASE_ID"
+          test -n "$FIREBASE_STORAGE_BUCKET"
+          test -n "$VITE_FIREBASE_APP_ID"
+          test -n "$VITE_FIREBASE_API_KEY"
+          test -n "$VITE_FIREBASE_MESSAGING_SENDER_ID"
+          test -n "$VITE_FIREBASE_APPCHECK_SITE_KEY"
+          test -n "$GCP_STAGING_RUNTIME_SERVICE_ACCOUNT"
+          test -n "$GCP_STAGING_MEDIA_RUNTIME_SERVICE_ACCOUNT"
+          test -n "$GCP_STAGING_EVENTARC_SERVICE_ACCOUNT"
+          test -n "$MEDIA_BUCKET_LOCATION"
+
+      - name: Authenticate to Google Cloud using Workload Identity Federation
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_STAGING_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_STAGING_SERVICE_ACCOUNT }}
+          project_id: ${{ vars.NEXORA_STAGING_PROJECT_ID }}
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.NEXORA_STAGING_PROJECT_ID }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+
+      - name: Install application and Functions dependencies
+        run: |
+          npm ci --no-audit --no-fund
+          npm ci --prefix functions --no-audit --no-fund
+
+      - name: Run staging guardrail tests and application checks
+        run: |
+          npm run test:staging-config
+          npm run lint
+          npm run functions:build
+
+      - name: Prepare isolated Firebase Functions runtime configuration
+        run: |
+          printf 'NEXORA_ENV=staging\nNEXORA_STAGING_PROJECT_ID=%s\nFIRESTORE_DATABASE_ID=%s\nFIREBASE_STORAGE_BUCKET=%s\n' \
+            "$NEXORA_STAGING_PROJECT_ID" "$FIRESTORE_DATABASE_ID" "$FIREBASE_STORAGE_BUCKET" \
+            > "functions/.env.$NEXORA_STAGING_PROJECT_ID"
+
+      - name: Deploy reviewed Firebase staging resources
+        run: npx --yes firebase-tools@15.33.0 deploy --only functions,firestore,storage --project "$NEXORA_STAGING_PROJECT_ID" --non-interactive
+
+      - name: Create the staging Artifact Registry repository if needed
+        run: |
+          if ! gcloud artifacts repositories describe nexora --location=europe-west1 --project="$NEXORA_STAGING_PROJECT_ID" >/dev/null 2>&1; then
+            gcloud artifacts repositories create nexora \
+              --repository-format=docker \
+              --location=europe-west1 \
+              --project="$NEXORA_STAGING_PROJECT_ID" \
+              --description="NEXORA staging container images"
+          fi
+          gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
+
+      - name: Build the staging Express and React container
+        run: |
+          IMAGE="europe-west1-docker.pkg.dev/$NEXORA_STAGING_PROJECT_ID/nexora/nexora-api-staging:$GITHUB_SHA"
+          docker build -f Dockerfile -t "$IMAGE" \
+            --build-arg VITE_NEXORA_ENV=staging \
+            --build-arg VITE_API_BASE_URL= \
+            --build-arg VITE_FIREBASE_PROJECT_ID="$VITE_FIREBASE_PROJECT_ID" \
+            --build-arg VITE_FIREBASE_APP_ID="$VITE_FIREBASE_APP_ID" \
+            --build-arg VITE_FIREBASE_API_KEY="$VITE_FIREBASE_API_KEY" \
+            --build-arg VITE_FIREBASE_AUTH_DOMAIN="$VITE_FIREBASE_AUTH_DOMAIN" \
+            --build-arg VITE_FIREBASE_DATABASE_ID="$VITE_FIREBASE_DATABASE_ID" \
+            --build-arg VITE_FIREBASE_STORAGE_BUCKET="$VITE_FIREBASE_STORAGE_BUCKET" \
+            --build-arg VITE_FIREBASE_MESSAGING_SENDER_ID="$VITE_FIREBASE_MESSAGING_SENDER_ID" \
+            --build-arg VITE_FIREBASE_APPCHECK_SITE_KEY="$VITE_FIREBASE_APPCHECK_SITE_KEY" \
+            --build-arg VITE_FIREBASE_VAPID_KEY="$VITE_FIREBASE_VAPID_KEY" \
+            --build-arg VITE_FIREBASE_MEASUREMENT_ID="$VITE_FIREBASE_MEASUREMENT_ID" \
+            .
+          docker push "$IMAGE"
+          echo "NEXORA_STAGING_IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy the Express API and React application to Cloud Run
+        run: |
+          gcloud run deploy nexora-api-staging \
+            --image "$NEXORA_STAGING_IMAGE" \
+            --project "$NEXORA_STAGING_PROJECT_ID" \
+            --region europe-west1 \
+            --service-account "$GCP_STAGING_RUNTIME_SERVICE_ACCOUNT" \
+            --allow-unauthenticated \
+            --port 8080 \
+            --min 0 \
+            --max 10 \
+            --memory 1Gi \
+            --cpu 1 \
+            --concurrency 80 \
+            --timeout 300 \
+            --set-env-vars "NEXORA_ENV=staging,NODE_ENV=production,RELEASE_VERSION=$GITHUB_SHA,GCLOUD_PROJECT=$NEXORA_STAGING_PROJECT_ID,NEXORA_STAGING_PROJECT_ID=$NEXORA_STAGING_PROJECT_ID,FIRESTORE_DATABASE_ID=$FIRESTORE_DATABASE_ID,FIREBASE_STORAGE_BUCKET=$FIREBASE_STORAGE_BUCKET" \
+            --quiet
+          SERVICE_URL="$(gcloud run services describe nexora-api-staging --project "$NEXORA_STAGING_PROJECT_ID" --region europe-west1 --format='value(status.url)')"
+          test -n "$SERVICE_URL"
+          echo "STAGING_APP_URL=$SERVICE_URL" >> "$GITHUB_ENV"
+          echo "VITE_API_BASE_URL=$SERVICE_URL" >> "$GITHUB_ENV"
+          echo "NEXORA_STAGING_SERVICE_URL=$SERVICE_URL" >> "$GITHUB_ENV"
+          echo "## NEXORA staging deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "Cloud Run service: $SERVICE_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Use this URL as VITE_API_BASE_URL for native staging builds." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate the provisioned staging target
+        run: npm run validate:staging
+
+
+      - name: Build and push the private media worker image
+        run: |
+          IMAGE="europe-west1-docker.pkg.dev/$NEXORA_STAGING_PROJECT_ID/nexora/nexora-media-worker:$GITHUB_SHA"
+          docker build -f services/media-worker/Dockerfile -t "$IMAGE" services/media-worker
+          docker push "$IMAGE"
+          echo "NEXORA_STAGING_MEDIA_IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy the private Eventarc media worker to Cloud Run
+        run: |
+          gcloud run deploy nexora-media-worker \
+            --image "$NEXORA_STAGING_MEDIA_IMAGE" \
+            --project "$NEXORA_STAGING_PROJECT_ID" \
+            --region europe-west1 \
+            --service-account "$GCP_STAGING_MEDIA_RUNTIME_SERVICE_ACCOUNT" \
+            --no-allow-unauthenticated \
+            --ingress internal \
+            --port 8080 \
+            --min 0 \
+            --max 3 \
+            --memory 4Gi \
+            --cpu 2 \
+            --concurrency 1 \
+            --timeout 900 \
+            --set-env-vars "NEXORA_ENV=staging,GCLOUD_PROJECT=$NEXORA_STAGING_PROJECT_ID,GOOGLE_CLOUD_PROJECT=$NEXORA_STAGING_PROJECT_ID,MEDIA_BUCKET=$FIREBASE_STORAGE_BUCKET,FIRESTORE_DATABASE_ID=$FIRESTORE_DATABASE_ID" \
+            --quiet
+
+      - name: Create the Cloud Storage Eventarc trigger if missing
+        run: |
+          if ! gcloud eventarc triggers describe nexora-media-staging-finalized \
+            --location "$MEDIA_BUCKET_LOCATION" \
+            --project "$NEXORA_STAGING_PROJECT_ID" >/dev/null 2>&1; then
+            gcloud eventarc triggers create nexora-media-staging-finalized \
+              --location "$MEDIA_BUCKET_LOCATION" \
+              --destination-run-service nexora-media-worker \
+              --destination-run-region europe-west1 \
+              --event-filters="type=google.cloud.storage.object.v1.finalized" \
+              --event-filters="bucket=$FIREBASE_STORAGE_BUCKET" \
+              --service-account "$GCP_STAGING_EVENTARC_SERVICE_ACCOUNT"
+          fi
+          gcloud eventarc triggers describe nexora-media-staging-finalized \
+            --location "$MEDIA_BUCKET_LOCATION" \
+            --project "$NEXORA_STAGING_PROJECT_ID" >/dev/null
+          echo "Private media worker and Cloud Storage Eventarc trigger configured." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify Cloud Run health and Firebase readiness
+        run: |
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-connrefused "$NEXORA_STAGING_SERVICE_URL/healthz"
+          echo
+          curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-connrefused "$NEXORA_STAGING_SERVICE_URL/readyz"
+          echo
