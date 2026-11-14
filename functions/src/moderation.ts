@@ -72,13 +72,23 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
   const reportId = stableReportId(reporterId, targetType, normalizedTargetId);
   const reportRef = db.collection('moderationReports').doc(reportId);
   const quotaRef = db.collection('moderationReportQuotas').doc(reporterId);
+  const isImpersonationReport = targetType === 'user' && category === 'impersonation' && normalizedTargetId !== reporterId;
+  const reporterKey = isImpersonationReport ? createHash('sha256').update(reporterId).digest('hex').slice(0, 40) : '';
+  const signalRef = isImpersonationReport
+    ? db.collection('identityImpersonationSignals').doc(normalizedTargetId).collection('reporters').doc(reporterKey)
+    : null;
   const duplicate = await db.runTransaction(async (transaction) => {
-    const [existing, quotaSnapshot] = await Promise.all([
-      transaction.get(reportRef),
-      transaction.get(quotaRef),
-    ]);
-    // Duplicate retries remain idempotent and do not consume quota.
-    if (existing.exists) return true;
+    const existing = await transaction.get(reportRef);
+    const quotaSnapshot = await transaction.get(quotaRef);
+    const existingSignal = signalRef ? await transaction.get(signalRef) : null;
+    // Duplicate retries remain idempotent and do not consume quota. Repair a missing
+    // private signal for a legacy impersonation report without charging quota again.
+    if (existing.exists) {
+      if (signalRef && existingSignal && !existingSignal.exists) transaction.create(signalRef, {
+        reporterId, reportId, createdAt: FieldValue.serverTimestamp(),
+      });
+      return true;
+    }
 
     const quota = consumeModerationReportQuota(
       quotaSnapshot.exists ? quotaSnapshot.data() : null,
@@ -90,20 +100,15 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
 
     const now = FieldValue.serverTimestamp();
     transaction.create(reportRef, {
-      reporterId,
-      targetType,
-      targetId: normalizedTargetId,
-      category,
+      reporterId, targetType, targetId: normalizedTargetId, category,
       explanation: typeof explanation === 'string' ? explanation.trim() : '',
-      status: 'pending',
-      policyVersion: '2026-10',
-      createdAt: now,
-      updatedAt: now,
+      status: 'pending', policyVersion: '2026-10', createdAt: now, updatedAt: now,
     });
     transaction.set(quotaRef, {
-      windowStartedAtMs: quota.windowStartedAtMs,
-      attempts: quota.attempts,
-      updatedAt: now,
+      windowStartedAtMs: quota.windowStartedAtMs, attempts: quota.attempts, updatedAt: now,
+    });
+    if (signalRef && existingSignal && !existingSignal.exists) transaction.create(signalRef, {
+      reporterId, reportId, createdAt: now,
     });
     const auditRef = db.collection('moderationAuditEvents').doc();
     transaction.create(auditRef, {
@@ -113,16 +118,7 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
     return false;
   });
   // Independent impersonation reports open a private reviewer case; reports never auto-enforce.
-  if (!duplicate && targetType === 'user' && category === 'impersonation' && normalizedTargetId !== reporterId) {
-    const reporterKey = createHash('sha256').update(reporterId).digest('hex').slice(0, 40);
-    const signalRef = db.collection('identityImpersonationSignals').doc(normalizedTargetId)
-      .collection('reporters').doc(reporterKey);
-    await db.runTransaction(async transaction => {
-      const existingSignal = await transaction.get(signalRef);
-      if (!existingSignal.exists) transaction.create(signalRef, {
-        reporterId, reportId, createdAt: FieldValue.serverTimestamp(),
-      });
-    });
+  if (isImpersonationReport) {
     const reporterSignals = db.collection('identityImpersonationSignals').doc(normalizedTargetId).collection('reporters');
     const caseRef = db.collection('identityImpersonationCases').doc(normalizedTargetId);
     const verifiedRef = db.collection('verifiedIdentities').doc(normalizedTargetId);
