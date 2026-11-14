@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { consumeModerationReportQuota } from './moderationPolicy.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -68,11 +69,22 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
   const normalizedTargetId = targetId.trim();
   const reportId = stableReportId(reporterId, targetType, normalizedTargetId);
   const reportRef = db.collection('moderationReports').doc(reportId);
+  const quotaRef = db.collection('moderationReportQuotas').doc(reporterId);
   const duplicate = await db.runTransaction(async (transaction) => {
-    const existing = await transaction.get(reportRef);
-    // One report per reporter/target pair, even after closure. This keeps retries
-    // idempotent and prevents concurrent submissions from creating duplicate work.
+    const [existing, quotaSnapshot] = await Promise.all([
+      transaction.get(reportRef),
+      transaction.get(quotaRef),
+    ]);
+    // Duplicate retries remain idempotent and do not consume quota.
     if (existing.exists) return true;
+
+    const quota = consumeModerationReportQuota(
+      quotaSnapshot.exists ? quotaSnapshot.data() : null,
+      Date.now(),
+    );
+    if (!quota.allowed) {
+      throw new HttpsError('resource-exhausted', 'You have reached the report limit. Try again after the current one-hour window.');
+    }
 
     const now = FieldValue.serverTimestamp();
     transaction.create(reportRef, {
@@ -84,6 +96,11 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
       status: 'pending',
       policyVersion: '2026-10',
       createdAt: now,
+      updatedAt: now,
+    });
+    transaction.set(quotaRef, {
+      windowStartedAtMs: quota.windowStartedAtMs,
+      attempts: quota.attempts,
       updatedAt: now,
     });
     const auditRef = db.collection('moderationAuditEvents').doc();
@@ -107,52 +124,71 @@ export const reviewModerationReport = onCall({ maxInstances: 10 }, async (reques
   if (decisionNote !== undefined && (typeof decisionNote !== 'string' || decisionNote.trim().length > 1000)) throw new HttpsError('invalid-argument', 'The decision note is too long.');
 
   const reportRef = db.collection('moderationReports').doc(reportId);
-  const reportSnap = await reportRef.get();
-  if (!reportSnap.exists) throw new HttpsError('not-found', 'Report not found.');
-  const report = reportSnap.data() || {};
-  if (!['pending', 'under_review', 'escalated'].includes(String(report.status))) throw new HttpsError('failed-precondition', 'This report is already closed.');
-
-  const accountId = action === 'dismiss' ? null : await resolveAccountId(report);
-  if (action !== 'dismiss' && !accountId) throw new HttpsError('failed-precondition', 'The reported account could not be resolved safely.');
-  const batch = db.batch();
-  const now = FieldValue.serverTimestamp();
-  batch.update(reportRef, {
-    status: action === 'dismiss' ? 'dismissed' : 'resolved',
-    action,
-    decisionNote: typeof decisionNote === 'string' ? decisionNote.trim() : '',
-    reviewerId,
-    reviewedAt: now,
-    updatedAt: now,
-  });
-  if (action !== 'dismiss') {
-    const enforcementId = `enforcement_${reportId}`;
-    const expiresAt = action === 'warn' ? null : Timestamp.fromMillis(Date.now() + (action === 'ban' ? 3650 : 7) * 24 * 60 * 60 * 1000);
-    batch.set(db.collection('accountEnforcements').doc(enforcementId), {
-      id: enforcementId,
-      accountId,
-      targetId: report.targetId,
-      action,
-      reportId,
-      status: 'active',
-      policyVersion: '2026-10',
-      issuedBy: reviewerId,
-      createdAt: now,
-      expiresAt,
-    }, { merge: true });
-    batch.set(db.collection('accountStatus').doc(accountId as string), {
-      accountId,
-      postingRestricted: action === 'restrict_posting' || action === 'suspend' || action === 'ban',
-      messagingRestricted: action === 'restrict_messaging' || action === 'suspend' || action === 'ban',
-      suspended: action === 'suspend' || action === 'ban',
-      expiresAt,
-      updatedAt: now,
-      sourceEnforcementId: enforcementId,
-    }, { merge: true });
+  const initialSnapshot = await reportRef.get();
+  if (!initialSnapshot.exists) throw new HttpsError('not-found', 'Report not found.');
+  const initialReport = initialSnapshot.data() || {};
+  if (!['pending', 'under_review', 'escalated'].includes(String(initialReport.status))) {
+    throw new HttpsError('failed-precondition', 'This report is already closed.');
   }
-  batch.create(db.collection('moderationAuditEvents').doc(), {
-    type: 'report_reviewed', reportId, action, actorId: reviewerId, createdAt: now,
+
+  const accountId = action === 'dismiss' ? null : await resolveAccountId(initialReport);
+  if (action !== 'dismiss' && !accountId) throw new HttpsError('failed-precondition', 'The reported account could not be resolved safely.');
+  const enforcementId = `enforcement_${reportId}`;
+  const enforcementRef = db.collection('accountEnforcements').doc(enforcementId);
+  const accountStatusRef = accountId ? db.collection('accountStatus').doc(accountId) : null;
+  const auditRef = db.collection('moderationAuditEvents').doc();
+  const nowMs = Date.now();
+  const now = FieldValue.serverTimestamp();
+  const expiresAt = action === 'warn' ? null : Timestamp.fromMillis(
+    nowMs + (action === 'ban' ? 3650 : 7) * 24 * 60 * 60 * 1000,
+  );
+
+  await db.runTransaction(async (transaction) => {
+    const currentSnapshot = await transaction.get(reportRef);
+    if (!currentSnapshot.exists) throw new HttpsError('not-found', 'Report not found.');
+    const currentReport = currentSnapshot.data() || {};
+    if (!['pending', 'under_review', 'escalated'].includes(String(currentReport.status))) {
+      throw new HttpsError('failed-precondition', 'This report has already been reviewed.');
+    }
+    if (currentReport.targetType !== initialReport.targetType || currentReport.targetId !== initialReport.targetId) {
+      throw new HttpsError('aborted', 'The report target changed during review. Reload and try again.');
+    }
+
+    transaction.update(reportRef, {
+      status: action === 'dismiss' ? 'dismissed' : 'resolved',
+      action,
+      decisionNote: typeof decisionNote === 'string' ? decisionNote.trim() : '',
+      reviewerId,
+      reviewedAt: now,
+      updatedAt: now,
+    });
+    if (accountId && accountStatusRef) {
+      transaction.set(enforcementRef, {
+        id: enforcementId,
+        accountId,
+        targetId: currentReport.targetId,
+        action,
+        reportId,
+        status: 'active',
+        policyVersion: '2026-10',
+        issuedBy: reviewerId,
+        createdAt: now,
+        expiresAt,
+      }, { merge: true });
+      transaction.set(accountStatusRef, {
+        accountId,
+        postingRestricted: action === 'restrict_posting' || action === 'suspend' || action === 'ban',
+        messagingRestricted: action === 'restrict_messaging' || action === 'suspend' || action === 'ban',
+        suspended: action === 'suspend' || action === 'ban',
+        expiresAt,
+        updatedAt: now,
+        sourceEnforcementId: enforcementId,
+      }, { merge: true });
+    }
+    transaction.create(auditRef, {
+      type: 'report_reviewed', reportId, action, actorId: reviewerId, createdAt: now,
+    });
   });
-  await batch.commit();
   return { accepted: true, reportId, action };
 });
 
