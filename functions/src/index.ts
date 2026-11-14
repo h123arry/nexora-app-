@@ -49,6 +49,7 @@ export { toggleWorldWeaveMomentPin, cleanupDeletedWorldWeaveMomentPin } from './
 export { addWorldWeaveMomentReply, deleteWorldWeaveMomentReply } from './worldWeaveReplies.js';
 export { createWorldWeaveChapter, updateWorldWeaveChapter, archiveWorldWeaveChapter, reorderWorldWeaveChapters } from './worldWeaveChapters.js';
 export { backfillWorldWeaveMembershipV2 } from './worldWeaveMembershipBackfill.js';
+export { discoverPublicWorldWeaves } from './worldWeaveDiscovery.js';
 export { auditWorldWeaveMembershipV2 } from './worldWeaveMembershipAudit.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';
 export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAnalytics } from './creatorAudienceAnalytics.js';
