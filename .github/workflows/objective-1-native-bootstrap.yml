@@ -27,6 +27,39 @@ jobs:
         with:
           ref: release/objective-1-capacitor-staging-foundation
 
+      - name: Merge the latest main release work before native generation
+        run: |
+          git fetch origin main
+          if ! git merge --no-edit origin/main; then
+            conflicts="$(git diff --name-only --diff-filter=U)"
+            if [ "$conflicts" != "package.json" ]; then
+              echo "Unexpected merge conflicts: $conflicts"
+              exit 1
+            fi
+            node --input-type=module <<'NODE'
+            import { execFileSync } from 'node:child_process';
+            import { readFileSync, writeFileSync } from 'node:fs';
+            const branchPackage = JSON.parse(execFileSync('git', ['show', 'HEAD:package.json'], { encoding: 'utf8' }));
+            const mainPackage = JSON.parse(execFileSync('git', ['show', 'origin/main:package.json'], { encoding: 'utf8' }));
+            const merged = {
+              ...mainPackage,
+              ...branchPackage,
+              dependencies: { ...mainPackage.dependencies, ...branchPackage.dependencies },
+              devDependencies: { ...mainPackage.devDependencies, ...branchPackage.devDependencies },
+              scripts: { ...mainPackage.scripts, ...branchPackage.scripts },
+            };
+            // Keep main's newest test inventory and add the native API-origin test.
+            merged.scripts['test:unit'] = mainPackage.scripts['test:unit'].replace(
+              'tests/firebase-environment.test.ts',
+              'tests/firebase-environment.test.ts tests/api-base-url.test.ts',
+            );
+            writeFileSync('package.json', JSON.stringify(merged, null, 2) + '\\n');
+            NODE
+            git add package.json
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Merge main into Objective 1 release architecture"
+          fi
+          git push origin HEAD:release/objective-1-capacitor-staging-foundation
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
