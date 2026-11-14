@@ -5,6 +5,8 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { spawn } from 'node:child_process';
 import { createHmac, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
+import { Reader, Context } from '@contentauth/c2pa-node';
+import { buildCredentialInspection, unsupportedCredentialInspection } from './originCredentials.js';
 import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -52,6 +54,34 @@ async function probe(file){
 async function upload(local,object,contentType,cacheControl='public,max-age=31536000,immutable'){
   await bucket.upload(local,{destination:object,metadata:{contentType,cacheControl,metadata:{nexoraGenerated:'true'}}});
 }
+async function persistCredentialInspection({ownerId,mediaId,generation,inspection}){
+  const assetRef=db.collection('mediaAssets').doc(mediaId);
+  const originRef=db.collection('mediaOrigins').doc(mediaId);
+  await db.runTransaction(async tx=>{
+    const [assetSnap,originSnap]=await Promise.all([tx.get(assetRef),tx.get(originRef)]);
+    const asset=assetSnap.data();
+    if(assetSnap.exists && asset?.ownerId===ownerId && (!asset.generation || asset.generation===generation)){
+      tx.set(assetRef,{credentialInspection:{...inspection,sourceGeneration:generation,checkedAt:FieldValue.serverTimestamp()},updatedAt:FieldValue.serverTimestamp()},{merge:true});
+    }
+    const origin=originSnap.data();
+    if(originSnap.exists && origin?.ownerUid===ownerId && origin?.mediaGeneration===generation){
+      tx.set(originRef,{credentialState:inspection.state,credentialInspection:{...inspection,sourceGeneration:generation,checkedAt:FieldValue.serverTimestamp()},updatedAt:FieldValue.serverTimestamp()},{merge:true});
+    }
+  });
+}
+
+async function inspectSourceCredential(file,contentType){
+  try {
+    const context=new Context({verify:{verifyAfterReading:true,verifyTrust:true,ocspFetch:false,remoteManifestFetch:false},trust:{verifyTrustList:true}});
+    const reader=await Reader.fromAsset({path:file,mimeType:contentType},context);
+    const inspection=buildCredentialInspection(reader ? reader.json() : null);
+    return inspection;
+  } catch(error) {
+    console.warn('NEXORA Origin C2PA inspection unavailable', {code:'c2pa_inspection_unavailable',message:String(error?.message||error).slice(0,160)});
+    return unsupportedCredentialInspection();
+  }
+}
+
 async function processObject(event){
   const classification=classifyStorageObject(event,bucketName);
   if(classification.ignored) return {ignored:true,reason:classification.reason};
@@ -75,6 +105,9 @@ async function processObject(event){
   try {
     const input=path.join(work,'source');
     await bucket.file(object.name, { generation }).download({ destination: input, preconditionOpts: { ifGenerationMatch: generation } });
+    // Inspect the immutable original before Sharp/FFmpeg transforms can strip its manifest.
+    const credentialInspection=await inspectSourceCredential(input,classification.contentType);
+    await persistCredentialInspection({ownerId,mediaId,generation,inspection:credentialInspection});
     if(isImage) {
       const sourceMetadata=await sharp(input,{limitInputPixels:100_000_000}).metadata();
       if(!sourceMetadata.width || !sourceMetadata.height || sourceMetadata.width>20_000 || sourceMetadata.height>20_000) throw new Error('Image dimensions are outside supported limits');

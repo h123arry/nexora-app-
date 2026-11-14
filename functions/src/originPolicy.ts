@@ -1,4 +1,5 @@
 export type OriginUploadKind = 'upload_ingest' | 'studio_export';
+export type OriginCredentialState = 'absent' | 'verified' | 'untrusted' | 'invalid' | 'unsupported' | 'pending';
 
 export type OriginUploadInput = {
   assetId: string;
@@ -41,7 +42,7 @@ export function buildOriginUploadRecords(input: OriginUploadInput) {
       mediaGeneration: input.mediaGeneration,
       contentType: input.contentType,
       byteSize: input.byteSize,
-      credentialState: 'absent' as const,
+      credentialState: 'absent' as OriginCredentialState,
       lineageState: 'unlinked' as const,
       disclosureState: 'unknown' as const,
       schemaVersion: 1 as const,
