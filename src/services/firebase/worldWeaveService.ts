@@ -235,3 +235,33 @@ export async function transferWorldWeaveOwnership(weaveId: string, memberId: str
   const action = httpsCallable(functions, 'transferWorldWeaveOwnership');
   await action({ weaveId, memberId, actorUid: user.uid });
 }
+
+export interface WorldWeaveContributor {
+  userId: string;
+  name: string;
+  username: string;
+  avatar: string;
+  role: 'owner' | 'contributor';
+}
+
+export async function listWorldWeaveContributors(weaveId: string): Promise<WorldWeaveContributor[]> {
+  const user = requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/')) throw new Error('Choose a valid WorldWeave.');
+  const snapshot = await getDoc(doc(db, 'worldWeaves', weaveId));
+  if (!snapshot.exists()) throw new Error('This WorldWeave no longer exists.');
+  const data = snapshot.data();
+  const ids = Array.isArray(data.participantIds) ? [...new Set(data.participantIds.filter((id): id is string => typeof id === 'string'))] : [];
+  if (data.ownerId !== user.uid && !ids.includes(user.uid)) throw new Error('Join this WorldWeave before viewing its contributors.');
+  const contributors = await Promise.all(ids.slice(0, 100).map(async userId => {
+    const profile = await getDoc(doc(db, 'publicProfiles', userId));
+    const value = profile.data() || {};
+    return {
+      userId,
+      name: String(value.name || value.username || 'NEXORA member').slice(0, 80),
+      username: String(value.username || '').slice(0, 40),
+      avatar: String(value.avatar || '').slice(0, 2048),
+      role: (data.ownerId === userId ? 'owner' : 'contributor') as 'owner' | 'contributor',
+    };
+  }));
+  return contributors;
+}
