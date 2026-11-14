@@ -42,6 +42,9 @@ jobs:
       VITE_FIREBASE_VAPID_KEY: ${{ vars.VITE_FIREBASE_VAPID_KEY }}
       VITE_FIREBASE_MEASUREMENT_ID: ${{ vars.VITE_FIREBASE_MEASUREMENT_ID }}
       GCP_STAGING_RUNTIME_SERVICE_ACCOUNT: ${{ vars.GCP_STAGING_RUNTIME_SERVICE_ACCOUNT }}
+      GCP_STAGING_MEDIA_RUNTIME_SERVICE_ACCOUNT: ${{ vars.GCP_STAGING_MEDIA_RUNTIME_SERVICE_ACCOUNT }}
+      GCP_STAGING_EVENTARC_SERVICE_ACCOUNT: ${{ vars.GCP_STAGING_EVENTARC_SERVICE_ACCOUNT }}
+      MEDIA_BUCKET_LOCATION: ${{ vars.MEDIA_BUCKET_LOCATION }}
     steps:
       - name: Check out reviewed release commit
         uses: actions/checkout@v4
@@ -57,6 +60,9 @@ jobs:
           test -n "$VITE_FIREBASE_MESSAGING_SENDER_ID"
           test -n "$VITE_FIREBASE_APPCHECK_SITE_KEY"
           test -n "$GCP_STAGING_RUNTIME_SERVICE_ACCOUNT"
+          test -n "$GCP_STAGING_MEDIA_RUNTIME_SERVICE_ACCOUNT"
+          test -n "$GCP_STAGING_EVENTARC_SERVICE_ACCOUNT"
+          test -n "$MEDIA_BUCKET_LOCATION"
 
       - name: Authenticate to Google Cloud using Workload Identity Federation
         uses: google-github-actions/auth@v2
@@ -158,6 +164,51 @@ jobs:
 
       - name: Validate the provisioned staging target
         run: npm run validate:staging
+
+
+      - name: Build and push the private media worker image
+        run: |
+          IMAGE="europe-west1-docker.pkg.dev/$NEXORA_STAGING_PROJECT_ID/nexora/nexora-media-worker:$GITHUB_SHA"
+          docker build -f services/media-worker/Dockerfile -t "$IMAGE" services/media-worker
+          docker push "$IMAGE"
+          echo "NEXORA_STAGING_MEDIA_IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy the private Eventarc media worker to Cloud Run
+        run: |
+          gcloud run deploy nexora-media-worker \
+            --image "$NEXORA_STAGING_MEDIA_IMAGE" \
+            --project "$NEXORA_STAGING_PROJECT_ID" \
+            --region europe-west1 \
+            --service-account "$GCP_STAGING_MEDIA_RUNTIME_SERVICE_ACCOUNT" \
+            --no-allow-unauthenticated \
+            --ingress internal \
+            --port 8080 \
+            --min 0 \
+            --max 3 \
+            --memory 4Gi \
+            --cpu 2 \
+            --concurrency 1 \
+            --timeout 900 \
+            --set-env-vars "NEXORA_ENV=staging,GCLOUD_PROJECT=$NEXORA_STAGING_PROJECT_ID,GOOGLE_CLOUD_PROJECT=$NEXORA_STAGING_PROJECT_ID,MEDIA_BUCKET=$FIREBASE_STORAGE_BUCKET,FIRESTORE_DATABASE_ID=$FIRESTORE_DATABASE_ID" \
+            --quiet
+
+      - name: Create the Cloud Storage Eventarc trigger if missing
+        run: |
+          if ! gcloud eventarc triggers describe nexora-media-staging-finalized \
+            --location "$MEDIA_BUCKET_LOCATION" \
+            --project "$NEXORA_STAGING_PROJECT_ID" >/dev/null 2>&1; then
+            gcloud eventarc triggers create nexora-media-staging-finalized \
+              --location "$MEDIA_BUCKET_LOCATION" \
+              --destination-run-service nexora-media-worker \
+              --destination-run-region europe-west1 \
+              --event-filters="type=google.cloud.storage.object.v1.finalized" \
+              --event-filters="bucket=$FIREBASE_STORAGE_BUCKET" \
+              --service-account "$GCP_STAGING_EVENTARC_SERVICE_ACCOUNT"
+          fi
+          gcloud eventarc triggers describe nexora-media-staging-finalized \
+            --location "$MEDIA_BUCKET_LOCATION" \
+            --project "$NEXORA_STAGING_PROJECT_ID" >/dev/null
+          echo "Private media worker and Cloud Storage Eventarc trigger configured." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify Cloud Run health and Firebase readiness
         run: |
