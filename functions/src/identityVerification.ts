@@ -158,20 +158,31 @@ export const listIdentityImpersonationCases = onCall({ maxInstances: 10 }, async
     .where('status', '==', 'open')
     .limit(50)
     .get();
-  return {
-    cases: snapshot.docs.map(document => {
-      const data = document.data();
+  const cases = await Promise.all(snapshot.docs.map(async document => {
+    const data = document.data();
+    const reportIds = Array.isArray(data.reportIds) ? data.reportIds.filter((id: unknown): id is string => typeof id === 'string').slice(0, 4) : [];
+    const reports = await Promise.all(reportIds.map(async (reportId: string) => {
+      const report = await db.collection('moderationReports').doc(reportId).get();
+      if (!report.exists) return null;
+      const reportData = report.data() || {};
       return {
-        userId: document.id,
-        status: data.status,
-        category: data.category,
-        independentReportCount: data.independentReportCount || 0,
-        hasVerifiedIdentity: data.hasVerifiedIdentity === true,
-        verifiedDisplayName: data.verifiedDisplayName || null,
-        openedAt: data.openedAt?.toDate?.()?.toISOString?.() || null,
+        category: typeof reportData.category === 'string' ? reportData.category : 'other',
+        explanation: typeof reportData.explanation === 'string' ? reportData.explanation : '',
+        createdAt: reportData.createdAt?.toDate?.()?.toISOString?.() || null,
       };
-    }),
-  };
+    }));
+    return {
+      userId: document.id,
+      status: data.status,
+      category: data.category,
+      independentReportCount: data.independentReportCount || 0,
+      hasVerifiedIdentity: data.hasVerifiedIdentity === true,
+      verifiedDisplayName: data.verifiedDisplayName || null,
+      openedAt: data.openedAt?.toDate?.()?.toISOString?.() || null,
+      reports: reports.filter(Boolean),
+    };
+  }));
+  return { cases };
 });
 
 export const reviewIdentityImpersonationCase = onCall({ maxInstances: 10 }, async request => {
