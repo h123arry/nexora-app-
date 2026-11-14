@@ -50,7 +50,7 @@ const profile = (uid) => ({
 });
 const publicProfile = (uid) => ({
   id: uid, username: uid, name: uid, avatar: '', bio: '', location: '', website: '',
-  followers: 0, following: 0, sparks: 0, isVerified: false, coverImage: '', joinedDate: 'Joined 2026',
+  followers: 0, following: 0, sparks: 0, coverImage: '', joinedDate: 'Joined 2026',
   reputationPoints: 0, reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
   skills: []
 });
@@ -343,10 +343,13 @@ const publicProfile = (uid) => ({
 
   it('rejects client-assigned public verification, reputation, and initial engagement metrics', async () => {
     const unverifiedDb = unverifiedDbFor('unverified');
-    const unverifiedProfile = { ...publicProfile('unverified'), isVerified: false };
+    const unverifiedProfile = publicProfile('unverified');
     await assertSucceeds(setDoc(doc(unverifiedDb, 'publicProfiles', 'unverified'), unverifiedProfile));
     await assertFails(setDoc(doc(unverifiedDb, 'publicProfiles', 'forged-badge'), {
       ...publicProfile('forged-badge'), id: 'forged-badge', isVerified: true
+    }));
+    await assertFails(setDoc(doc(unverifiedDb, 'publicProfiles', 'forged-false-badge'), {
+      ...publicProfile('forged-false-badge'), id: 'forged-false-badge', isVerified: false
     }));
     await assertFails(setDoc(doc(dbFor('alice'), 'publicProfiles', 'inflated-reputation'), {
       ...publicProfile('inflated-reputation'), id: 'inflated-reputation', reputationPoints: 50000
