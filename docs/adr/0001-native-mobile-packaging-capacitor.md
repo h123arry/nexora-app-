@@ -113,3 +113,7 @@ Native Google OAuth, native push, native camera/gallery plugin integration, nati
 - The Express server now handles CORS preflight and allows only same-origin requests, Capacitor iOS/Android WebView origins, and explicitly configured HTTPS origins. This is not a replacement for Firebase ID-token verification.
 - The staging deployment workflow is designed to deploy Firestore/Storage rules, Functions, and the Express/React container to Cloud Run. It prints the service URL and checks both health and Firebase readiness.
 - Cloud Run deployment, Firebase project creation, WIF setup, IAM, and live readiness are not claimed complete until the owner provisions the cloud resources and the protected workflow succeeds.
+
+## Media processing integration
+
+The staging deployment design includes the existing private FFmpeg/Sharp media worker as a separate Cloud Run service, invoked only by an authenticated Eventarc trigger for Cloud Storage object-finalized events. The worker uses a dedicated runtime identity and remains private; it is not a public upload or transcode endpoint. Its lockfile and Functions Framework startup target are now explicit and reproducible. A real staging upload/transcode/playback round trip is still required before media capabilities can be declared production-ready.
