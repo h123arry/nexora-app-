@@ -1,7 +1,7 @@
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { buildRemixLineageRecord } from './originLineagePolicy.js';
+import { assertSameAccountRemixSources, buildRemixLineageRecord } from './originLineagePolicy.js';
 import { canRemixOrigin } from './originPermissionPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
@@ -59,6 +59,18 @@ export const recordMyRemixLineage = onCall({ maxInstances: 20 }, async request =
         || parentAssets[index]?.ownerId !== parents[index]?.ownerUid
         || !['uploaded', 'ready'].includes(String(parentAssets[index]?.status)))) {
         throw new HttpsError('failed-precondition', 'Every source must be an existing, processed NEXORA media asset.');
+      }
+      // Fail closed: this callable currently has no canonical asset-to-post
+      // visibility link, so it cannot safely evaluate private posts, deleted
+      // posts, or both-direction account blocks. Do not treat creator opt-in as
+      // a substitute for those independent access checks.
+      try {
+        assertSameAccountRemixSources({
+          derivativeOwnerUid: uid,
+          sourceOwnerUids: parents.map(parent => String(parent?.ownerUid ?? '')),
+        });
+      } catch (error) {
+        throw new HttpsError('permission-denied', error instanceof Error ? error.message : 'Source access could not be verified.');
       }
       const parentPermissionSnapshots = parents.map(parent =>
         parent?.ownerUid === uid ? 'owner_remix' as const : 'allow_with_attribution' as const,
