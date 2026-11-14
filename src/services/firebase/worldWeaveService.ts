@@ -14,6 +14,9 @@ export interface WorldWeave {
   visibility: WorldWeaveVisibility; participantIds: string[]; memberCount: number;
   momentCount: number; pinnedMomentIds?: string[]; createdAt?: unknown; updatedAt?: unknown;
 }
+export interface WorldWeaveDiscoveryItem extends Omit<WorldWeave, 'participantIds'> {
+  participantIds?: string[];
+}
 export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; invitedBy: string; ownerName: string; weaveTitle: string; status: 'pending' | 'accepted'; createdAt?: unknown; }
 export type WorldWeaveReaction = 'heart' | 'applause' | 'insight' | 'laugh';
 export interface WorldWeaveMoment {
@@ -38,6 +41,20 @@ export function subscribeToPublicWorldWeaves(onItems: (items: WorldWeave[]) => v
   requireUser();
   return onSnapshot(query(collection(db, 'worldWeaves'), where('visibility', '==', 'public'), orderBy('updatedAt', 'desc'), limit(50)),
     snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeave))), onError);
+}
+
+export async function discoverPublicWorldWeaves(queryText = '', cursor: string | null = null): Promise<{
+  results: WorldWeaveDiscoveryItem[];
+  nextCursor: string | null;
+  query: string;
+}> {
+  requireUser();
+  const action = httpsCallable<
+    { query?: string; cursor?: string | null },
+    { results: WorldWeaveDiscoveryItem[]; nextCursor: string | null; query: string }
+  >(functions, 'discoverPublicWorldWeaves');
+  const response = await action({ query: queryText, cursor });
+  return response.data;
 }
 export function subscribeToWorldWeaveMoments(weaveId: string, onItems: (items: WorldWeaveMoment[]) => void, onError: (error: Error) => void): Unsubscribe {
   requireUser();
