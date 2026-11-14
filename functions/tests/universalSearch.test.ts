@@ -12,12 +12,13 @@ before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Universal search tests require the Firestore Emulator.');
   await Promise.all(paths.map(id => db.doc('users/' + id).delete().catch(() => undefined)));
   await db.doc('users/viewer').set({ username: 'viewer', interestDNA: { design: 1 } });
-  await db.doc('users/public-user').set({ username: 'nexora_creator', name: 'Nexora Creator', bio: 'Building social video', isSuspended: true });
+  await db.doc('users/public-user').set({ username: 'nexora_creator', name: 'Nexora Creator', bio: 'Building social video', isSuspended: true, isVerified: true });
   await db.doc('accountStatus/public-user').set({ suspended: true, expiresAt: new Date(Date.now() - 60_000) });
   await db.doc('users/private-user').set({ username: 'nexora_private', name: 'Nexora Private' });
   await db.doc('users/private-user/settings/preferences').set({ privacy: { isPrivateAccount: true, isPrivate: false } });
   await db.doc('users/blocked-user').set({ username: 'nexora_blocked', name: 'Nexora Blocked' });
   await db.doc('users/creator-two').set({ username: 'creator_two', name: 'Creator Two' });
+  await db.doc('verifiedIdentities/creator-two').set({ userId: 'creator-two', status: 'verified' });
   await db.doc('users/blocked-user/settings/preferences').set({ feed: { blockedCreatorIds: ['viewer'] } });
   await db.doc('users/viewer/settings/preferences').set({ privacy: { blockedUserIds: [] }, messaging: { blockedUserIds: [] }, feed: { blockedCreatorIds: ['blocked-user'] } });
   await db.doc('communities/search-circle').set({ id:'search-circle', type:'public', name:'Nexora Public Circle', description:'Public discovery space', bannedUsers:[] });
@@ -37,6 +38,10 @@ before(async () => {
   await syncUniversalSearchRecord(db,'post','private-post','posts/private-post',(await db.doc('posts/private-post').get()).data()!);
   await syncUniversalSearchRecord(db,'post','blocked-post','posts/blocked-post',(await db.doc('posts/blocked-post').get()).data()!);
   await syncUniversalSearchRecord(db,'video','followed-video','posts/followed-video',(await db.doc('posts/followed-video').get()).data()!);
+  const publicPersonIndexId = 'person_' + createHash('sha256').update('users/public-user').digest('hex');
+  const followedVideoIndexId = 'video_' + createHash('sha256').update('posts/followed-video').digest('hex');
+  assert.equal((await db.doc('searchIndex/' + publicPersonIndexId).get()).get('verified'), false);
+  assert.equal((await db.doc('searchIndex/' + followedVideoIndexId).get()).get('verified'), true);
   await syncUniversalSearchRecord(db,'circle','search-circle','communities/search-circle',(await db.doc('communities/search-circle').get()).data()!);
 });
 after(async () => {
@@ -57,6 +62,7 @@ after(async () => {
   await db.recursiveDelete(db.doc('users/public-user')).catch(() => undefined);
   await db.doc('accountStatus/public-user').delete().catch(() => undefined);
   await db.doc('searchIndex/circle_' + createHash('sha256').update('communities/search-circle').digest('hex')).delete().catch(() => undefined);
+  await db.doc('verifiedIdentities/creator-two').delete().catch(() => undefined);
   await db.doc('communities/search-circle').delete().catch(() => undefined);
   await deleteApp(app);
 });
