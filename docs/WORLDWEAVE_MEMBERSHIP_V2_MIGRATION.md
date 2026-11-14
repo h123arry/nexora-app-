@@ -145,3 +145,21 @@ Record only necessary operational facts: event type, actor UID, target UID when 
 - A rollback must switch reads back only for records whose legacy representation is verified; never infer membership from stale arrays for version-2 records after removals have occurred.
 - Do not deploy rules that require version-2 membership until the backfill and all writers are ready.
 - Do not run production migrations, delete legacy fields, or claim production readiness without explicit owner approval and verified staging evidence.
+
+
+## Implemented migration tooling (pre-cutover)
+
+Two administrator-only callables now implement the first safe migration stages:
+
+- `auditWorldWeaveMembershipV2`: read-only, cursor-paginated preflight. It reports malformed/duplicate legacy IDs, missing owners, count drift, oversized arrays, and conflicting or partial member records. It explicitly reports zero writes.
+- `backfillWorldWeaveMembershipV2`: per-weave, resumable, idempotent backfill. It creates at most 400 member records per invocation and advances the parent schema version only after all expected records are present and validated.
+
+### Operator workflow
+
+1. Run the audit across all pages and resolve all flagged records.
+2. Invoke the backfill for one eligible `weaveId`.
+3. If the response says `completed: false`, invoke it again for the same `weaveId`.
+4. Confirm version 2 and rerun the audit.
+5. Keep legacy authorization and fields in place until a separately reviewed cutover has passed cross-account emulator tests and staging acceptance.
+
+The backfill does not switch Firestore rules, does not change existing membership callables, and has not been executed against production data. It is preparation tooling only.
