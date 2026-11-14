@@ -104,7 +104,7 @@ export const discoverPublicWorldWeaves = onCall({ maxInstances: 10 }, async requ
     const title = typeof data.title === 'string' ? data.title.trim().slice(0, 90) : '';
     const description = typeof data.description === 'string' ? data.description.trim().slice(0, 500) : '';
     if (queryText) {
-      const searchable = normalize(title + ' ' + description);
+      const searchable = normalize(title + ' ' + description + ' ' + String(data.ownerName || ''));
       const words = queryText.split(' ').filter(Boolean);
       if (!words.every(word => searchable.includes(word))) return null;
     }
@@ -151,6 +151,7 @@ export const discoverPublicWorldWeaves = onCall({ maxInstances: 10 }, async requ
       description,
       ownerId,
       ownerName: typeof data.ownerName === 'string' ? data.ownerName.slice(0, 80) : 'NEXORA member',
+      memberCount: Number.isSafeInteger(data.memberCount) ? Math.max(1, Math.min(500, data.memberCount as number)) : 1,
       momentCount: Number.isSafeInteger(data.momentCount) ? Math.max(0, Math.min(1000000, data.momentCount as number)) : 0,
       createdAt: createdAt.toISOString(),
       updatedAt: updatedAt.toISOString(),
