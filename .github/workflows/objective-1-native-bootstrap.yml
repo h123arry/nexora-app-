@@ -84,8 +84,11 @@ jobs:
       - name: Test native API origin policy
         run: npx tsx --test tests/api-base-url.test.ts
 
-      - name: Build the existing React web application
-        run: npm run build:web
+      - name: Type-check the existing React application
+        run: npm run lint
+
+      - name: Build the existing application and server artifacts
+        run: npm run build
 
       - name: Generate Android project when not already present
         run: if [ ! -d android ]; then npx cap add android; fi
