@@ -1,4 +1,4 @@
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
@@ -13,7 +13,7 @@ function requireId(value: unknown, label: string): string {
   }
   return value;
 }
-function requireMember(weave: FirebaseFirestore.DocumentSnapshot, uid: string) {
+function requireMember(weave: DocumentSnapshot, uid: string) {
   const participants = Array.isArray(weave.get('participantIds')) ? weave.get('participantIds') as string[] : [];
   if (weave.get('ownerId') !== uid && !participants.includes(uid)) {
     throw new HttpsError('permission-denied', 'Join this WorldWeave before replying.');
