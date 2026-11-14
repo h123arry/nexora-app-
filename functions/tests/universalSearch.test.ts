@@ -12,13 +12,14 @@ before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Universal search tests require the Firestore Emulator.');
   await Promise.all(paths.map(id => db.doc('users/' + id).delete().catch(() => undefined)));
   await db.doc('users/viewer').set({ username: 'viewer', interestDNA: { design: 1 } });
-  await db.doc('users/public-user').set({ username: 'nexora_creator', name: 'Nexora Creator', bio: 'Building social video' });
+  await db.doc('users/public-user').set({ username: 'nexora_creator', name: 'Nexora Creator', bio: 'Building social video', isSuspended: true });
+  await db.doc('accountStatus/public-user').set({ suspended: true, expiresAt: new Date(Date.now() - 60_000) });
   await db.doc('users/private-user').set({ username: 'nexora_private', name: 'Nexora Private' });
-  await db.doc('users/private-user/settings/preferences').set({ privacy: { isPrivate: true } });
+  await db.doc('users/private-user/settings/preferences').set({ privacy: { isPrivateAccount: true, isPrivate: false } });
   await db.doc('users/blocked-user').set({ username: 'nexora_blocked', name: 'Nexora Blocked' });
   await db.doc('users/creator-two').set({ username: 'creator_two', name: 'Creator Two' });
-  await db.doc('users/blocked-user/settings/preferences').set({ privacy: { blockedUserIds: ['viewer'] } });
-  await db.doc('users/viewer/settings/preferences').set({ privacy: { blockedUserIds: [] }, messaging: { blockedUserIds: [] } });
+  await db.doc('users/blocked-user/settings/preferences').set({ feed: { blockedCreatorIds: ['viewer'] } });
+  await db.doc('users/viewer/settings/preferences').set({ privacy: { blockedUserIds: [] }, messaging: { blockedUserIds: [] }, feed: { blockedCreatorIds: ['blocked-user'] } });
   await db.doc('communities/search-circle').set({ id:'search-circle', type:'public', name:'Nexora Public Circle', description:'Public discovery space', bannedUsers:[] });
   await db.doc('posts/public-video').set({ id:'public-video', userId:'public-user', content:'Nexora video discovery', audience:'public', mediaType:'video', timestamp:new Date(), tags:['nexora','design'], likes:24 });
   await db.doc('posts/private-post').set({ id:'private-post', userId:'private-user', content:'Nexora private content', audience:'public', timestamp:new Date(), tags:['nexora'] });
@@ -54,6 +55,7 @@ after(async () => {
   for (const id of ['trend-a','trend-b','private-trend-a','private-trend-b']) await db.doc('posts/' + id).delete().catch(() => undefined);
   await db.recursiveDelete(db.doc('users/creator-two')).catch(() => undefined);
   await db.recursiveDelete(db.doc('users/public-user')).catch(() => undefined);
+  await db.doc('accountStatus/public-user').delete().catch(() => undefined);
   await db.doc('searchIndex/circle_' + createHash('sha256').update('communities/search-circle').digest('hex')).delete().catch(() => undefined);
   await db.doc('communities/search-circle').delete().catch(() => undefined);
   await deleteApp(app);
