@@ -1703,7 +1703,7 @@ export default function ProfileView({
                       <span className="text-[8px] font-mono bg-violet-500/25 text-violet-300 px-2 py-1 rounded-full font-extrabold uppercase">ACTIVE</span>
                     </div>
 
-                    {isOwnProfile && isLoggedIn && <IdentityVerificationPanel initialDisplayName={currentUser.name || ''} />}
+                    {isOwnProfile && isLoggedIn && <IdentityVerificationPanel userId={currentUser.id} initialDisplayName={currentUser.name || ''} />}
 
                     {/* Section 1: Identity & Switcher Vault */}
                     <div className="space-y-1.5">
