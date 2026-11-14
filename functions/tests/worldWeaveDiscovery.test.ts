@@ -21,6 +21,10 @@ const updatedAt = Timestamp.fromDate(new Date('2026-11-13T12:00:00.000Z'));
 
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'WorldWeave discovery tests require the Firestore Emulator.');
+  for (const id of [
+    ...Array.from({ length: 21 }, (_, index) => 'public-discovery-' + String(index).padStart(2, '0')),
+    'private-discovery-hidden', 'blocked-discovery-hidden', 'private-owner-hidden',
+  ]) await db.recursiveDelete(root.doc(id));
   for (const uid of [viewer, owner, blockedOwner, privateOwner]) {
     await db.doc('users/' + uid).set({ id: uid, username: uid, name: uid });
   }
@@ -64,10 +68,13 @@ before(async () => {
 });
 
 after(async () => {
+  for (const id of [
+    ...Array.from({ length: 21 }, (_, index) => 'public-discovery-' + String(index).padStart(2, '0')),
+    'private-discovery-hidden', 'blocked-discovery-hidden', 'private-owner-hidden',
+  ]) await db.recursiveDelete(root.doc(id));
   for (const uid of [viewer, owner, blockedOwner, privateOwner]) {
     await db.recursiveDelete(db.doc('users/' + uid));
   }
-  await db.recursiveDelete(root);
   await deleteApp(app);
 });
 
