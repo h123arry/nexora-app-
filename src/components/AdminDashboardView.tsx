@@ -40,6 +40,8 @@ export default function AdminDashboardView({
   const [users, setUsers] = useState<User[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [identityApplications, setIdentityApplications] = useState<IdentityReviewApplication[]>([]);
+  const [impersonationCases, setImpersonationCases] = useState<Array<{ userId: string; status: string; independentReportCount: number; hasVerifiedIdentity: boolean; verifiedDisplayName: string | null; openedAt: string | null }>>([]);
+  const [impersonationCaseNotes, setImpersonationCaseNotes] = useState<Record<string, string>>({});
   const [identityQueueState, setIdentityQueueState] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle');
   const [identityReviewNotes, setIdentityReviewNotes] = useState<Record<string, string>>({});
   const [crashLogs, setCrashLogs] = useState<CrashLog[]>([]);
@@ -108,6 +110,8 @@ export default function AdminDashboardView({
     try {
       const result = await httpsCallable<void, { applications: IdentityReviewApplication[] }>(getFunctions(), 'listIdentityVerificationApplications')();
       setIdentityApplications(result.data.applications || []);
+      const caseResult = await httpsCallable<void, { cases: Array<{ userId: string; status: string; independentReportCount: number; hasVerifiedIdentity: boolean; verifiedDisplayName: string | null; openedAt: string | null }> }>(getFunctions(), 'listIdentityImpersonationCases')();
+      setImpersonationCases(caseResult.data.cases || []);
       setIdentityQueueState('ready');
     } catch (error) {
       console.warn('Identity review queue unavailable:', error);
@@ -262,6 +266,27 @@ export default function AdminDashboardView({
       window.dispatchEvent(new CustomEvent('toast', { detail: action === 'dismiss' ? 'Report dismissed by authorized review.' : 'Posting restriction applied by authorized review.' }));
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Moderation action could not be completed.' }));
+    }
+  };
+
+  const handleImpersonationCaseReview = async (userId: string, decision: 'dismiss' | 'confirm_impersonation') => {
+    const reviewNote = impersonationCaseNotes[userId] || '';
+    if (reviewNote.trim().length < 5) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Add a review note of at least five characters.' }));
+      return;
+    }
+    try {
+      await httpsCallable<{ userId: string; decision: string; reviewNote: string }, { accepted: boolean }>(
+        getFunctions(), 'reviewIdentityImpersonationCase'
+      )({ userId, decision, reviewNote });
+      setImpersonationCases(previous => previous.filter(item => item.userId !== userId));
+      setImpersonationCaseNotes(previous => { const next = { ...previous }; delete next[userId]; return next; });
+      if (decision === 'confirm_impersonation') {
+        setIdentityApplications(previous => previous.filter(item => item.userId !== userId));
+      }
+      window.dispatchEvent(new CustomEvent('toast', { detail: decision === 'dismiss' ? 'Impersonation case dismissed after review.' : 'Impersonation confirmed. Public identity verification revoked where applicable.' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Impersonation case review failed.' }));
     }
   };
 
@@ -609,6 +634,33 @@ export default function AdminDashboardView({
               <h3 className="text-sm font-black text-violet-300 uppercase tracking-widest font-mono">Identity verification queue</h3>
               <p className="mt-1 text-xs text-zinc-400">Review public evidence independently. Email or phone verification is not proof of real-world identity.</p>
             </div>
+            <section className="space-y-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.03] p-4">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-amber-200">Impersonation escalation cases ({impersonationCases.length})</h3>
+                <p className="mt-1 text-[11px] text-zinc-400">Opened after three independent user reports within 24 hours. Reports are triage signals, not proof. No account action occurs without human review.</p>
+              </div>
+              {impersonationCases.length === 0 && <p className="text-xs text-zinc-500">No open impersonation escalation cases.</p>}
+              {impersonationCases.map(item => {
+                const subject = users.find(user => user.id === item.userId);
+                return <article key={item.userId} className="space-y-2 rounded-xl border border-amber-400/15 bg-black/20 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-bold text-white">{item.verifiedDisplayName || (subject ? '@' + subject.username : item.userId)}</p>
+                      <p className="text-[10px] text-amber-200">{item.independentReportCount} independent reports · {item.hasVerifiedIdentity ? 'Has public identity verification' : 'No public identity badge'}</p>
+                    </div>
+                    <span className="rounded-full border border-amber-400/20 px-2 py-1 text-[9px] uppercase text-amber-200">Human review required</span>
+                  </div>
+                  {canReviewIdentity ? <>
+                    <textarea value={impersonationCaseNotes[item.userId] || ''} onChange={event => setImpersonationCaseNotes(previous => ({ ...previous, [item.userId]: event.target.value }))} rows={2} maxLength={1000} aria-label={`Impersonation review note for ${item.userId}`} placeholder="Record the evidence reviewed and your decision (minimum 5 characters)." className="w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white outline-none focus:border-amber-400/50" />
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'dismiss')} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-zinc-200">Dismiss case</button>
+                      {canManageRoles && <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'confirm_impersonation')} className="rounded-lg bg-rose-600 px-3 py-2 text-[10px] font-black text-white hover:bg-rose-500">Confirm impersonation and revoke identity</button>}
+                    </div>
+                    {!canManageRoles && <p className="text-[10px] text-zinc-500">Only senior moderators, administrators, and the founder can confirm impersonation or revoke an identity badge.</p>}
+                  </> : <p className="text-[10px] text-zinc-500">Read-only. A reviewer must assess this case manually.</p>}
+                </article>;
+              })}
+            </section>
             {identityQueueState === 'loading' && <p className="text-xs text-zinc-400">Loading pending applications…</p>}
             {identityQueueState === 'unavailable' && <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 text-xs text-rose-200">The reviewer queue is unavailable. Check your reviewer permissions and try syncing again.</p>}
             {identityQueueState === 'ready' && identityApplications.length === 0 && <p className="rounded-xl border border-white/10 bg-black/20 p-6 text-center text-xs text-zinc-500">No pending identity applications.</p>}
