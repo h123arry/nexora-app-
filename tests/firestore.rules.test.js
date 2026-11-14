@@ -277,6 +277,18 @@ const publicProfile = (uid) => ({
       authorAvatar: '', text: 'Archived chapters cannot receive new moments.', mediaType: 'text', chapterId: 'chapter-archived',
       createdAt: serverTimestamp()
     }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'worldWeaves', 'chapter-rules-weave', 'moments', 'private-media-token'), {
+      weaveId: 'chapter-rules-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
+      authorAvatar: '', text: 'A private media moment must not publish a permanent download URL.',
+      mediaType: 'image', mediaUrl: 'https://storage.example/private-token',
+      storagePath: 'users/bob/media/private-media-token', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(setDoc(doc(dbFor('bob'), 'worldWeaves', 'chapter-rules-weave', 'moments', 'private-media-secure'), {
+      weaveId: 'chapter-rules-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
+      authorAvatar: '', text: 'The member requests a temporary URL after access is checked.',
+      mediaType: 'image', mediaUrl: '',
+      storagePath: 'users/bob/media/private-media-secure', createdAt: serverTimestamp()
+    }));
   });
 
   it('caps WorldWeave membership at 500 contributors for public joins and accepted invitations', async () => {
