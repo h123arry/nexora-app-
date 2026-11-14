@@ -269,7 +269,7 @@ export default function AdminDashboardView({
     }
   };
 
-  const handleImpersonationCaseReview = async (userId: string, decision: 'dismiss' | 'confirm_impersonation') => {
+  const handleImpersonationCaseReview = async (userId: string, decision: 'dismiss' | 'place_on_hold' | 'clear_hold' | 'confirm_impersonation') => {
     const reviewNote = impersonationCaseNotes[userId] || '';
     if (reviewNote.trim().length < 5) {
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Add a review note of at least five characters.' }));
