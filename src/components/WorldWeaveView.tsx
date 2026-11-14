@@ -6,8 +6,8 @@ import {
   addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave, deleteWorldWeaveMoment, fetchOlderWorldWeaveMoments, updateWorldWeaveDetails,
   acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, revokeWorldWeaveInvite, subscribeToWorldWeaveInvites, subscribeToMyWorldWeaveInvites,
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
-  MAX_WORLDWEAVE_MEMBERS, listWorldWeaveContributors, leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership,
-  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor,
+  MAX_WORLDWEAVE_MEMBERS, listWorldWeaveContributors, leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership, subscribeToWorldWeaveActivity,
+  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity,
 } from '../services/firebase/worldWeaveService';
 
 interface Props { currentUser: User; }
@@ -25,6 +25,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [sentInvitations, setSentInvitations] = useState<WorldWeaveInvite[]>([]);
   const [contributors, setContributors] = useState<WorldWeaveContributor[]>([]);
   const [selectedContributorId, setSelectedContributorId] = useState('');
+  const [activity, setActivity] = useState<WorldWeaveActivity[]>([]);
   const [discoveryQuery, setDiscoveryQuery] = useState('');
   const [selected, setSelected] = useState<WorldWeave | null>(null);
   const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
@@ -77,6 +78,14 @@ export default function WorldWeaveView({ currentUser }: Props) {
     }).catch(err => { if (active) setError(err instanceof Error ? err.message : 'Could not load contributors.'); });
     return () => { active = false; };
   }, [selected?.id, selected?.ownerId, selected?.participantIds?.length]);
+
+  useEffect(() => {
+    if (!selected || (selected.ownerId !== currentUser.id && !selected.participantIds?.includes(currentUser.id))) {
+      setActivity([]);
+      return;
+    }
+    return subscribeToWorldWeaveActivity(selected.id, setActivity, err => setError(err.message));
+  }, [selected?.id, selected?.ownerId, selected?.participantIds?.length, currentUser.id]);
 
   useEffect(() => {
     if (!selected) { setMoments([]); setHasMoreMoments(false); return; }
@@ -335,6 +344,23 @@ export default function WorldWeaveView({ currentUser }: Props) {
           </div>
           )}
         </div>}
+        {isMember && <section className="rounded-3xl border border-white/10 bg-[#0b1221] p-4">
+          <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold text-white">WorldWeave activity</h2><span className="text-[10px] text-slate-500">Latest 20 events</span></div>
+          {activity.length === 0 ? <p className="text-xs text-slate-500">Membership changes will appear here.</p> : <div className="space-y-2">
+            {activity.map(event => {
+              const actor = event.actorUid === currentUser.id ? 'You' : 'A contributor';
+              const target = event.targetUid === currentUser.id ? 'you' : 'a contributor';
+              const description = event.action === 'ownership_transferred' ? actor + ' transferred ownership to ' + target
+                : event.action === 'member_removed' ? actor + ' removed ' + target
+                : event.action === 'member_left' ? actor + ' left the WorldWeave'
+                : 'A membership update occurred';
+              return <div key={event.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/5 px-3 py-2">
+                <span className="text-xs text-slate-300">{description}</span>
+                <time className="shrink-0 text-[10px] text-slate-500">{timeLabel(event.createdAt)}</time>
+              </div>;
+            })}
+          </div>}
+        </section>}
         <section className="space-y-4">
           <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-white">The shared timeline</h2><span className="text-xs text-slate-500">Latest 100 · chronological</span></div>
           {hasMoreMoments && <div className="flex justify-center"><button type="button" disabled={loadingOlder} onClick={() => void handleLoadOlderMoments()} className="rounded-xl border border-violet-400/20 bg-violet-500/[.06] px-4 py-2.5 text-xs font-semibold text-violet-100 disabled:opacity-40">{loadingOlder ? 'Loading older moments…' : 'Load older moments'}</button></div>}
