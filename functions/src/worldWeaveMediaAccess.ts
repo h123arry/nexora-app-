@@ -133,5 +133,29 @@ export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, asyn
     expires: Date.now() + SIGNED_URL_TTL_MS,
     responseDisposition: 'inline',
   });
+
+  // Re-check the parent immediately before returning the URL so a concurrent
+  // removal/visibility change during signing does not grant fresh access.
+  const latestWeave = await weaveRef.get();
+  if (!latestWeave.exists || latestWeave.get('ownerId') !== ownerId
+    || !canReadWorldWeaveMedia({
+      uid, ownerId, authorId,
+      visibility: latestWeave.get('visibility'),
+      participantIds: latestWeave.get('participantIds'),
+      viewerBlockedIds: [
+        ...ids(viewerSettings?.privacy?.blockedUserIds),
+        ...ids(viewerSettings?.messaging?.blockedUserIds),
+      ],
+      ownerBlockedIds: [
+        ...ids(ownerSettings?.privacy?.blockedUserIds),
+        ...ids(ownerSettings?.messaging?.blockedUserIds),
+      ],
+      authorBlockedIds: [
+        ...ids(authorSettings?.privacy?.blockedUserIds),
+        ...ids(authorSettings?.messaging?.blockedUserIds),
+      ],
+    })) {
+    throw new HttpsError('permission-denied', 'Your access to this WorldWeave media has changed.');
+  }
   return { url, expiresInSeconds: Math.floor(SIGNED_URL_TTL_MS / 1000) };
 });
