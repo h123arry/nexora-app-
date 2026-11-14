@@ -85,7 +85,7 @@ export const deliverOriginAttributionCaseNotifications = onDocumentWritten(
     const after = event.data?.after;
     if (!after?.exists) return;
     const before = event.data?.before;
-    const record = after.data();
+    const record = after.data() || {};
     const previousStatus = before?.exists ? before.get('status') : null;
     if (previousStatus === record.status) return;
     const recipients = originCaseNotificationRecipients(record);
