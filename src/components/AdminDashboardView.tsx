@@ -15,6 +15,7 @@ type IdentityReviewApplication = {
   evidenceUrls: string[];
   version: number;
   submittedAt: string | null;
+  reviewSignals?: { possibleNameCollision?: boolean; nameCollisionCount?: number; duplicateEvidenceLinkCount?: number; evidenceScanMayBeIncomplete?: boolean } | null;
 };
 
 type IdentityReviewDecision = 'approved' | 'rejected' | 'needs_more_info';
@@ -624,6 +625,12 @@ export default function AdminDashboardView({
                       <span className="rounded-full border border-amber-400/20 bg-amber-400/5 px-2 py-1 text-[9px] font-bold uppercase text-amber-200">Pending review</span>
                     </div>
                     <p className="text-xs leading-relaxed text-zinc-300">{application.evidenceSummary}</p>
+                    {(application.reviewSignals?.possibleNameCollision || (application.reviewSignals?.duplicateEvidenceLinkCount || 0) > 0 || application.reviewSignals?.evidenceScanMayBeIncomplete) && (
+                      <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 text-[10px] leading-relaxed text-amber-100">
+                        <strong>Possible identity overlap.</strong> {application.reviewSignals?.nameCollisionCount || 0} matching active name claim(s), {application.reviewSignals?.duplicateEvidenceLinkCount || 0} shared evidence link(s).
+                        {application.reviewSignals?.evidenceScanMayBeIncomplete ? ' The match scan reached its safety limit; inspect manually.' : ' This is an advisory signal, not proof of impersonation or grounds for automatic rejection.'}
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Public evidence</p>
                       {application.evidenceUrls.map((url, index) => (
