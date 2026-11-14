@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Bug } from 'lucide-react';
 import { User as UserType, ThemeMood } from '../types';
 import { SettingsService } from '../services/firebase/settingsService';
+import { AuthService } from '../services/firebase/authService';
+import { isNativeRuntime } from '../lib/nativeRuntime';
 import { readSoundPreferences, saveSoundPreferences, playNexoraSound, type SoundPreferences } from '../services/soundExperience';
 
 const PrivacySettingsModal = lazy(() => import('./PrivacySettingsModal'));
@@ -30,6 +32,10 @@ export default function SettingsView({
   const [settingsError, setSettingsError] = useState('');
   const [settingsReady, setSettingsReady] = useState(false);
   const [soundPreferences, setSoundPreferences] = useState<SoundPreferences>(() => readSoundPreferences());
+  const [linkedProviders, setLinkedProviders] = useState<string[]>(() => AuthService.getLinkedProviders());
+  const [linkingGoogle, setLinkingGoogle] = useState(false);
+  const [linkedAccountMessage, setLinkedAccountMessage] = useState('');
+  const [linkedAccountError, setLinkedAccountError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -44,6 +50,7 @@ export default function SettingsView({
     }).catch(() => {
       if (active) setSettingsError('Could not load your saved settings. Try reopening this screen.');
     });
+    setLinkedProviders(AuthService.getLinkedProviders());
     return () => { active = false; };
   }, [currentUser.id]);
 
@@ -67,6 +74,22 @@ export default function SettingsView({
   const togglePrivacy = (key: 'isPrivateAccount' | 'allowDms', value: boolean) => {
     if (key === 'isPrivateAccount') setIsPrivateAccount(value); else setAllowDms(value);
     void saveSetting(key, () => SettingsService.updatePrivacy(currentUser.id, { [key]: value }));
+  };
+
+  const connectGoogleAccount = async () => {
+    if (linkingGoogle) return;
+    setLinkingGoogle(true);
+    setLinkedAccountError('');
+    setLinkedAccountMessage('');
+    try {
+      const providers = await AuthService.linkGoogleAccount();
+      setLinkedProviders(providers);
+      setLinkedAccountMessage('Google is now connected to this NEXORA account.');
+    } catch (error) {
+      setLinkedAccountError(error instanceof Error ? error.message : 'Google could not be connected. Try again.');
+    } finally {
+      setLinkingGoogle(false);
+    }
   };
 
   const updateSoundPreference = (key: keyof SoundPreferences, value: boolean) => {
@@ -325,7 +348,26 @@ export default function SettingsView({
           {activeSection === 'connected' && (
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Connected Accounts</h3>
-              <p className="text-xs text-zinc-400">No connected-account integrations are currently managed from this screen.</p>
+              <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/5 p-4">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white">Google</p>
+                  <p className="mt-1 text-[11px] text-zinc-400">
+                    {linkedProviders.includes('google.com') ? 'Connected to this NEXORA account' : 'Link Google as another sign-in method'}
+                  </p>
+                </div>
+                {linkedProviders.includes('google.com') ? (
+                  <span className="shrink-0 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1.5 text-[10px] font-semibold text-emerald-300">Connected</span>
+                ) : isNativeRuntime() ? (
+                  <span className="shrink-0 text-[10px] text-zinc-500">Web linking only</span>
+                ) : (
+                  <button type="button" disabled={linkingGoogle} onClick={() => void connectGoogleAccount()} className="shrink-0 rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2 text-[10px] font-semibold text-violet-200 disabled:opacity-50">
+                    {linkingGoogle ? 'Connecting…' : 'Connect Google'}
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] leading-relaxed text-zinc-500">Connecting a provider adds another sign-in method to this same account. It does not merge separate NEXORA accounts. Sign in again first if your current session is older than five minutes.</p>
+              {linkedAccountMessage && <p role="status" className="text-xs text-emerald-300">{linkedAccountMessage}</p>}
+              {linkedAccountError && <p role="alert" className="text-xs text-rose-300">{linkedAccountError}</p>}
             </div>
           )}
 

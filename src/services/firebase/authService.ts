@@ -13,6 +13,7 @@ import {
   reload,
   GoogleAuthProvider,
   signInWithPopup,
+  linkWithPopup,
   signOut,
   setPersistence,
   EmailAuthProvider,
@@ -23,6 +24,7 @@ import { User } from '../../types';
 import { ProfileService } from './profileService';
 import { EmailService } from './emailService';
 import { SecurityNotificationService } from './securityNotificationService';
+import { hasLinkedProvider, isRecentAuthentication } from './accountLinkingPolicy';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -480,6 +482,46 @@ export class AuthService {
 
   static getCurrentUser(): FirebaseUser | null {
     return auth.currentUser;
+  }
+
+  static getLinkedProviders(): string[] {
+    return (auth.currentUser?.providerData || [])
+      .map(provider => provider.providerId)
+      .filter(providerId => typeof providerId === 'string' && providerId.length > 0);
+  }
+
+  /** Link Google to the currently signed-in account; never create or merge a second NEXORA account. */
+  static async linkGoogleAccount(): Promise<string[]> {
+    this.requireConfigured();
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Sign in before connecting a Google account.');
+    if (isNativeRuntime()) {
+      throw new Error('Google account linking is not available in this native build yet.');
+    }
+    if (hasLinkedProvider(currentUser.providerData.map(provider => provider.providerId), GoogleAuthProvider.PROVIDER_ID)) {
+      return this.getLinkedProviders();
+    }
+
+    const token = await currentUser.getIdTokenResult(true);
+    const authTime = Number(token.claims.auth_time);
+    const now = Date.now() / 1000;
+    if (!isRecentAuthentication(authTime, now)) {
+      throw new Error('Sign in again immediately before connecting a Google account.');
+    }
+
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await linkWithPopup(currentUser, provider);
+      await result.user.getIdToken(true);
+      return result.user.providerData.map(item => item.providerId);
+    } catch (error) {
+      const code = (error as { code?: string })?.code;
+      if (code === 'auth/credential-already-in-use' || code === 'auth/email-already-in-use') {
+        throw new Error('That Google account is already connected to another NEXORA account. Sign in to that account instead.');
+      }
+      throw this.publicAuthError(error);
+    }
   }
 
   // --- Legacy Aliases for AuthView compatibility ---
