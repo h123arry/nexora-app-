@@ -8,6 +8,8 @@ import {
   normalizeIdentityEvidenceUrl,
   normalizeIdentityName,
   validateIdentityApplicationInput,
+  canApplyIdentityImpersonationDecision,
+  isSeniorIdentityImpersonationDecision,
 } from './identityVerificationPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
@@ -194,7 +196,7 @@ export const reviewIdentityImpersonationCase = onCall({ maxInstances: 10 }, asyn
   if (!userId || userId.length > 128 || userId.includes('/')) throw new HttpsError('invalid-argument', 'A valid account is required.');
   if (!allowedDecisions.includes(decision)) throw new HttpsError('invalid-argument', 'Choose a supported case decision.');
   if (reviewNote.length < 5 || reviewNote.length > 1000) throw new HttpsError('invalid-argument', 'A review note between 5 and 1000 characters is required.');
-  const requiresSeniorApproval = decision !== 'dismiss';
+  const requiresSeniorApproval = isSeniorIdentityImpersonationDecision(decision as 'dismiss' | 'place_on_hold' | 'clear_hold' | 'confirm_impersonation');
   const reviewerId = requiresSeniorApproval
     ? requireIdentityApprover(request as Request)
     : requireIdentityReviewer(request as Request);
@@ -209,6 +211,9 @@ export const reviewIdentityImpersonationCase = onCall({ maxInstances: 10 }, asyn
     const applicationSnapshot = await transaction.get(applicationRef);
     if (!caseSnapshot.exists) throw new HttpsError('not-found', 'Impersonation case not found.');
     const currentCaseStatus = String(caseSnapshot.get('status') || '');
+    if (!canApplyIdentityImpersonationDecision(decision as 'dismiss' | 'place_on_hold' | 'clear_hold' | 'confirm_impersonation', currentCaseStatus)) {
+      throw new HttpsError('failed-precondition', 'This case is not in a state that allows this decision.');
+    }
     const now = FieldValue.serverTimestamp();
 
     if (decision === 'dismiss') {
