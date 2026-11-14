@@ -47,9 +47,9 @@ export const submitIdentityVerificationApplication = onCall({ maxInstances: 10 }
   // Duplicate-name and shared-evidence matches are advisory reviewer signals only.
   // They never auto-reject an applicant because organizations and public figures can share official sources.
   const identityNameKey = normalizeIdentityName(input.displayName);
-  const evidenceUrlHashes = input.evidenceUrls.map(url =>
+  const evidenceUrlHashes = Array.from(new Set(input.evidenceUrls.map(url =>
     createHash('sha256').update(normalizeIdentityEvidenceUrl(url)).digest('hex')
-  );
+  )));
   const nameMatches = await db.collection('identityVerificationApplications')
     .where('identityNameKey', '==', identityNameKey)
     .limit(100)
