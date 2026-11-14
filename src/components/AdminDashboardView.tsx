@@ -664,7 +664,7 @@ export default function AdminDashboardView({
                       {item.status === 'on_hold' && canManageRoles && <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'clear_hold')} className="rounded-lg border border-emerald-400/30 px-3 py-2 text-[10px] font-bold text-emerald-200">Clear hold and restore badge</button>}
                       {canManageRoles && <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'confirm_impersonation')} className="rounded-lg bg-rose-600 px-3 py-2 text-[10px] font-black text-white hover:bg-rose-500">Confirm impersonation and revoke identity</button>}
                     </div>
-                    {!canReviewIdentity && <p className="text-[10px] text-zinc-500">Only senior moderators, administrators, and the founder can place or clear an identity hold, or confirm impersonation.</p>}
+                    {!canManageRoles && <p className="text-[10px] text-zinc-500">Senior moderators, administrators, and the founder can place or clear an identity hold, or confirm impersonation.</p>}
                   </> : <p className="text-[10px] text-zinc-500">Read-only. A reviewer must assess this case manually.</p>}
                 </article>;
               })}
