@@ -8,6 +8,7 @@ import {
 import { doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, storage } from './config';
 import { mediaStoragePath } from './storagePaths';
+import { apiRequestUrl } from '../../lib/apiBaseUrl';
 
 export interface MediaUploadOptions {
   file: File | Blob;
@@ -64,7 +65,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
         reader.onerror = () => reject(new Error('Could not read this voice recording.'));
         reader.readAsDataURL(file);
       });
-      const response = await fetch(`/api/private-chat-media/chat/${encodeURIComponent(options.chatId!)}/audio`, {
+      const response = await fetch(apiRequestUrl(`/api/private-chat-media/chat/${encodeURIComponent(options.chatId!)}/audio`), {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ audioBase64: dataUrl.slice(dataUrl.indexOf(',') + 1), mimeType: normalizedContentType }),
