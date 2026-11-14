@@ -7,6 +7,18 @@ import { auth, db } from '../lib/firebase';
 import { reviewModerationReport } from '../services/dataService';
 import GiftEarningsFinancePanel from './GiftEarningsFinancePanel';
 
+type IdentityReviewApplication = {
+  userId: string;
+  identityType: 'individual' | 'creator' | 'public_figure' | 'organization';
+  displayName: string;
+  evidenceSummary: string;
+  evidenceUrls: string[];
+  version: number;
+  submittedAt: string | null;
+};
+
+type IdentityReviewDecision = 'approved' | 'rejected' | 'needs_more_info';
+
 interface AdminDashboardViewProps {
   currentUser: User;
   posts: Post[];
@@ -21,11 +33,14 @@ export default function AdminDashboardView({
   lang
 }: AdminDashboardViewProps) {
   // Navigation tabs of Dashboard
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'moderation' | 'analytics' | 'finance' | 'audit' | 'health'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'moderation' | 'identity' | 'analytics' | 'finance' | 'audit' | 'health'>('users');
   
   // Loaded state
   const [users, setUsers] = useState<User[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
+  const [identityApplications, setIdentityApplications] = useState<IdentityReviewApplication[]>([]);
+  const [identityQueueState, setIdentityQueueState] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle');
+  const [identityReviewNotes, setIdentityReviewNotes] = useState<Record<string, string>>({});
   const [crashLogs, setCrashLogs] = useState<CrashLog[]>([]);
   const [searchUserQuery, setSearchUserQuery] = useState('');
   const [accessState, setAccessState] = useState<'checking' | 'granted' | 'denied'>('checking');
@@ -86,7 +101,19 @@ export default function AdminDashboardView({
       setReports([]);
     }
 
-    // 3. Load Crash & Health data
+    // 3. Load identity applications through the reviewer-only callable.
+    setIdentityQueueState('loading');
+    try {
+      const result = await httpsCallable<void, { applications: IdentityReviewApplication[] }>(getFunctions(), 'listIdentityVerificationApplications')();
+      setIdentityApplications(result.data.applications || []);
+      setIdentityQueueState('ready');
+    } catch (error) {
+      console.warn('Identity review queue unavailable:', error);
+      setIdentityApplications([]);
+      setIdentityQueueState('unavailable');
+    }
+
+    // 4. Load Crash & Health data
     const savedCrashes = localStorage.getItem('nexora_crash_logs');
     if (savedCrashes) {
       try {
@@ -235,6 +262,30 @@ export default function AdminDashboardView({
     }
   };
 
+  const handleIdentityReview = async (userId: string, decision: IdentityReviewDecision) => {
+    const reviewNote = identityReviewNotes[userId] || '';
+    if (decision !== 'approved' && reviewNote.trim().length < 5) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Add a review note of at least five characters before requesting changes or rejecting.' }));
+      return;
+    }
+    try {
+      await httpsCallable<{ userId: string; decision: IdentityReviewDecision; reviewNote: string }, { accepted: boolean }>(
+        getFunctions(), 'reviewIdentityVerificationApplication'
+      )({ userId, decision, reviewNote });
+      setIdentityApplications(previous => previous.filter(application => application.userId !== userId));
+      setIdentityReviewNotes(previous => {
+        const next = { ...previous };
+        delete next[userId];
+        return next;
+      });
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: decision === 'approved' ? 'Identity verified and public badge issued.' : decision === 'rejected' ? 'Identity application rejected.' : 'More identity evidence requested.',
+      }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Identity review could not be completed.' }));
+    }
+  };
+
   // Clear or resolve crash logs
   const handleResolveCrash = (logId: string) => {
     const updated = crashLogs.map(l => {
@@ -308,6 +359,14 @@ export default function AdminDashboardView({
         >
           <AlertTriangle className="w-3.5 h-3.5" />
           Mod Reports ({reports.filter(r => r.status === 'pending').length})
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('identity')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'identity' ? 'bg-violet-600 border border-white/10 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
+        >
+          <Shield className="w-3.5 h-3.5" />
+          Identity Review ({identityApplications.length})
         </button>
 
         <button 
@@ -536,6 +595,58 @@ export default function AdminDashboardView({
                   NO USER REPORTS IN MODERATION MATRIX QUEUE AT THIS MOMENT node.
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* IDENTITY REVIEW */}
+        {activeSubTab === 'identity' && (
+          <div className="space-y-4 text-left">
+            <div>
+              <h3 className="text-sm font-black text-violet-300 uppercase tracking-widest font-mono">Identity verification queue</h3>
+              <p className="mt-1 text-xs text-zinc-400">Review public evidence independently. Email or phone verification is not proof of real-world identity.</p>
+            </div>
+            {identityQueueState === 'loading' && <p className="text-xs text-zinc-400">Loading pending applications…</p>}
+            {identityQueueState === 'unavailable' && <p className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 text-xs text-rose-200">The reviewer queue is unavailable. Check your reviewer permissions and try syncing again.</p>}
+            {identityQueueState === 'ready' && identityApplications.length === 0 && <p className="rounded-xl border border-white/10 bg-black/20 p-6 text-center text-xs text-zinc-500">No pending identity applications.</p>}
+            <div className="grid grid-cols-1 gap-4">
+              {identityApplications.map(application => {
+                const applicant = users.find(user => user.id === application.userId);
+                return (
+                  <article key={application.userId} className="rounded-2xl border border-violet-400/15 bg-[#0b0a1d] p-4 space-y-3">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-black text-white">{application.displayName}</h4>
+                        <p className="text-[10px] font-mono text-violet-300">{applicant ? '@' + applicant.username : application.userId} · {application.identityType.replace('_', ' ')}</p>
+                      </div>
+                      <span className="rounded-full border border-amber-400/20 bg-amber-400/5 px-2 py-1 text-[9px] font-bold uppercase text-amber-200">Pending review</span>
+                    </div>
+                    <p className="text-xs leading-relaxed text-zinc-300">{application.evidenceSummary}</p>
+                    <div className="space-y-1">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-zinc-500">Public evidence</p>
+                      {application.evidenceUrls.map((url, index) => (
+                        <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="block break-all text-[11px] text-violet-300 underline decoration-violet-400/30 underline-offset-2 hover:text-violet-200">
+                          Evidence {index + 1}: {url}
+                        </a>
+                      ))}
+                    </div>
+                    <textarea
+                      value={identityReviewNotes[application.userId] || ''}
+                      onChange={event => setIdentityReviewNotes(previous => ({ ...previous, [application.userId]: event.target.value }))}
+                      rows={2}
+                      maxLength={1000}
+                      aria-label={`Review note for ${application.displayName}`}
+                      placeholder="Reviewer note (required when rejecting or requesting more information)"
+                      className="w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white outline-none focus:border-violet-400/50"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => void handleIdentityReview(application.userId, 'approved')} className="rounded-lg bg-emerald-600/90 px-3 py-2 text-[10px] font-black text-white hover:bg-emerald-500">Approve identity</button>
+                      <button type="button" onClick={() => void handleIdentityReview(application.userId, 'needs_more_info')} className="rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-[10px] font-bold text-amber-200 hover:bg-amber-400/10">Request more evidence</button>
+                      <button type="button" onClick={() => void handleIdentityReview(application.userId, 'rejected')} className="rounded-lg border border-rose-400/20 bg-rose-400/5 px-3 py-2 text-[10px] font-bold text-rose-200 hover:bg-rose-400/10">Reject</button>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </div>
         )}
