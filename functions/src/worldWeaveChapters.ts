@@ -22,9 +22,9 @@ export const createWorldWeaveChapter = onCall({ maxInstances: 15 }, async reques
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in to organize this WorldWeave.');
   const weaveId = request.data?.weaveId;
   if (!validId(weaveId)) throw new HttpsError('invalid-argument', 'A valid WorldWeave is required.');
-  const title = cleanText(request.data?.title, 60);
+  const title = typeof request.data?.title === 'string' ? request.data.title.trim() : '';
   const description = cleanText(request.data?.description, 250);
-  if (title.length < 2) throw new HttpsError('invalid-argument', 'A chapter title must contain 2 to 60 characters.');
+  if (title.length < 2 || title.length > 60) throw new HttpsError('invalid-argument', 'A chapter title must contain 2 to 60 characters.');
   if (typeof request.data?.description === 'string' && request.data.description.trim().length > 250) {
     throw new HttpsError('invalid-argument', 'Chapter descriptions must be 250 characters or fewer.');
   }
