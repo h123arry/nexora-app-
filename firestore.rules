@@ -364,7 +364,8 @@ service cloud.firestore {
           'savedCollections', 'updatedAt'
         ])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne']);
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
+
       allow delete: if false;
 
       match /searchHistory/{searchId} {
@@ -546,7 +547,8 @@ service cloud.firestore {
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['interestDNA'])
           || !request.resource.data.keys().hasAny(['interestDNA']))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne']);
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
+
       allow delete: if false;
     }
 
@@ -1297,17 +1299,36 @@ service cloud.firestore {
         || (!weaveMember()
           && resource.data.get('visibility', 'private') == 'public'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'memberCount', 'updatedAt'])
+          && resource.data.participantIds.size() < 500
           && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid])
           && request.resource.data.memberCount == resource.data.get('memberCount', 1) + 1
           && request.resource.data.updatedAt == request.time)
         || (!weaveMember()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'memberCount', 'updatedAt'])
+          && resource.data.participantIds.size() < 500
           && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid])
           && request.resource.data.memberCount == resource.data.get('memberCount', 1) + 1
           && request.resource.data.updatedAt == request.time
           && getAfter(/databases/$(database)/documents/worldWeaves/$(weaveId)/invites/$(request.auth.uid)).data.get('status', '') == 'accepted')
       );
       allow delete: if weaveOwner();
+
+      match /chapters/{chapterId} {
+        allow get, list: if signedIn()
+          && (get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('visibility', 'private') == 'public'
+            || request.auth.uid in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', [])
+            || request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', ''));
+        allow create, update, delete: if false;
+      }
+
+      match /activity/{eventId} {
+        // Membership activity is visible only to current contributors and the owner.
+        // Events are created exclusively by trusted Functions; clients cannot forge history.
+        allow get, list: if signedIn()
+          && (request.auth.uid in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', [])
+            || request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', ''));
+        allow create, update, delete: if false;
+      }
 
       match /moments/{momentId} {
         function canViewWeave() {
@@ -1323,7 +1344,7 @@ service cloud.firestore {
         allow create: if canContribute()
           && request.resource.data.keys().hasOnly([
             'weaveId', 'authorId', 'authorName', 'authorUsername', 'authorAvatar',
-            'text', 'mediaType', 'mediaUrl', 'storagePath', 'createdAt'
+            'text', 'mediaType', 'mediaUrl', 'storagePath', 'createdAt', 'chapterId'
           ])
           && request.resource.data.weaveId == weaveId
           && request.resource.data.authorId == request.auth.uid
@@ -1335,6 +1356,9 @@ service cloud.firestore {
           && request.resource.data.authorAvatar.size() <= 2048
           && request.resource.data.text is string
           && request.resource.data.text.size() <= 2000
+          && (!request.resource.data.keys().hasAny(['chapterId'])
+            || (request.resource.data.chapterId is string
+              && exists(/databases/$(database)/documents/worldWeaves/$(weaveId)/chapters/$(request.resource.data.chapterId))))
           && ((request.resource.data.mediaType == 'text'
               && !request.resource.data.keys().hasAny(['mediaUrl', 'storagePath']))
             || (request.resource.data.mediaType in ['image', 'video', 'audio']
@@ -1343,6 +1367,20 @@ service cloud.firestore {
               && request.resource.data.get('storagePath', '') is string
               && request.resource.data.storagePath.matches('^users/' + request.auth.uid + '/media/.*')))
           && request.resource.data.createdAt == request.time;
+        match /reactions/{userId} {
+          // Reactions are visible only to current contributors; writes go through
+          // the trusted callable so per-user uniqueness and aggregate counts stay atomic.
+          allow get, list: if canContribute();
+          allow create, update, delete: if false;
+        }
+
+        match /replies/{replyId} {
+          // Reply reads are member-only. Creation/deletion and replyCount changes
+          // are committed by trusted callables, never by client-authored counters.
+          allow get, list: if canContribute();
+          allow create, update, delete: if false;
+        }
+
         allow update: if false;
         allow delete: if signedIn()
           && (resource.data.authorId == request.auth.uid
