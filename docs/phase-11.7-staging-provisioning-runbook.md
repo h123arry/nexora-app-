@@ -87,3 +87,21 @@ Staging remains **NOT READY** until all of the following have evidence:
 - No real payments or production user data are used in these tests.
 
 Only after these checks should the controlled-beta readiness document be updated.
+
+## 8. Express API and React hosting on Cloud Run
+
+The existing `server.ts` Express process is the API host for private chat voice media and VOH, and it serves the production-built React assets. The repository now includes a Node.js 22 multi-stage `Dockerfile` and a protected staging deployment workflow.
+
+The workflow deploys:
+1. Firestore rules/indexes, Storage rules, and Cloud Functions to the isolated Firebase project.
+2. A versioned container image to Artifact Registry in `europe-west1`.
+3. The Express/React service as Cloud Run service `nexora-api-staging`, using a dedicated runtime service account.
+4. A staging URL returned by Cloud Run, followed by configuration validation and `/healthz` plus `/readyz` checks.
+
+Cloud Run runtime configuration uses `NEXORA_ENV=staging`, `NODE_ENV=production`, `RELEASE_VERSION`, `GCLOUD_PROJECT`, `NEXORA_STAGING_PROJECT_ID`, `FIRESTORE_DATABASE_ID`, and `FIREBASE_STORAGE_BUCKET`. The runtime service account must have least-privilege access to the staging Firestore database and Storage bucket. Do not attach a project Owner identity.
+
+Add the GitHub Environment variable `GCP_STAGING_RUNTIME_SERVICE_ACCOUNT` containing the runtime service-account email. Enable Cloud Run and Artifact Registry APIs and grant the WIF deployer permission to push images, deploy Cloud Run, and attach the runtime service account.
+
+The Cloud Run web build keeps `VITE_API_BASE_URL` empty so browser requests remain same-origin. After deployment, the Cloud Run service URL is printed in the workflow summary. Copy it into `VITE_API_BASE_URL` for native staging builds. The Express API permits same-origin traffic and the two Capacitor origins (`capacitor://localhost` and `https://localhost`) while retaining Firebase ID-token authorization.
+
+**This workflow is a deploy mechanism, not proof of provisioning.** Staging is still NOT PROVISIONED until the owner creates the project/resources, configures WIF and runtime IAM, and the workflow's readiness checks pass.
