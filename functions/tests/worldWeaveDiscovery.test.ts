@@ -58,7 +58,7 @@ before(async () => {
   batch.set(root.doc('private-owner-hidden'), {
     id: 'private-owner-hidden', ownerId: privateOwner, title: 'Private account story',
     description: 'Requires an existing follow.', visibility: 'public',
-    participantIds: [privateOwner], memberCount: 1, momentCount: 0, createdAt: updatedAt, updatedAt: hiddenUpdatedAt,
+    participantIds: [privateOwner], memberCount: 1, momentCount: 0, createdAt: updatedAt, updatedAt,
   });
   await batch.commit();
 });
