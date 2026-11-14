@@ -82,7 +82,8 @@ export const reviewIdentityVerificationApplication = onCall({ maxInstances: 10 }
   const reviewerId = requireIdentityReviewer(request as Request);
   const data = request.data || {};
   const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
-  const decision = data.decision;
+  const rawDecision = data.decision;
+  const decision = String(rawDecision || '') as 'approved' | 'rejected' | 'needs_more_info' | 'revoked';
   const reviewNote = typeof data.reviewNote === 'string' ? data.reviewNote.trim() : '';
   if (!userId || userId.length > 128 || userId.includes('/')) throw new HttpsError('invalid-argument', 'A valid applicant account is required.');
   if (!['approved', 'rejected', 'needs_more_info', 'revoked'].includes(String(decision))) throw new HttpsError('invalid-argument', 'Choose a supported identity review decision.');
