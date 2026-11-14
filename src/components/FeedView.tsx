@@ -12,7 +12,6 @@ import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
 import FeedPostCard from './FeedPostCard';
 import NexoraVideo from './NexoraVideo';
-import PurpleVerifiedBadge from './VohVerifiedBadge';
 import { getRecommendationProfile, recordRecommendationEvent, resetRecommendationProfile, saveRecommendationProfile } from '../utils/recommendations';
 import { trackClientObservation } from '../services/analyticsService';
 import { rankPosts } from '../services/discovery/discoveryService';
@@ -1277,7 +1276,7 @@ export default function FeedView({
     } else if (feedTab === 'trending') {
       // Trending: highly interactive posts and system updates
       const engagement = (post.likes || 0) + (post.commentsCount || 0) * 3 + (post.shares || 0) * 5;
-      const isHot = engagement > 15 || post.isVerified || post.isBroadcastPost;
+      const isHot = engagement > 15 || post.isBroadcastPost;
       if (!isHot) return false;
     }
 
@@ -2169,7 +2168,6 @@ export default function FeedView({
                             >
                               {u.name}
                             </span>
-                            {u.isVerified && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" />}
                           </div>
                           <span className="text-[10px] text-violet-400 font-mono font-medium block">@{u.username}</span>
                           <p className="text-[11px] text-zinc-300 leading-snug mt-1.5 font-sans line-clamp-2 select-text">{u.bio}</p>
