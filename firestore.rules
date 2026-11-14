@@ -729,9 +729,6 @@ service cloud.firestore {
           && request.resource.data.message is string
           && request.resource.data.message.size() > 0
           && request.resource.data.message.size() <= 500
-          && (!request.resource.data.keys().hasAny(['chapterId'])
-            || (request.resource.data.chapterId is string
-              && exists(/databases/$(database)/documents/worldWeaves/$(weaveId)/chapters/$(request.resource.data.chapterId))))
           && request.resource.data.createdAt == request.time;
         allow get, list: if signedIn()
           && (get(/databases/$(database)/documents/stories/$(storyId)).data.userId == request.auth.uid
@@ -1337,6 +1334,9 @@ service cloud.firestore {
           && request.resource.data.authorAvatar.size() <= 2048
           && request.resource.data.text is string
           && request.resource.data.text.size() <= 2000
+          && (!request.resource.data.keys().hasAny(['chapterId'])
+            || (request.resource.data.chapterId is string
+              && exists(/databases/$(database)/documents/worldWeaves/$(weaveId)/chapters/$(request.resource.data.chapterId))))
           && ((request.resource.data.mediaType == 'text'
               && !request.resource.data.keys().hasAny(['mediaUrl', 'storagePath']))
             || (request.resource.data.mediaType in ['image', 'video', 'audio']
