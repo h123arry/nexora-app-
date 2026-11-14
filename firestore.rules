@@ -180,6 +180,20 @@ service cloud.firestore {
         && addedComment.keys().hasOnly(['id', 'postId', 'userId', 'username', 'name', 'avatar', 'content', 'timestamp', 'likes']);
     }
 
+    // Identity applications and evidence links are private to the applicant and trusted review Functions.
+    // Public profiles receive a minimal projection only after an approved review.
+    match /identityVerificationApplications/{userId} {
+      allow get: if owner(userId);
+      allow list, create, update, delete: if false;
+    }
+    match /identityVerificationAuditEvents/{eventId} {
+      allow read, write: if false;
+    }
+    match /verifiedIdentities/{userId} {
+      allow get, list: if resource.data.status == 'verified';
+      allow create, update, delete: if false;
+    }
+
     // Default-deny for every path not explicitly listed below.
     match /{document=**} { allow read, write: if false; }
 
@@ -335,13 +349,11 @@ service cloud.firestore {
           'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
           'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
           'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'preferredLanguage',
-          'savedCollections', 'updatedAt', 'isVerified'
+          'savedCollections', 'updatedAt'
         ])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified'])
-          || request.resource.data.isVerified == request.auth.token.get('email_verified', false)
-          || request.resource.data.isVerified == request.auth.token.get('phone_number_verified', false));
+;
       allow delete: if false;
 
       match /searchHistory/{searchId} {
@@ -519,14 +531,12 @@ service cloud.firestore {
       allow update: if owner(userId)
         && request.resource.data.id == userId
         && request.resource.data.keys().hasOnly(publicProfileKeys())
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(editableProfileKeys().concat(['isVerified', 'interestDNA']))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(editableProfileKeys().concat(['interestDNA']))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['interestDNA'])
           || !request.resource.data.keys().hasAny(['interestDNA']))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified'])
-          || request.resource.data.isVerified == request.auth.token.get('email_verified', false)
-          || request.resource.data.isVerified == request.auth.token.get('phone_number_verified', false));
+;
       allow delete: if false;
     }
 
