@@ -15,10 +15,12 @@ export interface WorldWeave {
   momentCount: number; createdAt?: unknown; updatedAt?: unknown;
 }
 export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; invitedBy: string; ownerName: string; weaveTitle: string; status: 'pending' | 'accepted'; createdAt?: unknown; }
+export type WorldWeaveReaction = 'heart' | 'applause' | 'insight' | 'laugh';
 export interface WorldWeaveMoment {
   id: string; weaveId: string; authorId: string; authorName: string; authorUsername: string;
   authorAvatar: string; text: string; mediaType: 'text' | 'image' | 'video' | 'audio';
   mediaUrl?: string; storagePath?: string; createdAt?: unknown;
+  reactionCounts?: Partial<Record<WorldWeaveReaction, number>>;
 }
 function requireUser() {
   const user = auth.currentUser;
@@ -286,4 +288,17 @@ export function subscribeToWorldWeaveActivity(
     snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveActivity))),
     onError,
   );
+}
+
+export async function setWorldWeaveMomentReaction(
+  weaveId: string,
+  momentId: string,
+  reaction: WorldWeaveReaction,
+): Promise<void> {
+  requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/') || !momentId || momentId.length > 128 || momentId.includes('/')) {
+    throw new Error('Choose a valid WorldWeave moment.');
+  }
+  const action = httpsCallable(functions, 'setWorldWeaveMomentReaction');
+  await action({ weaveId, momentId, reaction });
 }
