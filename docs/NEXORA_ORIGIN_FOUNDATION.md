@@ -141,9 +141,12 @@ This is an initial upload-provenance foundation only. Remix lineage, creator dec
 - Remaining O3 acceptance is a production/staging device pass and an operational policy review for staff adjudication. Private-account remix must remain closed until a canonical accepted-follower authorization model is implemented and tested.
 
 ### O4 — Credential interoperability
-- Add bounded C2PA manifest extraction and cryptographic validation.
-- Display verified, invalid, absent, unsupported, and pending states accurately.
-- Test transformed assets, metadata stripping, malformed manifests, unsupported codecs, and invalid signatures.
+- **Initial O4 increment implemented:** the isolated Cloud Run media worker uses the maintained Content Authenticity Initiative Node SDK to inspect the exact immutable uploaded source generation before Sharp/FFmpeg transformations.
+- The worker records only a bounded credential verdict and allow-listed validation codes; it does not persist arbitrary assertion text, author names, GPS, or raw manifest data in public-facing records.
+- The SDK's `Trusted` validation state is the only state mapped to `verified`; `Valid` maps to `untrusted`, `Invalid` to `invalid`, missing validation output to `pending`, and a reader failure to `unsupported`. A missing manifest is `absent`.
+- Credential inspection is generation-bound and reconciled across the asynchronous Storage finalizer and Cloud Run worker, so either event order preserves the same source-generation result.
+- The media worker container is pinned to patched Node.js 22.23.4+ as required by the current SDK's documented TLS prerequisite. Credential inspection is performed on the original upload because transformed renditions may not retain the original C2PA binding.
+- Remaining O4 validation: run native SDK fixture tests in the worker image for trusted, valid-but-untrusted, invalid-signature, malformed-manifest, no-manifest, unsupported-format, and post-transcode binding cases; configure and review the production trust-anchor policy before surfacing a verified badge. No signing or credential-minting key has been introduced.
 
 ### O5 — Creator insights and fair recognition
 - Expose measured lineage events in creator analytics with sample sizes and metric definitions.

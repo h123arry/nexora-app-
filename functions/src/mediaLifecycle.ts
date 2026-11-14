@@ -98,6 +98,10 @@ export const verifyFinalizedMedia = onObjectFinalized({
       studioExport: object.metadata?.purpose === 'studio-export',
     });
 
+    const credentialInspection = current?.credentialInspection?.sourceGeneration === generation
+      ? current.credentialInspection
+      : null;
+
     if (originSnapshot.exists) {
       const prior = originSnapshot.data();
       if (prior?.ownerUid !== ownerId
@@ -108,6 +112,7 @@ export const verifyFinalizedMedia = onObjectFinalized({
     } else {
       transaction.create(originRef, {
         ...records.origin,
+        ...(credentialInspection ? { credentialState: credentialInspection.state, credentialInspection } : {}),
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
