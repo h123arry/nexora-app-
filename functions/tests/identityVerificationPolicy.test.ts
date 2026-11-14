@@ -80,7 +80,7 @@ test('impersonation case holds and resolution require the correct case state', a
 test('identity review notifications give applicants clear decision-specific next steps', async () => {
   const { buildIdentityReviewNotification } = await import('../src/identityVerificationPolicy.ts');
   const approved = buildIdentityReviewNotification('creator-1', 'approved', 2, '2026-11-14T00:00:00.000Z');
-  assert.equal(approved.id, 'identity_review_2');
+  assert.equal(approved.id, 'identity_review_2_approved');
   assert.equal(approved.type, 'system');
   assert.equal(approved.targetId, 'creator-1');
   assert.equal(approved.isRead, false);
