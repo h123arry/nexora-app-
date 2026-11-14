@@ -45,6 +45,7 @@ export { leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnersh
 export { setWorldWeaveMomentReaction } from './worldWeaveReactions.js';
 export { toggleWorldWeaveMomentPin, cleanupDeletedWorldWeaveMomentPin } from './worldWeavePins.js';
 export { addWorldWeaveMomentReply, deleteWorldWeaveMomentReply } from './worldWeaveReplies.js';
+export { createWorldWeaveChapter, updateWorldWeaveChapter } from './worldWeaveChapters.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';
 export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAnalytics } from './creatorAudienceAnalytics.js';
 export { createCommunityPost } from './communityPosts.js';
