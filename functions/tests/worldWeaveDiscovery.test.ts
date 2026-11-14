@@ -18,7 +18,6 @@ const owner = 'weave-discovery-owner';
 const blockedOwner = 'weave-discovery-blocked';
 const privateOwner = 'weave-discovery-private';
 const updatedAt = Timestamp.fromDate(new Date('2026-11-13T12:00:00.000Z'));
-const hiddenUpdatedAt = Timestamp.fromDate(new Date('2026-11-14T07:00:00.000Z'));
 
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'WorldWeave discovery tests require the Firestore Emulator.');
@@ -54,7 +53,7 @@ before(async () => {
   batch.set(root.doc('blocked-discovery-hidden'), {
     id: 'blocked-discovery-hidden', ownerId: blockedOwner, title: 'Blocked owner story',
     description: 'Do not show across a block.', visibility: 'public',
-    participantIds: [blockedOwner], memberCount: 1, momentCount: 0, createdAt: updatedAt, updatedAt: hiddenUpdatedAt,
+    participantIds: [blockedOwner], memberCount: 1, momentCount: 0, createdAt: updatedAt, updatedAt,
   });
   batch.set(root.doc('private-owner-hidden'), {
     id: 'private-owner-hidden', ownerId: privateOwner, title: 'Private account story',
@@ -101,11 +100,17 @@ describe('public WorldWeave discovery', () => {
   });
 
   it('excludes private experiences, both-direction blocks and private owners without a follow', async () => {
-    const result = await call(viewer);
-    const ids = result.results.map((item: { id: string }) => item.id);
+    const publicPage = await call(viewer);
+    const ids = publicPage.results.map((item: { id: string }) => item.id);
     assert.ok(ids.every((id: string) => id.startsWith('public-discovery-')));
     assert.equal(ids.includes('private-discovery-hidden'), false);
-    assert.equal(ids.includes('blocked-discovery-hidden'), false);
-    assert.equal(ids.includes('private-owner-hidden'), false);
+
+    await root.doc('blocked-discovery-hidden').update({ updatedAt: Timestamp.now() });
+    const blocked = await call(viewer, { query: 'blocked owner story' });
+    assert.equal(blocked.results.length, 0);
+
+    await root.doc('private-owner-hidden').update({ updatedAt: Timestamp.now() });
+    const privateOwnerResult = await call(viewer, { query: 'private account story' });
+    assert.equal(privateOwnerResult.results.length, 0);
   });
 });
