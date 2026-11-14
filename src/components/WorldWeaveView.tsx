@@ -5,11 +5,11 @@ import type { User } from '../types';
 import {
   addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave, deleteWorldWeaveMoment, fetchOlderWorldWeaveMoments, updateWorldWeaveDetails,
   acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, revokeWorldWeaveInvite, subscribeToWorldWeaveInvites, subscribeToMyWorldWeaveInvites,
-  subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
+  subscribeToMyWorldWeaves, discoverPublicWorldWeaves, subscribeToWorldWeaveMoments,
   MAX_WORLDWEAVE_MEMBERS, listWorldWeaveContributors, leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership, subscribeToWorldWeaveActivity,
   toggleWorldWeaveMomentPin, fetchWorldWeavePinnedMoments, subscribeToWorldWeaveMomentReplies, addWorldWeaveMomentReply, deleteWorldWeaveMomentReply,
   subscribeToWorldWeaveChapters, createWorldWeaveChapter, updateWorldWeaveChapter,
-  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, type WorldWeaveReply, type WorldWeaveChapter, setWorldWeaveMomentReaction,
+  type WorldWeave, type WorldWeaveDiscoveryItem, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, type WorldWeaveReply, type WorldWeaveChapter, setWorldWeaveMomentReaction,
 } from '../services/firebase/worldWeaveService';
 
 interface Props { currentUser: User; }
@@ -22,7 +22,10 @@ const timeLabel = (value: unknown) => {
 
 export default function WorldWeaveView({ currentUser }: Props) {
   const [myWeaves, setMyWeaves] = useState<WorldWeave[]>([]);
-  const [publicWeaves, setPublicWeaves] = useState<WorldWeave[]>([]);
+  const [publicWeaves, setPublicWeaves] = useState<WorldWeaveDiscoveryItem[]>([]);
+  const [discoveryCursor, setDiscoveryCursor] = useState<string | null>(null);
+  const [hasMorePublicWeaves, setHasMorePublicWeaves] = useState(false);
+  const [loadingDiscovery, setLoadingDiscovery] = useState(false);
   const [invitations, setInvitations] = useState<WorldWeaveInvite[]>([]);
   const [sentInvitations, setSentInvitations] = useState<WorldWeaveInvite[]>([]);
   const [contributors, setContributors] = useState<WorldWeaveContributor[]>([]);
@@ -41,7 +44,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [editingChapterTitle, setEditingChapterTitle] = useState('');
   const [editingChapterDescription, setEditingChapterDescription] = useState('');
   const [discoveryQuery, setDiscoveryQuery] = useState('');
-  const [selected, setSelected] = useState<WorldWeave | null>(null);
+  const [selected, setSelected] = useState<WorldWeaveDiscoveryItem | null>(null);
   const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
   const [hasMoreMoments, setHasMoreMoments] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -61,6 +64,11 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [notice, setNotice] = useState('');
+  const selectedIsMember = Boolean(selected && (
+    selected.ownerId === currentUser.id
+    || myWeaves.some(item => item.id === selected.id)
+    || selected.participantIds?.includes(currentUser.id)
+  ));
 
   useEffect(() => {
     let active = true;
@@ -68,12 +76,28 @@ export default function WorldWeaveView({ currentUser }: Props) {
     const stopMine = subscribeToMyWorldWeaves(currentUser.id, items => {
       if (active) { setMyWeaves(items); setLoading(false); }
     }, err => { if (active) { setError(err.message); setLoading(false); } });
-    const stopPublic = subscribeToPublicWorldWeaves(items => {
-      if (active) { setPublicWeaves(items); setLoading(false); }
-    }, err => { if (active) { setError(err.message); setLoading(false); } });
     const stopInvites = subscribeToMyWorldWeaveInvites(currentUser.id, items => { if (active) setInvitations(items); }, err => { if (active) setError(err.message); });
-    return () => { active = false; stopMine(); stopPublic(); stopInvites(); };
+    return () => { active = false; stopMine(); stopInvites(); };
   }, [currentUser.id]);
+
+  useEffect(() => {
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setLoadingDiscovery(true);
+      setPublicWeaves([]);
+      setDiscoveryCursor(null);
+      setHasMorePublicWeaves(false);
+      discoverPublicWorldWeaves(discoveryQuery).then(page => {
+        if (!active) return;
+        setPublicWeaves(page.results);
+        setDiscoveryCursor(page.nextCursor);
+        setHasMorePublicWeaves(Boolean(page.nextCursor));
+      }).catch(err => {
+        if (active) setError(err instanceof Error ? err.message : 'Could not discover public WorldWeaves.');
+      }).finally(() => { if (active) setLoadingDiscovery(false); });
+    }, 250);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [discoveryQuery, currentUser.id]);
 
   useEffect(() => {
     if (!selected || selected.ownerId !== currentUser.id) { setSentInvitations([]); return; }
@@ -96,7 +120,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
 
   useEffect(() => {
     let active = true;
-    if (!selected || (selected.ownerId !== currentUser.id && !selected.participantIds?.includes(currentUser.id))) {
+    if (!selected || !selectedIsMember) {
       setContributors([]);
       setSelectedContributorId('');
       return;
@@ -113,7 +137,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
 
   useEffect(() => {
     let active = true;
-    if (!selected || (selected.ownerId !== currentUser.id && !selected.participantIds?.includes(currentUser.id))) {
+    if (!selected || !selectedIsMember) {
       setPinnedMoments([]);
       return;
     }
@@ -131,7 +155,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
   }, [selected?.id, expandedReplyMomentId]);
 
   useEffect(() => {
-    if (!selected || (selected.ownerId !== currentUser.id && !selected.participantIds?.includes(currentUser.id))) {
+    if (!selected || !selectedIsMember) {
       setActivity([]);
       return;
     }
@@ -156,13 +180,13 @@ export default function WorldWeaveView({ currentUser }: Props) {
 
   useEffect(() => {
     if (!selected) return;
-    const latest = [...myWeaves, ...publicWeaves].find(item => item.id === selected.id);
+    const latest = [...publicWeaves, ...myWeaves].find(item => item.id === selected.id);
     if (latest) setSelected(current => current?.id === latest.id ? { ...current, ...latest } : current);
   }, [myWeaves, publicWeaves, selected?.id]);
 
   const weaves = useMemo(() => {
-    const unique = new Map<string, WorldWeave>();
-    [...myWeaves, ...publicWeaves].forEach(item => unique.set(item.id, item));
+    const unique = new Map<string, WorldWeaveDiscoveryItem>();
+    [...publicWeaves, ...myWeaves].forEach(item => unique.set(item.id, item));
     return [...unique.values()].sort((a, b) => {
       const aTime = a.updatedAt && typeof a.updatedAt === 'object' && 'toMillis' in a.updatedAt ? (a.updatedAt as {toMillis:()=>number}).toMillis() : 0;
       const bTime = b.updatedAt && typeof b.updatedAt === 'object' && 'toMillis' in b.updatedAt ? (b.updatedAt as {toMillis:()=>number}).toMillis() : 0;
@@ -181,6 +205,25 @@ export default function WorldWeaveView({ currentUser }: Props) {
     if (!term) return weaves;
     return weaves.filter(item => [item.title, item.description, item.ownerName].some(value => value.toLowerCase().includes(term)));
   }, [weaves, discoveryQuery]);
+
+  const handleLoadMorePublicWeaves = async () => {
+    if (!discoveryCursor || loadingDiscovery) return;
+    setLoadingDiscovery(true);
+    try {
+      const page = await discoverPublicWorldWeaves(discoveryQuery, discoveryCursor);
+      setPublicWeaves(current => {
+        const unique = new Map(current.map(item => [item.id, item]));
+        page.results.forEach(item => unique.set(item.id, item));
+        return [...unique.values()];
+      });
+      setDiscoveryCursor(page.nextCursor);
+      setHasMorePublicWeaves(Boolean(page.nextCursor));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load more public WorldWeaves.');
+    } finally {
+      setLoadingDiscovery(false);
+    }
+  };
 
   const handleJoinPublic = async () => {
     if (!selected) return;
@@ -235,7 +278,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     setBusy(true); setError(''); setNotice('');
     try {
       await removeWorldWeaveContributor(selected.id, target.userId);
-      setSelected(current => current ? { ...current, participantIds: current.participantIds.filter(id => id !== target.userId), memberCount: Math.max(1, current.memberCount - 1) } : current);
+      setSelected(current => current ? { ...current, participantIds: (current.participantIds || []).filter(id => id !== target.userId), memberCount: Math.max(1, current.memberCount - 1) } : current);
       setContributors(current => current.filter(item => item.userId !== target.userId));
       setSelectedContributorId('');
       setNotice(target.name + ' was removed. Their published moments remain in the story.');
@@ -398,7 +441,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
   };
 
   if (selected) {
-    const isMember = selected.participantIds?.includes(currentUser.id) || selected.ownerId === currentUser.id;
+    const isMember = selectedIsMember;
     return (
       <div className="mx-auto w-full max-w-5xl space-y-5 pb-10">
         <button onClick={() => { setSelected(null); setError(''); setNotice(''); }} className="inline-flex items-center gap-2 text-sm text-violet-200 hover:text-white"><ArrowLeft size={16}/> All WorldWeaves</button>
@@ -470,7 +513,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
                 <button type="button" disabled={busy || !selectedContributorId} onClick={() => void handleRemoveContributor()} className="rounded-xl border border-red-400/20 px-2 py-2.5 text-[11px] font-bold text-red-200 disabled:opacity-40">Remove</button>
                 <button type="button" disabled={busy || !selectedContributorId} onClick={() => void handleTransferOwnership()} className="rounded-xl bg-violet-600 px-2 py-2.5 text-[11px] font-bold text-white disabled:opacity-40">Transfer ownership</button>
               </div>
-              {selected.participantIds.length > 100 && <p className="mt-2 text-[10px] text-amber-200">Showing the first 100 contributors. Larger member directories will be paginated in Membership V2.</p>}
+              {(selected.participantIds?.length || 0) > 100 && <p className="mt-2 text-[10px] text-amber-200">Showing the first 100 contributors. Larger member directories will be paginated in Membership V2.</p>}
             </section>
             <section className="rounded-3xl border border-white/10 bg-[#0b1221] p-4">
               <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-white">Pending invitations</h3><span className="text-[10px] text-slate-500">{sentInvitations.length}/50</span></div>
@@ -586,6 +629,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       {loading && <div className="py-10 text-center text-sm text-slate-400">Loading WorldWeaves…</div>}
       {!loading && weaves.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center"><Globe2 className="mx-auto mb-3 text-violet-300" size={28}/><p className="font-semibold text-white">Your next great story starts here.</p><p className="mt-2 text-sm text-slate-400">Create an experience and invite the people who saw it differently.</p></div>}
       {!loading && weaves.length > 0 && visibleWeaves.length === 0 && <div className="rounded-2xl border border-white/10 p-6 text-center text-sm text-slate-400">No experiences match that search. Try another title or host.</div>}
+      {loadingDiscovery && <p className="py-3 text-center text-xs text-slate-500">Finding public experiences…</p>}
       <div className="grid gap-4 md:grid-cols-2">
         {visibleWeaves.map(weave => <button key={weave.id} onClick={() => { setSelected(weave); setNotice(''); setError(''); }} className="group rounded-3xl border border-white/10 bg-[#0b1221] p-5 text-left transition hover:-translate-y-0.5 hover:border-violet-400/35 hover:bg-[#100d23]">
           <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-violet-200"><Sparkles size={13}/>{weave.visibility === 'public' ? <Globe2 size={13}/> : <LockKeyhole size={13}/>} {weave.visibility}</div><span className="text-[10px] text-slate-500">{weave.ownerName}</span></div>
@@ -593,6 +637,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
           <div className="mt-5 flex items-center gap-4 text-xs text-slate-500"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{weave.memberCount || 1} contributors</span><span>{weave.momentCount || 0} moments</span></div>
         </button>)}
       </div>
+      {hasMorePublicWeaves && <div className="flex justify-center"><button type="button" disabled={loadingDiscovery} onClick={() => void handleLoadMorePublicWeaves()} className="rounded-xl border border-violet-400/25 px-5 py-2.5 text-xs font-semibold text-violet-200 transition hover:bg-violet-500/10 disabled:opacity-40">{loadingDiscovery ? 'Loading…' : 'Load more public experiences'}</button></div>}
     </div>
   );
 }
