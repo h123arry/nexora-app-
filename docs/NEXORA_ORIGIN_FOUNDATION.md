@@ -151,7 +151,7 @@ This is an initial upload-provenance foundation only. Remix lineage, creator dec
 ### O5 — Creator insights and fair recognition
 - Added an owner-authenticated creator-insights callable and a Creator Dashboard panel for recorded remix activity.
 - The first increment reports attributed source uses, distinct remixers, remixes created by the account, self-remix uses, deep lineage uses (depth 6+), and repeated source reuse patterns.
-- Metrics are explicitly scoped to the latest 500 platform remix events and display the sample size/cap; they are not lifetime totals. The query returns aggregates only and does not expose other creators' identities.
+- Metrics are explicitly scoped to the latest 500 platform remix events and display the sample size/cap; they are not lifetime totals. The query returns aggregates only and does not expose other creators' identities. Deep-lineage counts include only events with an explicitly recorded depth; legacy events without that field remain unknown.
 - Repeated-use and deep-lineage patterns are review signals, not findings of copying, fraud, or rights violations. No financial rewards or ranking boosts are calculated from these metrics.
 
 ### O6 — Cross-feature integration

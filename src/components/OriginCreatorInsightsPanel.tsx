@@ -44,10 +44,10 @@ export default function OriginCreatorInsightsPanel() {
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-xl border border-white/10 p-3"><p className="text-[10px] text-zinc-500">Self-remix uses</p><p className="mt-1 text-lg font-bold text-white">{insights.selfRemixUses}</p></div>
-        <div className="rounded-xl border border-white/10 p-3"><p className="text-[10px] text-zinc-500">Deep lineage uses (depth 6+)</p><p className="mt-1 text-lg font-bold text-white">{insights.deepLineageUses}</p></div>
+        <div className="rounded-xl border border-white/10 p-3"><p className="text-[10px] text-zinc-500">Known deep lineage uses (depth 6+)</p><p className="mt-1 text-lg font-bold text-white">{insights.deepLineageUses}</p></div>
       </div>
       {(insights.repeatedSourceUsePatterns > 0 || insights.deepLineageUses > 0) && <p className="flex items-start gap-2 text-[11px] leading-relaxed text-amber-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />Some repeated-source or deep-lineage patterns merit context review. These signals are not findings of copying, fraud or rights violations.</p>}
-      <p className="text-[10px] leading-relaxed text-zinc-500">{insights.methodology} Sample: {insights.sampleSize}/{insights.sampleLimit}{insights.sampleCapped ? '+' : ''} events. No financial rewards are calculated from these counts.</p>
+      <p className="text-[10px] leading-relaxed text-zinc-500">{insights.methodology} Depth is shown only where the event recorded it; older events without depth are unknown. Sample: {insights.sampleSize}/{insights.sampleLimit}{insights.sampleCapped ? '+' : ''} events. No financial rewards are calculated from these counts.</p>
     </>}
   </section>;
 }
