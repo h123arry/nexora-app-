@@ -29,6 +29,7 @@ on:
       - "android/**"
       - "ios/**"
       - "assets/**"
+      - "services/media-worker/**"
       - "Dockerfile"
       - ".dockerignore"
       - ".github/workflows/native-mobile-ci.yml"
