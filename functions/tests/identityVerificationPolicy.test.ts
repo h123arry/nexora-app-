@@ -49,3 +49,13 @@ test('identity collision keys normalize names and equivalent HTTPS evidence URLs
     normalizeIdentityEvidenceUrl('https://example.com/official?a=1&b=2'),
   );
 });
+
+test('impersonation escalation requires three independent reporters', async () => {
+  const { shouldOpenImpersonationCase } = await import('../src/identityVerificationPolicy.ts');
+  assert.equal(shouldOpenImpersonationCase(0), false);
+  assert.equal(shouldOpenImpersonationCase(1), false);
+  assert.equal(shouldOpenImpersonationCase(2), false);
+  assert.equal(shouldOpenImpersonationCase(3), true);
+  assert.equal(shouldOpenImpersonationCase(4), true);
+  assert.equal(shouldOpenImpersonationCase(2.5), false);
+});
