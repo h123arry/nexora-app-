@@ -22,11 +22,13 @@ describe('WorldWeave private media access policy', () => {
     }), true);
   });
 
-  it('enforces both-direction blocks even when an experience is public', () => {
-    const base = { uid: 'viewer', ownerId: 'alice', visibility: 'public', participantIds: ['alice'] };
+  it('enforces both-direction blocks for the experience owner and moment author', () => {
+    const base = { uid: 'viewer', ownerId: 'alice', authorId: 'bob', visibility: 'public', participantIds: ['alice'] };
     assert.equal(canReadWorldWeaveMedia({ ...base, viewerBlockedIds: ['alice'] }), false);
+    assert.equal(canReadWorldWeaveMedia({ ...base, viewerBlockedIds: ['bob'] }), false);
     assert.equal(canReadWorldWeaveMedia({ ...base, ownerBlockedIds: ['viewer'] }), false);
-    assert.equal(canReadWorldWeaveMedia({ ...base, viewerBlockedIds: [], ownerBlockedIds: [] }), true);
+    assert.equal(canReadWorldWeaveMedia({ ...base, authorBlockedIds: ['viewer'] }), false);
+    assert.equal(canReadWorldWeaveMedia({ ...base, viewerBlockedIds: [], ownerBlockedIds: [], authorBlockedIds: [] }), true);
   });
 
   it('fails closed for unknown visibility and malformed membership data', () => {
