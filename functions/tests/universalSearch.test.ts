@@ -41,7 +41,7 @@ before(async () => {
   const publicPersonIndexId = 'person_' + createHash('sha256').update('users/public-user').digest('hex');
   const followedVideoIndexId = 'video_' + createHash('sha256').update('posts/followed-video').digest('hex');
   assert.equal((await db.doc('searchIndex/' + publicPersonIndexId).get()).get('verified'), false);
-  assert.equal((await db.doc('searchIndex/' + followedVideoIndexId).get()).get('verified'), true);
+  assert.equal((await db.doc('searchIndex/' + followedVideoIndexId).get()).get('verified'), false);
   await syncUniversalSearchRecord(db,'circle','search-circle','communities/search-circle',(await db.doc('communities/search-circle').get()).data()!);
 });
 after(async () => {
@@ -70,6 +70,7 @@ describe('NEXORA universal search', () => {
   it('indexes and returns public people and video content while respecting blocks and private profiles', async () => {
     const result = await searchNexoraContent(db,'viewer','nexora');
     assert.ok(result.results.some(hit => hit.kind === 'person' && hit.targetId === 'public-user'));
+    assert.equal(result.results.find(hit => hit.kind === 'person' && hit.targetId === 'public-user')?.verified, false);
     assert.ok(result.results.some(hit => hit.kind === 'video' && hit.targetId === 'public-video'));
     assert.ok(!result.results.some(hit => hit.targetId === 'private-user' || hit.targetId === 'blocked-user' || hit.targetId === 'private-post' || hit.targetId === 'blocked-post'));
   });
@@ -96,6 +97,7 @@ describe('NEXORA universal search', () => {
     const result = await searchNexoraContent(db,'viewer','nexora video');
     const videos = result.results.filter(hit => hit.kind === 'video');
     assert.equal(videos[0]?.targetId, 'followed-video');
+    assert.equal(videos[0]?.verified, true);
   });
   it('returns hashtag discoveries from matching public posts', async () => {
     const result = await searchNexoraContent(db,'viewer','nexora');
