@@ -40,7 +40,7 @@ export default function AdminDashboardView({
   const [users, setUsers] = useState<User[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [identityApplications, setIdentityApplications] = useState<IdentityReviewApplication[]>([]);
-  const [impersonationCases, setImpersonationCases] = useState<Array<{ userId: string; status: string; independentReportCount: number; hasVerifiedIdentity: boolean; verifiedDisplayName: string | null; openedAt: string | null }>>([]);
+  const [impersonationCases, setImpersonationCases] = useState<Array<{ userId: string; status: string; independentReportCount: number; hasVerifiedIdentity: boolean; verifiedDisplayName: string | null; openedAt: string | null; reports: Array<{ category: string; explanation: string; createdAt: string | null }> }>>([]);
   const [impersonationCaseNotes, setImpersonationCaseNotes] = useState<Record<string, string>>({});
   const [identityQueueState, setIdentityQueueState] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>('idle');
   const [identityReviewNotes, setIdentityReviewNotes] = useState<Record<string, string>>({});
@@ -110,7 +110,7 @@ export default function AdminDashboardView({
     try {
       const result = await httpsCallable<void, { applications: IdentityReviewApplication[] }>(getFunctions(), 'listIdentityVerificationApplications')();
       setIdentityApplications(result.data.applications || []);
-      const caseResult = await httpsCallable<void, { cases: Array<{ userId: string; status: string; independentReportCount: number; hasVerifiedIdentity: boolean; verifiedDisplayName: string | null; openedAt: string | null }> }>(getFunctions(), 'listIdentityImpersonationCases')();
+      const caseResult = await httpsCallable<void, { cases: Array<{ userId: string; status: string; independentReportCount: number; hasVerifiedIdentity: boolean; verifiedDisplayName: string | null; openedAt: string | null; reports: Array<{ category: string; explanation: string; createdAt: string | null }> }> }>(getFunctions(), 'listIdentityImpersonationCases')();
       setImpersonationCases(caseResult.data.cases || []);
       setIdentityQueueState('ready');
     } catch (error) {
@@ -649,6 +649,12 @@ export default function AdminDashboardView({
                       <p className="text-[10px] text-amber-200">{item.independentReportCount} independent reports · {item.hasVerifiedIdentity ? 'Has public identity verification' : 'No public identity badge'}</p>
                     </div>
                     <span className="rounded-full border border-amber-400/20 px-2 py-1 text-[9px] uppercase text-amber-200">Human review required</span>
+                  </div>
+                  <div className="space-y-2">
+                    {item.reports.map((report, index) => <div key={index} className="rounded-lg border border-white/5 bg-black/30 p-2">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-amber-200">{report.category.replace('_', ' ')} · {report.createdAt ? new Date(report.createdAt).toLocaleString() : 'Time unavailable'}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-[11px] leading-relaxed text-zinc-300">{report.explanation || 'No additional explanation supplied.'}</p>
+                    </div>)}
                   </div>
                   {canReviewIdentity ? <>
                     <textarea value={impersonationCaseNotes[item.userId] || ''} onChange={event => setImpersonationCaseNotes(previous => ({ ...previous, [item.userId]: event.target.value }))} rows={2} maxLength={1000} aria-label={`Impersonation review note for ${item.userId}`} placeholder="Record the evidence reviewed and your decision (minimum 5 characters)." className="w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white outline-none focus:border-amber-400/50" />
