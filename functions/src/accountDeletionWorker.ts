@@ -4,6 +4,7 @@ import { FieldValue, getFirestore, Query, Timestamp } from 'firebase-admin/fires
 import { getStorage } from 'firebase-admin/storage';
 import { getFirebaseAdminApp, resolveFirebaseStorageBucket, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { accountStoragePrefixes, deleteUserOwnedDocuments } from './accountDeletionPolicy.js';
+import { canClaimDeletionLease, ownsDeletionLease } from './accountDeletionLeasePolicy.js';
 
 const PAGE_SIZE = 200;
 const LEASE_MS = 10 * 60 * 1000;
@@ -17,6 +18,7 @@ export interface LifecycleRequest {
   status?: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
   attempts?: number;
   leaseExpiresAt?: Timestamp;
+  leaseId?: string;
 }
 
 export interface CleanupProgress {
@@ -31,36 +33,84 @@ const db = getFirestore(workerApp, firestoreDatabaseId);
 const accountStorageBucket = getStorage(workerApp).bucket(resolveFirebaseStorageBucket());
 
 function isExpiredLease(request: LifecycleRequest): boolean {
-  return !request.leaseExpiresAt || request.leaseExpiresAt.toMillis() <= Date.now();
+  return canClaimDeletionLease(request.status, request.leaseExpiresAt?.toMillis(), Date.now());
 }
 
-async function claimRequest(requestId: string, userId: string): Promise<boolean> {
+async function claimRequest(requestId: string, userId: string): Promise<string | null> {
   const requestRef = db.collection('accountLifecycleRequests').doc(requestId);
   return db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(requestRef);
-    if (!snapshot.exists) return false;
+    if (!snapshot.exists) return null;
     const request = snapshot.data() as LifecycleRequest;
-    if (request.type !== 'delete_account' || request.requesterId !== userId) return false;
-    if (request.status === 'completed' || request.status === 'cancelled') return false;
-    if (request.status === 'processing' && !isExpiredLease(request)) return false;
+    if (request.type !== 'delete_account' || request.requesterId !== userId) return null;
+    if (request.status === 'completed' || request.status === 'cancelled') return null;
+    if (request.status === 'processing' && !isExpiredLease(request)) return null;
 
+    const leaseId = randomUUID();
     transaction.update(requestRef, {
       status: 'processing',
       attempts: (request.attempts || 0) + 1,
-      leaseId: randomUUID(),
+      leaseId,
       leaseExpiresAt: Timestamp.fromMillis(Date.now() + LEASE_MS),
       startedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
       progress: { stage: 'claimed', deletedDocuments: 0, deletedFiles: 0 },
     });
-    return true;
+    return leaseId;
   });
 }
 
-async function updateProgress(requestId: string, progress: CleanupProgress): Promise<void> {
-  await db.collection('accountLifecycleRequests').doc(requestId).update({
-    progress,
-    updatedAt: FieldValue.serverTimestamp(),
+async function updateProgress(requestId: string, leaseId: string, progress: CleanupProgress): Promise<void> {
+  const requestRef = db.collection('accountLifecycleRequests').doc(requestId);
+  await db.runTransaction(async transaction => {
+    const snapshot = await transaction.get(requestRef);
+    const request = snapshot.data() as LifecycleRequest | undefined;
+    if (!snapshot.exists || !ownsDeletionLease(request?.status, request?.leaseId, leaseId)) {
+      throw new Error('Account deletion worker lease is no longer current.');
+    }
+    transaction.update(requestRef, {
+      progress,
+      leaseExpiresAt: Timestamp.fromMillis(Date.now() + LEASE_MS),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  });
+}
+
+async function finishRequest(requestId: string, leaseId: string, progress: CleanupProgress): Promise<void> {
+  const requestRef = db.collection('accountLifecycleRequests').doc(requestId);
+  await db.runTransaction(async transaction => {
+    const snapshot = await transaction.get(requestRef);
+    const request = snapshot.data() as LifecycleRequest | undefined;
+    if (!snapshot.exists || !ownsDeletionLease(request?.status, request?.leaseId, leaseId)) {
+      throw new Error('Account deletion worker lease is no longer current.');
+    }
+    transaction.update(requestRef, {
+      status: 'completed',
+      progress: { ...progress, stage: 'completed' },
+      completedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      retentionNote: RETENTION_NOTE,
+      leaseExpiresAt: FieldValue.delete(),
+      leaseId: FieldValue.delete(),
+    });
+  });
+}
+
+async function failRequest(requestId: string, leaseId: string, progress: CleanupProgress): Promise<void> {
+  const requestRef = db.collection('accountLifecycleRequests').doc(requestId);
+  await db.runTransaction(async transaction => {
+    const snapshot = await transaction.get(requestRef);
+    const request = snapshot.data() as LifecycleRequest | undefined;
+    if (!snapshot.exists || request?.status !== 'processing' || request.leaseId !== leaseId) return;
+    transaction.update(requestRef, {
+      status: 'failed',
+      progress: { ...progress, stage: 'failed' },
+      errorCode: 'CLEANUP_FAILED',
+      errorMessage: 'Trusted cleanup failed and will require an operator retry.',
+      updatedAt: FieldValue.serverTimestamp(),
+      leaseExpiresAt: FieldValue.delete(),
+      leaseId: FieldValue.delete(),
+    });
   });
 }
 
@@ -155,48 +205,36 @@ async function deleteStorageObjects(userId: string): Promise<number> {
 }
 
 export async function processAccountDeletion(requestId: string, userId: string): Promise<void> {
-  if (!await claimRequest(requestId, userId)) return;
-  const requestRef = db.collection('accountLifecycleRequests').doc(requestId);
+  const leaseId = await claimRequest(requestId, userId);
+  if (!leaseId) return;
   let progress: CleanupProgress = { stage: 'claimed', deletedDocuments: 0, deletedFiles: 0 };
   try {
     progress.stage = 'owned-documents';
     const ownedCleanup = await deleteOwnedDocuments(userId);
     progress.deletedDocuments += ownedCleanup.deletedDocuments;
     progress.deletedFiles += ownedCleanup.deletedFiles;
-    await updateProgress(requestId, progress);
+    await updateProgress(requestId, leaseId, progress);
 
     progress.stage = 'user-subcollections';
     progress.deletedDocuments += await deleteUserSubcollections(userId);
-    await updateProgress(requestId, progress);
+    await updateProgress(requestId, leaseId, progress);
 
     progress.stage = 'storage';
     progress.deletedFiles += await deleteStorageObjects(userId);
-    await updateProgress(requestId, progress);
+    await updateProgress(requestId, leaseId, progress);
 
     progress.stage = 'identity';
     await db.collection('publicProfiles').doc(userId).delete().catch(() => undefined);
     await db.collection('users').doc(userId).delete().catch(() => undefined);
-    await getAuth().deleteUser(userId);
+    try {
+      await getAuth(workerApp).deleteUser(userId);
+    } catch (error) {
+      if ((error as { code?: string })?.code !== 'auth/user-not-found') throw error;
+    }
 
-    await requestRef.update({
-      status: 'completed',
-      progress: { ...progress, stage: 'completed' },
-      completedAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-      retentionNote: RETENTION_NOTE,
-      leaseExpiresAt: FieldValue.delete(),
-      leaseId: FieldValue.delete(),
-    });
+    await finishRequest(requestId, leaseId, progress);
   } catch (error) {
-    await requestRef.update({
-      status: 'failed',
-      progress: { ...progress, stage: 'failed' },
-      errorCode: 'CLEANUP_FAILED',
-      errorMessage: 'Trusted cleanup failed and will require an operator retry.',
-      updatedAt: FieldValue.serverTimestamp(),
-      leaseExpiresAt: FieldValue.delete(),
-      leaseId: FieldValue.delete(),
-    });
+    await failRequest(requestId, leaseId, progress);
     throw error;
   }
 }
