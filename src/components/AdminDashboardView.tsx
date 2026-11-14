@@ -654,9 +654,9 @@ export default function AdminDashboardView({
                     <textarea value={impersonationCaseNotes[item.userId] || ''} onChange={event => setImpersonationCaseNotes(previous => ({ ...previous, [item.userId]: event.target.value }))} rows={2} maxLength={1000} aria-label={`Impersonation review note for ${item.userId}`} placeholder="Record the evidence reviewed and your decision (minimum 5 characters)." className="w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white outline-none focus:border-amber-400/50" />
                     <div className="flex flex-wrap gap-2">
                       <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'dismiss')} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-zinc-200">Dismiss case</button>
-                      {canManageRoles && <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'confirm_impersonation')} className="rounded-lg bg-rose-600 px-3 py-2 text-[10px] font-black text-white hover:bg-rose-500">Confirm impersonation and revoke identity</button>}
+                      {canReviewIdentity && <button type="button" onClick={() => void handleImpersonationCaseReview(item.userId, 'confirm_impersonation')} className="rounded-lg bg-rose-600 px-3 py-2 text-[10px] font-black text-white hover:bg-rose-500">Confirm impersonation and revoke identity</button>}
                     </div>
-                    {!canManageRoles && <p className="text-[10px] text-zinc-500">Only senior moderators, administrators, and the founder can confirm impersonation or revoke an identity badge.</p>}
+                    {!canReviewIdentity && <p className="text-[10px] text-zinc-500">Only senior moderators, administrators, and the founder can confirm impersonation or revoke an identity badge.</p>}
                   </> : <p className="text-[10px] text-zinc-500">Read-only. A reviewer must assess this case manually.</p>}
                 </article>;
               })}
