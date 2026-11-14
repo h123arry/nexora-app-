@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Camera, Globe2, LockKeyhole, Mic, Plus, Send, Sparkles, Trash2, Users, X } from 'lucide-react';
 import type { User } from '../types';
@@ -26,6 +26,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [discoveryCursor, setDiscoveryCursor] = useState<string | null>(null);
   const [hasMorePublicWeaves, setHasMorePublicWeaves] = useState(false);
   const [loadingDiscovery, setLoadingDiscovery] = useState(false);
+  const discoveryRequestRef = useRef(0);
   const [invitations, setInvitations] = useState<WorldWeaveInvite[]>([]);
   const [sentInvitations, setSentInvitations] = useState<WorldWeaveInvite[]>([]);
   const [contributors, setContributors] = useState<WorldWeaveContributor[]>([]);
@@ -82,19 +83,20 @@ export default function WorldWeaveView({ currentUser }: Props) {
 
   useEffect(() => {
     let active = true;
+    const requestId = ++discoveryRequestRef.current;
     const timer = window.setTimeout(() => {
       setLoadingDiscovery(true);
       setPublicWeaves([]);
       setDiscoveryCursor(null);
       setHasMorePublicWeaves(false);
       discoverPublicWorldWeaves(discoveryQuery).then(page => {
-        if (!active) return;
+        if (!active || requestId !== discoveryRequestRef.current) return;
         setPublicWeaves(page.results);
         setDiscoveryCursor(page.nextCursor);
         setHasMorePublicWeaves(Boolean(page.nextCursor));
       }).catch(err => {
-        if (active) setError(err instanceof Error ? err.message : 'Could not discover public WorldWeaves.');
-      }).finally(() => { if (active) setLoadingDiscovery(false); });
+        if (active && requestId === discoveryRequestRef.current) setError(err instanceof Error ? err.message : 'Could not discover public WorldWeaves.');
+      }).finally(() => { if (active && requestId === discoveryRequestRef.current) setLoadingDiscovery(false); });
     }, 250);
     return () => { active = false; window.clearTimeout(timer); };
   }, [discoveryQuery, currentUser.id]);
@@ -208,9 +210,13 @@ export default function WorldWeaveView({ currentUser }: Props) {
 
   const handleLoadMorePublicWeaves = async () => {
     if (!discoveryCursor || loadingDiscovery) return;
+    const requestId = discoveryRequestRef.current;
+    const requestedQuery = discoveryQuery;
+    const requestedCursor = discoveryCursor;
     setLoadingDiscovery(true);
     try {
-      const page = await discoverPublicWorldWeaves(discoveryQuery, discoveryCursor);
+      const page = await discoverPublicWorldWeaves(requestedQuery, requestedCursor);
+      if (requestId !== discoveryRequestRef.current) return;
       setPublicWeaves(current => {
         const unique = new Map(current.map(item => [item.id, item]));
         page.results.forEach(item => unique.set(item.id, item));
@@ -221,7 +227,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load more public WorldWeaves.');
     } finally {
-      setLoadingDiscovery(false);
+      if (requestId === discoveryRequestRef.current) setLoadingDiscovery(false);
     }
   };
 
