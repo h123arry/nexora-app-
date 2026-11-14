@@ -190,3 +190,12 @@ Origin is not complete until each shipped stage has real UI integration, trusted
 - Added a private case inbox scoped to the requester and attributed source creator.
 - This is a workflow baseline, not a complete moderation adjudication system. Staff review queues, notifications, evidence attachments, and policy-based outcomes remain follow-up work.
 - Cross-account remix remains fail-closed until canonical source-post binding, both-direction block checks, private-account/follower authorization, and hidden/deleted-source checks are integrated.
+
+
+## Public Origin lineage viewer
+
+- The feed exposes a **View NEXORA Origin** action only for posts with a media asset and an explicitly public audience.
+- The authenticated callable rechecks the derivative post, owner binding, immutable lineage event, every source asset owner, and the unique source-post binding at read time.
+- A source is linked only while its post remains public and available, its account is not private, and viewer/source, viewer/derivative, and derivative/source block relationships remain clear. Unavailable or ambiguous sources are shown as unavailable without leaking creator IDs or source asset IDs.
+- The public projection returns only public source-post identity fields. It never returns source media URLs, private account details, raw credential data, or C2PA trust status.
+- The viewer shows direct recorded parents only; it does not claim the lineage proves authorship, rights ownership, or factual truth.

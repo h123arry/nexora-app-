@@ -810,7 +810,9 @@ export const FeedPostCard = React.memo(FeedPostCardImpl, (prev, next) => {
     prev.post.content !== next.post.content ||
     prev.post.isArchived !== next.post.isArchived ||
     prev.post.scheduledTime !== next.post.scheduledTime ||
-    prev.post.views !== next.post.views
+    prev.post.views !== next.post.views ||
+    prev.post.mediaAssetId !== next.post.mediaAssetId ||
+    prev.post.audience !== next.post.audience
   ) {
     return false;
   }
