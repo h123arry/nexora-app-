@@ -87,6 +87,7 @@ export const reviewIdentityVerificationApplication = onCall({ maxInstances: 10 }
   if (!userId || userId.length > 128 || userId.includes('/')) throw new HttpsError('invalid-argument', 'A valid applicant account is required.');
   if (!['approved', 'rejected', 'needs_more_info', 'revoked'].includes(String(decision))) throw new HttpsError('invalid-argument', 'Choose a supported identity review decision.');
   if (reviewNote.length > 1000) throw new HttpsError('invalid-argument', 'The review note is too long.');
+  if (['rejected', 'needs_more_info', 'revoked'].includes(String(decision)) && reviewNote.length < 5) throw new HttpsError('invalid-argument', 'A review note is required for this decision.');
 
   const applicationRef = db.collection('identityVerificationApplications').doc(userId);
   const publicRef = db.collection('verifiedIdentities').doc(userId);
