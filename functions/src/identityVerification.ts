@@ -50,12 +50,12 @@ export const submitIdentityVerificationApplication = onCall({ maxInstances: 10 }
   const evidenceUrlHashes = Array.from(new Set(input.evidenceUrls.map(url =>
     createHash('sha256').update(normalizeIdentityEvidenceUrl(url)).digest('hex')
   )));
-  const nameMatches = await db.collection('identityVerificationApplications')
+  const nameMatches = await db.collection('identityVerificationPrivateSignals')
     .where('identityNameKey', '==', identityNameKey)
     .limit(100)
     .get();
   const evidenceMatches = await Promise.all(evidenceUrlHashes.map(hash =>
-    db.collection('identityVerificationApplications')
+    db.collection('identityVerificationPrivateSignals')
       .where('evidenceUrlHashes', 'array-contains', hash)
       .limit(100)
       .get()
@@ -88,15 +88,20 @@ export const submitIdentityVerificationApplication = onCall({ maxInstances: 10 }
       id: uid,
       userId: uid,
       ...input,
-      identityNameKey,
-      evidenceUrlHashes,
-      reviewSignals,
       status: 'pending_review',
       version: nextVersion,
       reviewNote: '',
       submittedAt: now,
       updatedAt: now,
       createdAt: existing.exists ? existing.get('createdAt') : now,
+    });
+    transaction.set(db.collection('identityVerificationPrivateSignals').doc(uid), {
+      userId: uid,
+      identityNameKey,
+      evidenceUrlHashes,
+      reviewSignals,
+      status: 'pending_review',
+      updatedAt: now,
     });
     transaction.create(auditRef, {
       userId: uid, event: 'application_submitted', version: nextVersion, actorId: uid, createdAt: now,
@@ -130,21 +135,21 @@ export const listIdentityVerificationApplications = onCall({ maxInstances: 10 },
     .where('status', '==', 'pending_review')
     .limit(50)
     .get();
-  return {
-    applications: snapshot.docs.map(document => {
-      const data = document.data();
-      return {
-        userId: document.id,
-        identityType: data.identityType,
-        displayName: data.displayName,
-        evidenceSummary: data.evidenceSummary,
-        evidenceUrls: data.evidenceUrls,
-        reviewSignals: data.reviewSignals || null,
-        version: data.version,
-        submittedAt: data.submittedAt?.toDate?.()?.toISOString?.() || null,
-      };
-    }),
-  };
+  const applications = await Promise.all(snapshot.docs.map(async document => {
+    const data = document.data();
+    const signals = await db.collection('identityVerificationPrivateSignals').doc(document.id).get();
+    return {
+      userId: document.id,
+      identityType: data.identityType,
+      displayName: data.displayName,
+      evidenceSummary: data.evidenceSummary,
+      evidenceUrls: data.evidenceUrls,
+      reviewSignals: signals.data()?.reviewSignals || null,
+      version: data.version,
+      submittedAt: data.submittedAt?.toDate?.()?.toISOString?.() || null,
+    };
+  }));
+  return { applications };
 });
 
 export const reviewIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {
@@ -160,10 +165,12 @@ export const reviewIdentityVerificationApplication = onCall({ maxInstances: 10 }
   if (['rejected', 'needs_more_info', 'revoked'].includes(String(decision)) && reviewNote.length < 5) throw new HttpsError('invalid-argument', 'A review note is required for this decision.');
 
   const applicationRef = db.collection('identityVerificationApplications').doc(userId);
+  const privateSignalsRef = db.collection('identityVerificationPrivateSignals').doc(userId);
   const publicRef = db.collection('verifiedIdentities').doc(userId);
   const auditRef = db.collection('identityVerificationAuditEvents').doc();
   const result = await db.runTransaction(async transaction => {
     const application = await transaction.get(applicationRef);
+    const privateSignals = await transaction.get(privateSignalsRef);
     if (!application.exists) throw new HttpsError('not-found', 'Identity application not found.');
     if (reviewerId === userId) throw new HttpsError('permission-denied', 'Reviewers cannot approve or reject their own identity application.');
     const currentStatus = String(application.get('status') || '');
@@ -179,6 +186,7 @@ export const reviewIdentityVerificationApplication = onCall({ maxInstances: 10 }
       reviewedAt: now,
       updatedAt: now,
     });
+    if (privateSignals.exists) transaction.update(privateSignalsRef, { status: decision, updatedAt: now });
     if (decision === 'approved') {
       transaction.set(publicRef, {
         userId,
