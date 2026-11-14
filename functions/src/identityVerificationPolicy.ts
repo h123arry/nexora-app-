@@ -77,3 +77,35 @@ export function canApplyIdentityImpersonationDecision(
   if (decision === 'clear_hold') return caseStatus === 'on_hold';
   return caseStatus === 'open' || caseStatus === 'on_hold';
 }
+
+export type IdentityApplicationDecision = 'approved' | 'rejected' | 'needs_more_info' | 'revoked';
+
+export function buildIdentityReviewNotification(
+  userId: string,
+  decision: IdentityApplicationDecision,
+  version: number,
+  timestamp: string,
+) {
+  if (!userId || userId.length > 128 || userId.includes('/') || !Number.isInteger(version) || version < 1) {
+    throw new Error('A valid identity review notification target is required.');
+  }
+  const contentByDecision: Record<IdentityApplicationDecision, string> = {
+    approved: 'Your identity verification application was approved. Your public identity badge is now active.',
+    rejected: 'Your identity verification application was not approved. Review the decision note in your identity settings.',
+    needs_more_info: 'NEXORA needs more information to continue reviewing your identity application. Check the note in your identity settings.',
+    revoked: 'Your public identity verification was revoked after review. Check the decision note in your identity settings.',
+  };
+  return {
+    id: `identity_review_${version}`,
+    type: 'system' as const,
+    userId: 'nexora-system',
+    username: 'nexora',
+    actorName: 'NEXORA',
+    avatar: '',
+    targetId: userId,
+    content: contentByDecision[decision],
+    timestamp,
+    isRead: false,
+    priority: 8,
+  };
+}
