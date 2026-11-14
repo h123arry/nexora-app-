@@ -105,6 +105,7 @@ export default function CreatorDashboardView({
 
   useEffect(() => {
     let active = true;
+    setHasVerifiedIdentity(false);
     void ProfileService.getPublicIdentityVerification(currentUser.id).then(identity => {
       if (active) setHasVerifiedIdentity(Boolean(identity));
     });
