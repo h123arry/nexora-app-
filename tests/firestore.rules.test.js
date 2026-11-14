@@ -168,6 +168,32 @@ const publicProfile = (uid) => ({
     await assertFails(deleteDoc(doc(dbFor('alice'), 'worldWeaves', 'activity-weave', 'activity', 'event-1')));
   });
 
+  it('restricts WorldWeave moment reaction reads to contributors and reserves writes for trusted Functions', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'worldWeaves', 'reaction-weave'), {
+        id: 'reaction-weave', ownerId: 'alice', ownerName: 'Alice', title: 'Reaction story',
+        description: '', visibility: 'private', participantIds: ['alice', 'bob'],
+        memberCount: 2, momentCount: 1, createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
+      await setDoc(doc(adminDb, 'worldWeaves', 'reaction-weave', 'moments', 'moment-1'), {
+        id: 'moment-1', weaveId: 'reaction-weave', authorId: 'alice', text: 'A shared moment.', mediaType: 'text'
+      });
+      await setDoc(doc(adminDb, 'worldWeaves', 'reaction-weave', 'moments', 'moment-1', 'reactions', 'bob'), {
+        userId: 'bob', reaction: 'heart', updatedAt: Timestamp.now()
+      });
+    });
+
+    const reactionPath = ['worldWeaves', 'reaction-weave', 'moments', 'moment-1', 'reactions', 'bob'];
+    await assertSucceeds(getDoc(doc(dbFor('alice'), ...reactionPath)));
+    await assertSucceeds(getDoc(doc(dbFor('bob'), ...reactionPath)));
+    await assertFails(getDoc(doc(dbFor('charlie'), ...reactionPath)));
+    await assertFails(setDoc(doc(dbFor('bob'), 'worldWeaves', 'reaction-weave', 'moments', 'moment-1', 'reactions', 'charlie'), {
+      userId: 'charlie', reaction: 'laugh', updatedAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(doc(dbFor('bob'), ...reactionPath), { reaction: 'applause' }));
+    await assertFails(deleteDoc(doc(dbFor('bob'), ...reactionPath)));
+  });
+
   it('caps WorldWeave membership at 500 contributors for public joins and accepted invitations', async () => {
     const members = ['alice', ...Array.from({ length: 499 }, (_, index) => 'member-' + index)];
     await seed(async adminDb => {

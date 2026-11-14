@@ -7,7 +7,7 @@ import {
   acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, revokeWorldWeaveInvite, subscribeToWorldWeaveInvites, subscribeToMyWorldWeaveInvites,
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
   MAX_WORLDWEAVE_MEMBERS, listWorldWeaveContributors, leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership, subscribeToWorldWeaveActivity,
-  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity,
+  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, setWorldWeaveMomentReaction,
 } from '../services/firebase/worldWeaveService';
 
 interface Props { currentUser: User; }
@@ -253,6 +253,14 @@ export default function WorldWeaveView({ currentUser }: Props) {
     finally { setLoadingOlder(false); }
   };
 
+  const handleMomentReaction = async (moment: WorldWeaveMoment, reaction: WorldWeaveReaction) => {
+    if (!selected || busy) return;
+    setBusy(true); setError('');
+    try { await setWorldWeaveMomentReaction(selected.id, moment.id, reaction); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not update your reaction.'); }
+    finally { setBusy(false); }
+  };
+
   const handleDeleteMoment = async (moment: WorldWeaveMoment) => {
     if (!selected || !window.confirm('Remove this moment from the shared timeline?')) return;
     setBusy(true); setError(''); setNotice('');
@@ -374,6 +382,12 @@ export default function WorldWeaveView({ currentUser }: Props) {
                 {moment.mediaType === 'image' && moment.mediaUrl && <img src={moment.mediaUrl} alt="WorldWeave contribution" loading="lazy" className="mt-3 max-h-[520px] w-full rounded-2xl object-cover"/>}
                 {moment.mediaType === 'video' && moment.mediaUrl && <video src={moment.mediaUrl} controls playsInline preload="metadata" className="mt-3 max-h-[520px] w-full rounded-2xl bg-black"/>}
                 {moment.mediaType === 'audio' && moment.mediaUrl && <div className="mt-3 rounded-2xl border border-violet-400/15 bg-violet-500/[.06] p-3"><div className="mb-2 flex items-center gap-2 text-xs font-semibold text-violet-200"><Mic size={14}/> Voice note</div><audio src={moment.mediaUrl} controls preload="metadata" className="w-full"/></div>}
+                {isMember && <div className="mt-4 flex flex-wrap gap-2 border-t border-white/5 pt-3">
+                  <button type="button" disabled={busy} onClick={() => void handleMomentReaction(moment, 'heart')} aria-label="React with heart" className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-pink-400/30 hover:bg-pink-500/10 disabled:opacity-40">❤️ {moment.reactionCounts?.heart || 0}</button>
+                  <button type="button" disabled={busy} onClick={() => void handleMomentReaction(moment, 'applause')} aria-label="React with applause" className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-violet-400/30 hover:bg-violet-500/10 disabled:opacity-40">🙌 {moment.reactionCounts?.applause || 0}</button>
+                  <button type="button" disabled={busy} onClick={() => void handleMomentReaction(moment, 'insight')} aria-label="React with insight" className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-amber-400/30 hover:bg-amber-500/10 disabled:opacity-40">💡 {moment.reactionCounts?.insight || 0}</button>
+                  <button type="button" disabled={busy} onClick={() => void handleMomentReaction(moment, 'laugh')} aria-label="React with laughter" className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-emerald-400/30 hover:bg-emerald-500/10 disabled:opacity-40">😂 {moment.reactionCounts?.laugh || 0}</button>
+                </div>}
               </motion.article>)}
             </div>}
         </section>

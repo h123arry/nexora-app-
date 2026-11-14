@@ -42,6 +42,7 @@ export { getPublicPostPlayback } from './publicMediaPlayback.js';
 export { getStudioExportMp4Url, cleanupExpiredStudioMp4Exports } from './studioMp4Export.js';
 export { cleanupDeletedWorldWeaveMoment, cleanupUnpublishedWorldWeaveMedia } from './worldWeaveCleanup.js';
 export { leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership } from './worldWeaveGovernance.js';
+export { setWorldWeaveMomentReaction } from './worldWeaveReactions.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';
 export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAnalytics } from './creatorAudienceAnalytics.js';
 export { createCommunityPost } from './communityPosts.js';
