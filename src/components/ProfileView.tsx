@@ -3289,7 +3289,7 @@ export default function ProfileView({
                       </div>
                       <div className="leading-tight">
                         <h4 className="text-sm font-sans font-black text-white flex items-center justify-center gap-1">
-                          {editName || 'UNNAMED PROFILE'} <PurpleVerifiedBadge className="w-4 h-4" />
+                          {editName || 'UNNAMED PROFILE'} {identityVerification && <PurpleVerifiedBadge className="w-4 h-4" type={identityBadgeType} />}
                         </h4>
                         <p className="text-[10px] font-mono text-violet-400">@{editUsername || 'username'}</p>
                       </div>
