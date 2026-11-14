@@ -25,13 +25,14 @@ export default function OriginAttributionInbox() {
   const [showRequest, setShowRequest] = useState(false);
 
   const load = useCallback(async () => {
-    if (!auth.currentUser) { setError('Sign in to manage attribution cases.'); setLoading(false); return; }
+    const user = auth.currentUser;
+    if (!user) { setError('Sign in to manage attribution cases.'); setLoading(false); return; }
     setLoading(true); setError('');
     try {
       const list = httpsCallable(functions, 'listMyOriginAttributionCases');
       const result = await list({});
       setCases(((result.data as { cases?: OriginCase[] }).cases || []));
-      const token = await auth.currentUser.getIdTokenResult();
+      const token = await user.getIdTokenResult();
       const claims = token.claims;
       const role = typeof claims.role === 'string' ? claims.role : '';
       const reviewer = claims.moderator === true || claims.admin === true
