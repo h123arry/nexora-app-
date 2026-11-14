@@ -192,6 +192,15 @@ service cloud.firestore {
     match /identityVerificationPrivateSignals/{userId} {
       allow read, write: if false;
     }
+    match /identityImpersonationCases/{userId} {
+      allow read, write: if false;
+    }
+    match /identityImpersonationSignals/{userId} {
+      allow read, write: if false;
+      match /reporters/{reporterId} {
+        allow read, write: if false;
+      }
+    }
     match /verifiedIdentities/{userId} {
       allow get, list: if resource.data.status == 'verified';
       allow create, update, delete: if false;
