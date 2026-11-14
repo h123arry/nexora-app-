@@ -123,41 +123,44 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
         reporterId, reportId, createdAt: FieldValue.serverTimestamp(),
       });
     });
-    const recentSignals = await db.collection('identityImpersonationSignals').doc(normalizedTargetId)
-      .collection('reporters')
-      .where('createdAt', '>=', Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000))
-      .limit(4)
-      .get();
-    if (shouldOpenImpersonationCase(recentSignals.size)) {
-      const caseRef = db.collection('identityImpersonationCases').doc(normalizedTargetId);
-      await db.runTransaction(async transaction => {
-        const existingCase = await transaction.get(caseRef);
-        const verified = await transaction.get(db.collection('verifiedIdentities').doc(normalizedTargetId));
-        const reportIds = recentSignals.docs.map(signal => signal.get('reportId')).filter((id): id is string => typeof id === 'string');
-        if (existingCase.exists) {
-          if (existingCase.get('status') === 'open') transaction.update(caseRef, {
-            independentReportCount: recentSignals.size, reportIds, updatedAt: FieldValue.serverTimestamp(),
-          });
-          else if (existingCase.get('status') === 'dismissed') transaction.update(caseRef, {
-            status: 'open', independentReportCount: recentSignals.size, reportIds,
-            reopenedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
-            reviewerId: FieldValue.delete(), reviewNote: FieldValue.delete(), reviewedAt: FieldValue.delete(),
-          });
-          return;
-        }
-        transaction.create(caseRef, {
-          userId: normalizedTargetId, status: 'open', category: 'impersonation',
-          independentReportCount: recentSignals.size, reportIds,
-          hasVerifiedIdentity: verified.exists && verified.get('status') === 'verified',
-          verifiedDisplayName: verified.exists ? verified.get('displayName') || null : null,
-          openedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+    const reporterSignals = db.collection('identityImpersonationSignals').doc(normalizedTargetId).collection('reporters');
+    const caseRef = db.collection('identityImpersonationCases').doc(normalizedTargetId);
+    const verifiedRef = db.collection('verifiedIdentities').doc(normalizedTargetId);
+    await db.runTransaction(async transaction => {
+      // Read the live threshold query inside the transaction so concurrent third-party reports
+      // cannot all observe a sub-threshold snapshot and leave the case unopened.
+      const [recentSignals, existingCase, verified] = await Promise.all([
+        transaction.get(reporterSignals
+          .where('createdAt', '>=', Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000))
+          .limit(4)),
+        transaction.get(caseRef),
+        transaction.get(verifiedRef),
+      ]);
+      if (!shouldOpenImpersonationCase(recentSignals.size)) return;
+      const reportIds = recentSignals.docs.map(signal => signal.get('reportId')).filter((id): id is string => typeof id === 'string');
+      if (existingCase.exists) {
+        if (existingCase.get('status') === 'open') transaction.update(caseRef, {
+          independentReportCount: recentSignals.size, reportIds, updatedAt: FieldValue.serverTimestamp(),
         });
-        transaction.create(db.collection('identityVerificationAuditEvents').doc(), {
-          userId: normalizedTargetId, event: 'impersonation_case_opened',
-          independentReportCount: recentSignals.size, createdAt: FieldValue.serverTimestamp(),
+        else if (existingCase.get('status') === 'dismissed') transaction.update(caseRef, {
+          status: 'open', independentReportCount: recentSignals.size, reportIds,
+          reopenedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+          reviewerId: FieldValue.delete(), reviewNote: FieldValue.delete(), reviewedAt: FieldValue.delete(),
         });
+        return;
+      }
+      transaction.create(caseRef, {
+        userId: normalizedTargetId, status: 'open', category: 'impersonation',
+        independentReportCount: recentSignals.size, reportIds,
+        hasVerifiedIdentity: verified.exists && verified.get('status') === 'verified',
+        verifiedDisplayName: verified.exists ? verified.get('displayName') || null : null,
+        openedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
       });
-    }
+      transaction.create(db.collection('identityVerificationAuditEvents').doc(), {
+        userId: normalizedTargetId, event: 'impersonation_case_opened',
+        independentReportCount: recentSignals.size, createdAt: FieldValue.serverTimestamp(),
+      });
+    });
   }
   return { accepted: true, duplicate, reportId };
 });
