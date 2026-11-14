@@ -10,6 +10,7 @@ import { videoFileExtension } from '../services/media/videoFileExtension';
 import { saveMediaBlob, getMediaBlob, generateVideoThumbnail } from '../utils/indexedDbStorage';
 import { revokeObjectUrl, validateMediaFile } from '../utils/mediaValidation';
 import { uploadMediaFile } from '../services/firebase/storageService';
+import { setOriginRemixPolicy, type OriginRemixPolicy } from '../services/originRemixPolicyService';
 import { VoiceEngine } from '../services/voh/voiceEngine';
 import NexoraLoader from './NexoraLoader';
 import { deleteDraft, getDrafts, saveDraft } from '../services/dataService';
@@ -345,6 +346,7 @@ export default function MediaCreationEngine({
 
   // Publish state; upload progress is reported by Firebase Storage callbacks.
   const [postingStatus, setPostingStatus] = useState<'idle' | 'publishing' | 'completed' | 'failed'>('idle');
+  const [originRemixPolicy, setOriginRemixPolicyState] = useState<OriginRemixPolicy>('closed');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
@@ -1150,6 +1152,7 @@ export default function MediaCreationEngine({
     setSaturation(100);
     setBlur(0);
     setCommentsAllowed(true);
+    setOriginRemixPolicyState('closed');
     setActiveMode(null);
     setCurrentStep(1);
   };
@@ -1189,6 +1192,7 @@ export default function MediaCreationEngine({
       let mainImg = selectedImages[0]?.url || undefined;
       let finalVid = videoFileUrl || recordedVideoUrl || undefined;
       const durableImages: string[] = [];
+      const uploadedOriginAssetIds: string[] = [];
       for (let index = 0; index < selectedImages.length; index += 1) {
         const selectedImage = selectedImages[index];
         const imageUrl = selectedImage.url;
@@ -1229,6 +1233,7 @@ export default function MediaCreationEngine({
             onProgress: progress => setUploadProgress(progress),
           });
           durableImages.push(uploaded.downloadUrl);
+          uploadedOriginAssetIds.push(uploaded.mediaId);
         } else {
           durableImages.push(imageUrl);
         }
@@ -1252,6 +1257,7 @@ export default function MediaCreationEngine({
             onProgress: progress => setUploadProgress(progress),
           });
           finalVid = uploaded.downloadUrl;
+          uploadedOriginAssetIds.push(uploaded.mediaId);
           if (mainImg?.startsWith('blob:') || mainImg?.startsWith('data:')) {
             const thumbnail = videoCoverBlob || await (await fetch(mainImg)).blob();
             const uploadedThumbnail = await uploadMediaFile({ file: thumbnail, userId: currentUser.id, fileName: `video-thumbnail-${Date.now()}.jpg`, signal: uploadController.signal });
@@ -1281,6 +1287,7 @@ export default function MediaCreationEngine({
           onProgress: progress => setUploadProgress(progress),
         });
         finalVoiceUrl = uploadedVoice.downloadUrl;
+        uploadedOriginAssetIds.push(uploadedVoice.mediaId);
       }
 
       let pollObj = undefined;
@@ -1289,6 +1296,14 @@ export default function MediaCreationEngine({
           question: pollQuestion,
           options: pollOptionsList.filter(o => o.trim()).map((o, idx) => ({ id: `opt-${idx}`, text: o, votes: 0 }))
         };
+      }
+
+      // Open remixing only after the server confirms every uploaded source asset is verified and owned by this creator.
+      // If any update fails, publishing stops rather than silently advertising a permission that was not saved.
+      if (originRemixPolicy === 'allow_with_attribution') {
+        for (const assetId of uploadedOriginAssetIds) {
+          await setOriginRemixPolicy(assetId, currentUser.id, originRemixPolicy, uploadController.signal);
+        }
       }
 
       const createdPostId = onAddPost(
@@ -2306,6 +2321,26 @@ export default function MediaCreationEngine({
                           <span>Allow comments</span>
                           <input type="checkbox" checked={commentsAllowed} onChange={(event) => setCommentsAllowed(event.target.checked)} className="h-4 w-4 accent-violet-500" />
                         </label>
+                        <div className="border-t border-[#292244] pt-3 space-y-2">
+                          <div>
+                            <span className="block text-xs font-bold text-[#EEEAF8]">NEXORA Origin · Remix permission</span>
+                            <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Choose whether other creators may build on the media you upload in this post. You can change this later.</p>
+                          </div>
+                          <select
+                            aria-label="NEXORA Origin remix permission"
+                            value={originRemixPolicy}
+                            onChange={(event) => setOriginRemixPolicyState(event.target.value as OriginRemixPolicy)}
+                            className="w-full rounded-xl border border-[#34265E] bg-[#120E2B] px-3 py-2.5 text-xs font-semibold text-white outline-none focus:border-violet-400"
+                          >
+                            <option value="closed">Closed · Only me</option>
+                            <option value="allow_with_attribution">Allow remixing · Attribution required</option>
+                          </select>
+                          <p className="text-[10px] leading-relaxed text-[#A39BBF]">
+                            {originRemixPolicy === 'closed'
+                              ? 'Your uploaded media stays closed to cross-account remixes by default.'
+                              : 'NEXORA will record creator attribution when another account remixes this media. Permission applies only to newly uploaded media in this post.'}
+                          </p>
+                        </div>
                         <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
                       </div>
 
