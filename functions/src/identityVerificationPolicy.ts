@@ -47,3 +47,14 @@ export function canSubmitIdentityApplication(status: unknown): boolean {
 export function canReviewIdentityApplication(status: unknown): boolean {
   return status === 'pending_review';
 }
+
+export function normalizeIdentityName(value: string): string {
+  return value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' ');
+}
+
+export function normalizeIdentityEvidenceUrl(value: string): string {
+  const url = new URL(value);
+  url.hash = '';
+  url.searchParams.sort();
+  return url.toString();
+}
