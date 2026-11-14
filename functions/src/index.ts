@@ -54,6 +54,7 @@ export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAna
 export { createCommunityPost } from './communityPosts.js';
 export { getCommunityInsights } from './communityAnalytics.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
+export { submitIdentityVerificationApplication, getMyIdentityVerificationApplication, listIdentityVerificationApplications, reviewIdentityVerificationApplication, listIdentityImpersonationCases, reviewIdentityImpersonationCase } from './identityVerification.js';
 export { ingestClientAnalytics, aggregateAnalyticsDaily, getPlatformAnalytics } from './analytics.js';
 export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFinanceOverview } from './monetization.js';
 export { listCreatorMembershipTiers, createCreatorMembershipTier, updateCreatorMembershipTier, archiveCreatorMembershipTier } from './creatorMemberships.js';

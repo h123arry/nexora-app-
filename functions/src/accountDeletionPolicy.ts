@@ -1,4 +1,4 @@
-import type { Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { deleteOwnedOriginRecord } from './originCleanup.js';
 
 const PAGE_SIZE = 200;
@@ -21,6 +21,10 @@ export const ACCOUNT_OWNED_COLLECTIONS: ReadonlyArray<{ name: string; field: str
   { name: 'mediaOrigins', field: 'ownerUid' },
   { name: 'academyProgress', field: 'userId' },
   { name: 'academyLessonNotes', field: 'userId' },
+  { name: 'identityVerificationApplications', field: 'userId' },
+  { name: 'identityVerificationPrivateSignals', field: 'userId' },
+  { name: 'verifiedIdentities', field: 'userId' },
+  { name: 'identityImpersonationCases', field: 'userId' },
 ];
 
 export function accountStoragePrefixes(userId: string): string[] {
@@ -54,6 +58,58 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string): P
       await batch.commit();
       deleted += snapshot.size;
       if (snapshot.size < PAGE_SIZE) break;
+    }
+  }
+
+  // Identity reporter signals are nested below a target account and also retain
+  // a reporter UID. Remove both directions when either account is deleted.
+  const targetSignals = db.collection('identityImpersonationSignals').doc(userId);
+  while (true) {
+    const targetReporterSignals = await targetSignals.collection('reporters').limit(PAGE_SIZE).get();
+    if (targetReporterSignals.empty) break;
+    const batch = db.batch();
+    targetReporterSignals.docs.forEach(document => batch.delete(document.ref));
+    await batch.commit();
+    deleted += targetReporterSignals.size;
+    if (targetReporterSignals.size < PAGE_SIZE) break;
+  }
+  const targetSignalDocument = await targetSignals.get();
+  if (targetSignalDocument.exists) {
+    await targetSignals.delete();
+    deleted += 1;
+  }
+  while (true) {
+    const reporterSignals = await db.collectionGroup('reporters')
+      .where('reporterId', '==', userId)
+      .limit(PAGE_SIZE)
+      .get();
+    if (reporterSignals.empty) break;
+    const batch = db.batch();
+    reporterSignals.docs.forEach(document => batch.delete(document.ref));
+    await batch.commit();
+    deleted += reporterSignals.size;
+    if (reporterSignals.size < PAGE_SIZE) break;
+  }
+
+  // Retain the security audit trail, but remove direct account identifiers and
+  // free-text review notes so deletion does not leave identity-review PII behind.
+  for (const field of ['userId', 'reviewerId', 'actorId']) {
+    while (true) {
+      const matches = await db.collection('identityVerificationAuditEvents')
+        .where(field, '==', userId)
+        .limit(PAGE_SIZE)
+        .get();
+      if (matches.empty) break;
+      const batch = db.batch();
+      matches.docs.forEach(document => batch.update(document.ref, {
+        userId: FieldValue.delete(),
+        reviewerId: FieldValue.delete(),
+        actorId: FieldValue.delete(),
+        reviewNote: FieldValue.delete(),
+        accountDeleted: true,
+      }));
+      await batch.commit();
+      if (matches.size < PAGE_SIZE) break;
     }
   }
   return deleted;
