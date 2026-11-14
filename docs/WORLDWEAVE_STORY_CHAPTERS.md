@@ -21,7 +21,8 @@ Chapters let a WorldWeave tell a structured story without splitting contributors
 
 - Chapter path: `worldWeaves/{weaveId}/chapters/{chapterId}`
 - Chapter writes use trusted callable functions and require the current owner.
-- Archiving preserves the chapter document and all moment assignments; repeated archive requests are idempotent.
+- Archiving preserves the chapter document and all historical moment assignments; repeated archive requests are idempotent.
+- Firestore rules reject new moment assignments to archived chapters.
 - Reordering validates the complete current chapter set and assigns contiguous server-controlled positions in one transaction.
 - Current members can read chapters in private experiences; signed-in users can read chapters in public experiences.
 - Moment creation rules accept an optional `chapterId` only when the corresponding chapter document exists under the same WorldWeave.
@@ -36,6 +37,6 @@ Chapters let a WorldWeave tell a structured story without splitting contributors
 
 ## Verification
 
-- Functions emulator tests cover ordering, owner-only create/rename/archive/reorder, invalid titles, the 30-chapter ceiling, stale reorder rejection, idempotent archive, and preservation of historical moment assignments.
+- Functions emulator tests cover ordering, owner-only create/rename/archive/reorder, invalid titles, the 30-chapter ceiling, stale reorder rejection, idempotent archive, preservation of historical moment assignments, and Firestore rejection of new assignments to archived chapters.
 - Firestore rules tests cover member privacy, client write denial, valid chapter assignment, and nonexistent chapter rejection.
 - Existing moments without a chapter remain fully compatible.
