@@ -23,6 +23,8 @@ export default function OriginAttributionInbox() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [request, setRequest] = useState({ derivativeAssetId: '', sourceAssetId: '', reason: '' });
   const [showRequest, setShowRequest] = useState(false);
+  const [preview, setPreview] = useState<{ hasLineage: boolean; attribution: { sourceAssetId: string; creatorUid: string; permissionSnapshot: string }[] } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const load = useCallback(async () => {
     const user = auth.currentUser;
@@ -67,6 +69,18 @@ export default function OriginAttributionInbox() {
     finally { setBusy(''); }
   };
 
+  const previewAttribution = async () => {
+    const assetId = request.derivativeAssetId.trim();
+    if (!assetId) { setError('Enter your derivative asset ID before previewing attribution.'); return; }
+    setPreviewLoading(true); setError(''); setPreview(null);
+    try {
+      const callable = httpsCallable(functions, 'getMyOriginAttributionPreview');
+      const result = await callable({ assetId });
+      setPreview(result.data as { hasLineage: boolean; attribution: { sourceAssetId: string; creatorUid: string; permissionSnapshot: string }[] });
+    } catch (err: any) { setError(err?.message || 'The saved attribution preview could not be loaded.'); }
+    finally { setPreviewLoading(false); }
+  };
+
   const submitRequest = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy('new'); setError(''); setNotice('');
@@ -77,6 +91,7 @@ export default function OriginAttributionInbox() {
         reason: request.reason.trim(),
       });
       setRequest({ derivativeAssetId: '', sourceAssetId: '', reason: '' });
+      setPreview(null);
       setShowRequest(false);
       setNotice('Your attribution correction request was submitted.');
       await load();
@@ -113,6 +128,8 @@ export default function OriginAttributionInbox() {
       <p className="text-sm font-semibold text-white">Submit a correction request</p>
       <input className={inputClass} aria-label="Your derivative asset ID" placeholder="Your derivative asset ID" value={request.derivativeAssetId} onChange={e => setRequest(p => ({ ...p, derivativeAssetId: e.target.value }))} required />
       <input className={inputClass} aria-label="Source asset ID" placeholder="Source asset ID in the recorded lineage" value={request.sourceAssetId} onChange={e => setRequest(p => ({ ...p, sourceAssetId: e.target.value }))} required />
+      <button type="button" onClick={() => void previewAttribution()} disabled={previewLoading} className="rounded-xl border border-violet-400/30 px-3 py-2 text-xs font-semibold text-violet-200 disabled:opacity-50">{previewLoading ? 'Loading saved attribution…' : 'Preview saved attribution'}</button>
+      {preview && <div className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-3 space-y-2"><p className="text-xs font-semibold text-violet-200">{preview.hasLineage ? 'Recorded source attribution' : 'No remix lineage is recorded for this asset.'}</p>{preview.attribution.map((entry, index) => <div key={entry.sourceAssetId + index} className="text-xs text-zinc-300 break-all">Source {entry.sourceAssetId} · Creator {entry.creatorUid} · Permission {entry.permissionSnapshot}</div>)}</div>}
       <textarea className={inputClass} aria-label="Correction explanation" placeholder="Explain what attribution needs correcting (20–1,500 characters)" minLength={20} maxLength={1500} rows={3} value={request.reason} onChange={e => setRequest(p => ({ ...p, reason: e.target.value }))} required />
       <button disabled={busy === 'new'} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Send className="h-4 w-4" />Submit request</button>
     </form>}
