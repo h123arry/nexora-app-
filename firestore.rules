@@ -1341,6 +1341,13 @@ service cloud.firestore {
           allow create, update, delete: if false;
         }
 
+        match /replies/{replyId} {
+          // Reply reads are member-only. Creation/deletion and replyCount changes
+          // are committed by trusted callables, never by client-authored counters.
+          allow get, list: if canContribute();
+          allow create, update, delete: if false;
+        }
+
         allow update: if false;
         allow delete: if signedIn()
           && (resource.data.authorId == request.auth.uid

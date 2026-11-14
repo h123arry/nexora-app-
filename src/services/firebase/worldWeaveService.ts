@@ -21,6 +21,7 @@ export interface WorldWeaveMoment {
   authorAvatar: string; text: string; mediaType: 'text' | 'image' | 'video' | 'audio';
   mediaUrl?: string; storagePath?: string; createdAt?: unknown;
   reactionCounts?: Partial<Record<WorldWeaveReaction, number>>;
+  replyCount?: number;
 }
 function requireUser() {
   const user = auth.currentUser;
@@ -332,4 +333,49 @@ export async function fetchWorldWeavePinnedMoments(weaveId: string): Promise<Wor
     return snapshot.exists() ? ({ ...snapshot.data(), id: snapshot.id } as WorldWeaveMoment) : null;
   }));
   return moments.filter((moment): moment is WorldWeaveMoment => Boolean(moment));
+}
+
+export interface WorldWeaveReply {
+  id: string;
+  weaveId: string;
+  momentId: string;
+  authorId: string;
+  authorName: string;
+  authorUsername: string;
+  text: string;
+  createdAt?: unknown;
+}
+
+export function subscribeToWorldWeaveMomentReplies(
+  weaveId: string,
+  momentId: string,
+  onItems: (items: WorldWeaveReply[]) => void,
+  onError: (error: Error) => void,
+): Unsubscribe {
+  requireUser();
+  return onSnapshot(
+    query(collection(db, 'worldWeaves', weaveId, 'moments', momentId, 'replies'), orderBy('createdAt', 'desc'), limit(50)),
+    snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveReply)).reverse()),
+    onError,
+  );
+}
+
+export async function addWorldWeaveMomentReply(weaveId: string, momentId: string, text: string): Promise<void> {
+  requireUser();
+  const cleanText = text.trim();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/') || !momentId || momentId.length > 128 || momentId.includes('/')) {
+    throw new Error('Choose a valid WorldWeave moment.');
+  }
+  if (!cleanText || cleanText.length > 1000) throw new Error('A reply must contain 1 to 1,000 characters.');
+  const action = httpsCallable(functions, 'addWorldWeaveMomentReply');
+  await action({ weaveId, momentId, text: cleanText });
+}
+
+export async function deleteWorldWeaveMomentReply(weaveId: string, momentId: string, replyId: string): Promise<void> {
+  requireUser();
+  if (![weaveId, momentId, replyId].every(id => typeof id === 'string' && id.length > 0 && id.length <= 128 && !id.includes('/'))) {
+    throw new Error('Choose a valid WorldWeave reply.');
+  }
+  const action = httpsCallable(functions, 'deleteWorldWeaveMomentReply');
+  await action({ weaveId, momentId, replyId });
 }

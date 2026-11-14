@@ -7,8 +7,8 @@ import {
   acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, revokeWorldWeaveInvite, subscribeToWorldWeaveInvites, subscribeToMyWorldWeaveInvites,
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
   MAX_WORLDWEAVE_MEMBERS, listWorldWeaveContributors, leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership, subscribeToWorldWeaveActivity,
-  toggleWorldWeaveMomentPin, fetchWorldWeavePinnedMoments,
-  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, setWorldWeaveMomentReaction,
+  toggleWorldWeaveMomentPin, fetchWorldWeavePinnedMoments, subscribeToWorldWeaveMomentReplies, addWorldWeaveMomentReply, deleteWorldWeaveMomentReply,
+  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, type WorldWeaveReply, setWorldWeaveMomentReaction,
 } from '../services/firebase/worldWeaveService';
 
 interface Props { currentUser: User; }
@@ -28,6 +28,9 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [selectedContributorId, setSelectedContributorId] = useState('');
   const [activity, setActivity] = useState<WorldWeaveActivity[]>([]);
   const [pinnedMoments, setPinnedMoments] = useState<WorldWeaveMoment[]>([]);
+  const [expandedReplyMomentId, setExpandedReplyMomentId] = useState<string | null>(null);
+  const [momentReplies, setMomentReplies] = useState<WorldWeaveReply[]>([]);
+  const [replyDraft, setReplyDraft] = useState('');
   const [discoveryQuery, setDiscoveryQuery] = useState('');
   const [selected, setSelected] = useState<WorldWeave | null>(null);
   const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
@@ -95,6 +98,14 @@ export default function WorldWeaveView({ currentUser }: Props) {
       .catch(err => { if (active) setError(err instanceof Error ? err.message : 'Could not load pinned moments.'); });
     return () => { active = false; };
   }, [selected?.id, selected?.ownerId, selected?.pinnedMomentIds?.join('|'), currentUser.id]);
+
+  useEffect(() => {
+    if (!selected || !expandedReplyMomentId) {
+      setMomentReplies([]);
+      return;
+    }
+    return subscribeToWorldWeaveMomentReplies(selected.id, expandedReplyMomentId, setMomentReplies, err => setError(err.message));
+  }, [selected?.id, expandedReplyMomentId]);
 
   useEffect(() => {
     if (!selected || (selected.ownerId !== currentUser.id && !selected.participantIds?.includes(currentUser.id))) {
@@ -266,6 +277,28 @@ export default function WorldWeaveView({ currentUser }: Props) {
     finally { setLoadingOlder(false); }
   };
 
+  const handleSubmitMomentReply = async (event: React.FormEvent, moment: WorldWeaveMoment) => {
+    event.preventDefault();
+    if (!selected || !replyDraft.trim() || busy) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await addWorldWeaveMomentReply(selected.id, moment.id, replyDraft);
+      setReplyDraft('');
+      setNotice('Your reply was added to the conversation.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not add your reply.'); }
+    finally { setBusy(false); }
+  };
+
+  const handleDeleteMomentReply = async (reply: WorldWeaveReply) => {
+    if (!selected || !window.confirm('Remove this reply?')) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await deleteWorldWeaveMomentReply(selected.id, reply.momentId, reply.id);
+      setNotice('Reply removed.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not remove this reply.'); }
+    finally { setBusy(false); }
+  };
+
   const handleToggleMomentPin = async (moment: WorldWeaveMoment) => {
     if (!selected || selected.ownerId !== currentUser.id || busy) return;
     setBusy(true); setError(''); setNotice('');
@@ -419,6 +452,22 @@ export default function WorldWeaveView({ currentUser }: Props) {
                 {moment.mediaType === 'video' && moment.mediaUrl && <video src={moment.mediaUrl} controls playsInline preload="metadata" className="mt-3 max-h-[520px] w-full rounded-2xl bg-black"/>}
                 {moment.mediaType === 'audio' && moment.mediaUrl && <div className="mt-3 rounded-2xl border border-violet-400/15 bg-violet-500/[.06] p-3"><div className="mb-2 flex items-center gap-2 text-xs font-semibold text-violet-200"><Mic size={14}/> Voice note</div><audio src={moment.mediaUrl} controls preload="metadata" className="w-full"/></div>}
                 {selected.ownerId === currentUser.id && <button type="button" disabled={busy || (!(selected.pinnedMomentIds || []).includes(moment.id) && (selected.pinnedMomentIds || []).length >= 3)} onClick={() => void handleToggleMomentPin(moment)} className="mt-3 rounded-full border border-violet-400/20 px-3 py-1.5 text-xs font-semibold text-violet-200 hover:bg-violet-500/10 disabled:opacity-40">{(selected.pinnedMomentIds || []).includes(moment.id) ? 'Unpin from story' : 'Pin to story'}</button>}
+                {isMember && <div className="mt-3 border-t border-white/5 pt-3">
+                  <button type="button" onClick={() => { setExpandedReplyMomentId(current => current === moment.id ? null : moment.id); setReplyDraft(''); }} className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-300 hover:border-violet-400/30 hover:bg-violet-500/10">💬 {moment.replyCount || 0} replies {expandedReplyMomentId === moment.id ? '· Close' : '· View'}</button>
+                  {expandedReplyMomentId === moment.id && <div className="mt-3 space-y-3 rounded-2xl border border-white/5 bg-black/10 p-3">
+                    {momentReplies.length === 0 ? <p className="text-xs text-slate-500">Start the conversation with a thoughtful reply.</p> : <div className="max-h-72 space-y-3 overflow-y-auto">
+                      {momentReplies.map(reply => <div key={reply.id} className="flex items-start justify-between gap-3">
+                        <div className="min-w-0"><p className="text-[11px] font-bold text-violet-200">{reply.authorName} <span className="font-normal text-slate-500">@{reply.authorUsername} · {timeLabel(reply.createdAt)}</span></p><p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-300">{reply.text}</p></div>
+                        {(reply.authorId === currentUser.id || selected.ownerId === currentUser.id) && <button type="button" disabled={busy} onClick={() => void handleDeleteMomentReply(reply)} className="shrink-0 rounded-lg px-2 py-1 text-[10px] text-red-300 hover:bg-red-500/10 disabled:opacity-40">Remove</button>}
+                      </div>)}
+                    </div>}
+                    <form onSubmit={event => void handleSubmitMomentReply(event, moment)} className="flex gap-2">
+                      <input value={replyDraft} onChange={event => setReplyDraft(event.target.value)} maxLength={1000} placeholder="Add to the conversation…" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white outline-none placeholder:text-slate-500 focus:border-violet-400/50"/>
+                      <button disabled={busy || !replyDraft.trim()} className="rounded-xl bg-violet-600 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-40">Reply</button>
+                    </form>
+                    <p className="text-right text-[10px] text-slate-500">{replyDraft.length}/1000</p>
+                  </div>}
+                </div>}
                 {isMember && <div className="mt-4 flex flex-wrap gap-2 border-t border-white/5 pt-3">
                   <button type="button" disabled={busy} onClick={() => void handleMomentReaction(moment, 'heart')} aria-label="React with heart" className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-pink-400/30 hover:bg-pink-500/10 disabled:opacity-40">❤️ {moment.reactionCounts?.heart || 0}</button>
                   <button type="button" disabled={busy} onClick={() => void handleMomentReaction(moment, 'applause')} aria-label="React with applause" className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-slate-300 transition hover:border-violet-400/30 hover:bg-violet-500/10 disabled:opacity-40">🙌 {moment.reactionCounts?.applause || 0}</button>
