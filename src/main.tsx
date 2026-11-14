@@ -1,4 +1,5 @@
 import './polyfill.ts';
+import { isNativeRuntime } from './lib/nativeRuntime';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
@@ -8,7 +9,7 @@ import {ErrorBoundary} from './components/ErrorBoundary.tsx';
 
 // Register the PWA worker only for production builds so local development is
 // not served stale cached application assets.
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+if (import.meta.env.PROD && !isNativeRuntime() && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     let updateRegistration: ServiceWorkerRegistration | null = null;
     let applyingUpdate = false;
