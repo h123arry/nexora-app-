@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { CheckCircle2, Clock3, ShieldCheck, AlertCircle, ExternalLink } from 'lucide-react';
 import { functions } from '../lib/firebase';
@@ -26,19 +26,22 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const refreshGeneration = useRef(0);
 
   const refresh = useCallback(async () => {
+    const generation = ++refreshGeneration.current;
     setLoading(true);
     try {
       const callable = httpsCallable<undefined, { application: Application | null }>(functions, 'getMyIdentityVerificationApplication');
       const result = await callable();
+      if (generation !== refreshGeneration.current) return;
       const next = result.data.application;
       setApplication(next);
       if (next) {
         setIdentityType(next.identityType);
         setDisplayName(next.displayName);
         setEvidenceSummary(next.evidenceSummary);
-        setEvidenceLinks(next.evidenceUrls.join('\n'));
+        setEvidenceLinks(next.evidenceUrls.join('\\n'));
       } else {
         setIdentityType('creator');
         setDisplayName(initialDisplayName);
@@ -46,13 +49,18 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
         setEvidenceLinks('');
       }
     } catch {
-      setError('Could not load identity review status. Try again when your connection is stable.');
+      if (generation === refreshGeneration.current) {
+        setError('Could not load identity review status. Try again when your connection is stable.');
+      }
     } finally {
-      setLoading(false);
+      if (generation === refreshGeneration.current) setLoading(false);
     }
-  }, [initialDisplayName]);
+  }, [initialDisplayName, userId]);
 
-  useEffect(() => { void refresh(); }, [refresh, userId]);
+  useEffect(() => {
+    void refresh();
+    return () => { refreshGeneration.current += 1; };
+  }, [refresh, userId]);
 
   const canApply = !application || ['rejected', 'needs_more_info', 'revoked'].includes(application.status);
   const evidenceCount = evidenceLinks.split('\n').map(value => value.trim()).filter(Boolean).length;
