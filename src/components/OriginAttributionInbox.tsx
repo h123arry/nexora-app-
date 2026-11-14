@@ -23,7 +23,7 @@ export default function OriginAttributionInbox() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [request, setRequest] = useState({ derivativeAssetId: '', sourceAssetId: '', reason: '' });
   const [showRequest, setShowRequest] = useState(false);
-  const [preview, setPreview] = useState<{ hasLineage: boolean; attribution: { sourceAssetId: string; creatorUid: string; permissionSnapshot: string }[] } | null>(null);
+  const [preview, setPreview] = useState<{ hasLineage: boolean; credentialState: 'absent' | 'verified' | 'untrusted' | 'invalid' | 'unsupported' | 'pending'; credentialValidationCodes: string[]; attribution: { sourceAssetId: string; creatorUid: string; permissionSnapshot: string }[] } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -76,7 +76,7 @@ export default function OriginAttributionInbox() {
     try {
       const callable = httpsCallable(functions, 'getMyOriginAttributionPreview');
       const result = await callable({ assetId });
-      setPreview(result.data as { hasLineage: boolean; attribution: { sourceAssetId: string; creatorUid: string; permissionSnapshot: string }[] });
+      setPreview(result.data as { hasLineage: boolean; credentialState: 'absent' | 'verified' | 'untrusted' | 'invalid' | 'unsupported' | 'pending'; credentialValidationCodes: string[]; attribution: { sourceAssetId: string; creatorUid: string; permissionSnapshot: string }[] });
     } catch (err: any) { setError(err?.message || 'The saved attribution preview could not be loaded.'); }
     finally { setPreviewLoading(false); }
   };
@@ -129,7 +129,16 @@ export default function OriginAttributionInbox() {
       <input className={inputClass} aria-label="Your derivative asset ID" placeholder="Your derivative asset ID" value={request.derivativeAssetId} onChange={e => setRequest(p => ({ ...p, derivativeAssetId: e.target.value }))} required />
       <input className={inputClass} aria-label="Source asset ID" placeholder="Source asset ID in the recorded lineage" value={request.sourceAssetId} onChange={e => setRequest(p => ({ ...p, sourceAssetId: e.target.value }))} required />
       <button type="button" onClick={() => void previewAttribution()} disabled={previewLoading} className="rounded-xl border border-violet-400/30 px-3 py-2 text-xs font-semibold text-violet-200 disabled:opacity-50">{previewLoading ? 'Loading saved attribution…' : 'Preview saved attribution'}</button>
-      {preview && <div className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-3 space-y-2"><p className="text-xs font-semibold text-violet-200">{preview.hasLineage ? 'Recorded source attribution' : 'No remix lineage is recorded for this asset.'}</p>{preview.attribution.map((entry, index) => <div key={entry.sourceAssetId + index} className="text-xs text-zinc-300 break-all">Source {entry.sourceAssetId} · Creator {entry.creatorUid} · Permission {entry.permissionSnapshot}</div>)}</div>}
+      {preview && <div className="rounded-xl border border-violet-400/20 bg-violet-500/5 p-3 space-y-2">
+        <p className="text-xs font-semibold text-violet-200">{preview.hasLineage ? 'Recorded source attribution' : 'No remix lineage is recorded for this asset.'}</p>
+        <div className="rounded-lg border border-white/10 bg-black/20 p-2.5 space-y-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-300">C2PA credential inspection</p>
+          <p className={`text-xs font-semibold ${preview.credentialState === 'verified' ? 'text-emerald-300' : preview.credentialState === 'invalid' ? 'text-rose-300' : preview.credentialState === 'untrusted' ? 'text-amber-300' : 'text-zinc-300'}`}>{({ verified: 'Trusted credential', untrusted: 'Valid credential, signer not trusted', invalid: 'Credential validation failed', absent: 'No embedded credential found', unsupported: 'Credential could not be inspected', pending: 'Credential inspection pending' } as const)[preview.credentialState]}</p>
+          <p className="text-[11px] leading-relaxed text-zinc-400">This is a cryptographic credential check, not proof that the depicted event is true or that the uploader owns the rights. Missing credentials do not imply misconduct.</p>
+          {preview.credentialValidationCodes.length > 0 && <p className="text-[10px] text-zinc-500 break-all">Validation codes: {preview.credentialValidationCodes.join(', ')}</p>}
+        </div>
+        {preview.attribution.map((entry, index) => <div key={entry.sourceAssetId + index} className="text-xs text-zinc-300 break-all">Source {entry.sourceAssetId} · Creator {entry.creatorUid} · Permission {entry.permissionSnapshot}</div>)}
+      </div>}
       <textarea className={inputClass} aria-label="Correction explanation" placeholder="Explain what attribution needs correcting (20–1,500 characters)" minLength={20} maxLength={1500} rows={3} value={request.reason} onChange={e => setRequest(p => ({ ...p, reason: e.target.value }))} required />
       <button disabled={busy === 'new'} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Send className="h-4 w-4" />Submit request</button>
     </form>}
