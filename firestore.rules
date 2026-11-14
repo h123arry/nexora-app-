@@ -98,6 +98,1442 @@ service cloud.firestore {
         && data.get('sparks', 0) == 0
         && data.get('contributions', 0) == 0;
     }
+    function ownsMediaAsset(mediaAssetId) {
+      let assetPath = /databases/$(database)/documents/mediaAssets/$(mediaAssetId);
+      return mediaAssetId is string
+        && mediaAssetId.matches('^[A-Za-z0-9_-]{1,128}
+    function validPollOption(option) {
+      return option is map
+        && option.keys().hasOnly(['id', 'text', 'votes'])
+        && option.id is string
+        && option.id.size() <= 80
+        && option.text is string
+        && option.text.size() <= 300
+        && option.votes is int
+        && option.votes == 0;
+    }
+    function validInitialPoll(data) {
+      return !data.keys().hasAny(['interactivePoll'])
+        || (data.interactivePoll is map
+          && data.interactivePoll.keys().hasOnly(['question', 'options'])
+          && data.interactivePoll.question is string
+          && data.interactivePoll.question.size() <= 500
+          && data.interactivePoll.options is list
+          && data.interactivePoll.options.size() >= 2
+          && data.interactivePoll.options.size() <= 5
+          && validPollOption(data.interactivePoll.options[0])
+          && validPollOption(data.interactivePoll.options[1])
+          && (data.interactivePoll.options.size() < 3 || validPollOption(data.interactivePoll.options[2]))
+          && (data.interactivePoll.options.size() < 4 || validPollOption(data.interactivePoll.options[3]))
+          && (data.interactivePoll.options.size() < 5 || validPollOption(data.interactivePoll.options[4])));
+    }
+    function validInitialBroadcastReactions(data) {
+      return !data.keys().hasAny(['broadcastReactions'])
+        || (data.broadcastReactions is map
+          && data.broadcastReactions.keys().hasOnly(['🔥', '🙌', '⚡', '🏆'])
+          && data.broadcastReactions.get('🔥', 0) == 0
+          && data.broadcastReactions.get('🙌', 0) == 0
+          && data.broadcastReactions.get('⚡', 0) == 0
+          && data.broadcastReactions.get('🏆', 0) == 0);
+    }
+    function publicCommunityKeys() {
+      return [
+        'id', 'ownerId', 'creatorId', 'type', 'name', 'description', 'bannerImage',
+        'avatarImage', 'rules', 'tags', 'moderators', 'admins', 'pinnedPosts',
+        'events', 'mediaLibrary', 'createdAt'
+      ];
+    }
+    function privateCommunityKeys() {
+      return publicCommunityKeys().concat(['bannedUsers', 'mutedUsers', 'pendingMembers', 'reports', 'activityLog']);
+    }
+    function publicProfileKeys() {
+      return [
+        'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
+        'followers', 'following', 'sparks', 'hasStory',
+        'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
+        'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
+        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts'
+      ];
+    }
+    function editableProfileKeys() {
+      return [
+        'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
+        'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
+        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts'
+      ];
+    }
+    function isOwnCommentAppend(postId) {
+      let oldComments = resource.data.get('comments', []);
+      let newComments = request.resource.data.get('comments', []);
+      let addedComment = newComments[oldComments.size()];
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['comments', 'commentsCount'])
+        && oldComments is list
+        && newComments is list
+        && newComments.size() == oldComments.size() + 1
+        && newComments.hasAll(oldComments)
+        && request.resource.data.get('commentsCount', 0) == resource.data.get('commentsCount', 0) + 1
+        && addedComment.userId == request.auth.uid
+        && addedComment.postId == postId
+        && addedComment.content is string
+        && addedComment.keys().hasOnly(['id', 'postId', 'userId', 'username', 'name', 'avatar', 'content', 'timestamp', 'likes']);
+    }
+
+    // Identity evidence and review state are private; only a minimal verified projection is public.
+    match /identityVerificationApplications/{userId} {
+      allow get: if owner(userId);
+      allow list, create, update, delete: if false;
+    }
+    match /identityVerificationAuditEvents/{eventId} {
+      allow read, write: if false;
+    }
+    match /identityVerificationPrivateSignals/{userId} {
+      allow read, write: if false;
+    }
+    match /identityImpersonationCases/{userId} {
+      allow read, write: if false;
+    }
+    match /identityImpersonationSignals/{userId} {
+      allow read, write: if false;
+      match /reporters/{reporterId} {
+        allow read, write: if false;
+      }
+    }
+    match /verifiedIdentities/{userId} {
+      allow get, list: if resource.data.status == 'verified';
+      allow create, update, delete: if false;
+    }
+
+    // Default-deny for every path not explicitly listed below.
+    match /{document=**} { allow read, write: if false; }
+
+
+    // Creator lenses are written and reviewed only by trusted callables.
+    // Clients may read approved public lenses and their own private drafts.
+    match /creatorLenses/{lensId} {
+      allow get, list: if resource.data.get('status', '') == 'approved'
+        || owner(resource.data.get('ownerId', ''));
+      allow create, update, delete: if false;
+    }
+    match /creatorLensAuditEvents/{eventId} {
+      allow read, write: if false;
+    }
+
+    // NEXORA Institute content is published by trusted Academy callables.
+    // Assessment answer keys, grading records and credentials are never client-writable.
+    match /academyInstructors/{uid} {
+      allow get: if owner(uid);
+      allow list, create, update, delete: if false;
+    }
+    match /academyCourses/{courseId} {
+      allow get, list: if resource.data.status == 'published';
+      allow create, update, delete: if false;
+      match /lessons/{lessonId} {
+        function publishedCourse() {
+          return get(/databases/$(database)/documents/academyCourses/$(courseId)).data.status == 'published';
+        }
+        allow get, list: if publishedCourse() && resource.data.status == 'published';
+        allow create, update, delete: if false;
+      }
+      match /assessments/{assessmentId} {
+        allow read, write: if false;
+      }
+    }
+    match /academyAssessmentAttempts/{attemptId} {
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+    match /academyCertificates/{certificateId} {
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+    match /academyMentorshipSessions/{sessionId} {
+      allow get, list: if resource.data.status == 'scheduled';
+      allow create, update, delete: if false;
+      match /bookings/{userId} {
+        allow get: if owner(userId);
+        allow list, create, update, delete: if false;
+      }
+    }
+
+    // Canonical username claims prevent query-before-write races during onboarding.
+    match /usernames/{username} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['userId', 'username', 'createdAt', 'updatedAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.username == username
+        && username.size() >= 3
+        && username.size() <= 20;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.username == resource.data.username
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt']);
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Mail and security logs are trusted-server-only: clients cannot forge recipients or audit events.
+    match /mail/{mailId} {
+      allow read: if false;
+      allow create, update, delete: if false;
+    }
+    // Clients may declare an upload intent. Trusted Functions own every
+    // subsequent lifecycle transition and any derived playback metadata.
+    match /mediaAssets/{mediaId} {
+      allow get: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow list: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['id', 'ownerId', 'storagePath', 'kind', 'contentType', 'size', 'status', 'purpose', 'createdAt', 'updatedAt'])
+        && request.resource.data.id == mediaId
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.storagePath == 'users/' + request.auth.uid + '/media/' + mediaId
+        && request.resource.data.kind in ['image', 'video', 'audio']
+        && request.resource.data.contentType is string
+        && request.resource.data.size is int
+        && request.resource.data.size > 0
+        && request.resource.data.status == 'pending_upload'
+        && (!request.resource.data.keys().hasAny(['purpose']) || request.resource.data.purpose == 'studio-export')
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if false;
+      // Owners may clean up only their own abandoned upload intent; trusted Functions own later states.
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid
+        && resource.data.status == 'pending_upload';
+    }
+    // NEXORA Origin records are created and advanced only by trusted media Functions.
+    // Owners can inspect their own private provenance; public projections use a separate future API.
+    match /mediaOrigins/{mediaId} {
+      allow get, list: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create, update, delete: if false;
+
+      match /events/{eventId} {
+        allow get, list: if signedIn()
+          && get(/databases/$(database)/documents/mediaOrigins/$(mediaId)).data.ownerUid == request.auth.uid;
+        allow create, update, delete: if false;
+      }
+    }
+
+    // Streaks and last-visit markers are server-owned. Owners may read their
+    // own summary, but clients cannot forge streaks or reset activity dates.
+    match /userRetention/{userId} {
+      allow get: if owner(userId);
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /users/{userId}/securityLogs/{logId} {
+      allow read: if owner(userId);
+      allow create, update, delete: if false;
+    }
+
+    // Full account records (including email, role, moderation state, and other private fields) are owner-only.
+    match /users/{userId} {
+      allow get: if owner(userId);
+      allow list: if false;
+      allow create: if owner(userId)
+        && request.resource.data.id == userId
+        && request.resource.data.keys().hasOnly([
+          'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
+          'followers', 'following', 'sparks', 'hasStory', 'coverImage', 'profileFrameId', 'profileBadgeId',
+          'joinedDate', 'email', 'phone', 'role', 'isBanned', 'isSuspended',
+          'isSeedProfile', 'preferredLanguage', 'savedCollections', 'contributions',
+          'reputationPoints', 'reputationBreakdown', 'interestDNA', 'skills',
+          'nexBalance', 'totalEarnedNex', 'pendingNex', 'thisWeekEarnedNex',
+          'thisMonthEarnedNex', 'thisYearEarnedNex', 'creatorModeEnabled',
+          'statusText', 'statusEmoji', 'pinnedMusicSong', 'pinnedMusicArtist',
+          'pinnedMusicUrl', 'pinnedPosts', 'achievements', 'lastUsernameChangeTime',
+          'lastDisplayNameChangeTime', 'createdAt', 'updatedAt'
+        ])
+        && !request.resource.data.keys().hasAny(['role', 'isBanned', 'isSuspended', 'nexBalance', 'totalEarnedNex', 'pendingNex'])
+        && (!request.resource.data.keys().hasAny(['email'])
+          || request.resource.data.email == request.auth.token.get('email', '')
+          || request.auth.token.get('phone_number_verified', false))
+        && zeroInitialReputation(request.resource.data)
+        && zeroInitialEngagement(request.resource.data);
+      allow update: if owner(userId)
+        && request.resource.data.id == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
+          'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
+          'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'preferredLanguage',
+          'savedCollections', 'updatedAt'
+        ])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
+        ;
+      allow delete: if false;
+
+      match /searchHistory/{searchId} {
+        allow get, list: if owner(userId);
+        allow create, update: if owner(userId)
+          && request.resource.data.keys().hasOnly(['term', 'updatedAt'])
+          && request.resource.data.term is string
+          && request.resource.data.term.size() >= 2
+          && request.resource.data.term.size() <= 100
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if owner(userId);
+      }
+
+      match /inboxPreferences/{chatId} {
+        allow get, list: if owner(userId);
+        allow create, update: if owner(userId)
+          && chatId.size() > 0 && chatId.size() <= 150
+          && exists(/databases/$(database)/documents/chats/$(chatId))
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+          && request.resource.data.keys().hasOnly(['chatId', 'pinned', 'archived', 'updatedAt'])
+          && request.resource.data.chatId == chatId
+          && request.resource.data.pinned is bool
+          && request.resource.data.archived is bool
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if owner(userId);
+      }
+
+      match /memoryEvents/{eventId} { allow read, write: if owner(userId); }
+      match /memoryState/{stateId} { allow read, write: if owner(userId); }
+      match /settings/{settingId} {
+        allow get: if owner(userId);
+        allow list: if owner(userId);
+        allow create, update: if owner(userId)
+          && settingId == 'preferences'
+          && request.resource.data.keys().hasOnly([
+            'privacy', 'notifications', 'appearance', 'content', 'feed', 'security', 'messaging', 'updatedAt'
+          ])
+          && request.resource.data.privacy is map
+          && request.resource.data.notifications is map
+          && request.resource.data.appearance is map
+          && request.resource.data.content is map
+          && request.resource.data.feed is map
+          && request.resource.data.security is map
+          && (!request.resource.data.keys().hasAny(['messaging'])
+            || (request.resource.data.messaging is map
+              && request.resource.data.messaging.keys().hasOnly(['mutedChatIds', 'blockedUserIds'])
+              && request.resource.data.messaging.get('mutedChatIds', []) is list
+              && request.resource.data.messaging.get('mutedChatIds', []).size() <= 500
+              && request.resource.data.messaging.get('blockedUserIds', []) is list
+              && request.resource.data.messaging.get('blockedUserIds', []).size() <= 500));
+        allow delete: if owner(userId);
+      }
+      match /notifications/{notifId} {
+        allow read, list, delete: if owner(userId);
+        allow create: if false;
+        allow update: if owner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead'])
+          && request.resource.data.keys().hasAll(['isRead'])
+          && request.resource.data.isRead is bool;
+      }
+
+      // Push tokens are private device credentials. Only the owning account may
+      // register, refresh, inspect or revoke its own web-device token records.
+      match /pushTokens/{tokenId} {
+        allow get, list: if owner(userId);
+        allow create, update: if owner(userId)
+          && tokenId.matches('^[a-f0-9]{64}$')
+          && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() >= 20
+          && request.resource.data.token.size() <= 4096
+          && request.resource.data.platform == 'web'
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if owner(userId);
+      }
+
+      match /activityEvents/{eventId} { allow read, write: if owner(userId); }
+      // Callable backend owns these markers and the corresponding post counter.
+      match /postLikes/{postId} {
+        allow get, list: if owner(userId);
+        allow create, update, delete: if false;
+      }
+      // Repost markers are written only by the trusted, transactional repost callable.
+      match /postReposts/{postId} {
+        allow get, list: if owner(userId);
+        allow create, update, delete: if false;
+      }
+      // Comment reaction markers are private and written only by the trusted callable.
+      match /commentLikes/{reactionId} {
+        allow get, list: if owner(userId);
+        allow create, update, delete: if false;
+      }
+      // Named saved collections are private, bounded and scoped to the account owner.
+      match /savedCollections/{collectionId} {
+        allow get, list: if owner(userId);
+        allow create: if owner(userId)
+          && request.resource.data.keys().hasOnly(['name', 'itemCount', 'createdAt', 'updatedAt'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 48
+          && request.resource.data.itemCount == 0
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if owner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['itemCount', 'updatedAt'])
+          && request.resource.data.itemCount is int
+          && request.resource.data.itemCount >= 0
+          && request.resource.data.itemCount <= 500
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if owner(userId);
+
+        match /items/{itemId} {
+          allow get, list: if owner(userId);
+          allow create: if owner(userId)
+            && request.resource.data.keys().hasOnly(['itemType', 'itemId', 'parentId', 'createdAt'])
+            && request.resource.data.itemId is string
+            && request.resource.data.itemId.size() > 0
+            && request.resource.data.itemId.size() <= 150
+            && request.resource.data.createdAt == request.time
+            && (
+              (request.resource.data.itemType == 'post'
+                && !request.resource.data.keys().hasAny(['parentId'])
+                && itemId == 'post_' + request.resource.data.itemId
+                && exists(/databases/$(database)/documents/posts/$(request.resource.data.itemId))
+                && publicPost(get(/databases/$(database)/documents/posts/$(request.resource.data.itemId)).data))
+              || (request.resource.data.itemType == 'circle'
+                && !request.resource.data.keys().hasAny(['parentId'])
+                && itemId == 'circle_' + request.resource.data.itemId
+                && exists(/databases/$(database)/documents/communities/$(request.resource.data.itemId))
+                && get(/databases/$(database)/documents/communities/$(request.resource.data.itemId)).data.type == 'public')
+              || (request.resource.data.itemType == 'page'
+                && !request.resource.data.keys().hasAny(['parentId'])
+                && itemId == 'page_' + request.resource.data.itemId
+                && exists(/databases/$(database)/documents/pages/$(request.resource.data.itemId)))
+              || (request.resource.data.itemType == 'event'
+                && request.resource.data.keys().hasAny(['parentId'])
+                && request.resource.data.parentId is string
+                && request.resource.data.parentId.size() > 0
+                && request.resource.data.parentId.size() <= 150
+                && itemId == 'event_' + request.resource.data.parentId + '_' + request.resource.data.itemId
+                && exists(/databases/$(database)/documents/communities/$(request.resource.data.parentId)/events/$(request.resource.data.itemId))
+                && get(/databases/$(database)/documents/communities/$(request.resource.data.parentId)/events/$(request.resource.data.itemId)).data.status == 'scheduled'
+                && exists(/databases/$(database)/documents/communities/$(request.resource.data.parentId)/members/$(userId))
+                && get(/databases/$(database)/documents/communities/$(request.resource.data.parentId)/members/$(userId)).data.status == 'active')
+            );
+          allow update: if false;
+          allow delete: if owner(userId);
+        }
+      }
+
+      // Saved-post records are private to their owner. Only public posts can be bookmarked.
+      match /postBookmarks/{postId} {
+        allow get, list: if owner(userId);
+        allow create: if owner(userId)
+          && request.resource.data.keys().hasOnly(['postId', 'createdAt'])
+          && request.resource.data.postId == postId
+          && request.resource.data.createdAt == request.time
+          && exists(/databases/$(database)/documents/posts/$(postId))
+          && publicPost(get(/databases/$(database)/documents/posts/$(postId)).data);
+        allow update: if false;
+        allow delete: if owner(userId);
+      }
+    }
+
+    // Public directory contains an allowlisted projection, never private account fields.
+    match /publicProfiles/{userId} {
+      allow get, list: if true;
+      allow create: if owner(userId)
+        && request.resource.data.id == userId
+        && request.resource.data.keys().hasOnly(publicProfileKeys())
+        && !request.resource.data.keys().hasAny(['interestDNA'])
+        && zeroInitialReputation(request.resource.data)
+        && zeroInitialEngagement(request.resource.data);
+      allow update: if owner(userId)
+        && request.resource.data.id == userId
+        && request.resource.data.keys().hasOnly(publicProfileKeys())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(editableProfileKeys().concat(['interestDNA']))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['interestDNA'])
+          || !request.resource.data.keys().hasAny(['interestDNA']))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
+        ;
+      allow delete: if false;
+    }
+
+    // Shared posts must explicitly be public; private audience options are not secure or supported here.
+    match /posts/{postId} {
+      allow get, list: if publicPost(resource.data);
+      allow create: if accountMayPost()
+        && request.resource.data.keys().hasOnly([
+          'id', 'userId', 'authorId', 'username', 'name', 'avatar', 'content',
+          'image', 'imageFilter', 'images', 'imageFilters', 'videoUrl', 'mediaAssetId', 'voiceTranscript',
+          'voiceAudioUrl', 'audience', 'communityName', 'tags', 'taggedUsernames', 'imageAltText', 'likes', 'commentsCount',
+          'shares', 'views', 'saves', 'bookmarksCount', 'likeCount', 'commentsDisabled',
+          'searchSuggestion', 'timestamp', 'isLikedByUser', 'isBookmarkedByUser', 'location',
+          'comments', 'isVoice', 'voiceDuration', 'videoDuration', 'media', 'opportunityType',
+          'coAuthors', 'interactivePoll', 'editHistory', 'scheduledTime', 'isDraft', 'isArchived',
+          'isBroadcastPost', 'broadcastReactions', 'discussionModeEnabled', 'discussionSideA',
+          'discussionSideB', 'discussionVotesA', 'discussionVotesB'
+        ])
+        && request.resource.data.id == postId
+        && publicPost(request.resource.data)
+        && request.resource.data.userId == request.auth.uid
+        && (!request.resource.data.keys().hasAny(['mediaAssetId']) || ownsMediaAsset(request.resource.data.mediaAssetId))
+        && (!request.resource.data.keys().hasAny(['authorId']) || request.resource.data.authorId == request.auth.uid)
+        && (!request.resource.data.keys().hasAny(['taggedUsernames'])
+          || (request.resource.data.taggedUsernames is list && request.resource.data.taggedUsernames.size() <= 20))
+        && (!request.resource.data.keys().hasAny(['imageAltText'])
+          || (request.resource.data.imageAltText is string && request.resource.data.imageAltText.size() <= 500))
+        && (!request.resource.data.keys().hasAny(['location'])
+          || (request.resource.data.location is string && request.resource.data.location.size() <= 120))
+        && (!request.resource.data.keys().hasAny(['commentsDisabled'])
+          || request.resource.data.commentsDisabled is bool)
+        && request.resource.data.get('likes', 0) == 0
+        && request.resource.data.get('commentsCount', 0) == 0
+        && request.resource.data.get('shares', 0) == 0
+        && request.resource.data.get('views', 0) == 0
+        && request.resource.data.get('saves', 0) == 0
+        && request.resource.data.get('bookmarksCount', 0) == 0
+        && request.resource.data.get('likeCount', 0) == 0
+        && request.resource.data.get('isLikedByUser', false) == false
+        && request.resource.data.get('isBookmarkedByUser', false) == false
+        && (!request.resource.data.keys().hasAny(['comments'])
+          || (request.resource.data.comments is list && request.resource.data.comments.size() == 0))
+        && (!request.resource.data.keys().hasAny(['discussionVotesA'])
+          || (request.resource.data.discussionVotesA is list && request.resource.data.discussionVotesA.size() == 0))
+        && (!request.resource.data.keys().hasAny(['discussionVotesB'])
+          || (request.resource.data.discussionVotesB is list && request.resource.data.discussionVotesB.size() == 0))
+        && validInitialPoll(request.resource.data)
+        && validInitialBroadcastReactions(request.resource.data);
+      allow update: if accountMayPost()
+        && publicPost(resource.data)
+        && ((resource.data.userId == request.auth.uid || resource.data.authorId == request.auth.uid)
+          && request.resource.data.userId == resource.data.userId
+          && publicPost(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'content', 'image', 'images', 'imageFilter', 'imageFilters', 'videoUrl',
+          'voiceTranscript', 'voiceAudioUrl', 'tags', 'taggedUsernames', 'imageAltText',
+          'commentsDisabled', 'location', 'audience', 'communityName', 'opportunityType',
+          'interactivePoll', 'editHistory', 'scheduledTime', 'isDraft', 'isArchived',
+          'discussionModeEnabled', 'discussionSideA', 'discussionSideB', 'updatedAt'
+          ])
+          && (!request.resource.data.keys().hasAny(['taggedUsernames'])
+            || (request.resource.data.taggedUsernames is list && request.resource.data.taggedUsernames.size() <= 20))
+          && (!request.resource.data.keys().hasAny(['imageAltText'])
+            || (request.resource.data.imageAltText is string && request.resource.data.imageAltText.size() <= 500))
+          && (!request.resource.data.keys().hasAny(['location'])
+            || (request.resource.data.location is string && request.resource.data.location.size() <= 120))
+          && (!request.resource.data.keys().hasAny(['commentsDisabled'])
+            || request.resource.data.commentsDisabled is bool)
+          || isOwnCommentAppend(postId));
+      allow delete: if signedIn() && (resource.data.userId == request.auth.uid || resource.data.authorId == request.auth.uid);
+    }
+
+    // Scheduled creator posts are private workflow records managed only by trusted Functions.
+    // Clients schedule, list and cancel through authenticated callables; the publisher uses Admin SDK.
+    match /creatorScheduledPosts/{scheduleId} {
+      allow read, write: if false;
+    }
+    match /creatorScheduleCounters/{userId} {
+      allow read, write: if false;
+    }
+
+    // Private, versioned NEXORA Studio project manifests. Media bytes live in the
+    // owner's media Storage path; this document contains only project metadata and references.
+    match /studioCloudDrafts/{userId} {
+      function validStudioManifest() {
+        return request.resource.data.manifest is map
+          && request.resource.data.manifest.keys().hasOnly(['schemaVersion', 'project', 'assets'])
+          && request.resource.data.manifest.schemaVersion == 1
+          && request.resource.data.manifest.project is map
+          && request.resource.data.manifest.assets is map
+          && request.resource.data.manifest.assets.size() <= 100;
+      }
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['userId', 'revision', 'manifest', 'updatedAt'])
+        && request.resource.data.userId == userId
+        && request.resource.data.revision == 1
+        && validStudioManifest();
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && resource.data.userId == userId
+        && request.resource.data.keys().hasOnly(['userId', 'revision', 'manifest', 'updatedAt'])
+        && request.resource.data.userId == userId
+        && request.resource.data.revision == resource.data.revision + 1
+        && validStudioManifest();
+      allow delete: if signedIn() && request.auth.uid == userId && resource.data.userId == userId;
+    }
+
+    match /drafts/{draftId} {
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if accountMayPost()
+        && request.resource.data.keys().hasOnly(['userId', 'caption', 'videoUrl', 'type', 'tags', 'updatedAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 10000
+        && request.resource.data.videoUrl is string
+        && request.resource.data.videoUrl.size() <= 1000
+        && (!request.resource.data.keys().hasAny(['type']) || request.resource.data.type in ['video', 'image', 'text'])
+        && (!request.resource.data.keys().hasAny(['tags']) || (request.resource.data.tags is list && request.resource.data.tags.size() <= 30));
+      allow update: if signedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'videoUrl', 'type', 'tags', 'updatedAt'])
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 10000
+        && request.resource.data.videoUrl is string
+        && request.resource.data.videoUrl.size() <= 1000
+        && (!request.resource.data.keys().hasAny(['type']) || request.resource.data.type in ['video', 'image', 'text'])
+        && (!request.resource.data.keys().hasAny(['tags']) || (request.resource.data.tags is list && request.resource.data.tags.size() <= 30));
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Stories are public, short-lived updates. Identity comes from the owner's public
+    // profile; clients cannot write view counts or extend a story beyond 24 hours.
+    match /stories/{storyId} {
+      allow get: if signedIn()
+        && (resource.data.userId == request.auth.uid
+          || (resource.data.privacy == 'everyone' && resource.data.expiresAt > request.time));
+      allow list: if signedIn()
+        && resource.data.privacy == 'everyone';
+      allow create: if accountMayPost()
+        && request.resource.data.keys().hasOnly([
+          'id', 'userId', 'name', 'username', 'avatar', 'caption',
+          'mediaType', 'mediaUrl', 'storagePath', 'mediaId', 'privacy', 'createdAt', 'expiresAt'
+        ])
+        && request.resource.data.id == storyId
+        && request.resource.data.userId == request.auth.uid
+        && exists(/databases/$(database)/documents/publicProfiles/$(request.auth.uid))
+        && request.resource.data.name == get(/databases/$(database)/documents/publicProfiles/$(request.auth.uid)).data.name
+        && request.resource.data.username == get(/databases/$(database)/documents/publicProfiles/$(request.auth.uid)).data.username
+        && request.resource.data.avatar == get(/databases/$(database)/documents/publicProfiles/$(request.auth.uid)).data.avatar
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 500
+        && ((request.resource.data.mediaType == 'text'
+          && request.resource.data.caption.size() > 0
+          && !request.resource.data.keys().hasAny(['mediaUrl', 'storagePath', 'mediaId']))
+          || (request.resource.data.mediaType in ['image', 'video', 'audio']
+            && request.resource.data.mediaUrl is string
+            && request.resource.data.mediaUrl.size() > 0
+            && request.resource.data.mediaUrl.size() <= 2000
+            && request.resource.data.storagePath is string
+            && request.resource.data.storagePath.size() > 0
+            && request.resource.data.storagePath.size() <= 500
+            && request.resource.data.mediaId is string
+            && request.resource.data.mediaId == storyId))
+        && request.resource.data.privacy == 'everyone'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.expiresAt <= request.time + duration.value(24, 'h');
+      allow update: if false;
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+
+      match /reactions/{userId} {
+        allow get, list: if signedIn()
+          && (userId == request.auth.uid
+            || get(/databases/$(database)/documents/stories/$(storyId)).data.userId == request.auth.uid);
+        allow create, update: if signedIn()
+          && userId == request.auth.uid
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.expiresAt > request.time
+          && request.resource.data.keys().hasOnly(['storyId', 'userId', 'emoji', 'updatedAt'])
+          && request.resource.data.storyId == storyId
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.emoji in ['❤️', '🔥', '👏', '😂', '😍']
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if signedIn() && userId == request.auth.uid;
+      }
+      match /replies/{replyId} {
+        allow create: if signedIn()
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.expiresAt > request.time
+          && request.resource.data.keys().hasOnly(['storyId', 'authorId', 'authorName', 'message', 'createdAt'])
+          && request.resource.data.storyId == storyId
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() <= 100
+          && request.resource.data.message is string
+          && request.resource.data.message.size() > 0
+          && request.resource.data.message.size() <= 500
+          && request.resource.data.createdAt == request.time;
+        allow get, list: if signedIn()
+          && (get(/databases/$(database)/documents/stories/$(storyId)).data.userId == request.auth.uid
+            || resource.data.authorId == request.auth.uid);
+        allow update, delete: if false;
+      }
+
+      match /views/{viewerId} {
+        allow create: if signedIn()
+          && viewerId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['storyId', 'viewerId', 'createdAt'])
+          && request.resource.data.storyId == storyId
+          && request.resource.data.viewerId == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.privacy == 'everyone'
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.expiresAt > request.time;
+        allow get, list: if signedIn()
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.userId == request.auth.uid;
+        allow update, delete: if false;
+      }
+    }
+
+    match /follows/{followId} {
+      // Relationship reads are participant-scoped; mutations go through the trusted follow callable.
+      allow get: if signedIn()
+        && (resource == null || resource.data.followerId == request.auth.uid || resource.data.followingId == request.auth.uid);
+      allow list: if signedIn()
+        && (resource.data.followerId == request.auth.uid || resource.data.followingId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    // Creator audience aggregates and visitor hashes are backend-owned.
+    match /creatorAudienceDaily/{dayId} { allow read, write: if false; }
+    match /creatorAudienceEventReceipts/{eventId} { allow read, write: if false; }
+    match /creatorFollowProjections/{edgeId} { allow read, write: if false; }
+    match /creatorProfileDailyVisitors/{visitorId} { allow read, write: if false; }
+    match /creatorProfileVisitorHistory/{visitorId} { allow read, write: if false; }
+
+    match /activities/{activityId} {
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+    }
+
+    match /notifications/{notificationId} {
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      // Recipient-facing notifications must be created by trusted backend code.
+      allow create: if false;
+      allow update: if signedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    match /creatorAnalytics/{analyticsId} {
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      // Creator analytics are derived records; clients cannot forge totals.
+      allow create, update, delete: if false;
+    }
+
+    // Academy lesson progress is a learner-owned record, not a credential.
+    // Course completion and certificates must be assessed by trusted backend code.
+    match /academyProgress/{progressId} {
+      // Learners may read only their own progress. Writes are performed by
+      // academyCompleteLesson after validating the published lesson.
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+
+    // Learner study notes are private, account-owned learning records. They never affect grading.
+    match /academyLessonNotes/{noteId} {
+      function validAcademyLesson(courseId, lessonId) {
+        return (courseId == 'creator-foundations' && lessonId in ['identity', 'audience', 'plan'])
+          || (courseId == 'content-craft' && lessonId in ['hooks', 'story', 'quality'])
+          || (courseId == 'community-building' && lessonId in ['conversation', 'trust', 'collab'])
+          || (courseId == 'creator-business' && lessonId in ['value', 'revenue', 'disclosure'])
+          || (courseId == 'live-production' && lessonId in ['run-of-show', 'hosting', 'safety'])
+          || (courseId == 'creator-analytics' && lessonId in ['metrics', 'retention', 'experiments'])
+          || (courseId == 'personal-brand' && lessonId in ['positioning', 'portfolio', 'reputation'])
+          || (courseId == 'creator-safety' && lessonId in ['security', 'rights', 'wellbeing'])
+          || (courseId == 'video-production' && lessonId in ['shot-planning', 'sound-lighting', 'editing-workflow'])
+          || (courseId == 'creator-finance' && lessonId in ['income-costs', 'cash-flow', 'records-tax'])
+          || (courseId == 'creative-rights' && lessonId in ['ownership-permissions', 'music-image-licensing', 'contracts-deliverables'])
+          || (courseId == 'inclusive-creation' && lessonId in ['captions-transcripts', 'visual-accessibility', 'inclusive-community'])
+          || (courseId is string && courseId.size() > 0 && courseId.size() <= 128
+            && lessonId is string && lessonId.size() > 0 && lessonId.size() <= 128
+            && !courseId.matches('.*[/].*') && !lessonId.matches('.*[/].*')
+            && exists(/databases/$(database)/documents/academyCourses/$(courseId))
+            && get(/databases/$(database)/documents/academyCourses/$(courseId)).data.status == 'published'
+            && exists(/databases/$(database)/documents/academyCourses/$(courseId)/lessons/$(lessonId))
+            && get(/databases/$(database)/documents/academyCourses/$(courseId)/lessons/$(lessonId)).data.status == 'published');
+      }
+      function validLessonNote() {
+        return request.resource.data.keys().hasOnly(['userId', 'courseId', 'lessonId', 'note', 'updatedAt', 'schemaVersion'])
+          && request.resource.data.keys().hasAll(['userId', 'courseId', 'lessonId', 'note', 'updatedAt', 'schemaVersion'])
+          && request.resource.data.userId == request.auth.uid
+          && validAcademyLesson(request.resource.data.courseId, request.resource.data.lessonId)
+          && noteId == request.auth.uid + '_' + string(request.resource.data.courseId.size()) + '_' + request.resource.data.courseId + '_' + string(request.resource.data.lessonId.size()) + '_' + request.resource.data.lessonId
+          && request.resource.data.note is string
+          && request.resource.data.note.size() <= 5000
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.schemaVersion == 1;
+      }
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && validLessonNote();
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.courseId == resource.data.courseId
+        && request.resource.data.lessonId == resource.data.lessonId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['note', 'updatedAt'])
+        && validLessonNote();
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Creator workbooks are private planning documents, never public profile or performance claims.
+    match /academyCreatorWorkbooks/{workbookId} {
+      function validWorkbook() {
+        return request.resource.data.keys().hasOnly(['userId', 'templateId', 'content', 'updatedAt', 'schemaVersion'])
+          && request.resource.data.keys().hasAll(['userId', 'templateId', 'content', 'updatedAt', 'schemaVersion'])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.templateId in [
+            'content-brief', 'publishing-plan', 'audience-interview', 'partnership-proposal',
+            'live-run-sheet', 'community-charter', 'content-experiment', 'portfolio-case-study',
+            'production-shotlist', 'creator-budget', 'rights-register', 'accessibility-audit'
+          ]
+          && workbookId == request.auth.uid + '_' + request.resource.data.templateId
+          && request.resource.data.content is string
+          && request.resource.data.content.size() <= 16000
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.schemaVersion == 1;
+      }
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && validWorkbook();
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.templateId == resource.data.templateId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'updatedAt'])
+        && validWorkbook();
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Raw analytics observations and aggregate metrics are server-owned.
+    match /analyticsEvents/{eventId} { allow read, write: if false; }
+    match /analyticsDaily/{dayId} {
+      allow get, list: if signedIn() && (request.auth.token.get('admin', false)
+        || request.auth.token.get('analyticsAdmin', false)
+        || request.auth.token.get('role', '') in ['admin', 'founder', 'analytics_admin']);
+      allow write: if false;
+    }
+    // Financial state is trusted-server-owned. Users may view only their own
+    // sanitized billing records; no client write can create money, access, or earnings.
+    match /financialTransactions/{transactionId} {
+      allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+    match /subscriptions/{subscriptionId} {
+      allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+    match /entitlements/{entitlementId} {
+      allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+    // Creator-authored membership tier drafts are readable by their owner only; all mutations use trusted callables.
+    // Live room state is server-authoritative. Signed-in members may read active rooms;
+    // only the host may read an ended room. Session and chat writes use trusted callables.
+    match /liveSessions/{sessionId} {
+      allow get, list: if signedIn() && (resource.data.status == 'live' || resource.data.hostId == request.auth.uid);
+      allow create, update, delete: if false;
+      match /messages/{messageId} {
+        allow get, list: if signedIn()
+          && exists(/databases/$(database)/documents/liveSessions/$(sessionId))
+          && (get(/databases/$(database)/documents/liveSessions/$(sessionId)).data.status == 'live'
+            || get(/databases/$(database)/documents/liveSessions/$(sessionId)).data.hostId == request.auth.uid);
+        allow create, update, delete: if false;
+      }
+      match /guestRequests/{guestId} {
+        function liveRoomHost() {
+          return signedIn()
+            && get(/databases/$(database)/documents/liveSessions/$(sessionId)).data.hostId == request.auth.uid;
+        }
+        // A guest may read only their own request; only the host may list pending requests.
+        allow get: if signedIn() && (request.auth.uid == guestId || liveRoomHost());
+        allow list: if liveRoomHost();
+        allow create, update, delete: if false;
+      }
+      match /moderation/{participantId} {
+        // Moderation history is private to the host; clients cannot forge moderation state.
+        allow get, list: if signedIn()
+          && get(/databases/$(database)/documents/liveSessions/$(sessionId)).data.hostId == request.auth.uid;
+        allow create, update, delete: if false;
+      }
+
+    }
+    match /liveSessionViewers/{viewerId} { allow read, write: if false; }
+    match /liveChatRateLimits/{rateId} { allow read, write: if false; }
+    match /creatorMembershipTiers/{tierId} {
+      allow get, list: if signedIn() && resource.data.creatorId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+    match /checkoutAttempts/{checkoutId} {
+      allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+    match /refundRequests/{refundId} {
+      allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+    match /creatorEarnings/{earningId} {
+      allow get, list: if signedIn() && resource.data.creatorId == request.auth.uid;
+      allow write: if false;
+    }
+    match /creatorPayoutBeneficiaries/{userId} { allow read, write: if false; }
+    match /creatorPayoutAuditEvents/{eventId} { allow read, write: if false; }
+    match /creatorPayoutRequests/{requestId} { allow get, list: if signedIn() && resource.data.creatorId == request.auth.uid; allow create, update, delete: if false; }
+    match /giftRiskSignals/{signalId} { allow read, write: if false; }
+    match /giftRiskReviewAudit/{eventId} { allow read, write: if false; }
+    match /giftCompetitions/{competitionId} { allow get, list: if signedIn(); allow create, update, delete: if false; }
+    match /giftCompetitionContributions/{contributionId} { allow read, write: if false; }
+    match /financialLedger/{entryId} { allow read, write: if false; }
+    match /paymentWebhookFailures/{failureId} { allow read, write: if false; }
+    match /financeAuditEvents/{eventId} { allow read, write: if false; }
+
+    // Nex Coin balances and personal transaction history are readable only by
+    // their owner. Every write is performed by trusted server transactions.
+    match /nexWallets/{userId} {
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list: if false;
+      allow create, update, delete: if false;
+
+      match /transactions/{transactionId} {
+        allow get, list: if signedIn() && request.auth.uid == userId;
+        allow create, update, delete: if false;
+      }
+    }
+    match /nexLedgerEntries/{entryId} { allow read, write: if false; }
+    match /nexLedgerTransactions/{transactionId} { allow read, write: if false; }
+    match /nexLedgerRequests/{requestId} { allow read, write: if false; }
+
+    // Live gift delivery is immutable and may only be created by the trusted callable.
+    match /giftDeliveryEvents/{eventId} {
+      allow get, list: if signedIn() && resource.data.targetType == 'live';
+      allow create, update, delete: if false;
+    }
+    // Creator gift galleries are public to signed-in Nexora members and server-managed.
+    match /users/{userId}/giftGallery/{giftId} {
+      allow get, list: if signedIn();
+      allow create, update, delete: if false;
+    }
+
+    match /pages/{pageId} {
+      allow get, list: if true;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'id', 'ownerId', 'name', 'username', 'avatar', 'coverImage', 'category',
+          'description', 'website', 'contactInfo', 'isVerified', 'followersCount',
+          'postsCount', 'videosCount', 'sparksReceived', 'joinedDate', 'createdAt'
+        ])
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.id == pageId
+        && request.resource.data.get('isVerified', false) == false
+        && request.resource.data.get('followersCount', 0) == 0
+        && request.resource.data.get('postsCount', 0) == 0
+        && request.resource.data.get('videosCount', 0) == 0
+        && request.resource.data.get('sparksReceived', 0) == 0;
+      allow update: if signedIn() && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.get('id', pageId) == pageId
+        && request.resource.data.get('isVerified', false) == resource.data.get('isVerified', false)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'username', 'avatar', 'coverImage', 'category', 'description',
+          'website', 'contactInfo', 'joinedDate', 'updatedAt'
+        ]);
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
+
+    // Booking requests are private to the customer and owning business Page.
+    // All mutations go through trusted callables; clients cannot self-approve requests.
+    match /pageBookings/{bookingId} {
+      allow get, list: if signedIn()
+        && (resource.data.customerId == request.auth.uid || resource.data.ownerId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /pages/{pageId}/channelUpdates/{updateId} {
+      allow get, list: if signedIn()
+        && (get(/databases/$(database)/documents/pages/$(pageId)).data.ownerId == request.auth.uid
+          || exists(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + pageId)));
+      allow create, update, delete: if false;
+    }
+
+    match /pages/{pageId}/services/{serviceId} {
+      allow get, list: if (resource.data.status == 'active' && resource.data.bookable == true)
+          || (signedIn() && get(/databases/$(database)/documents/pages/$(pageId)).data.ownerId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /communities/{communityId} {
+      // Private and invite-only records can include membership and moderation state.
+      // Their detailed member authorization is not implemented, so only owners may read them.
+      allow get, list: if resource.data.type == 'public'
+        || (signedIn() && resource.data.ownerId == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.id == communityId
+        && request.resource.data.type in ['public', 'private', 'invite-only']
+        && request.resource.data.keys().hasOnly(
+          request.resource.data.type == 'public' ? publicCommunityKeys() : privateCommunityKeys()
+        );
+      allow update: if signedIn() && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.get('id', communityId) == communityId
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.type in ['public', 'private', 'invite-only']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+          resource.data.type == 'public'
+            ? ['name', 'description', 'bannerImage', 'avatarImage', 'rules', 'tags', 'pinnedPosts', 'events', 'mediaLibrary']
+            : ['name', 'description', 'bannerImage', 'avatarImage', 'rules', 'tags', 'moderators', 'admins', 'bannedUsers', 'mutedUsers', 'pendingMembers', 'pinnedPosts', 'reports', 'activityLog', 'events', 'mediaLibrary']
+        );
+      allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+
+      // Circle reports contain private reporter identities and review notes.
+      match /reports/{reportId} {
+        allow read, write: if false;
+      }
+
+      // Circle ban markers contain private member IDs and are managed only by trusted callables.
+      match /bans/{memberId} {
+        allow read, write: if false;
+      }
+
+      // Membership is a per-user record. Members can read only their own record;
+      // owners can review the member list. Clients cannot assign elevated roles.
+      match /members/{memberId} {
+        function parentCommunity() {
+          return get(/databases/$(database)/documents/communities/$(communityId)).data;
+        }
+        function parentCommunityAfterWrite() {
+          return getAfter(/databases/$(database)/documents/communities/$(communityId)).data;
+        }
+        allow get: if signedIn()
+          && (request.auth.uid == memberId || parentCommunity().ownerId == request.auth.uid);
+        function activeCircleMember() {
+          return signedIn()
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+        }
+        allow list: if signedIn() && (parentCommunity().ownerId == request.auth.uid || (activeCircleMember() && resource.data.status == 'active'));
+        allow create: if signedIn()
+          && request.auth.uid == memberId
+          && request.resource.data.keys().hasOnly(['userId', 'role', 'status', 'joinedAt'])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.status == 'active'
+          && request.resource.data.joinedAt == request.time
+          && !exists(/databases/$(database)/documents/communities/$(communityId)/bans/$(request.auth.uid))
+          && (
+            (
+              request.resource.data.role == 'member'
+              && parentCommunity().type == 'public'
+              && !(request.auth.uid in parentCommunity().get('bannedUsers', []))
+            )
+            || (request.resource.data.role == 'owner' && parentCommunityAfterWrite().ownerId == request.auth.uid)
+          );
+        allow update: if false;
+        allow delete: if signedIn()
+          && (
+            (request.auth.uid == memberId && resource.data.role != 'owner')
+            || (parentCommunity().ownerId == request.auth.uid && memberId != request.auth.uid)
+          );
+      }
+
+
+      // Community feed posts are visible to active Circle members and created only by trusted callables.
+      match /posts/{postId} {
+        function activeCirclePostMember() {
+          return signedIn()
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+        }
+        allow get, list: if activeCirclePostMember();
+        allow create, update, delete: if false;
+      }
+
+      // Announcements are visible to active Circle members and managed only by trusted callables.
+      match /announcements/{announcementId} {
+        function activeCircleMember() {
+          return signedIn()
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+        }
+        allow get, list: if activeCircleMember();
+        allow create, update, delete: if false;
+      }
+
+      // Circle events and RSVP records are written only by trusted callables.
+      // Active members can read event listings and only their own RSVP marker.
+      match /events/{eventId} {
+        function activeCircleMember() {
+          return signedIn()
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+        }
+        allow get, list: if activeCircleMember();
+        allow create, update, delete: if false;
+        match /rsvps/{userId} {
+          allow get: if signedIn() && request.auth.uid == userId
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+          allow list, create, update, delete: if false;
+        }
+      }
+
+      match /messages/{messageId} {
+        function activeCircleMember() {
+          return signedIn()
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+        }
+        allow get, list: if activeCircleMember();
+        allow create: if activeCircleMember()
+          && request.resource.data.keys().hasOnly(['id', 'senderId', 'content', 'createdAt'])
+          && request.resource.data.id == messageId
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.content is string
+          && request.resource.data.content.size() > 0
+          && request.resource.data.content.size() <= 2000
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
+
+      // Poll state is readable by active members; only trusted callables can
+      // create polls, cast votes, and update aggregate counts.
+      match /polls/{pollId} {
+        function activeCircleMember() {
+          return signedIn()
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+        }
+        allow get, list: if activeCircleMember();
+        allow create, update, delete: if false;
+
+        match /votes/{userId} {
+          allow get: if signedIn() && request.auth.uid == userId
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+          allow list, create, update, delete: if false;
+        }
+      }
+    }
+
+    match /automationLogs/{logId} { allow read, write: if false; }
+
+    match /moderationReports/{reportId} {
+      allow get, list: if reviewer() || (signedIn() && resource.data.reporterId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /moderationAppeals/{appealId} {
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+    match /accountStatus/{userId} {
+      allow get: if owner(userId);
+      allow list, create, update, delete: if false;
+    }
+    match /accountEnforcements/{enforcementId} {
+      allow get, list: if signedIn() && resource.data.accountId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+    match /moderationAuditEvents/{eventId} { allow read, write: if false; }
+
+    // Account lifecycle requests are append-only client intents. Trusted operations
+    // must process them and update status outside the client security boundary.
+    match /accountLifecycleRequests/{requestId} {
+      allow get, list: if signedIn() && resource.data.requesterId == request.auth.uid;
+      allow create: if recentlyAuthenticated()
+        && request.resource.data.keys().hasOnly([
+          'type', 'requesterId', 'status', 'policyVersion', 'createdAt', 'updatedAt', 'retentionNote'
+        ])
+        && request.resource.data.type == 'delete_account'
+        && request.resource.data.requesterId == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.policyVersion == '2026-10'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.retentionNote is string
+        && request.resource.data.retentionNote.size() <= 500;
+      allow update, delete: if false;
+    }
+
+    match /worldWeaves/{weaveId} {
+      function weaveMember() {
+        return signedIn() && request.auth.uid in resource.data.get('participantIds', []);
+      }
+      function weaveOwner() {
+        return signedIn() && resource.data.get('ownerId', '') == request.auth.uid;
+      }
+      allow get, list: if signedIn()
+        && (resource.data.get('visibility', 'private') == 'public'
+          || request.auth.uid in resource.data.get('participantIds', [])
+          || (exists(/databases/$(database)/documents/worldWeaves/$(weaveId)/invites/$(request.auth.uid))
+            && get(/databases/$(database)/documents/worldWeaves/$(weaveId)/invites/$(request.auth.uid)).data.get('status', '') == 'pending'));
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'id', 'ownerId', 'ownerName', 'title', 'description', 'visibility',
+          'participantIds', 'memberCount', 'momentCount', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.id == weaveId
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerName is string
+        && request.resource.data.ownerName.size() <= 80
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 90
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 500
+        && request.resource.data.visibility in ['public', 'private']
+        && request.resource.data.participantIds == [request.auth.uid]
+        && request.resource.data.memberCount == 1
+        && request.resource.data.momentCount == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if signedIn() && (
+        (weaveOwner()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'visibility', 'updatedAt'])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 3
+          && request.resource.data.title.size() <= 90
+          && request.resource.data.description is string
+          && request.resource.data.description.size() <= 500
+          && request.resource.data.visibility in ['public', 'private']
+          && request.resource.data.updatedAt == request.time)
+
+                || (weaveMember()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt', 'momentCount', 'lastMomentId'])
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.momentCount == resource.data.get('momentCount', 0) + 1
+          && request.resource.data.lastMomentId is string
+          && request.resource.data.lastMomentId != resource.data.get('lastMomentId', '')
+          && getAfter(/databases/$(database)/documents/worldWeaves/$(weaveId)/moments/$(request.resource.data.lastMomentId)).data.get('authorId', '') == request.auth.uid
+          && getAfter(/databases/$(database)/documents/worldWeaves/$(weaveId)/moments/$(request.resource.data.lastMomentId)).data.get('createdAt', null) == request.time)
+        || (!weaveMember()
+          && resource.data.get('visibility', 'private') == 'public'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'memberCount', 'updatedAt'])
+          && resource.data.participantIds.size() < 500
+          && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid])
+          && request.resource.data.memberCount == resource.data.get('memberCount', 1) + 1
+          && request.resource.data.updatedAt == request.time)
+        || (!weaveMember()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'memberCount', 'updatedAt'])
+          && resource.data.participantIds.size() < 500
+          && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid])
+          && request.resource.data.memberCount == resource.data.get('memberCount', 1) + 1
+          && request.resource.data.updatedAt == request.time
+          && getAfter(/databases/$(database)/documents/worldWeaves/$(weaveId)/invites/$(request.auth.uid)).data.get('status', '') == 'accepted')
+      );
+      allow delete: if weaveOwner();
+
+      match /chapters/{chapterId} {
+        allow get, list: if signedIn()
+          && (get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('visibility', 'private') == 'public'
+            || request.auth.uid in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', [])
+            || request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', ''));
+        allow create, update, delete: if false;
+      }
+
+      match /activity/{eventId} {
+        // Membership activity is visible only to current contributors and the owner.
+        // Events are created exclusively by trusted Functions; clients cannot forge history.
+        allow get, list: if signedIn()
+          && (request.auth.uid in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', [])
+            || request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', ''));
+        allow create, update, delete: if false;
+      }
+
+      match /moments/{momentId} {
+        function canViewWeave() {
+          let weave = get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data;
+          return signedIn() && (weave.get('visibility', 'private') == 'public'
+            || request.auth.uid in weave.get('participantIds', []));
+        }
+        function canContribute() {
+          return signedIn()
+            && request.auth.uid in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', []);
+        }
+        allow get, list: if canViewWeave();
+        allow create: if canContribute()
+          && request.resource.data.keys().hasOnly([
+            'weaveId', 'authorId', 'authorName', 'authorUsername', 'authorAvatar',
+            'text', 'mediaType', 'mediaUrl', 'storagePath', 'createdAt', 'chapterId'
+          ])
+          && request.resource.data.weaveId == weaveId
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() <= 80
+          && request.resource.data.authorUsername is string
+          && request.resource.data.authorUsername.size() <= 40
+          && request.resource.data.authorAvatar is string
+          && request.resource.data.authorAvatar.size() <= 2048
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 2000
+          && (!request.resource.data.keys().hasAny(['chapterId'])
+            || (request.resource.data.chapterId is string
+              && exists(/databases/$(database)/documents/worldWeaves/$(weaveId)/chapters/$(request.resource.data.chapterId))
+              && get(/databases/$(database)/documents/worldWeaves/$(weaveId)/chapters/$(request.resource.data.chapterId)).data.get('archived', false) != true))
+          && ((request.resource.data.mediaType == 'text'
+              && !request.resource.data.keys().hasAny(['mediaUrl', 'storagePath']))
+            || (request.resource.data.mediaType in ['image', 'video', 'audio']
+              && request.resource.data.get('mediaUrl', '') is string
+              && request.resource.data.mediaUrl.size() <= 2048
+              && request.resource.data.get('storagePath', '') is string
+              && request.resource.data.storagePath.matches('^users/' + request.auth.uid + '/media/.*')))
+          && request.resource.data.createdAt == request.time;
+        match /reactions/{userId} {
+          // Reactions are visible only to current contributors; writes go through
+          // the trusted callable so per-user uniqueness and aggregate counts stay atomic.
+          allow get, list: if canContribute();
+          allow create, update, delete: if false;
+        }
+
+        match /replies/{replyId} {
+          // Reply reads are member-only. Creation/deletion and replyCount changes
+          // are committed by trusted callables, never by client-authored counters.
+          allow get, list: if canContribute();
+          allow create, update, delete: if false;
+        }
+
+        allow update: if false;
+        allow delete: if signedIn()
+          && (resource.data.authorId == request.auth.uid
+            || get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', '') == request.auth.uid);
+      }
+
+      match /invites/{inviteeId} {
+        allow get, list: if signedIn()
+          && (request.auth.uid == inviteeId
+            || request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', ''));
+        allow create: if signedIn()
+          && request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', '')
+          && inviteeId == request.resource.data.inviteeId
+          && inviteeId != request.auth.uid
+          && !(inviteeId in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', []))
+          && request.resource.data.keys().hasOnly(['weaveId', 'inviteeId', 'invitedBy', 'ownerName', 'weaveTitle', 'status', 'createdAt'])
+          && request.resource.data.weaveId == weaveId
+          && request.resource.data.invitedBy == request.auth.uid
+          && request.resource.data.ownerName is string
+          && request.resource.data.ownerName.size() <= 80
+          && request.resource.data.weaveTitle is string
+          && request.resource.data.weaveTitle.size() >= 3
+          && request.resource.data.weaveTitle.size() <= 90
+          && request.resource.data.status == 'pending'
+          && request.resource.data.createdAt == request.time;
+        allow update: if signedIn() && request.auth.uid == inviteeId
+          && resource.data.get('status', '') == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'acceptedAt'])
+          && request.resource.data.status == 'accepted'
+          && request.resource.data.acceptedAt == request.time;
+        allow delete: if signedIn()
+          && (request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', '')
+            || (request.auth.uid == inviteeId && resource.data.get('status', '') == 'pending'));
+      }
+    }
+
+    match /{path=**}/invites/{inviteId} {
+      allow list: if signedIn() && resource.data.get('inviteeId', '') == request.auth.uid;
+    }
+
+    match /privacySettings/{userId} { allow read, write: if owner(userId); }
+
+    // Chats can be discovered only by participant-filtered queries and read only by participants.
+    // Search projections are written and queried only by trusted server code.
+    // Clients cannot enumerate, mutate, or bypass visibility checks on this index.
+    match /searchIndex/{searchDocumentId} { allow read, write: if false; }
+
+    match /chats/{chatId} {
+      allow get, list: if signedIn() && request.auth.uid in resource.data.participants;
+      // Clients may open direct conversations only. Group membership is created
+      // by the trusted callable after validating every invited account's privacy.
+      allow create: if accountMayMessage()
+        && request.resource.data.participants is list
+        && request.resource.data.participants.size() == 2
+        && request.resource.data.participants[0] != request.resource.data.participants[1]
+        && request.auth.uid in request.resource.data.participants
+        && request.resource.data.get('isGroup', false) != true
+        && recipientAllowsNewChat();
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.participants
+        && request.resource.data.participants == resource.data.participants
+        && recipientAllowsMessage(chatId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'lastTimestamp', 'unreadCount', 'updatedAt'])
+        && (!request.resource.data.keys().hasAny(['lastMessage'])
+          || (request.resource.data.lastMessage is string && request.resource.data.lastMessage.size() <= 10000))
+        && (!request.resource.data.keys().hasAny(['lastTimestamp'])
+          || (request.resource.data.lastTimestamp is string && request.resource.data.lastTimestamp.size() <= 40))
+        && (!request.resource.data.keys().hasAny(['unreadCount'])
+          || (request.resource.data.unreadCount is int && request.resource.data.unreadCount >= 0 && request.resource.data.unreadCount <= 10000));
+      allow delete: if signedIn()
+        && request.auth.uid in resource.data.participants
+        && (resource.data.get('isGroup', false) != true || resource.data.get('ownerId', '') == request.auth.uid);
+
+      match /messages/{messageId} {
+        allow get, list: if chatMember(chatId);
+        allow create: if chatMember(chatId) && accountMayMessage() && recipientAllowsMessage(chatId) && validMessageCreate(chatId, messageId);
+        function validGroupReceiptUpdate() {
+          let chat = get(/databases/$(database)/documents/chats/$(chatId)).data;
+          let previousReceipts = resource.data.get('recipientReceipts', {});
+          let nextReceipts = request.resource.data.get('recipientReceipts', {});
+          let previousReceipt = previousReceipts.get(request.auth.uid, {});
+          let nextReceipt = nextReceipts.get(request.auth.uid, {});
+          return chat.get('isGroup', false) == true
+            && resource.data.senderId != request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipientReceipts'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['recipientReceipts'])
+            && nextReceipts.diff(previousReceipts).affectedKeys().hasOnly([request.auth.uid])
+            && nextReceipts.diff(previousReceipts).affectedKeys().hasAny([request.auth.uid])
+            && nextReceipt.keys().hasOnly(['status', 'updatedAt'])
+            && nextReceipt.get('status', '') in ['delivered', 'read']
+            && nextReceipt.get('updatedAt', null) == request.time
+            && (previousReceipt.get('status', '') != 'read' || nextReceipt.status == 'read');
+        }
+        function validMessageReactionUpdate() {
+          let previousUsers = resource.data.get('reactionUsers', {});
+          let nextUsers = request.resource.data.get('reactionUsers', {});
+          let ownReactions = nextUsers.get(request.auth.uid, []);
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactionUsers'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['reactionUsers'])
+            && nextUsers.diff(previousUsers).affectedKeys().hasOnly([request.auth.uid])
+            && nextUsers.diff(previousUsers).affectedKeys().hasAny([request.auth.uid])
+            && ownReactions is list
+            && ownReactions.size() <= 12
+            && ownReactions.hasOnly([
+              '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '🥹', '😊', '😇', '🙂',
+              '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮',
+              '🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '❤️'
+            ]);
+        }
+        allow update: if chatMember(chatId) && (
+          validMessageReactionUpdate()
+          || (
+            get(/databases/$(database)/documents/chats/$(chatId)).data.get('isGroup', false) != true
+            && resource.data.senderId != request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+            && request.resource.data.status in ['delivered', 'read']
+          )
+          || validGroupReceiptUpdate()
+        );
+        allow delete: if chatMember(chatId) && resource.data.senderId == request.auth.uid;
+      }
+    match /presence/{userId} {
+        allow get: if chatMember(chatId);
+        allow list: if false;
+        allow create, update: if chatMember(chatId)
+          && userId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['isOnline', 'lastActive'])
+          && request.resource.data.isOnline is bool
+          && request.resource.data.lastActive == request.time;
+        allow delete: if chatMember(chatId) && userId == request.auth.uid;
+      }
+      match /typing/{typingId} {
+        allow read, list: if chatMember(chatId);
+        allow create, update: if chatMember(chatId) && typingId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['state', 'updatedAt'])
+          && request.resource.data.state in ['typing', 'recording', 'uploading', null]
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if chatMember(chatId) && typingId == request.auth.uid;
+      }
+    }
+
+    // Legacy root messages are not used by the current client; deny until migrated to participant-bound chats.
+    match /messages/{messageId} { allow read, write: if false; }
+
+    match /presence/{userId} {
+      allow get: if owner(userId);
+      allow list: if false;
+      allow create, update: if owner(userId)
+        && request.resource.data.keys().hasOnly(['isOnline', 'lastActive'])
+        && request.resource.data.isOnline is bool
+        && request.resource.data.lastActive == request.time;
+      allow delete: if owner(userId);
+    }
+  }
+}
+)
+        && exists(assetPath)
+        && get(assetPath).data.ownerId == request.auth.uid;
+    }
     function publicPost(data) {
       return data.get('audience', '') == 'public';
     }
