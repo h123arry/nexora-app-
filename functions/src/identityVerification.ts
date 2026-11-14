@@ -1,9 +1,12 @@
+import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import {
   canReviewIdentityApplication,
   canSubmitIdentityApplication,
+  normalizeIdentityEvidenceUrl,
+  normalizeIdentityName,
   validateIdentityApplicationInput,
 } from './identityVerificationPolicy.js';
 
@@ -41,6 +44,36 @@ export const submitIdentityVerificationApplication = onCall({ maxInstances: 10 }
   try { input = validateIdentityApplicationInput(request.data || {}); }
   catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Invalid identity application.'); }
 
+  // Duplicate-name and shared-evidence matches are advisory reviewer signals only.
+  // They never auto-reject an applicant because organizations and public figures can share official sources.
+  const identityNameKey = normalizeIdentityName(input.displayName);
+  const evidenceUrlHashes = input.evidenceUrls.map(url =>
+    createHash('sha256').update(normalizeIdentityEvidenceUrl(url)).digest('hex')
+  );
+  const nameMatches = await db.collection('identityVerificationApplications')
+    .where('identityNameKey', '==', identityNameKey)
+    .limit(100)
+    .get();
+  const evidenceMatches = await Promise.all(evidenceUrlHashes.map(hash =>
+    db.collection('identityVerificationApplications')
+      .where('evidenceUrlHashes', 'array-contains', hash)
+      .limit(100)
+      .get()
+  ));
+  const activeApplication = (status: unknown) => status === 'approved' || status === 'pending_review';
+  const nameCollisionCount = nameMatches.docs.filter(document =>
+    document.id !== uid && activeApplication(document.get('status'))
+  ).length;
+  const duplicateEvidenceLinkCount = evidenceUrlHashes.filter((hash, index) =>
+    evidenceMatches[index].docs.some(document => document.id !== uid && activeApplication(document.get('status')))
+  ).length;
+  const reviewSignals = {
+    possibleNameCollision: nameCollisionCount > 0,
+    nameCollisionCount,
+    duplicateEvidenceLinkCount,
+    evidenceScanMayBeIncomplete: evidenceMatches.some(snapshot => snapshot.size === 100) || nameMatches.size === 100,
+  };
+
   const applicationRef = db.collection('identityVerificationApplications').doc(uid);
   const auditRef = db.collection('identityVerificationAuditEvents').doc();
   const version = await db.runTransaction(async transaction => {
@@ -55,6 +88,9 @@ export const submitIdentityVerificationApplication = onCall({ maxInstances: 10 }
       id: uid,
       userId: uid,
       ...input,
+      identityNameKey,
+      evidenceUrlHashes,
+      reviewSignals,
       status: 'pending_review',
       version: nextVersion,
       reviewNote: '',
@@ -103,6 +139,7 @@ export const listIdentityVerificationApplications = onCall({ maxInstances: 10 },
         displayName: data.displayName,
         evidenceSummary: data.evidenceSummary,
         evidenceUrls: data.evidenceUrls,
+        reviewSignals: data.reviewSignals || null,
         version: data.version,
         submittedAt: data.submittedAt?.toDate?.()?.toISOString?.() || null,
       };
