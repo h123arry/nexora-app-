@@ -59,3 +59,20 @@ test('impersonation escalation requires three independent reporters', async () =
   assert.equal(shouldOpenImpersonationCase(4), true);
   assert.equal(shouldOpenImpersonationCase(2.5), false);
 });
+
+test('impersonation case holds and resolution require the correct case state', async () => {
+  const { canApplyIdentityImpersonationDecision, isSeniorIdentityImpersonationDecision } = await import('../src/identityVerificationPolicy.ts');
+  assert.equal(canApplyIdentityImpersonationDecision('dismiss', 'open'), true);
+  assert.equal(canApplyIdentityImpersonationDecision('dismiss', 'on_hold'), false);
+  assert.equal(canApplyIdentityImpersonationDecision('place_on_hold', 'open'), true);
+  assert.equal(canApplyIdentityImpersonationDecision('place_on_hold', 'dismissed'), false);
+  assert.equal(canApplyIdentityImpersonationDecision('clear_hold', 'on_hold'), true);
+  assert.equal(canApplyIdentityImpersonationDecision('clear_hold', 'open'), false);
+  assert.equal(canApplyIdentityImpersonationDecision('confirm_impersonation', 'open'), true);
+  assert.equal(canApplyIdentityImpersonationDecision('confirm_impersonation', 'on_hold'), true);
+  assert.equal(canApplyIdentityImpersonationDecision('confirm_impersonation', 'cleared'), false);
+  assert.equal(isSeniorIdentityImpersonationDecision('dismiss'), false);
+  assert.equal(isSeniorIdentityImpersonationDecision('place_on_hold'), true);
+  assert.equal(isSeniorIdentityImpersonationDecision('clear_hold'), true);
+  assert.equal(isSeniorIdentityImpersonationDecision('confirm_impersonation'), true);
+});
