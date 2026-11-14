@@ -29,18 +29,24 @@ function decodeCursor(value: unknown, query: string): DiscoveryCursor | null {
   try {
     const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as Partial<DiscoveryCursor>;
     if (parsed.v !== 1 || parsed.query !== query || typeof parsed.id !== 'string'
-      || !ID_PATTERN.test(parsed.id) || typeof parsed.updatedAtMs !== 'number'
-      || !Number.isFinite(parsed.updatedAtMs) || parsed.updatedAtMs < 0) throw new Error('invalid');
+      || !ID_PATTERN.test(parsed.id) || !Number.isInteger(parsed.updatedAtSeconds)
+      || (parsed.updatedAtSeconds as number) < 0 || !Number.isInteger(parsed.updatedAtNanoseconds)
+      || (parsed.updatedAtNanoseconds as number) < 0 || (parsed.updatedAtNanoseconds as number) >= 1000000000) throw new Error('invalid');
     return parsed as DiscoveryCursor;
   } catch {
     throw new HttpsError('invalid-argument', 'The WorldWeave discovery cursor is invalid. Restart discovery.');
   }
 }
 function encodeCursor(query: string, snapshot: FirebaseFirestore.QueryDocumentSnapshot): string {
+  const updatedAt = snapshot.get('updatedAt');
+  const timestamp = updatedAt instanceof Timestamp
+    ? updatedAt
+    : Timestamp.fromDate(dateOf(updatedAt));
   return Buffer.from(JSON.stringify({
     v: 1,
     query,
-    updatedAtMs: dateOf(snapshot.get('updatedAt')).getTime(),
+    updatedAtSeconds: timestamp.seconds,
+    updatedAtNanoseconds: timestamp.nanoseconds,
     id: snapshot.id,
   } satisfies DiscoveryCursor)).toString('base64url');
 }
