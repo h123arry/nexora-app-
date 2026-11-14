@@ -32,6 +32,8 @@ export default function SettingsView({
   const [settingsError, setSettingsError] = useState('');
   const [settingsReady, setSettingsReady] = useState(false);
   const [soundPreferences, setSoundPreferences] = useState<SoundPreferences>(() => readSoundPreferences());
+  const [revokingSessions, setRevokingSessions] = useState(false);
+  const [sessionRevokeError, setSessionRevokeError] = useState('');
   const [linkedProviders, setLinkedProviders] = useState<string[]>(() => AuthService.getLinkedProviders());
   const [linkingGoogle, setLinkingGoogle] = useState(false);
   const [linkedAccountMessage, setLinkedAccountMessage] = useState('');
@@ -74,6 +76,21 @@ export default function SettingsView({
   const togglePrivacy = (key: 'isPrivateAccount' | 'allowDms', value: boolean) => {
     if (key === 'isPrivateAccount') setIsPrivateAccount(value); else setAllowDms(value);
     void saveSetting(key, () => SettingsService.updatePrivacy(currentUser.id, { [key]: value }));
+  };
+
+  const revokeAllSessions = async () => {
+    if (revokingSessions) return;
+    const confirmed = typeof window !== 'undefined'
+      && window.confirm('Revoke sign-in sessions for every device? This device will also sign out, and other devices will need to sign in again when their current ID token expires.');
+    if (!confirmed) return;
+    setRevokingSessions(true);
+    setSessionRevokeError('');
+    try {
+      await AuthService.revokeAllSessions();
+    } catch (error) {
+      setSessionRevokeError(error instanceof Error ? error.message : 'Sessions could not be revoked. Please try again.');
+      setRevokingSessions(false);
+    }
   };
 
   const connectGoogleAccount = async () => {
@@ -341,7 +358,15 @@ export default function SettingsView({
           {activeSection === 'security' && (
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Security</h3>
-              <p className="text-xs text-zinc-400">Two-factor authentication and active-session management are not enabled from this screen. Your sign-in provider remains responsible for authentication security.</p>
+              <p className="text-xs text-zinc-400">Two-factor authentication is not enabled in NEXORA yet. You can revoke refresh-token sessions below. This device signs out immediately; other devices must reauthenticate when their current ID token expires.</p>
+              <div className="rounded-2xl border border-white/5 bg-white/5 p-4">
+                <p className="text-xs font-bold text-white">Session control</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">Use this if a device is lost or you suspect someone else has access. Recent authentication is required.</p>
+                <button type="button" disabled={revokingSessions} onClick={() => void revokeAllSessions()} className="mt-3 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-2.5 text-[11px] font-semibold text-rose-200 disabled:opacity-50">
+                  {revokingSessions ? 'Revoking sessions…' : 'Revoke all sessions'}
+                </button>
+                {sessionRevokeError && <p role="alert" className="mt-2 text-[11px] text-rose-300">{sessionRevokeError}</p>}
+              </div>
             </div>
           )}
 
