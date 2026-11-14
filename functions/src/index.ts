@@ -2,6 +2,7 @@ import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/fire
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
+import { revokeAllSessions } from './accountSecurity.js';
 import { FieldPath, getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
 import { createPublicPostRepost } from './postReposts.js';
@@ -1034,3 +1035,5 @@ export const recordDailySession = onCall({ maxInstances: 10 }, async request => 
     throw new HttpsError('internal', 'Your session could not be recorded. Please try again.');
   }
 });
+
+export { revokeAllSessions };
