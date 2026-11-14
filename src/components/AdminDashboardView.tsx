@@ -402,7 +402,7 @@ export default function AdminDashboardView({
         </button>
 
         <button 
-          onClick={() => setActiveSubTab('analytics')
+          onClick={() => setActiveSubTab('analytics')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'analytics' ? 'bg-violet-600 border border-white/10 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
         >
           <BarChart2 className="w-3.5 h-3.5" />
