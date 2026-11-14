@@ -29,6 +29,8 @@ The repository README correctly identifies staging multi-account verification an
 ## Delivery sequence
 
 ### WW-1 — Collaboration and membership integrity
+
+Implementation contract: [WorldWeave Membership V2 migration design](./WORLDWEAVE_MEMBERSHIP_V2_MIGRATION.md). The design defines the compatibility window, deterministic backfill, versioned authorization, member lifecycle invariants, audit trail, rollback, and release gates. It is a design artifact only; it does not authorize production migration.
 - Replace growth-sensitive parent-document membership arrays with a scalable membership subcollection while retaining a compatibility reader during migration.
 - Introduce explicit owner/contributor roles and trusted role-change operations. The owner cannot accidentally remove the final owner.
 - Add contributor leave, owner-controlled removal, and safe ownership handover. Prevent an owner from leaving without transferring ownership or closing the experience.
