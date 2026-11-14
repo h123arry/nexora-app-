@@ -8,6 +8,7 @@ import { functions } from '../../lib/firebase';
 import { uploadMediaFile } from './storageService';
 
 export type WorldWeaveVisibility = 'public' | 'private';
+export const MAX_WORLDWEAVE_MEMBERS = 500;
 export interface WorldWeave {
   id: string; ownerId: string; ownerName: string; title: string; description: string;
   visibility: WorldWeaveVisibility; participantIds: string[]; memberCount: number;
@@ -80,26 +81,35 @@ export async function joinPublicWorldWeave(weaveId: string): Promise<WorldWeave>
       throw new Error('This public WorldWeave is no longer available.');
     }
     const data = snapshot.data();
-    const alreadyJoined = (data.participantIds || []).includes(user.uid);
+    const participantIds: string[] = Array.isArray(data.participantIds) ? data.participantIds : [];
+    const alreadyJoined = participantIds.includes(user.uid);
+    if (!alreadyJoined && participantIds.length >= MAX_WORLDWEAVE_MEMBERS) throw new Error('This WorldWeave has reached its contributor limit.');
     if (!alreadyJoined) transaction.update(weaveRef, {
       participantIds: arrayUnion(user.uid), memberCount: increment(1), updatedAt: serverTimestamp(),
     });
-    return { ...data, id: weaveId, participantIds: [...(data.participantIds || []), ...(alreadyJoined ? [] : [user.uid])],
-      memberCount: (data.memberCount || 1) + (alreadyJoined ? 0 : 1) } as WorldWeave;
+    return { ...data, id: weaveId, participantIds: [...participantIds, ...(alreadyJoined ? [] : [user.uid])],
+      memberCount: participantIds.length + (alreadyJoined ? 0 : 1) } as WorldWeave;
   });
 }
 export async function inviteToWorldWeave(weaveId: string, inviteeId: string): Promise<void> {
   const user = requireUser();
   if (!inviteeId || inviteeId === user.uid) throw new Error('Choose another NEXORA member to invite.');
-  const weaveSnapshot = await getDoc(doc(db, 'worldWeaves', weaveId));
-  if (!weaveSnapshot.exists()) throw new Error('This WorldWeave no longer exists.');
-  const weave = weaveSnapshot.data();
-  if (weave.ownerId !== user.uid) throw new Error('Only the WorldWeave owner can invite contributors.');
-  if ((weave.participantIds || []).includes(inviteeId)) throw new Error('That member is already contributing.');
+  const weaveRef = doc(db, 'worldWeaves', weaveId);
   const inviteRef = doc(db, 'worldWeaves', weaveId, 'invites', inviteeId);
-  if ((await getDoc(inviteRef)).exists()) throw new Error('An invitation already exists for this member.');
-  await setDoc(inviteRef, { weaveId, inviteeId, invitedBy: user.uid, ownerName: weave.ownerName,
-    weaveTitle: weave.title, status: 'pending', createdAt: serverTimestamp() });
+  await runTransaction(db, async transaction => {
+    const [weaveSnapshot, inviteSnapshot] = await Promise.all([
+      transaction.get(weaveRef), transaction.get(inviteRef),
+    ]);
+    if (!weaveSnapshot.exists()) throw new Error('This WorldWeave no longer exists.');
+    const weave = weaveSnapshot.data();
+    if (weave.ownerId !== user.uid) throw new Error('Only the WorldWeave owner can invite contributors.');
+    const participantIds: string[] = Array.isArray(weave.participantIds) ? weave.participantIds : [];
+    if (participantIds.includes(inviteeId)) throw new Error('That member is already contributing.');
+    if (participantIds.length >= MAX_WORLDWEAVE_MEMBERS) throw new Error('This WorldWeave has reached its contributor limit.');
+    if (inviteSnapshot.exists()) throw new Error('An invitation already exists for this member.');
+    transaction.set(inviteRef, { weaveId, inviteeId, invitedBy: user.uid, ownerName: String(weave.ownerName || '').slice(0, 80),
+      weaveTitle: String(weave.title || '').slice(0, 90), status: 'pending', createdAt: serverTimestamp() });
+  });
 }
 export function subscribeToWorldWeaveInvites(weaveId: string, onItems: (items: WorldWeaveInvite[]) => void, onError: (error: Error) => void): Unsubscribe {
   requireUser();
@@ -134,13 +144,15 @@ export async function acceptWorldWeaveInvite(weaveId: string): Promise<WorldWeav
       throw new Error('This WorldWeave invitation is no longer available.');
     }
     const data = weave.data();
-    const alreadyJoined = (data.participantIds || []).includes(user.uid);
+    const participantIds: string[] = Array.isArray(data.participantIds) ? data.participantIds : [];
+    const alreadyJoined = participantIds.includes(user.uid);
+    if (!alreadyJoined && participantIds.length >= MAX_WORLDWEAVE_MEMBERS) throw new Error('This WorldWeave has reached its contributor limit.');
     transaction.update(inviteRef, { status: 'accepted', acceptedAt: serverTimestamp() });
     if (!alreadyJoined) {
       transaction.update(weaveRef, { participantIds: arrayUnion(user.uid), memberCount: increment(1), updatedAt: serverTimestamp() });
     }
-    return { ...data, id: weave.id, participantIds: [...(data.participantIds || []), ...(alreadyJoined ? [] : [user.uid])],
-      memberCount: (data.memberCount || 1) + (alreadyJoined ? 0 : 1) } as WorldWeave;
+    return { ...data, id: weave.id, participantIds: [...participantIds, ...(alreadyJoined ? [] : [user.uid])],
+      memberCount: participantIds.length + (alreadyJoined ? 0 : 1) } as WorldWeave;
   });
 }
 export async function declineWorldWeaveInvite(weaveId: string): Promise<void> {
