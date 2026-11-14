@@ -209,7 +209,6 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         cloudRevisionRef.current,
         setCloudProgress,
         controller.signal,
-        originRemixPolicy,
       );
       cloudRevisionRef.current = result.revision;
       setCloudConflict(false);
@@ -1159,6 +1158,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         caption,
         progress => setUploadProgress(Math.min(100, Math.max(0, Number.isFinite(progress) ? progress : 0))),
         controller.signal,
+        originRemixPolicy,
       );
       setUploadProgress(100);
       setMessage('Your Studio video has been published.');
