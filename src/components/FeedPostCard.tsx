@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { getMotionPreset } from '../utils/motionPresets';
 import { 
   Zap, Repeat, Quote, MessageCircle, Bookmark, Play, Pause, Volume2, Send, 
-  Globe, CheckCircle, MoreHorizontal, EyeOff, FolderPlus, ShieldAlert, 
+  Globe, CheckCircle, MoreHorizontal, EyeOff, FolderPlus, ShieldAlert, GitBranch, 
   Edit2, UserPlus, VolumeX, Pin, BookOpen, Archive, Trash, Sparkles, 
   BarChart2, Sliders, X, Check
 } from 'lucide-react';
@@ -12,6 +12,7 @@ import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraImagePlayer from './NexoraImagePlayer';
 import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
+import OriginAttributionViewer from './OriginAttributionViewer';
 
 interface FeedPostCardProps {
   post: Post;
@@ -120,6 +121,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   const cardRef = useRef<HTMLDivElement | null>(null);
   const impressionTimerRef = useRef<number | null>(null);
   const impressionRecordedRef = useRef(false);
+  const [showOriginViewer, setShowOriginViewer] = useState(false);
 
   useEffect(() => {
     const target = cardRef.current;
@@ -435,6 +437,19 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                       Copy Link
                     </button>
 
+                    {post.mediaAssetId && post.audience === 'public' && (
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setShowOriginViewer(true);
+                          setActiveDotsMenuPostId(null);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-200 flex items-center gap-2 text-xs transition-colors cursor-pointer border-t border-white/5"
+                      >
+                        <GitBranch className="w-3.5 h-3.5 shrink-0" />
+                        View NEXORA Origin
+                      </button>
+                    )}
                     <button
                       role="menuitem"
                       onClick={() => {
@@ -770,6 +785,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           </div>
         )
       )}
+      {showOriginViewer && <OriginAttributionViewer postId={post.id} onClose={() => setShowOriginViewer(false)} />}
     </div>
   );
 };
