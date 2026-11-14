@@ -585,8 +585,9 @@ const publicProfile = (uid) => ({
       timestamp: new Date().toISOString()
     }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { lastMessage: 'blocked sender metadata' }));
-    await assertSucceeds(setDoc(doc(dbFor('bob'), 'chats', 'chat-1', 'messages', 'm-from-blocker'), {
-      id: 'm-from-blocker', chatId: 'chat-1', senderId: 'bob', content: 'blocker can still send', status: 'sent',
+    // Blocking is mutual: the blocker cannot bypass the restriction by reversing sender/recipient.
+    await assertFails(setDoc(doc(dbFor('bob'), 'chats', 'chat-1', 'messages', 'm-from-blocker'), {
+      id: 'm-from-blocker', chatId: 'chat-1', senderId: 'bob', content: 'blocker cannot send in reverse', status: 'sent',
       timestamp: new Date().toISOString()
     }));
     await seed(async (db) => {
