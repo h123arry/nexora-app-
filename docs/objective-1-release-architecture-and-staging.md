@@ -146,3 +146,25 @@ The workflow creates the Artifact Registry Docker repository `nexora` in `europe
 ### External cloud prerequisites
 
 The owner must enable Artifact Registry, Cloud Run, and required Firebase APIs; create the runtime service account; grant its least-privilege data access; and configure the WIF provider/deployer identity. The workflow does not create a Firebase project, billing account, DNS record, Apple/Google store account, or signing credential.
+
+## 11. Private media worker and Eventarc staging delivery
+
+The staging deployment also builds and deploys the existing `services/media-worker` as a separate private Cloud Run service:
+
+- Worker container: Node.js 22 + FFmpeg + Sharp.
+- Startup: Functions Framework HTTP target `processMedia` on port 8080.
+- Cloud Run service: `nexora-media-worker`, private ingress, no unauthenticated invocation, 2 vCPU / 4 GiB, one concurrent media job per instance, 900-second request timeout, maximum three instances.
+- Runtime environment: staging project ID, exact `MEDIA_BUCKET`, and configured `FIRESTORE_DATABASE_ID`.
+- Eventarc trigger: `nexora-media-staging-finalized`, filtering `google.cloud.storage.object.v1.finalized` for the staging bucket. Its location must match the bucket's region or multi-region, while the destination Cloud Run service can remain in `europe-west1`.
+
+The media worker now has its own committed npm lockfile and uses `npm ci --omit=dev` in its container build. The native/container CI runs its policy tests and builds its image.
+
+### Additional protected GitHub Environment variables
+
+- `MEDIA_BUCKET_LOCATION`: exact Cloud Storage bucket location, for example `europe-west1` or `EU`; it must match the bucket.
+- `GCP_STAGING_MEDIA_RUNTIME_SERVICE_ACCOUNT`: dedicated Cloud Run worker runtime identity.
+- `GCP_STAGING_EVENTARC_SERVICE_ACCOUNT`: dedicated identity used by the Eventarc trigger to invoke the private worker.
+
+The media runtime identity needs Firestore access and bucket-scoped object read/create permissions for source and `processed/**` outputs. The Eventarc identity needs `roles/eventarc.eventReceiver` and `roles/run.invoker` on the worker. The Cloud Storage service agent needs `roles/pubsub.publisher` for Eventarc's transport. The WIF deployer needs permission to deploy Cloud Run and create the Eventarc trigger. Do not grant project Owner to runtime identities.
+
+The workflow creates the trigger only if it does not already exist. Eventarc event filters are immutable after creation; if the bucket or source location changes, remove and recreate the trigger deliberately. The worker is not exposed publicly. A real upload, Eventarc delivery, rendition verification, duplicate-event check, and playback from a second account remain staging acceptance tests after provisioning.
