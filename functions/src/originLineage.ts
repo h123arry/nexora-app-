@@ -1,7 +1,8 @@
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { assertSameAccountRemixSources, buildRemixLineageRecord } from './originLineagePolicy.js';
+import { buildRemixLineageRecord } from './originLineagePolicy.js';
+import { assertCrossAccountOriginSourceAccess } from './originSourceAccess.js';
 import { canRemixOrigin } from './originPermissionPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
@@ -60,15 +61,15 @@ export const recordMyRemixLineage = onCall({ maxInstances: 20 }, async request =
         || !['uploaded', 'ready'].includes(String(parentAssets[index]?.status)))) {
         throw new HttpsError('failed-precondition', 'Every source must be an existing, processed NEXORA media asset.');
       }
-      // Fail closed: this callable currently has no canonical asset-to-post
-      // visibility link, so it cannot safely evaluate private posts, deleted
-      // posts, or both-direction account blocks. Do not treat creator opt-in as
-      // a substitute for those independent access checks.
+      // Same-account assets remain owner-controlled. Cross-account sources must
+      // resolve to a unique public post and pass authoritative two-way block checks.
       try {
-        assertSameAccountRemixSources({
-          derivativeOwnerUid: uid,
-          sourceOwnerUids: parents.map(parent => String(parent?.ownerUid ?? '')),
-        });
+        for (let index = 0; index < parents.length; index += 1) {
+          const sourceOwnerUid = String(parents[index]?.ownerUid ?? '');
+          if (sourceOwnerUid !== uid) await assertCrossAccountOriginSourceAccess(db, transaction, {
+            derivativeOwnerUid: uid, sourceOwnerUid, sourceAssetId: parentAssetIds[index],
+          });
+        }
       } catch (error) {
         throw new HttpsError('permission-denied', error instanceof Error ? error.message : 'Source access could not be verified.');
       }
