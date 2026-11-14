@@ -44,6 +44,9 @@ describe('verification authority rules', () => {
       await setDoc(doc(adminDb, 'verifiedIdentities', 'alice'), {
         userId: 'alice', status: 'verified', identityType: 'creator', displayName: 'Alice Creator',
       });
+      await setDoc(doc(adminDb, 'verifiedIdentities', 'charlie'), {
+        userId: 'charlie', status: 'under_review', identityType: 'creator', displayName: 'Charlie Creator',
+      });
     });
 
     const db = env.authenticatedContext('alice', {
@@ -72,6 +75,7 @@ describe('verification authority rules', () => {
     await assertFails(setDoc(doc(db, 'identityVerificationApplications', 'charlie'), { userId: 'charlie', status: 'approved' }));
     await assertFails(updateDoc(doc(db, 'verifiedIdentities', 'alice'), { status: 'revoked' }));
     await assertSucceeds(getDoc(doc(db, 'verifiedIdentities', 'alice')));
+    await assertFails(getDoc(doc(db, 'verifiedIdentities', 'charlie')));
     await assertSucceeds(updateDoc(doc(db, 'publicProfiles', 'alice'), { name: 'Alice Updated' }));
   });
 });
