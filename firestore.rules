@@ -1278,6 +1278,15 @@ service cloud.firestore {
       );
       allow delete: if weaveOwner();
 
+      match /activity/{eventId} {
+        // Membership activity is visible only to current contributors and the owner.
+        // Events are created exclusively by trusted Functions; clients cannot forge history.
+        allow get, list: if signedIn()
+          && (request.auth.uid in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', [])
+            || request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', ''));
+        allow create, update, delete: if false;
+      }
+
       match /moments/{momentId} {
         function canViewWeave() {
           let weave = get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data;
