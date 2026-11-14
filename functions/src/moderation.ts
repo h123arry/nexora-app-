@@ -121,11 +121,13 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
         if (existingCase.exists) {
           if (existingCase.get('status') === 'open') transaction.update(caseRef, {
             independentReportCount: recentSignals.size,
+            reportIds: recentSignals.docs.map(signal => signal.get('reportId')).filter((id): id is string => typeof id === 'string'),
             updatedAt: FieldValue.serverTimestamp(),
           });
           else if (existingCase.get('status') === 'dismissed') transaction.update(caseRef, {
             status: 'open',
             independentReportCount: recentSignals.size,
+            reportIds: recentSignals.docs.map(signal => signal.get('reportId')).filter((id): id is string => typeof id === 'string'),
             reopenedAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp(),
             reviewerId: FieldValue.delete(),
@@ -139,6 +141,7 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
           status: 'open',
           category: 'impersonation',
           independentReportCount: recentSignals.size,
+          reportIds: recentSignals.docs.map(signal => signal.get('reportId')).filter((id): id is string => typeof id === 'string'),
           hasVerifiedIdentity: verified.exists && verified.get('status') === 'verified',
           verifiedDisplayName: verified.exists ? verified.get('displayName') || null : null,
           openedAt: FieldValue.serverTimestamp(),
