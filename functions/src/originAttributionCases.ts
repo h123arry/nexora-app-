@@ -140,11 +140,22 @@ export const getMyOriginAttributionPreview = onCall({ maxInstances: 10 }, async 
   if (!origin.exists || origin.get('ownerUid') !== uid) {
     throw new HttpsError('permission-denied', 'Only the asset owner can preview its attribution.');
   }
-  if (!event.exists) return { assetId, hasLineage: false, attribution: [] };
+  const allowedCredentialStates = new Set(['absent', 'verified', 'untrusted', 'invalid', 'unsupported', 'pending']);
+  const storedCredentialState = origin.get('credentialState');
+  const credentialState = typeof storedCredentialState === 'string' && allowedCredentialStates.has(storedCredentialState)
+    ? storedCredentialState
+    : 'pending';
+  const storedCodes = origin.get('credentialInspection')?.validationCodes;
+  const credentialValidationCodes = Array.isArray(storedCodes)
+    ? [...new Set(storedCodes.filter((code: unknown) => typeof code === 'string' && /^[A-Za-z0-9._-]{1,128}$/.test(code)))].slice(0, 20)
+    : [];
+  if (!event.exists) return { assetId, hasLineage: false, attribution: [], credentialState, credentialValidationCodes };
   const entries = event.get('parentAttribution');
   return {
     assetId,
     hasLineage: true,
+    credentialState,
+    credentialValidationCodes,
     attribution: Array.isArray(entries) ? entries.map((entry: any) => ({
       sourceAssetId: String(entry.sourceAssetId || ''),
       creatorUid: String(entry.creatorUid || ''),
