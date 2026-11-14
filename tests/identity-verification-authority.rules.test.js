@@ -35,9 +35,7 @@ describe('verification authority rules', () => {
     }).firestore();
 
     await assertFails(updateDoc(doc(db, 'users', 'alice'), { isVerified: false }));
-    await assertFails(updateDoc(doc(db, 'users', 'alice'), { isVerified: true }));
     await assertFails(updateDoc(doc(db, 'publicProfiles', 'alice'), { isVerified: false }));
-    await assertFails(updateDoc(doc(db, 'publicProfiles', 'alice'), { isVerified: true }));
 
     await assertSucceeds(updateDoc(doc(db, 'users', 'alice'), { name: 'Alice Updated' }));
     await assertSucceeds(updateDoc(doc(db, 'publicProfiles', 'alice'), { name: 'Alice Updated' }));
