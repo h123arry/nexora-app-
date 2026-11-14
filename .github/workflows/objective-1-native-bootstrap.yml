@@ -1,0 +1,96 @@
+name: Objective 1 Native Project Bootstrap
+
+on:
+  push:
+    branches:
+      - release/objective-1-capacitor-staging-foundation
+    paths:
+      - package.json
+      - capacitor.config.ts
+      - .github/workflows/objective-1-native-bootstrap.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nexora-objective-1-native-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  generate-native-projects:
+    if: github.ref == 'refs/heads/release/objective-1-capacitor-staging-foundation'
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Check out Objective 1 branch
+        uses: actions/checkout@v4
+        with:
+          ref: release/objective-1-capacitor-staging-foundation
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java for Android Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Regenerate the npm lockfile for pinned Capacitor dependencies
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Install exactly the committed dependency graph
+        run: npm ci --no-audit --no-fund
+
+      - name: Validate staging guardrails
+        run: npm run test:staging-config
+
+      - name: Test native API origin policy
+        run: npx tsx --test tests/api-base-url.test.ts
+
+      - name: Build the existing React web application
+        run: npm run build:web
+
+      - name: Generate Android project
+        run: npx cap add android
+
+      - name: Generate iOS project
+        run: npx cap add ios
+
+      - name: Synchronize the existing web application into both native shells
+        run: npx cap sync
+
+      - name: Compile Android debug shell
+        run: |
+          cd android
+          ./gradlew --no-daemon assembleDebug
+
+      - name: Compile iOS simulator shell without signing
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Commit generated native projects and lockfile
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -f .github/workflows/objective-1-native-bootstrap.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json android ios
+          git add -u .github/workflows/objective-1-native-bootstrap.yml
+          if git diff --cached --quiet; then
+            echo "No generated native changes to commit."
+            exit 1
+          fi
+          git commit -m "Generate Capacitor Android and iOS projects"
+          git push origin HEAD:release/objective-1-capacitor-staging-foundation
