@@ -71,7 +71,7 @@ Trade-offs:
 
 ## Current status
 
-The architecture decision is accepted and documented. Capacitor dependencies, configuration, and generated native projects have **not** yet been added. No Android or iOS store build has been produced or tested by this decision record.
+The architecture decision is accepted and the initial integration has been committed on the Objective 1 release branch. Capacitor dependencies and configuration are now declared. Native project generation and platform compilation are being automated and remain subject to CI evidence. No signed Android or iOS store build has been produced.
 
 The next implementation step is the dependency/configuration integration, preceded by the API-origin and browser/native compatibility audit.
 
@@ -88,3 +88,20 @@ The initial source inspection found several web-origin assumptions that must be 
 - Existing localStorage-based browser persistence and lockout UX must be reviewed for native lifecycle and account-switch behaviour. Security-critical throttling must remain server-authoritative.
 
 These findings are compatibility work items, not evidence that the features are already native-ready. They should be resolved with small platform adapters while preserving the current web implementation.
+
+## Implementation update — 2026-11-14
+
+- Capacitor 8 is the selected stable major line. The repository now declares `@capacitor/core`, `@capacitor/android`, `@capacitor/ios`, and `@capacitor/cli` on the 8.6.x line.
+- `capacitor.config.ts` uses `dist` as the bundled web directory, sets a stable proposed bundle identifier, disables cleartext traffic and mixed content, and does not configure a remote development server.
+- `src/lib/nativeRuntime.ts` detects iOS Capacitor and Android localhost WebView origins.
+- `src/lib/apiBaseUrl.ts` resolves API paths against a configured HTTPS origin for native builds and preserves same-origin paths for the web app. It rejects insecure origins, credentials, query strings, fragments, and absolute request paths.
+- Private chat voice uploads now use the shared API URL resolver.
+- PWA service-worker registration is skipped inside the native WebView.
+- Web FCM registration is explicitly disabled inside native builds until native push is integrated; the app does not mislabel Web Push as native push.
+- Google popup sign-in is explicitly blocked in native builds until a native OAuth/deep-link adapter is implemented. Email/password remains on the existing Firebase Web SDK path.
+- The bundle identifier `com.voiceofharrison.nexora` is a proposed stable identifier and must be checked against the owner's Apple/Google developer accounts and Firebase Android/iOS app registrations before store submission.
+- A one-time macOS bootstrap workflow is preparing the npm lockfile, Android/iOS source projects, and unsigned simulator/debug compilation. Its result must be checked before calling native project generation complete.
+
+### Known native capability gaps
+
+Native Google OAuth, native push, native camera/gallery plugin integration, native share/deep-link handling, and secure native token storage are not claimed complete by the Capacitor shell. These require platform adapters and physical-device verification in subsequent release objectives. The app's web-only popup and web push implementations are not used as substitutes.
