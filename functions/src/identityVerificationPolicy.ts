@@ -62,3 +62,18 @@ export function normalizeIdentityEvidenceUrl(value: string): string {
 export function shouldOpenImpersonationCase(independentReporterCount: number): boolean {
   return Number.isInteger(independentReporterCount) && independentReporterCount >= 3;
 }
+
+export type IdentityImpersonationDecision = 'dismiss' | 'place_on_hold' | 'clear_hold' | 'confirm_impersonation';
+
+export function isSeniorIdentityImpersonationDecision(decision: IdentityImpersonationDecision): boolean {
+  return decision !== 'dismiss';
+}
+
+export function canApplyIdentityImpersonationDecision(
+  decision: IdentityImpersonationDecision,
+  caseStatus: unknown,
+): boolean {
+  if (decision === 'dismiss' || decision === 'place_on_hold') return caseStatus === 'open';
+  if (decision === 'clear_hold') return caseStatus === 'on_hold';
+  return caseStatus === 'open' || caseStatus === 'on_hold';
+}
