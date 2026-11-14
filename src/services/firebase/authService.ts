@@ -23,6 +23,7 @@ import { User } from '../../types';
 import { ProfileService } from './profileService';
 import { EmailService } from './emailService';
 import { SecurityNotificationService } from './securityNotificationService';
+import { isNativeRuntime } from '../../lib/nativeRuntime';
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_TIME_MS = 5 * 60 * 1000; // 5 minutes
@@ -270,6 +271,9 @@ export class AuthService {
    */
   static async loginWithGoogle(): Promise<{ firebaseUser: FirebaseUser; user: User; isNewUser: boolean }> {
     this.requireConfigured();
+    if (isNativeRuntime()) {
+      throw new Error('Google sign-in is not enabled in this native build yet. Use an available sign-in method until native OAuth is configured.');
+    }
     let authenticatedUser: FirebaseUser | null = null;
     try {
       const provider = new GoogleAuthProvider();
