@@ -25,6 +25,16 @@ function requireIdentityReviewer(request: Request): string {
   return uid;
 }
 
+function requireIdentityApprover(request: Request): string {
+  const uid = requireUid(request);
+  const token = request.auth?.token || {};
+  const role = typeof token.role === 'string' ? token.role : '';
+  if (token.admin !== true && token.founder !== true && !['senior_moderator', 'admin', 'founder'].includes(role)) {
+    throw new HttpsError('permission-denied', 'Senior identity review access is required to approve or reject identity claims.');
+  }
+  return uid;
+}
+
 export const submitIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {
   const uid = requireUid(request as Request);
   let input;
@@ -101,7 +111,7 @@ export const listIdentityVerificationApplications = onCall({ maxInstances: 10 },
 });
 
 export const reviewIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {
-  const reviewerId = requireIdentityReviewer(request as Request);
+  const reviewerId = requireIdentityApprover(request as Request);
   const data = request.data || {};
   const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
   const rawDecision = data.decision;
@@ -118,6 +128,7 @@ export const reviewIdentityVerificationApplication = onCall({ maxInstances: 10 }
   const result = await db.runTransaction(async transaction => {
     const application = await transaction.get(applicationRef);
     if (!application.exists) throw new HttpsError('not-found', 'Identity application not found.');
+    if (reviewerId === userId) throw new HttpsError('permission-denied', 'Reviewers cannot approve or reject their own identity application.');
     const currentStatus = String(application.get('status') || '');
     const isRevocation = decision === 'revoked';
     if (isRevocation ? currentStatus !== 'approved' : !canReviewIdentityApplication(currentStatus)) {
