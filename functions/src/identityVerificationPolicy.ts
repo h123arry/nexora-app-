@@ -96,7 +96,7 @@ export function buildIdentityReviewNotification(
     revoked: 'Your public identity verification was revoked after review. Check the decision note in your identity settings.',
   };
   return {
-    id: `identity_review_${version}`,
+    id: `identity_review_${version}_${decision}`,
     type: 'system' as const,
     userId: 'nexora-system',
     username: 'nexora',
