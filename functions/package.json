@@ -16,7 +16,7 @@
     "firebase-functions": "^7.4.0"
   },
   "devDependencies": {
-    "typescript": "^5.8.2"
+    "typescript": "^7.0.2"
   },
   "overrides": {
     "@grpc/grpc-js": "^1.13.6"
