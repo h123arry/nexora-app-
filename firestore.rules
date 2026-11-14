@@ -189,6 +189,9 @@ service cloud.firestore {
     match /identityVerificationAuditEvents/{eventId} {
       allow read, write: if false;
     }
+    match /identityVerificationPrivateSignals/{userId} {
+      allow read, write: if false;
+    }
     match /verifiedIdentities/{userId} {
       allow get, list: if resource.data.status == 'verified';
       allow create, update, delete: if false;
