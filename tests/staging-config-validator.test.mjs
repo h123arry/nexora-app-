@@ -11,6 +11,7 @@ const requiredNames = [
   'FIRESTORE_DATABASE_ID',
   'FIREBASE_STORAGE_BUCKET',
   'STAGING_APP_URL',
+  'VITE_API_BASE_URL',
   'VITE_NEXORA_ENV',
   'VITE_FIREBASE_PROJECT_ID',
   'VITE_FIREBASE_APP_ID',
@@ -29,6 +30,7 @@ const validConfig = {
   FIRESTORE_DATABASE_ID: 'staging-db',
   FIREBASE_STORAGE_BUCKET: 'nexora-staging-example.appspot.com',
   STAGING_APP_URL: 'https://staging.nexora.example',
+  VITE_API_BASE_URL: 'https://api-staging.nexora.example',
   VITE_NEXORA_ENV: 'staging',
   VITE_FIREBASE_PROJECT_ID: 'nexora-staging-example',
   VITE_FIREBASE_APP_ID: '1:123456:web:staging',
@@ -152,6 +154,14 @@ test('requires a valid non-local HTTPS staging URL', () => {
     const result = runValidator({ STAGING_APP_URL: url });
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /must be a non-local HTTPS staging URL/);
+  }
+});
+
+test('rejects non-HTTPS, local, or credential-bearing API origins', () => {
+  for (const apiUrl of ['http://api-staging.nexora.example', 'https://localhost:3000', 'https://user:pass@api-staging.nexora.example', 'https://api-staging.nexora.example?token=x']) {
+    const result = runValidator({ VITE_API_BASE_URL: apiUrl });
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /VITE_API_BASE_URL must be a non-local HTTPS origin/);
   }
 });
 
