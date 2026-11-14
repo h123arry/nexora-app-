@@ -2,7 +2,7 @@ import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirebaseStorageBucket, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { canResolvePublicPostMedia, chooseVideoRendition, safeVideoRenditions } from './publicMediaPlaybackPolicy.js';
+import { canResolvePublicPostMedia, canViewPublicPostMedia, chooseVideoRendition, safeVideoRenditions } from './publicMediaPlaybackPolicy.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -23,18 +23,37 @@ export const getPublicPostPlayback = onCall({ maxInstances: 40 }, async request 
     throw new HttpsError('invalid-argument', 'A valid post and media asset are required.');
   }
 
+  const viewerUid = request.auth.uid;
   const postRef = db.collection('posts').doc(postId);
   const assetRef = db.collection('mediaAssets').doc(mediaAssetId);
   const [postSnapshot, assetSnapshot] = await Promise.all([postRef.get(), assetRef.get()]);
   const post = postSnapshot.data();
   const asset = assetSnapshot.data();
+  const ownerId = typeof post?.userId === 'string' ? post.userId : '';
   if (!postSnapshot.exists || !assetSnapshot.exists
-    || !canResolvePublicPostMedia(post, asset, mediaAssetId)) {
+    || !canResolvePublicPostMedia(post, asset, mediaAssetId) || !ownerId) {
+    throw new HttpsError('not-found', 'Processed playback is unavailable for this post.');
+  }
+
+  const viewerSettingsRef = db.collection('users').doc(viewerUid).collection('settings').doc('preferences');
+  const ownerSettingsRef = db.collection('users').doc(ownerId).collection('settings').doc('preferences');
+  const [viewerSettings, ownerSettings, viewerProfile, ownerProfile, viewerStatus, ownerStatus, follow] = await Promise.all([
+    viewerSettingsRef.get(), ownerSettingsRef.get(),
+    db.collection('users').doc(viewerUid).get(), db.collection('users').doc(ownerId).get(),
+    db.collection('accountStatus').doc(viewerUid).get(), db.collection('accountStatus').doc(ownerId).get(),
+    viewerUid === ownerId ? Promise.resolve(null) : db.collection('follows').doc(`${viewerUid}_${ownerId}`).get(),
+  ]);
+  if (!canViewPublicPostMedia({
+    viewerUid, ownerUid: ownerId, post,
+    viewerSettings: viewerSettings.data() || null, ownerSettings: ownerSettings.data() || null,
+    viewerProfile: viewerProfile.data() || null, ownerProfile: ownerProfile.data() || null,
+    viewerStatus: viewerStatus.data() || null, ownerStatus: ownerStatus.data() || null,
+    followsOwner: viewerUid === ownerId || follow?.exists === true,
+  })) {
     throw new HttpsError('not-found', 'Processed playback is unavailable for this post.');
   }
   if (asset?.status !== 'ready') return { ready: false as const };
 
-  const ownerId = typeof post?.userId === 'string' ? post.userId : '';
   const renditions = safeVideoRenditions(asset?.renditions, ownerId, mediaAssetId);
   const selected = chooseVideoRendition(renditions);
   if (!selected) return { ready: false as const };

@@ -26,6 +26,7 @@ import CreatorGiftEarningsPanel from './CreatorGiftEarningsPanel';
 import CreatorEconomyExpansionPanel from './CreatorEconomyExpansionPanel';
 import CreatorMembershipPanel from './CreatorMembershipPanel';
 import { buildCreatorAchievements } from '../services/analytics/creatorAchievements';
+import { ProfileService } from '../services/firebase/profileService';
 import ContentSeriesPanel from './ContentSeriesPanel';
 import ReferralGrowthPanel from './ReferralGrowthPanel';
 
@@ -49,6 +50,7 @@ export default function CreatorDashboardView({
   
   // Real Local state for Optimistic UI and responsiveness
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
+  const [hasPublicIdentityVerification, setHasPublicIdentityVerification] = useState(false);
   const [drafts, setDrafts] = useState<any[]>([]);
   const [isDraftsLoading, setIsDraftsLoading] = useState(true);
   const [studioTemplates, setStudioTemplates] = useState<CreatorStudioTemplate[]>([]);
@@ -63,6 +65,14 @@ export default function CreatorDashboardView({
   const [audienceError, setAudienceError] = useState(false);
   const [analyticsDays, setAnalyticsDays] = useState<7 | 30>(7);
   
+  useEffect(() => {
+    let active = true;
+    void ProfileService.getPublicIdentityVerification(currentUser.id).then(identity => {
+      if (active) setHasPublicIdentityVerification(identity !== null);
+    });
+    return () => { active = false; };
+  }, [currentUser.id]);
+
   // Modals & Sub-states
   const [selectedPostForAnalytics, setSelectedPostForAnalytics] = useState<Post | null>(null);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
@@ -663,8 +673,8 @@ export default function CreatorDashboardView({
   }, [localPosts, uploadedMedia, mediaSearch, mediaTypeFilter]);
 
   const achievementsList = useMemo(
-    () => buildCreatorAchievements(localPosts, currentUser.reputationPoints, currentUser.isVerified === true),
-    [localPosts, currentUser.reputationPoints, currentUser.isVerified],
+    () => buildCreatorAchievements(localPosts, currentUser.reputationPoints, hasPublicIdentityVerification),
+    [localPosts, currentUser.reputationPoints, hasPublicIdentityVerification],
   );
 
   return (

@@ -7,35 +7,46 @@ const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
 const auth = getAuth(app);
 
-type Request = { auth?: { uid: string; token: Record<string, unknown> } | null; data?: Record<string, unknown> };
+type Request = { auth?: { uid: string; token: Record<string, unknown> } | null; data?: Record<string, unknown>; rawRequest?: { headers?: { authorization?: string } } };
 
-function requireReviewer(request: Request): string {
-  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to access the admin dashboard.');
-  const token = request.auth.token || {};
-  const role = typeof token.role === 'string' ? token.role : '';
-  if (!(token.moderator === true || token.admin === true
+async function currentAdminClaims(request: Request): Promise<{ uid: string; claims: Record<string, unknown> }> {
+  const uid = request.auth?.uid;
+  const authorization = request.rawRequest?.headers?.authorization || '';
+  const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+  if (!uid || !token) throw new HttpsError('unauthenticated', 'A current authenticated session is required.');
+  try {
+    const decoded = await auth.verifyIdToken(token, true);
+    if (decoded.uid !== uid) throw new HttpsError('unauthenticated', 'The authenticated session no longer matches this account.');
+    return { uid, claims: decoded as unknown as Record<string, unknown> };
+  } catch {
+    throw new HttpsError('unauthenticated', 'Your session is expired or has been revoked. Sign in again.');
+  }
+}
+
+async function requireReviewer(request: Request): Promise<{ uid: string; claims: Record<string, unknown> }> {
+  const { uid, claims } = await currentAdminClaims(request);
+  const role = typeof claims.role === 'string' ? claims.role : '';
+  if (!(claims.moderator === true || claims.admin === true
     || ['moderator', 'senior_moderator', 'admin', 'founder'].includes(role))) {
     throw new HttpsError('permission-denied', 'Admin dashboard access is required.');
   }
-  return request.auth.uid;
+  return { uid, claims };
 }
 
-function requireAdmin(request: Request): string {
-  const uid = requireReviewer(request);
-  const token = (request.auth?.token || {}) as Record<string, unknown>;
-  if (!(token.admin === true || ['admin', 'founder'].includes(String(token.role || '')))) {
+async function requireAdmin(request: Request): Promise<{ uid: string; claims: Record<string, unknown> }> {
+  const { uid, claims } = await currentAdminClaims(request);
+  if (!(claims.admin === true || ['admin', 'founder'].includes(String(claims.role || '')))) {
     throw new HttpsError('permission-denied', 'Administrator access is required for account management.');
   }
-  return uid;
+  return { uid, claims };
 }
 
-function requireFounder(request: Request): string {
-  const uid = requireAdmin(request);
-  const token = (request.auth?.token || {}) as Record<string, unknown>;
-  if (!(token.founder === true || token.role === 'founder')) {
+async function requireFounder(request: Request): Promise<{ uid: string; claims: Record<string, unknown> }> {
+  const { uid, claims } = await requireAdmin(request);
+  if (!(claims.founder === true || claims.role === 'founder')) {
     throw new HttpsError('permission-denied', 'Only the founder can change administrator roles.');
   }
-  return uid;
+  return { uid, claims };
 }
 
 function validUid(value: unknown): value is string {
@@ -43,8 +54,7 @@ function validUid(value: unknown): value is string {
 }
 
 export const listAdminUsers = onCall({ maxInstances: 5 }, async request => {
-  requireReviewer(request);
-  const token = (request.auth?.token || {}) as Record<string, unknown>;
+  const { claims: token } = await requireReviewer(request);
   const canManage = token.admin === true || ['admin', 'founder'].includes(String(token.role || ''));
   const canManageRoles = token.founder === true || token.role === 'founder';
   try {
@@ -149,7 +159,7 @@ export const updateAdminUser = onCall({ maxInstances: 5 }, async request => {
   if (!validUid(targetUid)) throw new HttpsError('invalid-argument', 'A valid target account is required.');
 
   if (action === 'role') {
-    const actorUid = requireFounder(request);
+    const { uid: actorUid } = await requireFounder(request);
     const role = data.role;
     if (!['admin', 'user'].includes(String(role))) throw new HttpsError('invalid-argument', 'Choose a supported account role.');
     if (actorUid === targetUid) throw new HttpsError('failed-precondition', 'You cannot change your own administrator role.');
@@ -167,8 +177,11 @@ export const updateAdminUser = onCall({ maxInstances: 5 }, async request => {
     const nextClaims: Record<string, unknown> = { ...previousClaims, role };
     if (role === 'admin') nextClaims.admin = true;
     else delete nextClaims.admin;
-    await auth.setCustomUserClaims(targetUid, nextClaims);
     try {
+      await auth.setCustomUserClaims(targetUid, nextClaims);
+      // Role changes invalidate existing ID-token sessions so stale reviewer/admin claims
+      // cannot remain usable until the token's natural expiry.
+      await auth.revokeRefreshTokens(targetUid);
       await db.runTransaction(async transaction => {
         const current = await transaction.get(userRef);
         if (!current.exists || current.get('username') === 'voh' || current.get('role') === 'founder') {
@@ -182,12 +195,13 @@ export const updateAdminUser = onCall({ maxInstances: 5 }, async request => {
       });
     } catch (error) {
       await auth.setCustomUserClaims(targetUid, previousClaims);
+      await auth.revokeRefreshTokens(targetUid).catch(() => undefined);
       throw error;
     }
     return { updated: true, targetUid, role };
   }
 
-  const actorUid = requireAdmin(request);
+  const { uid: actorUid } = await requireAdmin(request);
   if (action !== 'ban' && action !== 'suspend' && action !== 'reset_reputation') {
     throw new HttpsError('invalid-argument', 'A supported account-management action is required.');
   }
@@ -202,7 +216,7 @@ export const updateAdminUser = onCall({ maxInstances: 5 }, async request => {
 });
 
 export const listAdminAuditEvents = onCall({ maxInstances: 5 }, async request => {
-  requireAdmin(request);
+  await requireAdmin(request);
   try {
     const snapshot = await db.collection('adminAuditEvents')
       .orderBy('createdAt', 'desc').limit(100).get();

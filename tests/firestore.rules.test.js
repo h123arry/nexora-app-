@@ -50,7 +50,7 @@ const profile = (uid) => ({
 });
 const publicProfile = (uid) => ({
   id: uid, username: uid, name: uid, avatar: '', bio: '', location: '', website: '',
-  followers: 0, following: 0, sparks: 0, isVerified: false, coverImage: '', joinedDate: 'Joined 2026',
+  followers: 0, following: 0, sparks: 0, coverImage: '', joinedDate: 'Joined 2026',
   reputationPoints: 0, reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
   skills: []
 });
@@ -329,11 +329,14 @@ const publicProfile = (uid) => ({
     const ownPrivate = {
       id: 'alice', email: 'alice@example.test', username: 'alice', name: 'Alice',
       bio: '', avatar: '', location: '', website: '', followers: 0, following: 0,
-      sparks: 0, isVerified: true, coverImage: '', joinedDate: 'Joined 2026',
+      sparks: 0, coverImage: '', joinedDate: 'Joined 2026',
       reputationPoints: 0, reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
       interestDNA: {}, skills: [], createdAt: new Date(), updatedAt: new Date()
     };
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'users', 'alice'), ownPrivate));
+    await assertFails(setDoc(doc(unverifiedDbFor('unverified'), 'users', 'unverified'), {
+      ...ownPrivate, id: 'unverified', email: 'unverified@example.test', isVerified: true
+    }));
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), publicProfile('alice')));
     await assertFails(setDoc(doc(dbFor('bob'), 'users', 'bob'), { ...ownPrivate, id: 'bob', email: 'alice@example.test' }));
     await assertFails(setDoc(doc(dbFor('bob'), 'users', 'bob'), { ...ownPrivate, id: 'bob', email: 'bob@example.test', role: 'admin' }));
@@ -343,10 +346,13 @@ const publicProfile = (uid) => ({
 
   it('rejects client-assigned public verification, reputation, and initial engagement metrics', async () => {
     const unverifiedDb = unverifiedDbFor('unverified');
-    const unverifiedProfile = { ...publicProfile('unverified'), isVerified: false };
+    const unverifiedProfile = publicProfile('unverified');
     await assertSucceeds(setDoc(doc(unverifiedDb, 'publicProfiles', 'unverified'), unverifiedProfile));
     await assertFails(setDoc(doc(unverifiedDb, 'publicProfiles', 'forged-badge'), {
       ...publicProfile('forged-badge'), id: 'forged-badge', isVerified: true
+    }));
+    await assertFails(setDoc(doc(unverifiedDb, 'publicProfiles', 'forged-false-badge'), {
+      ...publicProfile('forged-false-badge'), id: 'forged-false-badge', isVerified: false
     }));
     await assertFails(setDoc(doc(dbFor('alice'), 'publicProfiles', 'inflated-reputation'), {
       ...publicProfile('inflated-reputation'), id: 'inflated-reputation', reputationPoints: 50000
@@ -423,6 +429,8 @@ const publicProfile = (uid) => ({
     await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { email: 'attacker@example.test' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { isVerified: true }));
     await assertFails(updateDoc(doc(dbFor('bob'), 'users', 'bob'), { isVerified: false }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { isVerified: true }));
+    await assertFails(updateDoc(doc(dbFor('bob'), 'publicProfiles', 'bob'), { isVerified: false }));
     await assertFails(updateDoc(doc(dbFor('bob'), 'users', 'alice'), { bio: 'intrusion' }));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { bio: 'public bio' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { email: 'leak@example.test' }));
