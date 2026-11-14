@@ -179,7 +179,7 @@ export const listIdentityImpersonationCases = onCall({ maxInstances: 10 }, async
       hasVerifiedIdentity: data.hasVerifiedIdentity === true,
       verifiedDisplayName: data.verifiedDisplayName || null,
       openedAt: data.openedAt?.toDate?.()?.toISOString?.() || null,
-      reports: reports.filter(Boolean),
+      reports: reports.filter((report): report is NonNullable<typeof report> => report !== null),
     };
   }));
   return { cases };
