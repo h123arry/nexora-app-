@@ -76,3 +76,17 @@ test('impersonation case holds and resolution require the correct case state', a
   assert.equal(isSeniorIdentityImpersonationDecision('clear_hold'), true);
   assert.equal(isSeniorIdentityImpersonationDecision('confirm_impersonation'), true);
 });
+
+test('identity review notifications give applicants clear decision-specific next steps', async () => {
+  const { buildIdentityReviewNotification } = await import('../src/identityVerificationPolicy.ts');
+  const approved = buildIdentityReviewNotification('creator-1', 'approved', 2, '2026-11-14T00:00:00.000Z');
+  assert.equal(approved.id, 'identity_review_2');
+  assert.equal(approved.type, 'system');
+  assert.equal(approved.targetId, 'creator-1');
+  assert.equal(approved.isRead, false);
+  assert.match(approved.content, /badge is now active/);
+  assert.match(buildIdentityReviewNotification('creator-1', 'needs_more_info', 3, '2026-11-14T00:00:00.000Z').content, /needs more information/);
+  assert.match(buildIdentityReviewNotification('creator-1', 'rejected', 4, '2026-11-14T00:00:00.000Z').content, /not approved/);
+  assert.match(buildIdentityReviewNotification('creator-1', 'revoked', 5, '2026-11-14T00:00:00.000Z').content, /revoked/);
+  assert.throws(() => buildIdentityReviewNotification('../bad', 'approved', 1, 'now'), /valid identity review/);
+});
