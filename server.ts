@@ -164,7 +164,7 @@ async function allowChatMediaPlayback(uid: string): Promise<boolean> {
     const snapshot = await transaction.get(ref);
     const previous = snapshot.data();
     const count = previous?.windowStart === windowStart ? Number(previous.count) || 0 : 0;
-    if (count >= 120) return false;
+    if (count >= 60) return false;
     transaction.set(ref, {
       windowStart,
       count: count + 1,
