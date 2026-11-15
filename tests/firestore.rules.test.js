@@ -781,6 +781,19 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('mallory'), 'posts', 'forged'), { ...post, userId: 'alice' }));
     await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'inflated'), { ...post, id: 'inflated', likes: 500 }));
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'posts', 'p1'), post));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'posts', 'origin-media-assets'), {
+      ...post, id: 'origin-media-assets', mediaAssetId: 'origin_asset_1',
+      mediaAssetIds: ['origin_asset_1', 'origin_asset_2'],
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'bad-origin-media-assets'), {
+      ...post, id: 'bad-origin-media-assets', mediaAssetId: 'invalid/asset/path',
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'too-many-origin-media-assets'), {
+      ...post, id: 'too-many-origin-media-assets', mediaAssetIds: Array.from({ length: 11 }, (_, index) => `asset_${index}`),
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'posts', 'origin-media-assets'), {
+      mediaAssetIds: ['replacement_asset'],
+    }));
     await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'private-field'), { ...post, id: 'private-field', email: 'private@example.test' }));
     await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'admin-field'), { ...post, id: 'admin-field', role: 'admin' }));
     await assertFails(setDoc(doc(unverifiedDbFor('alice'), 'posts', 'unverified-badge'), {
