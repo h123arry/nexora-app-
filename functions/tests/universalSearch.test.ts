@@ -84,6 +84,27 @@ describe('NEXORA universal search', () => {
     const afterPrivacyChange = await searchNexoraContent(db,'viewer','nexora');
     assert.ok(!afterPrivacyChange.results.some(hit => hit.targetId === 'search-circle'));
   });
+  it('enforces blocks in both directions for people and their public content', async () => {
+    await db.doc('users/viewer/settings/preferences').set({
+      privacy: { blockedUserIds: ['public-user'] },
+      messaging: { blockedUserIds: [] },
+    });
+    const blockedByViewer = await searchNexoraContent(db,'viewer','nexora');
+    assert.ok(!blockedByViewer.results.some(hit => hit.targetId === 'public-user' || hit.targetId === 'public-video'));
+
+    await db.doc('users/viewer/settings/preferences').set({
+      privacy: { blockedUserIds: [] },
+      messaging: { blockedUserIds: [] },
+    });
+    await db.doc('users/public-user/settings/preferences').set({
+      privacy: { blockedUserIds: ['viewer'] },
+      messaging: { blockedUserIds: [] },
+    });
+    const blockedByCreator = await searchNexoraContent(db,'viewer','nexora');
+    assert.ok(!blockedByCreator.results.some(hit => hit.targetId === 'public-user' || hit.targetId === 'public-video'));
+
+    await db.doc('users/public-user/settings/preferences').delete();
+  });
   it('boosts followed creators in personalized search ranking', async () => {
     const result = await searchNexoraContent(db,'viewer','nexora video');
     const videos = result.results.filter(hit => hit.kind === 'video');
