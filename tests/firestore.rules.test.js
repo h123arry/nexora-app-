@@ -406,22 +406,6 @@ const publicProfile = (uid) => ({
     await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'usernames', 'alice_handle')));
   });
 
-  it('allows a post to bind only a media asset owned by its creator', async () => {
-    await seed(async (db) => {
-      await setDoc(doc(db, 'mediaAssets', 'asset-owned-by-alice'), { id: 'asset-owned-by-alice', ownerId: 'alice' });
-      await setDoc(doc(db, 'mediaAssets', 'asset-owned-by-bob'), { id: 'asset-owned-by-bob', ownerId: 'bob' });
-    });
-    await assertSucceeds(setDoc(doc(dbFor('alice'), 'posts', 'post-with-owned-media'), {
-      id: 'post-with-owned-media', userId: 'alice', audience: 'public', mediaAssetId: 'asset-owned-by-alice'
-    }));
-    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'post-with-foreign-media'), {
-      id: 'post-with-foreign-media', userId: 'alice', audience: 'public', mediaAssetId: 'asset-owned-by-bob'
-    }));
-    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'post-with-missing-media'), {
-      id: 'post-with-missing-media', userId: 'alice', audience: 'public', mediaAssetId: 'asset-does-not-exist'
-    }));
-  });
-
   it('allows public posts and public profile projections without exposing private account records', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'posts', 'post-1'), { id: 'post-1', userId: 'alice', audience: 'public', content: 'public' });
@@ -797,6 +781,19 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('mallory'), 'posts', 'forged'), { ...post, userId: 'alice' }));
     await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'inflated'), { ...post, id: 'inflated', likes: 500 }));
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'posts', 'p1'), post));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'posts', 'origin-media-assets'), {
+      ...post, id: 'origin-media-assets', mediaAssetId: 'origin_asset_1',
+      mediaAssetIds: ['origin_asset_1', 'origin_asset_2'],
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'bad-origin-media-assets'), {
+      ...post, id: 'bad-origin-media-assets', mediaAssetId: 'invalid/asset/path',
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'too-many-origin-media-assets'), {
+      ...post, id: 'too-many-origin-media-assets', mediaAssetIds: Array.from({ length: 11 }, (_, index) => `asset_${index}`),
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'posts', 'origin-media-assets'), {
+      mediaAssetIds: ['replacement_asset'],
+    }));
     await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'private-field'), { ...post, id: 'private-field', email: 'private@example.test' }));
     await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'admin-field'), { ...post, id: 'admin-field', role: 'admin' }));
     await assertFails(setDoc(doc(unverifiedDbFor('alice'), 'posts', 'unverified-badge'), {
