@@ -43,6 +43,9 @@ before(async () => {
   assert.ok(emulatorHost, 'VOH API security test requires Firebase Auth Emulator.');
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Private media tests require Firestore Emulator.');
   process.env.STORAGE_EMULATOR_HOST ||= '127.0.0.1:9199';
+  await getAdminStorage(testAdminApp).bucket('demo-nexora-voh.firebasestorage.app')
+    .file('_nexora-readiness-probe')
+    .save(Buffer.from('ready'), { resumable: false });
   server = spawn('node', ['--import', 'tsx', 'server.ts'], {
     cwd: process.cwd(),
     env: {
@@ -86,6 +89,7 @@ after(async () => {
   if (server && server.exitCode === null) server.kill('SIGTERM');
   await testDb.recursiveDelete(testDb.collection('chats'));
   await Promise.all([uid, nonMemberUid].filter(Boolean).map(userId => testDb.collection('vohUserMemory').doc(userId).delete().catch(() => undefined)));
+  await getAdminStorage(testAdminApp).bucket('demo-nexora-voh.firebasestorage.app').file('_nexora-readiness-probe').delete().catch(() => undefined);
   await getAdminStorage(testAdminApp).bucket('demo-nexora-voh.firebasestorage.app').deleteFiles({ prefix: 'chats/' }).catch(() => undefined);
   await Promise.all([uid, nonMemberUid].filter(Boolean).map(userId => getAdminAuth(testAdminApp).deleteUser(userId).catch(() => undefined)));
   await deleteApp(testAdminApp);
@@ -104,7 +108,7 @@ describe('operational health boundary', () => {
     const readiness = await fetch(`${baseUrl}/readyz`);
     assert.equal(readiness.status, 200);
     const report = await readiness.json() as { status: string; dependencies: Record<string, string> };
-    assert.deepEqual(report, { status: 'ready', dependencies: { firebase: 'available', firestore: 'available' } });
+    assert.deepEqual(report, { status: 'ready', dependencies: { firebase: 'available', firestore: 'available', storage: 'available' } });
     assert.equal(JSON.stringify(report).includes('demo-nexora-voh'), false);
   });
 });
