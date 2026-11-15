@@ -70,7 +70,7 @@ function publicRecord(kind: SearchKind, id: string, path: string, data: Record<s
   const searchText = [title, body, subtitle, safeString(data.username, 80), safeString(data.category, 80), ...tags, ...(Array.isArray(data.options) ? data.options.map(option => typeof option === 'string' ? option : (option && typeof option === 'object' ? String((option as Record<string, unknown>).text || '') : '')) : [])].join(' ');
   return {
     id, kind, title: title || 'NEXORA', subtitle, excerpt: body.slice(0, 260), image,
-    targetId: id, targetPath: path, ownerId, verified: data.isVerified === true,
+    targetId: id, targetPath: path, ownerId, verified: false,
     createdAt, tags, searchKeys: searchKeys(searchText), normalizedText: normalizeSearchText(searchText),
     isPublic: true, parentId: safeString(parent?.id, 150), bannedUsers: Array.isArray(data.bannedUsers) ? data.bannedUsers.filter((item): item is string => typeof item === 'string').slice(0, 500) : [], scoreSignals: {
       likes: Math.max(0, Math.min(1000000, Number(data.likes || data.likesCount) || 0)),
