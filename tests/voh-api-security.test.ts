@@ -91,6 +91,24 @@ after(async () => {
   await deleteApp(testAdminApp);
 });
 
+describe('operational health boundary', () => {
+  it('reports service health and Firestore readiness without exposing infrastructure identifiers', async () => {
+    const health = await fetch(`${baseUrl}/healthz`);
+    assert.equal(health.status, 200);
+    assert.equal(health.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(health.headers.get('x-frame-options'), 'DENY');
+    assert.equal(health.headers.get('strict-transport-security'), 'max-age=31536000; includeSubDomains');
+    assert.match(health.headers.get('x-request-id') || '', /^[0-9a-f-]{36}$/i);
+    assert.deepEqual(await health.json(), { status: 'ok', service: 'nexora-api', version: 'test' });
+
+    const readiness = await fetch(`${baseUrl}/readyz`);
+    assert.equal(readiness.status, 200);
+    const report = await readiness.json() as { status: string; dependencies: Record<string, string> };
+    assert.deepEqual(report, { status: 'ready', dependencies: { firebase: 'available', firestore: 'available' } });
+    assert.equal(JSON.stringify(report).includes('demo-nexora-voh'), false);
+  });
+});
+
 describe('VOH API security boundary', () => {
   it('rejects absent and malformed Firebase identity tokens', async () => {
     const missing = await fetch(`${baseUrl}/api/voh-ai/summarize-post`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content: 'short text' }) });
