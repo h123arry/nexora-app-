@@ -92,6 +92,14 @@ test('attribution correction, creator response, requester dispute and staff reso
     call(resolveOriginAttributionDispute, requesterUid, { caseId, outcome: 'upheld', note: 'This account is not a reviewer and cannot decide this dispute.' }),
     /permission-denied|authorized moderators/i,
   );
+  await assert.rejects(
+    call(resolveOriginAttributionDispute, requesterUid, { caseId, outcome: 'upheld', note: 'A requester cannot review their own attribution dispute.' }, { role: 'moderator' }),
+    /permission-denied|cannot review or decide/i,
+  );
+  await assert.rejects(
+    call(resolveOriginAttributionDispute, sourceCreatorUid, { caseId, outcome: 'upheld', note: 'A source creator cannot review their own attribution dispute.' }, { role: 'moderator' }),
+    /permission-denied|cannot review or decide/i,
+  );
   await call(resolveOriginAttributionDispute, 'origin-attribution-reviewer', {
     caseId, outcome: 'overturned', note: 'The evidence supports a correction to the recorded attribution presentation.',
   }, { role: 'moderator' });
@@ -119,6 +127,12 @@ test('Origin case notification delivery is participant-scoped and idempotent', a
     assert.equal(await writeOriginAttributionCaseNotifications(db, caseId, null, record, new Date().toISOString()), 1);
     assert.equal((await sourceInbox.get()).docs.some(item => item.id === `origin_${caseId}_open_request_${sourceCreatorUid}`), true);
     assert.equal((await requesterInbox.get()).docs.some(item => item.id.includes(caseId)), false);
+    const requestNotification = sourceInbox.doc(`origin_${caseId}_open_request_${sourceCreatorUid}`);
+    await requestNotification.update({ isRead: true });
+    assert.equal(await writeOriginAttributionCaseNotifications(db, caseId, null, record, new Date().toISOString()), 0,
+      'a retry of the original create event must not create or reset an existing notification');
+    assert.equal((await requestNotification.get()).get('isRead'), true,
+      'a retried delivery must preserve the recipient read state');
 
     assert.equal(await writeOriginAttributionCaseNotifications(db, caseId, 'open', record, new Date().toISOString()), 0,
       'retries with an unchanged status must not create another notification');

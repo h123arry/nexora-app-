@@ -26,3 +26,17 @@ export function originCaseNotificationRecipients(record: {
   ];
   return [];
 }
+
+/** A case participant must never adjudicate their own attribution dispute. */
+export function canReviewerResolveOriginDispute(input: {
+  status: unknown;
+  outcome: unknown;
+  reviewerUid: unknown;
+  requesterUid: unknown;
+  sourceCreatorUid: unknown;
+}): boolean {
+  return canResolveOriginDispute(input.status, input.outcome)
+    && typeof input.reviewerUid === 'string' && input.reviewerUid.length > 0
+    && input.reviewerUid !== input.requesterUid
+    && input.reviewerUid !== input.sourceCreatorUid;
+}

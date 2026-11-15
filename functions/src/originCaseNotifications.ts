@@ -12,8 +12,7 @@ export async function writeOriginAttributionCaseNotifications(
   if (!caseId || previousStatus === record.status) return 0;
   const recipients = originCaseNotificationRecipients(record);
   if (!recipients.length) return 0;
-  const batch = db.batch();
-  for (const recipient of recipients) {
+  const notifications = recipients.map(recipient => {
     const notificationId = `origin_${caseId}_${String(record.status)}_${recipient.kind}_${recipient.uid}`;
     const ref = db.collection('users').doc(recipient.uid).collection('notifications').doc(notificationId);
     const content = recipient.kind === 'request'
@@ -23,19 +22,34 @@ export async function writeOriginAttributionCaseNotifications(
         : recipient.kind === 'dispute'
           ? 'An attribution correction decision has been disputed and needs review.'
           : 'A moderator has completed the review of an attribution dispute.';
-    batch.set(ref, {
-      id: notificationId,
-      type: 'origin_attribution',
-      userId: 'system',
-      username: 'NEXORA Origin',
-      avatar: '/logo.svg',
-      content,
-      targetId: caseId,
-      isRead: false,
-      timestamp: eventTime,
-      createdAt: FieldValue.serverTimestamp(),
-    }, { merge: false });
-  }
-  await batch.commit();
-  return recipients.length;
+    return {
+      ref,
+      data: {
+        id: notificationId,
+        type: 'origin_attribution',
+        userId: 'system',
+        username: 'NEXORA Origin',
+        avatar: '/logo.svg',
+        content,
+        targetId: caseId,
+        isRead: false,
+        timestamp: eventTime,
+        createdAt: FieldValue.serverTimestamp(),
+      },
+    };
+  });
+  // A retried Firestore event must not reset isRead on an already-delivered
+  // notification. Deterministic IDs plus transactional create make delivery
+  // idempotent while preserving a recipient's read state.
+  return db.runTransaction(async transaction => {
+    const existing = await Promise.all(notifications.map(item => transaction.get(item.ref)));
+    let created = 0;
+    notifications.forEach((item, index) => {
+      if (!existing[index].exists) {
+        transaction.create(item.ref, item.data);
+        created += 1;
+      }
+    });
+    return created;
+  });
 }

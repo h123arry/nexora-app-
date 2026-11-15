@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canResolveOriginDispute, isOriginReviewer, originCaseNotificationRecipients } from '../functions/src/originCaseOperationsPolicy.ts';
+import { canResolveOriginDispute, canReviewerResolveOriginDispute, isOriginReviewer, originCaseNotificationRecipients } from '../functions/src/originCaseOperationsPolicy.ts';
 
 test('Origin dispute review requires a trusted reviewer claim', () => {
   assert.equal(isOriginReviewer({ role: 'moderator' }), true);
@@ -26,4 +26,13 @@ test('case transitions notify only the appropriate participants', () => {
     { uid: 'requester', kind: 'resolution' }, { uid: 'source', kind: 'resolution' },
   ]);
   assert.deepEqual(originCaseNotificationRecipients({ requesterUid: 'same', sourceCreatorUid: 'same', status: 'open' }), []);
+});
+
+test('Origin dispute reviewers must be independent of both creators', () => {
+  const base = { status: 'disputed', outcome: 'upheld', requesterUid: 'requester', sourceCreatorUid: 'source' };
+  assert.equal(canReviewerResolveOriginDispute({ ...base, reviewerUid: 'independent-moderator' }), true);
+  assert.equal(canReviewerResolveOriginDispute({ ...base, reviewerUid: 'requester' }), false);
+  assert.equal(canReviewerResolveOriginDispute({ ...base, reviewerUid: 'source' }), false);
+  assert.equal(canReviewerResolveOriginDispute({ ...base, reviewerUid: '' }), false);
+  assert.equal(canReviewerResolveOriginDispute({ ...base, reviewerUid: 'independent-moderator', status: 'open' }), false);
 });
