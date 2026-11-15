@@ -107,7 +107,7 @@ app.get('/readyz', async (_req, res) => {
     if (!mediaBucket) {
       return res.status(503).json({ status: 'not_ready', dependencies: { firebase: 'configured', firestore: 'unknown', storage: 'missing_configuration' } });
     }
-    const probe = Promise.all([serverDb.listCollections(), mediaBucket.getMetadata()]);
+    const probe = Promise.all([serverDb.listCollections(), mediaBucket.getFiles({ maxResults: 1 })]);
     await Promise.race([
       probe,
       new Promise((_, reject) => setTimeout(() => reject(new Error('readiness timeout')), 2_000)),
