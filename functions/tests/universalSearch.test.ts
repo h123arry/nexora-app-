@@ -12,7 +12,7 @@ before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Universal search tests require the Firestore Emulator.');
   await Promise.all(paths.map(id => db.doc('users/' + id).delete().catch(() => undefined)));
   await db.doc('users/viewer').set({ username: 'viewer', interestDNA: { design: 1 } });
-  await db.doc('users/public-user').set({ username: 'nexora_creator', name: 'Nexora Creator', bio: 'Building social video' });
+  await db.doc('users/public-user').set({ username: 'nexora_creator', name: 'Nexora Creator', bio: 'Building social video', isVerified: true });
   await db.doc('users/private-user').set({ username: 'nexora_private', name: 'Nexora Private' });
   await db.doc('users/private-user/settings/preferences').set({ privacy: { isPrivate: true } });
   await db.doc('users/blocked-user').set({ username: 'nexora_blocked', name: 'Nexora Blocked' });
@@ -36,6 +36,8 @@ before(async () => {
   await syncUniversalSearchRecord(db,'post','private-post','posts/private-post',(await db.doc('posts/private-post').get()).data()!);
   await syncUniversalSearchRecord(db,'post','blocked-post','posts/blocked-post',(await db.doc('posts/blocked-post').get()).data()!);
   await syncUniversalSearchRecord(db,'video','followed-video','posts/followed-video',(await db.doc('posts/followed-video').get()).data()!);
+  const forgedVerificationIndexId = 'person_' + createHash('sha256').update('users/public-user').digest('hex');
+  assert.equal((await db.doc('searchIndex/' + forgedVerificationIndexId).get()).get('verified'), false, 'client profile flags must never create a trusted search badge');
   await syncUniversalSearchRecord(db,'circle','search-circle','communities/search-circle',(await db.doc('communities/search-circle').get()).data()!);
 });
 after(async () => {
