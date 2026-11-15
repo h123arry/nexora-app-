@@ -134,28 +134,60 @@ export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, asyn
     responseDisposition: 'inline',
   });
 
-  // Re-check the parent immediately before returning the URL so a concurrent
-  // removal/visibility change during signing does not grant fresh access.
-  const latestWeave = await weaveRef.get();
-  if (!latestWeave.exists || latestWeave.get('ownerId') !== ownerId
+  // Re-read every mutable authorization input after signing. A moment can be
+  // deleted/replaced, membership revoked, a block added, an account restricted,
+  // or a private-profile follow removed while the URL is being minted.
+  const [latestWeave, latestMoment, latestViewerSettings, latestOwnerSettings, latestAuthorSettings,
+    latestOwnerStatus, latestAuthorStatus] = await Promise.all([
+    weaveRef.get(), momentRef.get(),
+    db.collection('users').doc(uid).collection('settings').doc('preferences').get(),
+    db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
+    db.collection('users').doc(authorId).collection('settings').doc('preferences').get(),
+    db.collection('accountStatus').doc(ownerId).get(),
+    db.collection('accountStatus').doc(authorId).get(),
+  ]);
+  const latestViewer = latestViewerSettings.data() || {};
+  const latestOwner = latestOwnerSettings.data() || {};
+  const latestAuthor = latestAuthorSettings.data() || {};
+  if (!latestWeave.exists || !latestMoment.exists
+    || latestWeave.get('ownerId') !== ownerId
+    || latestMoment.get('weaveId') !== weaveId
+    || latestMoment.get('authorId') !== authorId
+    || latestMoment.get('storagePath') !== storagePath
+    || !['image', 'video', 'audio'].includes(String(latestMoment.get('mediaType')))
+    || activeRestriction(latestOwnerStatus.data() || {})
+    || activeRestriction(latestAuthorStatus.data() || {})
     || !canReadWorldWeaveMedia({
       uid, ownerId, authorId,
       visibility: latestWeave.get('visibility'),
       participantIds: latestWeave.get('participantIds'),
       viewerBlockedIds: [
-        ...ids(viewerSettings?.privacy?.blockedUserIds),
-        ...ids(viewerSettings?.messaging?.blockedUserIds),
+        ...ids(latestViewer?.privacy?.blockedUserIds),
+        ...ids(latestViewer?.messaging?.blockedUserIds),
       ],
       ownerBlockedIds: [
-        ...ids(ownerSettings?.privacy?.blockedUserIds),
-        ...ids(ownerSettings?.messaging?.blockedUserIds),
+        ...ids(latestOwner?.privacy?.blockedUserIds),
+        ...ids(latestOwner?.messaging?.blockedUserIds),
       ],
       authorBlockedIds: [
-        ...ids(authorSettings?.privacy?.blockedUserIds),
-        ...ids(authorSettings?.messaging?.blockedUserIds),
+        ...ids(latestAuthor?.privacy?.blockedUserIds),
+        ...ids(latestAuthor?.messaging?.blockedUserIds),
       ],
     })) {
     throw new HttpsError('permission-denied', 'Your access to this WorldWeave media has changed.');
+  }
+  if (latestWeave.get('visibility') === 'public') {
+    const followChecks: Promise<FirebaseFirestore.DocumentSnapshot>[] = [];
+    if (latestOwner?.privacy?.isPrivate === true && uid !== ownerId) {
+      followChecks.push(db.collection('follows').doc(uid + '_' + ownerId).get());
+    }
+    if (latestAuthor?.privacy?.isPrivate === true && uid !== authorId) {
+      followChecks.push(db.collection('follows').doc(uid + '_' + authorId).get());
+    }
+    const latestFollows = await Promise.all(followChecks);
+    if (latestFollows.some(snapshot => !snapshot.exists)) {
+      throw new HttpsError('permission-denied', 'Your access to this WorldWeave media has changed.');
+    }
   }
   return { url, expiresInSeconds: Math.floor(SIGNED_URL_TTL_MS / 1000) };
 });
