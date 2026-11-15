@@ -5,13 +5,14 @@ import {
   Zap, Repeat, Quote, MessageCircle, Bookmark, Play, Pause, Volume2, Send, 
   Globe, CheckCircle, MoreHorizontal, EyeOff, FolderPlus, ShieldAlert, 
   Edit2, UserPlus, VolumeX, Pin, BookOpen, Archive, Trash, Sparkles, 
-  BarChart2, Sliders, X, Check
+  BarChart2, Sliders, X, Check, ShieldCheck
 } from 'lucide-react';
 import { Post, User } from '../types';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraImagePlayer from './NexoraImagePlayer';
 import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
+import OriginAttributionPreviewModal from './OriginAttributionPreviewModal';
 
 interface FeedPostCardProps {
   post: Post;
@@ -120,6 +121,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   const cardRef = useRef<HTMLDivElement | null>(null);
   const impressionTimerRef = useRef<number | null>(null);
   const impressionRecordedRef = useRef(false);
+  const [originPreviewAssetId, setOriginPreviewAssetId] = useState<string | null>(null);
 
   useEffect(() => {
     const target = cardRef.current;
@@ -339,6 +341,19 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                       >
                         <BarChart2 className="w-3.5 h-3.5 shrink-0 text-violet-300" />
                         View Analytics 📊
+                      </button>
+                    )}
+                    {isOwnPost && (post.mediaAssetId || post.mediaAssetIds?.length) && (
+                      <button
+                        role="menuitem"
+                        onClick={() => {
+                          setOriginPreviewAssetId(post.mediaAssetId || post.mediaAssetIds![0]);
+                          setActiveDotsMenuPostId(null);
+                        }}
+                        className="w-full text-left px-3 py-2.5 hover:bg-violet-500/10 text-violet-200 font-semibold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5 shrink-0 text-violet-300" />
+                        View Origin attribution
                       </button>
                     )}
 
@@ -770,6 +785,12 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           </div>
         )
       )}
+      {originPreviewAssetId && (
+        <OriginAttributionPreviewModal
+          assetId={originPreviewAssetId}
+          onClose={() => setOriginPreviewAssetId(null)}
+        />
+      )}
     </div>
   );
 };
@@ -792,6 +813,8 @@ export const FeedPostCard = React.memo(FeedPostCardImpl, (prev, next) => {
     prev.post.shares !== next.post.shares ||
     prev.post.comments?.length !== next.post.comments?.length ||
     prev.post.content !== next.post.content ||
+    prev.post.mediaAssetId !== next.post.mediaAssetId ||
+    (prev.post.mediaAssetIds || []).join('|') !== (next.post.mediaAssetIds || []).join('|') ||
     prev.post.mediaAssetId !== next.post.mediaAssetId ||
     (prev.post.mediaAssetIds || []).join('|') !== (next.post.mediaAssetIds || []).join('|') ||
     prev.post.isArchived !== next.post.isArchived ||
