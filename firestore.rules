@@ -566,7 +566,9 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid
         && (!request.resource.data.keys().hasAny(['authorId']) || request.resource.data.authorId == request.auth.uid)
         && (!request.resource.data.keys().hasAny(['mediaAssetId'])
-          || (request.resource.data.mediaAssetId is string && request.resource.data.mediaAssetId.matches('^[A-Za-z0-9_-]{1,128}
+          || (request.resource.data.mediaAssetId is string && request.resource.data.mediaAssetId.matches('^[A-Za-z0-9_-]{1,128}$')))
+        && (!request.resource.data.keys().hasAny(['mediaAssetIds'])
+          || (request.resource.data.mediaAssetIds is list && request.resource.data.mediaAssetIds.size() <= 10))
         && (!request.resource.data.keys().hasAny(['imageAltText'])
           || (request.resource.data.imageAltText is string && request.resource.data.imageAltText.size() <= 500))
         && (!request.resource.data.keys().hasAny(['location'])
