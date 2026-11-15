@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
 import { getFirestore } from 'firebase-admin/firestore';
+import { writeOriginAttributionCaseNotifications } from '../src/originCaseNotifications.js';
 import {
   requestMyOriginAttributionCorrection,
   respondToOriginAttributionCorrection,
@@ -107,4 +108,29 @@ test('attribution correction, creator response, requester dispute and staff reso
   assert.equal(sourceCases.cases.some((item: { id: string }) => item.id === caseId), true);
   await assert.rejects(call(getMyOriginAttributionPreview, sourceCreatorUid, { assetId: derivativeAssetId }),
     /permission-denied|asset owner/i);
+});
+
+test('Origin case notification delivery is participant-scoped and idempotent', async () => {
+  const caseId = 'origin-attribution-notification-integration';
+  const requesterInbox = db.collection('users').doc(requesterUid).collection('notifications');
+  const sourceInbox = db.collection('users').doc(sourceCreatorUid).collection('notifications');
+  const record = { requesterUid, sourceCreatorUid, status: 'open' };
+  try {
+    assert.equal(await writeOriginAttributionCaseNotifications(db, caseId, null, record, new Date().toISOString()), 1);
+    assert.equal((await sourceInbox.get()).docs.some(item => item.id === `origin_${caseId}_open_request_${sourceCreatorUid}`), true);
+    assert.equal((await requesterInbox.get()).docs.some(item => item.id.includes(caseId)), false);
+
+    assert.equal(await writeOriginAttributionCaseNotifications(db, caseId, 'open', record, new Date().toISOString()), 0,
+      'retries with an unchanged status must not create another notification');
+
+    assert.equal(await writeOriginAttributionCaseNotifications(db, caseId, 'open', { ...record, status: 'rejected' }, new Date().toISOString()), 1);
+    assert.equal((await requesterInbox.get()).docs.some(item => item.id === `origin_${caseId}_rejected_response_${requesterUid}`), true);
+
+    assert.equal(await writeOriginAttributionCaseNotifications(db, caseId, 'disputed', { ...record, status: 'resolved' }, new Date().toISOString()), 2);
+    assert.equal((await requesterInbox.get()).docs.some(item => item.id === `origin_${caseId}_resolved_resolution_${requesterUid}`), true);
+    assert.equal((await sourceInbox.get()).docs.some(item => item.id === `origin_${caseId}_resolved_resolution_${sourceCreatorUid}`), true);
+  } finally {
+    const [requester, source] = await Promise.all([requesterInbox.get(), sourceInbox.get()]);
+    await Promise.all([...requester.docs, ...source.docs].filter(item => item.id.includes(caseId)).map(item => item.ref.delete()));
+  }
 });
