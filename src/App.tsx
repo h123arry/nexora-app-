@@ -1514,7 +1514,7 @@ export default function App() {
     scheduledTime?: string,
     isBroadcastPost?: boolean,
     communityName?: string,
-    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string }
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[] }
   ): string => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       requireAuth(() => handleAddPost(content, imageUrl, tagsString, images, videoUrl, voiceTranscript, voiceAudioUrl, audience, isVoice, voiceDuration, interactivePoll, opportunityType, pulseRegion, imageFilter, imageFilters, scheduledTime, isBroadcastPost, communityName, postDetails), 'Sign in to publish content.');
@@ -1539,7 +1539,8 @@ export default function App() {
       images,
       imageFilters,
       videoUrl,
-      mediaAssetId: normalizeMediaAssetId(postDetails?.mediaAssetId),
+      mediaAssetId: normalizeMediaAssetId(postDetails?.mediaAssetId || postDetails?.mediaAssetIds?.[0]),
+      mediaAssetIds: [...new Set((postDetails?.mediaAssetIds || [postDetails?.mediaAssetId]).map(normalizeMediaAssetId).filter((id): id is string => Boolean(id)))].slice(0, 10),
       voiceTranscript,
       voiceAudioUrl,
       audience: 'public',
