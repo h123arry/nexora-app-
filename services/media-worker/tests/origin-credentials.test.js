@@ -72,6 +72,12 @@ describe('NEXORA Origin native C2PA reader integration', () => {
   });
 });
 
+describe('NEXORA Origin malformed media and rendition binding', () => {
+  const context = new Context({
+    verify: { verifyAfterReading: true, verifyTrust: true, ocspFetch: false, remoteManifestFetch: false },
+    trust: { verifyTrustList: true },
+  });
+
   it('maps malformed source media to unsupported instead of absent or verified', async () => {
     const directory = await mkdtemp(path.join(tmpdir(), 'nexora-origin-malformed-'));
     const malformedPath = path.join(directory, 'malformed.jpg');
@@ -101,3 +107,4 @@ describe('NEXORA Origin native C2PA reader integration', () => {
     assert.notEqual(transformedInspection.state, 'verified',
       'a transformed rendition must not inherit the original source credential verdict');
   });
+});
