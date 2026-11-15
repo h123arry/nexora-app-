@@ -165,6 +165,8 @@ export interface Post {
   videoUrl?: string;
   /** Owner-scoped mediaAssets document created for this uploaded source. */
   mediaAssetId?: string;
+  /** All uploaded source asset IDs for a multi-media post, used for exact Origin source binding. */
+  mediaAssetIds?: string[];
   voiceTranscript?: string;
   voiceAudioUrl?: string;
   audience?: 'public' | 'circle' | 'community' | 'followers' | 'onlyme';
