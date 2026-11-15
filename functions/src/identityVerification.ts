@@ -172,7 +172,7 @@ export const listIdentityVerificationApplications = onCall({ maxInstances: 10 },
 });
 
 export const listIdentityImpersonationCases = onCall({ maxInstances: 10 }, async request => {
-  requireIdentityReviewer(request as Request);
+  await requireIdentityReviewer(request as Request);
   const snapshot = await db.collection('identityImpersonationCases')
     .where('status', 'in', ['open', 'on_hold'])
     .limit(50)
