@@ -104,12 +104,15 @@ app.get('/readyz', async (_req, res) => {
     return res.status(503).json({ status: 'not_ready', dependencies: { firebase: 'missing_configuration' } });
   }
   try {
-    const probe = serverDb.listCollections();
+    if (!mediaBucket) {
+      return res.status(503).json({ status: 'not_ready', dependencies: { firebase: 'configured', firestore: 'unknown', storage: 'missing_configuration' } });
+    }
+    const probe = Promise.all([serverDb.listCollections(), mediaBucket.getMetadata()]);
     await Promise.race([
       probe,
       new Promise((_, reject) => setTimeout(() => reject(new Error('readiness timeout')), 2_000)),
     ]);
-    return res.status(200).json({ status: 'ready', dependencies: { firebase: 'available', firestore: 'available' } });
+    return res.status(200).json({ status: 'ready', dependencies: { firebase: 'available', firestore: 'available', storage: 'available' } });
   } catch {
     return res.status(503).json({ status: 'not_ready', dependencies: { firebase: 'unavailable' } });
   }
