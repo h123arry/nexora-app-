@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { advanceBankLookupQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from '../src/paystackPayoutPolicy.ts';
+import { advanceBankLookupQuota, advancePayoutOtpQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from '../src/paystackPayoutPolicy.ts';
 
 const body = Buffer.from('{"event":"transfer.success","data":{"reference":"nxp_example","amount":125000,"currency":"NGN"}}');
 const webhookSecret = ['whsec','test','placeholder'].join('_');
@@ -57,4 +57,22 @@ test('bank lookup quota resets only after expiry and rejects malformed state', (
   assert.equal(advanceBankLookupQuota({ windowStartedAt: 'bad', attempts: 2 }, 10_000).allowed, false);
   assert.equal(advanceBankLookupQuota({ windowStartedAt: 1, attempts: 99 }, 10_000).allowed, false);
   assert.equal(advanceBankLookupQuota(null, -1).allowed, false);
+});
+
+
+test('payout OTP quota permits five attempts per payout and blocks the sixth', () => {
+  let state = advancePayoutOtpQuota(null, 20_000);
+  for (let i = 1; i < 5; i += 1) state = advancePayoutOtpQuota(state, 20_000 + i);
+  assert.equal(state.allowed, true);
+  assert.equal(state.attempts, 5);
+  const blocked = advancePayoutOtpQuota(state, 20_100);
+  assert.equal(blocked.allowed, false);
+  assert.equal(blocked.retryAfterMs, 15 * 60 * 1000 - 100);
+});
+
+test('payout OTP quota resets after expiry and rejects corrupt counters', () => {
+  const reset = advancePayoutOtpQuota({ windowStartedAt: 1_000, attempts: 5 }, 1_000 + 15 * 60 * 1000);
+  assert.equal(reset.allowed, true);
+  assert.equal(reset.attempts, 1);
+  assert.equal(advancePayoutOtpQuota({ windowStartedAt: 'bad', attempts: 2 }, 10_000).allowed, false);
 });
