@@ -105,6 +105,24 @@ describe('NEXORA universal search', () => {
 
     await db.doc('users/public-user/settings/preferences').delete();
   });
+  it('hides actively suspended creators but restores visibility after restriction expiry', async () => {
+    await db.doc('users/public-user/settings/preferences').delete();
+    await db.doc('accountStatus/public-user').set({
+      suspended: true,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    const suspended = await searchNexoraContent(db,'viewer','nexora');
+    assert.ok(!suspended.results.some(hit => hit.targetId === 'public-user' || hit.targetId === 'public-video'));
+
+    await db.doc('accountStatus/public-user').update({
+      expiresAt: new Date(Date.now() - 60_000),
+    });
+    const expired = await searchNexoraContent(db,'viewer','nexora');
+    assert.ok(expired.results.some(hit => hit.targetId === 'public-user'));
+    assert.ok(expired.results.some(hit => hit.targetId === 'public-video'));
+
+    await db.doc('accountStatus/public-user').delete();
+  });
   it('boosts followed creators in personalized search ranking', async () => {
     const result = await searchNexoraContent(db,'viewer','nexora video');
     const videos = result.results.filter(hit => hit.kind === 'video');
