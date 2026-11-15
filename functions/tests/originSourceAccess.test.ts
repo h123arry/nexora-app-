@@ -44,6 +44,12 @@ test('cross-account Origin source authorization uses live Firestore records', as
     await assertAllowed();
   });
 
+  await t.test('supports an exact asset ID stored in a multi-media post array', async () => {
+    await sourcePost.set({ mediaAssetId: null, mediaAssetIds: [sourceAssetId] }, { merge: true });
+    await assertAllowed();
+    await sourcePost.set({ mediaAssetId: sourceAssetId }, { merge: true });
+  });
+
   await t.test('rejects private source accounts', async () => {
     await sourcePrefs.set({ privacy: { isPrivateAccount: true } }, { merge: true });
     await assertDenied();
@@ -67,7 +73,7 @@ test('cross-account Origin source authorization uses live Firestore records', as
 
   await t.test('rejects ambiguous media-to-post bindings', async () => {
     const duplicate = db.collection('posts').doc('origin-source-access-duplicate');
-    await duplicate.set({ mediaAssetId: sourceAssetId, userId: input.sourceOwnerUid, audience: 'public' });
+    await duplicate.set({ mediaAssetIds: [sourceAssetId], userId: input.sourceOwnerUid, audience: 'public' });
     await assertDenied();
     await duplicate.delete();
   });
