@@ -84,6 +84,45 @@ describe('NEXORA universal search', () => {
     const afterPrivacyChange = await searchNexoraContent(db,'viewer','nexora');
     assert.ok(!afterPrivacyChange.results.some(hit => hit.targetId === 'search-circle'));
   });
+  it('enforces blocks in both directions for people and their public content', async () => {
+    await db.doc('users/viewer/settings/preferences').set({
+      privacy: { blockedUserIds: ['public-user'] },
+      messaging: { blockedUserIds: [] },
+    });
+    const blockedByViewer = await searchNexoraContent(db,'viewer','nexora');
+    assert.ok(!blockedByViewer.results.some(hit => hit.targetId === 'public-user' || hit.targetId === 'public-video'));
+
+    await db.doc('users/viewer/settings/preferences').set({
+      privacy: { blockedUserIds: [] },
+      messaging: { blockedUserIds: [] },
+    });
+    await db.doc('users/public-user/settings/preferences').set({
+      privacy: { blockedUserIds: ['viewer'] },
+      messaging: { blockedUserIds: [] },
+    });
+    const blockedByCreator = await searchNexoraContent(db,'viewer','nexora');
+    assert.ok(!blockedByCreator.results.some(hit => hit.targetId === 'public-user' || hit.targetId === 'public-video'));
+
+    await db.doc('users/public-user/settings/preferences').delete();
+  });
+  it('hides actively suspended creators but restores visibility after restriction expiry', async () => {
+    await db.doc('users/public-user/settings/preferences').delete();
+    await db.doc('accountStatus/public-user').set({
+      suspended: true,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+    const suspended = await searchNexoraContent(db,'viewer','nexora');
+    assert.ok(!suspended.results.some(hit => hit.targetId === 'public-user' || hit.targetId === 'public-video'));
+
+    await db.doc('accountStatus/public-user').update({
+      expiresAt: new Date(Date.now() - 60_000),
+    });
+    const expired = await searchNexoraContent(db,'viewer','nexora');
+    assert.ok(expired.results.some(hit => hit.targetId === 'public-user'));
+    assert.ok(expired.results.some(hit => hit.targetId === 'public-video'));
+
+    await db.doc('accountStatus/public-user').delete();
+  });
   it('boosts followed creators in personalized search ranking', async () => {
     const result = await searchNexoraContent(db,'viewer','nexora video');
     const videos = result.results.filter(hit => hit.kind === 'video');
