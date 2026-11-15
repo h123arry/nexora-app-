@@ -131,7 +131,7 @@ interface MediaCreationEngineProps {
     scheduledTime?: string,
     isBroadcastPost?: boolean,
     communityName?: string,
-    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean }
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string }
   ) => string;
   theme: 'neon-cyber' | 'stealth-dark' | 'platinum-light' | 'emerald-glass';
   isStoryModeInitially?: boolean;
@@ -1330,6 +1330,7 @@ export default function MediaCreationEngine({
           taggedUsernames: requestedMentions,
           imageAltText: imageAltText.trim() || undefined,
           commentsAllowed,
+          mediaAssetId: uploadedOriginAssetIds[0],
         }
       );
       if (!createdPostId) throw new Error('Nexora could not confirm this post. Please sign in and retry.');

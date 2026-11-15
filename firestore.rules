@@ -98,6 +98,13 @@ service cloud.firestore {
         && data.get('sparks', 0) == 0
         && data.get('contributions', 0) == 0;
     }
+    function ownsMediaAsset(mediaAssetId) {
+      let assetPath = /databases/$(database)/documents/mediaAssets/$(mediaAssetId);
+      return mediaAssetId is string
+        && mediaAssetId.matches('^[A-Za-z0-9_-]{1,128}$')
+        && exists(assetPath)
+        && get(assetPath).data.ownerId == request.auth.uid;
+    }
     function publicPost(data) {
       return data.get('audience', '') == 'public';
     }
@@ -552,7 +559,7 @@ service cloud.firestore {
       allow create: if accountMayPost()
         && request.resource.data.keys().hasOnly([
           'id', 'userId', 'authorId', 'username', 'name', 'avatar', 'content',
-          'image', 'imageFilter', 'images', 'imageFilters', 'videoUrl', 'voiceTranscript',
+          'image', 'imageFilter', 'images', 'imageFilters', 'videoUrl', 'mediaAssetId', 'voiceTranscript',
           'voiceAudioUrl', 'audience', 'communityName', 'tags', 'taggedUsernames', 'imageAltText', 'likes', 'commentsCount',
           'shares', 'views', 'saves', 'bookmarksCount', 'likeCount', 'commentsDisabled',
           'searchSuggestion', 'timestamp', 'isLikedByUser', 'isBookmarkedByUser', 'location',
@@ -564,6 +571,7 @@ service cloud.firestore {
         && request.resource.data.id == postId
         && publicPost(request.resource.data)
         && request.resource.data.userId == request.auth.uid
+        && (!request.resource.data.keys().hasAny(['mediaAssetId']) || ownsMediaAsset(request.resource.data.mediaAssetId))
         && (!request.resource.data.keys().hasAny(['authorId']) || request.resource.data.authorId == request.auth.uid)
         && (!request.resource.data.keys().hasAny(['taggedUsernames'])
           || (request.resource.data.taggedUsernames is list && request.resource.data.taggedUsernames.size() <= 20))
