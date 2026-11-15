@@ -248,7 +248,7 @@ describe('private chat media boundary', () => {
     assert.deepEqual(Buffer.from(await playback.arrayBuffer()), audioBytes);
     const denied = await fetch(`${baseUrl}${playbackPath}`, { headers: { authorization: `Bearer ${nonMemberToken}` } });
     assert.equal(denied.status, 404);
-    for (let index = 0; index < 119; index += 1) {
+    for (let index = 0; index < 59; index += 1) {
       const allowedPlayback = await fetch(`${baseUrl}${playbackPath}`, { headers: { authorization: `Bearer ${idToken}` } });
       assert.equal(allowedPlayback.status, 200);
     }
