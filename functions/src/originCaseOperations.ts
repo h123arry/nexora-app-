@@ -2,7 +2,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { canResolveOriginDispute, isOriginReviewer } from './originCaseOperationsPolicy.js';
+import { canReviewerResolveOriginDispute, isOriginReviewer } from './originCaseOperationsPolicy.js';
 import { writeOriginAttributionCaseNotifications } from './originCaseNotifications.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
@@ -55,7 +55,16 @@ export const resolveOriginAttributionDispute = onCall({ maxInstances: 5 }, async
     await db.runTransaction(async tx => {
       const snapshot = await tx.get(ref);
       if (!snapshot.exists) throw new HttpsError('not-found', 'Attribution case not found.');
-      if (!canResolveOriginDispute(snapshot.get('status'), outcome)) {
+      if (reviewerUid === snapshot.get('requesterUid') || reviewerUid === snapshot.get('sourceCreatorUid')) {
+        throw new HttpsError('permission-denied', 'A creator involved in this attribution case cannot review or decide their own dispute.');
+      }
+      if (!canReviewerResolveOriginDispute({
+        status: snapshot.get('status'),
+        outcome,
+        reviewerUid,
+        requesterUid: snapshot.get('requesterUid'),
+        sourceCreatorUid: snapshot.get('sourceCreatorUid'),
+      })) {
         throw new HttpsError('failed-precondition', 'Only an open dispute can receive a final review decision.');
       }
       tx.update(ref, {

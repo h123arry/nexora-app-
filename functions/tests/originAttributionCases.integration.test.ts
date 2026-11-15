@@ -92,6 +92,14 @@ test('attribution correction, creator response, requester dispute and staff reso
     call(resolveOriginAttributionDispute, requesterUid, { caseId, outcome: 'upheld', note: 'This account is not a reviewer and cannot decide this dispute.' }),
     /permission-denied|authorized moderators/i,
   );
+  await assert.rejects(
+    call(resolveOriginAttributionDispute, requesterUid, { caseId, outcome: 'upheld', note: 'A requester cannot review their own attribution dispute.' }, { role: 'moderator' }),
+    /permission-denied|cannot review or decide/i,
+  );
+  await assert.rejects(
+    call(resolveOriginAttributionDispute, sourceCreatorUid, { caseId, outcome: 'upheld', note: 'A source creator cannot review their own attribution dispute.' }, { role: 'moderator' }),
+    /permission-denied|cannot review or decide/i,
+  );
   await call(resolveOriginAttributionDispute, 'origin-attribution-reviewer', {
     caseId, outcome: 'overturned', note: 'The evidence supports a correction to the recorded attribution presentation.',
   }, { role: 'moderator' });
