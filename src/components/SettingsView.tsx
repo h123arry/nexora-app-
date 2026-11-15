@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Bug } from 'lucide-react';
+import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Bug, Scale } from 'lucide-react';
 import { User as UserType, ThemeMood } from '../types';
 import { SettingsService } from '../services/firebase/settingsService';
 import { AuthService } from '../services/firebase/authService';
@@ -8,6 +8,7 @@ import { isNativeRuntime } from '../lib/nativeRuntime';
 import { readSoundPreferences, saveSoundPreferences, playNexoraSound, type SoundPreferences } from '../services/soundExperience';
 
 const PrivacySettingsModal = lazy(() => import('./PrivacySettingsModal'));
+const OriginAttributionInbox = lazy(() => import('./OriginAttributionInbox'));
 
 interface SettingsViewProps {
   currentUser: UserType;
@@ -22,7 +23,7 @@ export default function SettingsView({
   setTheme,
   onUpdateProfile
 }: SettingsViewProps) {
-  const [activeSection, setActiveSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta'>('account');
+  const [activeSection, setActiveSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta' | 'origin'>('account');
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
   const [isPrivateAccount, setIsPrivateAccount] = useState(false);
   const [allowDms, setAllowDms] = useState(true);
@@ -130,7 +131,8 @@ export default function SettingsView({
     { id: 'security', label: 'Security', icon: ShieldCheck, desc: 'Two-factor & active sessions' },
     { id: 'connected', label: 'Connected Accounts', icon: Link2, desc: 'OAuth & Workspace integrations' },
     { id: 'about', label: 'About Nexora', icon: Info, desc: 'Platform version & legal info' },
-    { id: 'beta', label: 'Beta feedback', icon: Bug, desc: 'Report issues with useful context' }
+    { id: 'beta', label: 'Beta feedback', icon: Bug, desc: 'Report issues with useful context' },
+    { id: 'origin', label: 'NEXORA Origin', icon: Scale, desc: 'Attribution, corrections & disputes' }
   ];
 
   return (
@@ -185,6 +187,18 @@ export default function SettingsView({
 
         {/* Section Content Panel */}
         <div className="md:col-span-2 p-6 rounded-3xl nx-surface shadow-md space-y-6">
+          {activeSection === 'origin' && (
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-bold text-white">NEXORA Origin</h3>
+                <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">Review recorded remix attribution, request corrections, respond to creator requests, and follow disputes. Staff review access is enforced by the server.</p>
+              </div>
+              <Suspense fallback={<p role="status" className="text-xs text-zinc-500">Loading Origin attribution tools…</p>}>
+                <OriginAttributionInbox />
+              </Suspense>
+            </div>
+          )}
+
           {activeSection === 'account' && (
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Account Overview</h3>
