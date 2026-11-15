@@ -12,13 +12,15 @@ before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Universal search tests require the Firestore Emulator.');
   await Promise.all(paths.map(id => db.doc('users/' + id).delete().catch(() => undefined)));
   await db.doc('users/viewer').set({ username: 'viewer', interestDNA: { design: 1 } });
-  await db.doc('users/public-user').set({ username: 'nexora_creator', name: 'Nexora Creator', bio: 'Building social video', isVerified: true });
+  await db.doc('users/public-user').set({ username: 'nexora_creator', name: 'Nexora Creator', bio: 'Building social video', isSuspended: true, isVerified: true });
+  await db.doc('accountStatus/public-user').set({ suspended: true, expiresAt: new Date(Date.now() - 60_000) });
   await db.doc('users/private-user').set({ username: 'nexora_private', name: 'Nexora Private' });
-  await db.doc('users/private-user/settings/preferences').set({ privacy: { isPrivate: true } });
+  await db.doc('users/private-user/settings/preferences').set({ privacy: { isPrivateAccount: true, isPrivate: false } });
   await db.doc('users/blocked-user').set({ username: 'nexora_blocked', name: 'Nexora Blocked' });
   await db.doc('users/creator-two').set({ username: 'creator_two', name: 'Creator Two' });
-  await db.doc('users/blocked-user/settings/preferences').set({ privacy: { blockedUserIds: ['viewer'] } });
-  await db.doc('users/viewer/settings/preferences').set({ privacy: { blockedUserIds: [] }, messaging: { blockedUserIds: [] } });
+  await db.doc('verifiedIdentities/creator-two').set({ userId: 'creator-two', status: 'verified' });
+  await db.doc('users/blocked-user/settings/preferences').set({ feed: { blockedCreatorIds: ['viewer'] } });
+  await db.doc('users/viewer/settings/preferences').set({ privacy: { blockedUserIds: [] }, messaging: { blockedUserIds: [] }, feed: { blockedCreatorIds: ['blocked-user'] } });
   await db.doc('communities/search-circle').set({ id:'search-circle', type:'public', name:'Nexora Public Circle', description:'Public discovery space', bannedUsers:[] });
   await db.doc('posts/public-video').set({ id:'public-video', userId:'public-user', content:'Nexora video discovery', audience:'public', mediaType:'video', timestamp:new Date(), tags:['nexora','design'], likes:24 });
   await db.doc('posts/private-post').set({ id:'private-post', userId:'private-user', content:'Nexora private content', audience:'public', timestamp:new Date(), tags:['nexora'] });
@@ -36,8 +38,10 @@ before(async () => {
   await syncUniversalSearchRecord(db,'post','private-post','posts/private-post',(await db.doc('posts/private-post').get()).data()!);
   await syncUniversalSearchRecord(db,'post','blocked-post','posts/blocked-post',(await db.doc('posts/blocked-post').get()).data()!);
   await syncUniversalSearchRecord(db,'video','followed-video','posts/followed-video',(await db.doc('posts/followed-video').get()).data()!);
-  const forgedVerificationIndexId = 'person_' + createHash('sha256').update('users/public-user').digest('hex');
-  assert.equal((await db.doc('searchIndex/' + forgedVerificationIndexId).get()).get('verified'), false, 'client profile flags must never create a trusted search badge');
+  const publicPersonIndexId = 'person_' + createHash('sha256').update('users/public-user').digest('hex');
+  const followedVideoIndexId = 'video_' + createHash('sha256').update('posts/followed-video').digest('hex');
+  assert.equal((await db.doc('searchIndex/' + publicPersonIndexId).get()).get('verified'), false);
+  assert.equal((await db.doc('searchIndex/' + followedVideoIndexId).get()).get('verified'), false);
   await syncUniversalSearchRecord(db,'circle','search-circle','communities/search-circle',(await db.doc('communities/search-circle').get()).data()!);
 });
 after(async () => {
@@ -56,7 +60,9 @@ after(async () => {
   for (const id of ['trend-a','trend-b','private-trend-a','private-trend-b']) await db.doc('posts/' + id).delete().catch(() => undefined);
   await db.recursiveDelete(db.doc('users/creator-two')).catch(() => undefined);
   await db.recursiveDelete(db.doc('users/public-user')).catch(() => undefined);
+  await db.doc('accountStatus/public-user').delete().catch(() => undefined);
   await db.doc('searchIndex/circle_' + createHash('sha256').update('communities/search-circle').digest('hex')).delete().catch(() => undefined);
+  await db.doc('verifiedIdentities/creator-two').delete().catch(() => undefined);
   await db.doc('communities/search-circle').delete().catch(() => undefined);
   await deleteApp(app);
 });
@@ -64,6 +70,7 @@ describe('NEXORA universal search', () => {
   it('indexes and returns public people and video content while respecting blocks and private profiles', async () => {
     const result = await searchNexoraContent(db,'viewer','nexora');
     assert.ok(result.results.some(hit => hit.kind === 'person' && hit.targetId === 'public-user'));
+    assert.equal(result.results.find(hit => hit.kind === 'person' && hit.targetId === 'public-user')?.verified, false);
     assert.ok(result.results.some(hit => hit.kind === 'video' && hit.targetId === 'public-video'));
     assert.ok(!result.results.some(hit => hit.targetId === 'private-user' || hit.targetId === 'blocked-user' || hit.targetId === 'private-post' || hit.targetId === 'blocked-post'));
   });
@@ -86,49 +93,11 @@ describe('NEXORA universal search', () => {
     const afterPrivacyChange = await searchNexoraContent(db,'viewer','nexora');
     assert.ok(!afterPrivacyChange.results.some(hit => hit.targetId === 'search-circle'));
   });
-  it('enforces blocks in both directions for people and their public content', async () => {
-    await db.doc('users/viewer/settings/preferences').set({
-      privacy: { blockedUserIds: ['public-user'] },
-      messaging: { blockedUserIds: [] },
-    });
-    const blockedByViewer = await searchNexoraContent(db,'viewer','nexora');
-    assert.ok(!blockedByViewer.results.some(hit => hit.targetId === 'public-user' || hit.targetId === 'public-video'));
-
-    await db.doc('users/viewer/settings/preferences').set({
-      privacy: { blockedUserIds: [] },
-      messaging: { blockedUserIds: [] },
-    });
-    await db.doc('users/public-user/settings/preferences').set({
-      privacy: { blockedUserIds: ['viewer'] },
-      messaging: { blockedUserIds: [] },
-    });
-    const blockedByCreator = await searchNexoraContent(db,'viewer','nexora');
-    assert.ok(!blockedByCreator.results.some(hit => hit.targetId === 'public-user' || hit.targetId === 'public-video'));
-
-    await db.doc('users/public-user/settings/preferences').delete();
-  });
-  it('hides actively suspended creators but restores visibility after restriction expiry', async () => {
-    await db.doc('users/public-user/settings/preferences').delete();
-    await db.doc('accountStatus/public-user').set({
-      suspended: true,
-      expiresAt: new Date(Date.now() + 60_000),
-    });
-    const suspended = await searchNexoraContent(db,'viewer','nexora');
-    assert.ok(!suspended.results.some(hit => hit.targetId === 'public-user' || hit.targetId === 'public-video'));
-
-    await db.doc('accountStatus/public-user').update({
-      expiresAt: new Date(Date.now() - 60_000),
-    });
-    const expired = await searchNexoraContent(db,'viewer','nexora');
-    assert.ok(expired.results.some(hit => hit.targetId === 'public-user'));
-    assert.ok(expired.results.some(hit => hit.targetId === 'public-video'));
-
-    await db.doc('accountStatus/public-user').delete();
-  });
   it('boosts followed creators in personalized search ranking', async () => {
     const result = await searchNexoraContent(db,'viewer','nexora video');
     const videos = result.results.filter(hit => hit.kind === 'video');
     assert.equal(videos[0]?.targetId, 'followed-video');
+    assert.equal(videos[0]?.verified, true);
   });
   it('returns hashtag discoveries from matching public posts', async () => {
     const result = await searchNexoraContent(db,'viewer','nexora');

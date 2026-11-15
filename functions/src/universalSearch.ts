@@ -45,6 +45,16 @@ function asDate(value: unknown): Date {
   }
   return new Date(0);
 }
+
+function hasActiveAccountRestriction(profile: Record<string, unknown>, status: Record<string, unknown>): boolean {
+  if (profile.isSeedProfile === true) return true;
+  const statusIsAuthoritative = Object.prototype.hasOwnProperty.call(status, 'banned')
+    || Object.prototype.hasOwnProperty.call(status, 'suspended');
+  if (!statusIsAuthoritative) return profile.isBanned === true || profile.isSuspended === true;
+  if (status.banned !== true && status.suspended !== true) return false;
+  const expiry = asDate(status.expiresAt);
+  return expiry.getTime() === 0 || expiry.getTime() > Date.now();
+}
 function safeString(value: unknown, max = 500): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
 }
@@ -79,8 +89,10 @@ export async function syncUniversalSearchRecord(
   const ref = db.collection(INDEX).doc(indexId);
   if (!data) { await ref.delete().catch(() => undefined); return; }
   const status = safeString(data.status, 40).toLowerCase();
+  // Keep non-seed people in the private index; current account restrictions are
+  // evaluated at query time so an expired suspension does not require reindexing.
   const isEligible =
-    (kind === 'person' && data.isBanned !== true && data.isSuspended !== true && data.isSeedProfile !== true) ||
+    (kind === 'person' && data.isSeedProfile !== true) ||
     (kind === 'post' && (data.audience === 'public' || (!!parent && parent.type === 'public' && parent.isPrivate !== true)) && status !== 'deleted' && status !== 'removed') ||
     (kind === 'video' && data.audience === 'public' && status !== 'deleted' && status !== 'removed') ||
     (kind === 'page' && data.isPrivate !== true && data.privacy !== 'private' && status !== 'private' && status !== 'suspended' && status !== 'deleted' && status !== 'draft') ||
@@ -191,8 +203,10 @@ export async function searchNexoraContent(
   const blocked = new Set<string>([
     ...(Array.isArray(viewerData?.privacy?.blockedUserIds) ? viewerData.privacy.blockedUserIds : []),
     ...(Array.isArray(viewerData?.messaging?.blockedUserIds) ? viewerData.messaging.blockedUserIds : []),
+    ...(Array.isArray(viewerData?.feed?.blockedCreatorIds) ? viewerData.feed.blockedCreatorIds : []),
   ].filter((item): item is string => typeof item === 'string'));
-  const ownerPolicyCache = new Map<string, Promise<{privateProfile:boolean; blocks:string[]; restricted:boolean}>>();
+  const ownerPolicyCache = new Map<string, Promise<{privateProfile:boolean; blocks:string[]; restricted:boolean; verified:boolean}>>();
+  const ownerVerified = new Map<string, boolean>();
   const parentPolicyCache = new Map<string, Promise<{exists:boolean; data:Record<string, unknown>}>>();
   const readParentPolicy = (collectionName: string, id: string) => {
     const key = collectionName + '/' + id;
@@ -229,25 +243,26 @@ export async function searchNexoraContent(
           db.collection('users').doc(ownerId).get(),
           db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
           db.collection('accountStatus').doc(ownerId).get(),
-        ]).then(([ownerProfile, ownerSettings, ownerStatus]) => {
+          db.collection('verifiedIdentities').doc(ownerId).get(),
+        ]).then(([ownerProfile, ownerSettings, ownerStatus, verifiedIdentity]) => {
           const profile = ownerProfile.data() || {};
           const privacy = ownerSettings.data() || {};
           const restriction = ownerStatus.data() || {};
-          const restrictionExpiry = asDate(restriction.expiresAt);
           return {
-            privateProfile: privacy?.privacy?.isPrivate === true,
+            privateProfile: privacy?.privacy?.isPrivate === true || privacy?.privacy?.isPrivateAccount === true,
             blocks: [
               ...(Array.isArray(privacy?.privacy?.blockedUserIds) ? privacy.privacy.blockedUserIds : []),
               ...(Array.isArray(privacy?.messaging?.blockedUserIds) ? privacy.messaging.blockedUserIds : []),
+              ...(Array.isArray(privacy?.feed?.blockedCreatorIds) ? privacy.feed.blockedCreatorIds : []),
             ],
-            restricted: profile.isBanned === true || profile.isSuspended === true || profile.isSeedProfile === true
-              || ((restriction.banned === true || restriction.suspended === true)
-                && (restrictionExpiry.getTime() === 0 || restrictionExpiry.getTime() > Date.now())),
+            restricted: hasActiveAccountRestriction(profile, restriction),
+            verified: verifiedIdentity.exists && verifiedIdentity.get('status') === 'verified',
           };
         });
         ownerPolicyCache.set(ownerId, policy);
       }
       const visibility = await policy;
+      ownerVerified.set(ownerId, visibility.verified);
       if (visibility.restricted || visibility.blocks.includes(viewerUid)) return null;
       if (visibility.privateProfile && !followedIds.has(ownerId)) {
         const follow = await db.collection('follows').doc(viewerUid + '_' + ownerId).get();
@@ -266,7 +281,7 @@ export async function searchNexoraContent(
     hits.push({
       id: candidate.id, kind: data.kind, title: String(data.title || ''), subtitle: String(data.subtitle || ''),
       excerpt: String(data.excerpt || ''), image: String(data.image || ''), targetId: String(data.targetId || ''),
-      targetPath: String(data.targetPath || ''), ownerId: String(data.ownerId || ''), verified: data.verified === true,
+      targetPath: String(data.targetPath || ''), ownerId: String(data.ownerId || ''), verified: ownerVerified.get(ownerId) === true,
       createdAt: asDate(data.createdAt).toISOString(),
       score: score + (followedIds.has(String(data.targetId || '')) || (ownerId && followedIds.has(ownerId)) ? 3 : 0)
         + Math.min(4, (Array.isArray(data.tags) ? data.tags : []).reduce((sum: number, tag: unknown) => sum + (interests[normalizeSearchText(tag)] || 0) * 0.35, 0)),
@@ -319,9 +334,9 @@ export async function getNexoraTrending(db: Firestore): Promise<Array<{tag:strin
     const profile = profileSnapshots[index].data() || {};
     const privacy = privacySnapshots[index].data() || {};
     const status = statusSnapshots[index].data() || {};
-    const expiry = asDate(status.expiresAt).getTime();
-    const activeRestriction = (status.suspended === true || status.banned === true) && (expiry === 0 || expiry > Date.now());
-    if (profile.isBanned === true || profile.isSuspended === true || profile.isSeedProfile === true || privacy?.privacy?.isPrivate === true || activeRestriction) hiddenCreators.add(id);
+    const activeRestriction = hasActiveAccountRestriction(profile, status);
+    const privateProfile = privacy?.privacy?.isPrivate === true || privacy?.privacy?.isPrivateAccount === true;
+    if (activeRestriction || privateProfile) hiddenCreators.add(id);
   });
   const groups = new Map<string,{posts:Set<string>;creators:Map<string,number>}>();
   const now = Date.now();
