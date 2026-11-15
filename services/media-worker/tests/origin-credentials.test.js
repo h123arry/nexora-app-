@@ -1,10 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Reader, Context } from '@contentauth/c2pa-node';
 import sharp from 'sharp';
-import { buildCredentialInspection, unsupportedCredentialInspection } from '../src/originCredentials.js';
+import { buildCredentialInspection, unsupportedCredentialInspection, inspectSourceCredential } from '../src/originCredentials.js';
 
 describe('NEXORA Origin C2PA credential state mapping', () => {
   it('treats a missing manifest as absent, never as verified', () => {
@@ -69,3 +71,33 @@ describe('NEXORA Origin native C2PA reader integration', () => {
     assert.ok(inspection.validationCodes.some(code => /asset|hash|binding|ingredient/i.test(code)));
   });
 });
+
+  it('maps malformed source media to unsupported instead of absent or verified', async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), 'nexora-origin-malformed-'));
+    const malformedPath = path.join(directory, 'malformed.jpg');
+    try {
+      await writeFile(malformedPath, Buffer.from('not a jpeg or c2pa asset'));
+      const inspection = await inspectSourceCredential(malformedPath, 'image/jpeg');
+      assert.equal(inspection.state, 'unsupported');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps credential inspection bound to the original upload before image transcoding', async () => {
+    const fixturePath = fileURLToPath(new URL('./fixtures/c2pa-untrusted-ca.jpg', import.meta.url));
+    const originalReader = await Reader.fromAsset({ path: fixturePath, mimeType: 'image/jpeg' }, context);
+    assert.ok(originalReader);
+    assert.equal(buildCredentialInspection(originalReader.json()).state, 'untrusted');
+
+    const transformed = await sharp(fixturePath).webp({ quality: 80 }).toBuffer();
+    let transformedInspection;
+    try {
+      const transformedReader = await Reader.fromAsset({ buffer: transformed, mimeType: 'image/webp' }, context);
+      transformedInspection = buildCredentialInspection(transformedReader ? transformedReader.json() : null);
+    } catch {
+      transformedInspection = unsupportedCredentialInspection();
+    }
+    assert.notEqual(transformedInspection.state, 'verified',
+      'a transformed rendition must not inherit the original source credential verdict');
+  });

@@ -1,3 +1,4 @@
+import { Reader, Context } from '@contentauth/c2pa-node';
 const VALID_STATES = new Set(['Trusted', 'Valid', 'Invalid']);
 const SAFE_CODE = /^[A-Za-z0-9._-]{1,128}$/;
 
@@ -24,4 +25,22 @@ export function buildCredentialInspection(manifestStore) {
 
 export function unsupportedCredentialInspection() {
   return { state: 'unsupported', validationState: null, validationCodes: [], validator: '@contentauth/c2pa-node@0.12.0', schemaVersion: 1 };
+}
+
+/** Inspect the exact original upload; reader failures are unsupported, never trusted. */
+export async function inspectSourceCredential(file, contentType) {
+  try {
+    const context = new Context({
+      verify: { verifyAfterReading: true, verifyTrust: true, ocspFetch: false, remoteManifestFetch: false },
+      trust: { verifyTrustList: true },
+    });
+    const reader = await Reader.fromAsset({ path: file, mimeType: contentType }, context);
+    return buildCredentialInspection(reader ? reader.json() : null);
+  } catch (error) {
+    console.warn('NEXORA Origin C2PA inspection unavailable', {
+      code: 'c2pa_inspection_unavailable',
+      message: String(error?.message || error).slice(0, 160),
+    });
+    return unsupportedCredentialInspection();
+  }
 }
