@@ -21,7 +21,7 @@ const sourceAssetId = 'origin-attribution-integration-source';
 const requesterUid = 'origin-attribution-integration-requester';
 const sourceCreatorUid = 'origin-attribution-integration-source-creator';
 const originRef = db.collection('mediaOrigins').doc(derivativeAssetId);
-const eventRef = originRef.collection('events').doc(`derivative_${derivativeAssetId}');
+const eventRef = originRef.collection('events').doc(`derivative_${derivativeAssetId}`);
 const auth = (uid: string, token: Record<string, unknown> = {}) => ({ uid, token });
 const call = (fn: any, uid: string, data: Record<string, unknown> = {}, token: Record<string, unknown> = {}) =>
   fn.run({ auth: auth(uid, token), data });
