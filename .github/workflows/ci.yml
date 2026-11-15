@@ -86,6 +86,9 @@ jobs:
       - name: Run Origin cross-account source access emulator tests
         run: npm run test:origin-source-access
 
+      - name: Run Origin attribution and dispute emulator tests
+        run: npm run test:origin-attribution
+
       - name: Run Storage security rules tests
         run: npm run test:storage
 

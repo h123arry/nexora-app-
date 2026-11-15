@@ -2,7 +2,8 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { canResolveOriginDispute, isOriginReviewer, originCaseNotificationRecipients } from './originCaseOperationsPolicy.js';
+import { canResolveOriginDispute, isOriginReviewer } from './originCaseOperationsPolicy.js';
+import { writeOriginAttributionCaseNotifications } from './originCaseNotifications.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const CASES = 'originAttributionCases';
@@ -85,35 +86,12 @@ export const deliverOriginAttributionCaseNotifications = onDocumentWritten(
     const after = event.data?.after;
     if (!after?.exists) return;
     const before = event.data?.before;
-    const record = after.data() || {};
-    const previousStatus = before?.exists ? before.get('status') : null;
-    if (previousStatus === record.status) return;
-    const recipients = originCaseNotificationRecipients(record);
-    if (!recipients.length) return;
-    const batch = db.batch();
-    for (const recipient of recipients) {
-      const notificationId = `origin_${event.params.caseId}_${String(record.status)}_${recipient.kind}_${recipient.uid}`;
-      const ref = db.collection('users').doc(recipient.uid).collection('notifications').doc(notificationId);
-      const content = recipient.kind === 'request'
-        ? 'A creator requested an attribution correction on media you contributed.'
-        : recipient.kind === 'response'
-          ? 'A creator responded to your attribution correction request.'
-          : recipient.kind === 'dispute'
-            ? 'An attribution correction decision has been disputed and needs review.'
-            : 'A moderator has completed the review of an attribution dispute.';
-      batch.set(ref, {
-        id: notificationId,
-        type: 'origin_attribution',
-        userId: 'system',
-        username: 'NEXORA Origin',
-        avatar: '/logo.svg',
-        content,
-        targetId: event.params.caseId,
-        isRead: false,
-        timestamp: event.time,
-        createdAt: FieldValue.serverTimestamp(),
-      }, { merge: false });
-    }
-    await batch.commit();
+    await writeOriginAttributionCaseNotifications(
+      db,
+      event.params.caseId,
+      before?.exists ? before.get('status') : null,
+      after.data() || {},
+      event.time,
+    );
   },
 );
