@@ -1,4 +1,4 @@
-import { FieldValue, type Firestore } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { deleteOwnedOriginRecord } from './originCleanup.js';
 
 const PAGE_SIZE = 200;
@@ -108,6 +108,28 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string, on
       deleted += 1;
       await onBatch?.();
     }
+  }
+
+  // Historical settlement records remain for accounting, but the provider beneficiary
+  // reference is no longer needed once the transfer is terminal and must not outlive the bank profile.
+  let payoutCursor: QueryDocumentSnapshot | undefined;
+  while (true) {
+    let payoutQuery = db.collection('creatorPayoutRequests')
+      .where('creatorId', '==', userId)
+      .where('status', 'in', ['success', 'failed', 'reversed'])
+      .orderBy(FieldPath.documentId())
+      .limit(PAGE_SIZE);
+    if (payoutCursor) payoutQuery = payoutQuery.startAfter(payoutCursor);
+    const rows = await payoutQuery.get();
+    if (rows.empty) break;
+    const batch = db.batch();
+    rows.docs.forEach(row => batch.update(row.ref, {
+      beneficiaryRef: FieldValue.delete(),
+    }));
+    await batch.commit();
+    await onBatch?.();
+    payoutCursor = rows.docs[rows.docs.length - 1];
+    if (rows.size < PAGE_SIZE) break;
   }
 
   // Keep payout audit evidence, but remove only the deleted account's identity.
