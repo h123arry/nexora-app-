@@ -56,6 +56,25 @@ const publicProfile = (uid) => ({
 });
 
  describe('Firestore authorization regression tests', () => {
+  it('blocks tokens authenticated before the server-side session revocation cutoff', async () => {
+    const cutoffSeconds = Math.ceil(Date.now() / 1000);
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'accountStatus', 'alice'), {
+        accountId: 'alice',
+        sessionsRevokedAfter: Timestamp.fromMillis(cutoffSeconds * 1000)
+      });
+      await setDoc(doc(adminDb, 'users', 'alice'), profile('alice'));
+    });
+    const revokedDb = env.authenticatedContext('alice', {
+      email: 'alice@example.test', email_verified: true, auth_time: cutoffSeconds - 1
+    }).firestore();
+    const freshDb = env.authenticatedContext('alice', {
+      email: 'alice@example.test', email_verified: true, auth_time: cutoffSeconds
+    }).firestore();
+    await assertFails(getDoc(doc(revokedDb, 'users', 'alice')));
+    await assertSucceeds(getDoc(doc(freshDb, 'users', 'alice')));
+  });
+
   it('protects private WorldWeaves and requires invited membership before contributing', async () => {
     await seed(async adminDb => {
       await setDoc(doc(adminDb, 'worldWeaves', 'private-weave'), {
