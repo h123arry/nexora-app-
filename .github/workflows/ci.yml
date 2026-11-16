@@ -94,6 +94,8 @@ jobs:
 
       - name: Run Storage security rules tests
         run: npm run test:storage
+      - name: Run legacy WorldWeave media migration emulator tests
+        run: npm run test:legacy-media-migration
 
       - name: Run migration integration tests
         run: npm run test:migration
