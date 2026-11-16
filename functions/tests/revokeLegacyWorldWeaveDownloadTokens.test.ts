@@ -6,7 +6,7 @@ import { getStorage } from 'firebase-admin/storage';
 import {
   firebaseDownloadTokenObjectPath,
   runLegacyWorldWeaveMediaMigration,
-  metadataWithRevokedFirebaseDownloadTokens,
+  metadataWithRotatedFirebaseDownloadToken,
 } from '../src/migrations/revokeLegacyWorldWeaveDownloadTokens.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-legacy-media';
@@ -94,7 +94,8 @@ describe('legacy WorldWeave download-token migration', () => {
     assert.equal(applied.revokedAndCleared, 1);
     assert.equal((await moment.get()).get('mediaUrl'), '');
     const metadata = (await file.getMetadata())[0].metadata || {};
-    assert.equal(metadata.firebaseStorageDownloadTokens, undefined);
+    assert.equal(typeof metadata.firebaseStorageDownloadTokens, 'string');
+    assert.notEqual(metadata.firebaseStorageDownloadTokens, 'legacy-token');
     assert.equal(metadata.ownerId, 'legacy-media-author');
     assert.equal(metadata.purpose, 'worldweave');
 
