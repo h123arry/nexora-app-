@@ -188,6 +188,12 @@ export async function runLegacyWorldWeaveMediaMigration(
   return summary;
 }
 
+export function assertResolverReadyForApply(apply: boolean, resolverReady: boolean): void {
+  if (apply && !resolverReady) {
+    throw new Error('Refusing to clear private media URLs until the expiring WorldWeave resolver is deployed and verified. Re-run with --resolver-ready only after that gate is met.');
+  }
+}
+
 function argValue(args: string[], name: string): string | undefined {
   const prefix = `--${name}=`;
   return args.find(arg => arg.startsWith(prefix))?.slice(prefix.length);
@@ -197,9 +203,11 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const apply = args.includes('--apply');
   const allowProduction = args.includes('--allow-production');
+  const resolverReady = args.includes('--resolver-ready');
   const confirmProject = argValue(args, 'confirm-project');
   const reportPath = argValue(args, 'report');
   const maxMoments = Number(argValue(args, 'max-moments') || 5000);
+  assertResolverReadyForApply(apply, resolverReady);
   const projectId = resolveFirebaseProjectId();
   const emulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST && (process.env.STORAGE_EMULATOR_HOST || process.env.FIREBASE_STORAGE_EMULATOR_HOST));
 
