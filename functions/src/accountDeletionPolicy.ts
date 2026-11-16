@@ -42,6 +42,16 @@ export function accountStoragePrefixes(userId: string): string[] {
 export async function deleteUserOwnedDocuments(db: Firestore, userId: string, onBatch?: () => Promise<void>): Promise<number> {
   if (!userId) throw new Error('A valid account ID is required for data cleanup.');
   let deleted = 0;
+  // Financial settlement records are retained for reconciliation and legal/accounting evidence.
+  // Do not erase a beneficiary while a provider transfer may still settle or need reconciliation.
+  const activePayouts = await db.collection('creatorPayoutRequests')
+    .where('creatorId', '==', userId)
+    .where('status', 'in', ['submitting', 'processing', 'submission_unknown', 'awaiting_provider_approval'])
+    .limit(1).get();
+  if (!activePayouts.empty) {
+    throw new Error('Account deletion is paused because a creator payout is still pending provider settlement or reconciliation.');
+  }
+
   for (const target of ACCOUNT_OWNED_COLLECTIONS) {
     while (true) {
       const snapshot = await db.collection(target.name).where(target.field, '==', userId).limit(PAGE_SIZE).get();
@@ -87,16 +97,6 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string, on
     await batch.commit();
     deleted += rows.size;
     if (rows.size < PAGE_SIZE) break;
-  }
-
-  // Financial settlement records are retained for reconciliation and legal/accounting evidence.
-  // Do not erase a beneficiary while a provider transfer may still settle or need reconciliation.
-  const activePayouts = await db.collection('creatorPayoutRequests')
-    .where('creatorId', '==', userId)
-    .where('status', 'in', ['submitting', 'processing', 'submission_unknown', 'awaiting_provider_approval'])
-    .limit(1).get();
-  if (!activePayouts.empty) {
-    throw new Error('Account deletion is paused because a creator payout is still pending provider settlement or reconciliation.');
   }
 
   // Once all payouts are terminal, remove the bank-beneficiary and compliance documents.
