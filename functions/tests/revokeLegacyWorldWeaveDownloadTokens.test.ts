@@ -46,19 +46,18 @@ describe('legacy WorldWeave download-token migration', () => {
     assert.equal(firebaseDownloadTokenObjectPath('https://firebasestorage.googleapis.com/v0/b/bucket/o/%2E%2E%2Fsecret?token=abc'), null);
   });
 
-  it('explicitly clears only the Firebase token metadata and preserves unrelated custom metadata', () => {
-    assert.deepEqual(metadataWithRevokedFirebaseDownloadTokens({
+  it('rotates only the Firebase token and preserves unrelated custom metadata', () => {
+    const rotated = metadataWithRotatedFirebaseDownloadToken({
       firebaseStorageDownloadTokens: 'token-a,token-b',
       ownerId: 'legacy-media-author',
       purpose: 'worldweave',
-    }), {
-      firebaseStorageDownloadTokens: null,
-      ownerId: 'legacy-media-author',
-      purpose: 'worldweave',
     });
-    assert.deepEqual(metadataWithRevokedFirebaseDownloadTokens(undefined), {
-      firebaseStorageDownloadTokens: null,
-    });
+    assert.equal(typeof rotated.firebaseStorageDownloadTokens, 'string');
+    assert.notEqual(rotated.firebaseStorageDownloadTokens, 'token-a,token-b');
+    assert.equal(rotated.ownerId, 'legacy-media-author');
+    assert.equal(rotated.purpose, 'worldweave');
+    const emptyMetadata = metadataWithRotatedFirebaseDownloadToken(undefined);
+    assert.equal(typeof emptyMetadata.firebaseStorageDownloadTokens, 'string');
   });
 
   it('dry-runs without modifying legacy tokens, then revokes tokens and clears the URL idempotently', async () => {
