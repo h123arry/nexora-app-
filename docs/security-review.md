@@ -14,7 +14,7 @@ The legacy process-local custom email OTP endpoints were not used by the current
 
 The browser-side transactional email writer was removed. It no longer writes rendered mail bodies, verification content, or security messages to Firestore. The mail rule is now server-only (`allow create, update, delete: if false`). A trusted provider-backed email service has not been implemented, so security email alerts remain unavailable rather than being presented as delivered.
 
-Production Express startup now requires the project, named database, Storage bucket, and release identifier. Local development retains documented defaults. Browser Firebase initialization no longer performs a synthetic `test/connection` read or emits startup debug logs. Service-worker registration is production-only to avoid stale local development assets.
+Production Express startup now requires the project, configured Firestore database, Storage bucket, and release identifier. Local development retains documented defaults. Browser Firebase initialization no longer performs a synthetic `test/connection` read or emits startup debug logs. Service-worker registration is production-only to avoid stale local development assets.
 
 ## Secret and logging review
 
@@ -22,4 +22,4 @@ A repository scanner checks tracked files for private keys, service-account JSON
 
 ## Remaining security blockers
 
-Production Auth providers, authorized domains, email/SMS quotas, App Check enforcement, MFA/trusted devices, abuse throttles, Functions IAM, named-database deployment, Storage lifecycle policy, backup/restore, monitoring destinations, legal/privacy review, and provider configuration remain external verification requirements. The repository is not a production security certification and should not be described as one.
+Production Auth providers, authorized domains, email/SMS quotas, App Check enforcement, MFA/trusted devices, abuse throttles, Functions IAM, configured `default` Firestore database deployment, Storage lifecycle policy, backup/restore, monitoring destinations, legal/privacy review, and provider configuration remain external verification requirements. The repository is not a production security certification and should not be described as one.

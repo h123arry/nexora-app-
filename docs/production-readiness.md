@@ -21,7 +21,7 @@
 
 ## B. Verified in staging or an isolated test environment
 
-The local Firebase emulator suites verify authorization logic and selected service behavior, but they are not a staging deployment. Before launch, an operator must verify a real non-production Firebase project with the intended named database and Storage bucket: Auth provider flows, authorized domains, Functions IAM, App Check behavior, indexes, private media, account deletion, provider quotas, and denied-path smoke tests.
+The local Firebase emulator suites verify authorization logic and selected service behavior, but they are not a staging deployment. Before launch, an operator must verify a real non-production Firebase project with the configured `default` Firestore database and Storage bucket: Auth provider flows, authorized domains, Functions IAM, App Check behavior, indexes, private media, account deletion, provider quotas, and denied-path smoke tests.
 
 ## C. Verified in production
 
@@ -29,7 +29,7 @@ None. No production Firebase project, hosting target, deployed Functions revisio
 
 ## D. Blocked by external configuration
 
-Production project and hosting credentials; named-database and bucket confirmation; Application Default Credentials/IAM; Auth provider enablement and authorized domains; App Check registration/enforcement; Functions secrets and runtime/region; backup/export scheduling and restore drill; monitoring and alert destinations; Storage lifecycle/retention; provider-backed transactional email; FCM/VAPID delivery; and staging/production smoke-test accounts are not available here.
+Production project and hosting credentials; configured `default` database and bucket confirmation; Application Default Credentials/IAM; Auth provider enablement and authorized domains; App Check registration/enforcement; Functions secrets and runtime/region; backup/export scheduling and restore drill; monitoring and alert destinations; Storage lifecycle/retention; provider-backed transactional email; FCM/VAPID delivery; and staging/production smoke-test accounts are not available here.
 
 Payments, payouts, creator earnings, trusted ledger operations, private audience variants, durable search indexing, media transcoding/moderation/captions, distributed abuse controls, MFA/trusted devices, and live moderation remain unimplemented or unavailable. They must not be represented as live features.
 
@@ -43,4 +43,4 @@ Do not launch until staging confirms the actual target configuration, backups an
 
 ## Immediate next action
 
-Create an isolated staging Firebase project matching the intended named database and Storage architecture, configure non-production secrets and Auth providers, deploy the reviewed rules/indexes/Functions, and execute the smoke-test and rollback evidence described in [`docs/deployment-runbook.md`](deployment-runbook.md).
+Create an isolated staging Firebase project using the configured `default` Firestore database and Storage architecture, configure non-production secrets and Auth providers, deploy the reviewed rules/indexes/Functions, and execute the smoke-test and rollback evidence described in [`docs/deployment-runbook.md`](deployment-runbook.md).

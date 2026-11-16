@@ -28,7 +28,7 @@ An owner must complete the following in an isolated, non-production staging proj
 - [ ] Firebase Console project and registered Web App match the reviewed configuration.
 - [ ] Hosting domain is HTTPS and listed in Firebase Auth authorized domains.
 - [ ] `NODE_ENV=production`, immutable `RELEASE_VERSION`, `GCLOUD_PROJECT`, `FIRESTORE_DATABASE_ID`, and `FIREBASE_STORAGE_BUCKET` are configured in the host secret/environment manager.
-- [ ] Application Default Credentials/IAM allow the server and Functions to reach only the intended project and named database.
+- [ ] Application Default Credentials/IAM allow the server and Functions to reach only the intended project and configured `default` Firestore database.
 - [ ] Firestore rules and indexes are deployed from the reviewed commit; Storage rules are deployed from the same compatibility window.
 - [ ] App Check registration and staged enforcement policy are configured, or the beta owner has explicitly approved a documented temporary exception.
 - [ ] Storage billing/Blaze requirements, lifecycle cleanup, retention, and object access policy are approved.
@@ -93,8 +93,8 @@ Do not advertise or expose these as fully live beta capabilities:
 1. Production Storage is not verified and the Firebase Console previously showed Storage onboarding/Blaze billing requirements.
 2. App Check is not verified as registered or enforced.
 3. Phone Auth is disabled in the known project; the UI must not imply that phone sign-in is available.
-4. Production Firestore rules, indexes, Functions, IAM, named-database behavior, and private media paths have not been live-verified.
-5. Firebase named-database SDK overloads are documented as Public Preview; an owner architecture decision is still required for production confidence.
+4. Production Firestore rules, indexes, Functions, IAM, configured `default` database behavior, and private media paths have not been live-verified.
+5. The checked-in client configuration now targets Firestore `(default)`. Verify the deployed project, database and Admin SDK access in isolated staging; do not infer live availability from repository configuration.
 6. Provider-backed transactional email, SMS, FCM background delivery, Gemini/VOH quotas, and monitoring/alert destinations are not certified.
 7. Search is limited to data loaded by the client; it is not a durable global search index.
 8. Some community membership, Circles, creator scheduling, analytics, reputation, World Pulse, and monetization surfaces remain local, simulated, disabled, or best-effort.
