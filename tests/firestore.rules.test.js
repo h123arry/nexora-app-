@@ -72,6 +72,7 @@ const publicProfile = (uid) => ({
       email: 'alice@example.test', email_verified: true, auth_time: cutoffSeconds
     }).firestore();
     await assertFails(getDoc(doc(revokedDb, 'users', 'alice')));
+    await assertFails(getDoc(doc(dbFor('alice'), 'users', 'alice')));
     await assertSucceeds(getDoc(doc(freshDb, 'users', 'alice')));
   });
 
