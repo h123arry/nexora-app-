@@ -16,12 +16,12 @@ The source SVGs must remain byte-for-byte identical. Do not reintroduce the form
 
 The project uses `@capacitor/assets` (already in devDependencies) to generate platform-specific raster outputs from `assets/logo.svg`.
 
-- `npm run mobile:assets` generates assets for all detected platforms.
+- `npm run mobile:assets` explicitly generates Android, iOS and PWA assets in sequence.
 - `npm run mobile:assets:android` generates Android launcher and splash assets.
 - `npm run mobile:assets:ios` generates iOS AppIcon and launch assets.
-- `npm run mobile:assets:pwa` generates PWA icons and updates the manifest.
+- `npm run mobile:assets:pwa` generates PWA icons and updates the manifest, including the `public/icons/` icon set.
 
-The generator uses pure black (`#000000`) for light and dark icon/splash backgrounds so the app icon matches the approved artwork. Native CI runs the platform-specific generator before syncing and compiling. On pushes to `main`, the asset-generation job commits generated native and PWA outputs so the repository stays in sync with the canonical source.
+The generator uses pure black (`#000000`) for light and dark icon/splash backgrounds so the app icon matches the approved artwork. Native CI runs the platform-specific generator before syncing and compiling. The main CI suite also runs `npm run test:branding`, which checks that the canonical SVG copies match, shared React branding uses `/logo.svg`, and native generation remains wired into CI. On pushes to `main`, the asset-generation job commits generated native and PWA outputs so the repository stays in sync with the canonical source.
 
 After changing the canonical SVG, run `npm run mobile:assets` and inspect generated outputs on iOS and Android before release.
 
