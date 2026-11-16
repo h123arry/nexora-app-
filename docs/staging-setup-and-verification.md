@@ -72,3 +72,15 @@ Manus completed the repository-side resolver, fail-closed checks, emulator routi
 The owner must provide the staging project and Web App values, enable Auth providers and Authorized Domains, confirm the Firestore database ID and Storage bucket, configure App Check, supply secret-manager values, authorize the CLI with least privilege, run the reviewed validation/deployment commands, and record real staging evidence.
 
 Until those owner actions and real smoke tests are complete, the status remains **STAGING BLOCKED**. Phase 5 should cover owner-run staging activation, controlled deployment, observability, rollback evidence, and the two-account verification matrix.
+
+## Automated post-deployment release gate
+
+The staging deployment workflow runs `scripts/smoke-staging.mjs` after deploying the API and private media worker. The gate requires:
+
+- A credential-free HTTPS Cloud Run service URL.
+- `/healthz` to identify the NEXORA API and report the exact GitHub release SHA deployed by the workflow.
+- `/readyz` to report Firebase, Firestore, and Storage as available.
+- Both endpoints to return valid JSON, a valid `X-Request-Id`, and the `X-Content-Type-Options: nosniff` security header.
+- Bounded retries and per-request timeouts; a stale revision or unavailable dependency fails the workflow.
+
+The smoke gate proves service identity and basic dependency reachability only. It does not replace the two-account user journey, App Check enforcement verification, index readiness review, backup/restore drill, monitoring alert acknowledgement, or owner approval. It never deploys to production.
