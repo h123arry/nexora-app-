@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
 const DEFAULT_ATTEMPTS = 12;
 const RETRY_DELAY_MS = 5_000;
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -92,7 +95,7 @@ async function main() {
   }));
 }
 
-if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   main().catch(error => {
     console.error(`Staging smoke verification failed: ${error instanceof Error ? error.message : 'unknown error'}`);
     process.exitCode = 1;
