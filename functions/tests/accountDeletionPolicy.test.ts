@@ -29,7 +29,7 @@ async function cleanupPayoutFixtures(): Promise<void> {
     await db.collection('creatorPayoutCompliance').doc(userId).delete().catch(() => undefined);
   }
   for (const id of ['payout-delete-pending', 'payout-delete-submitting', 'payout-delete-unknown', 'payout-delete-approval',
-    'payout-delete-success', 'payout-delete-failed', 'payout-delete-reversed']) {
+    'payout-delete-success', 'payout-delete-failed', 'payout-delete-reversed', 'payout-delete-other-history']) {
     await db.collection('creatorPayoutRequests').doc(id).delete().catch(() => undefined);
   }
   for (const id of ['payout-delete-audit', 'payout-delete-creator-audit', 'payout-delete-actor-audit']) {
@@ -172,7 +172,7 @@ describe('account deletion data and storage scope', () => {
     ] as const) {
       await db.collection('creatorPayoutRequests').doc(id).set({
         creatorId: 'payout-delete-test', reference: id,
-        amountNex: 1000, amountKobo: 100000, status
+        amountNex: 1000, amountKobo: 100000, status, beneficiaryRef: 'RCP_test_123'
       });
     }
     await db.collection('creatorPayoutBeneficiaries').doc('payout-delete-other').set({
@@ -181,6 +181,10 @@ describe('account deletion data and storage scope', () => {
     });
     await db.collection('creatorPayoutCompliance').doc('payout-delete-other').set({
       creatorId: 'payout-delete-other', beneficiaryRef: 'RCP_other', status: 'approved'
+    });
+    await db.collection('creatorPayoutRequests').doc('payout-delete-other-history').set({
+      creatorId: 'payout-delete-other', reference: 'payout-delete-other-history',
+      amountNex: 1000, amountKobo: 100000, status: 'success', beneficiaryRef: 'RCP_other'
     });
     await db.collection('creatorPayoutAuditEvents').doc('payout-delete-audit').set({
       creatorId: 'payout-delete-test', actorId: 'payout-delete-test',
@@ -229,6 +233,10 @@ describe('account deletion data and storage scope', () => {
     }
     assert.equal((await db.collection('creatorPayoutBeneficiaries').doc('payout-delete-other').get()).exists, true);
     assert.equal((await db.collection('creatorPayoutCompliance').doc('payout-delete-other').get()).exists, true);
+    assert.equal((await db.collection('creatorPayoutRequests').doc('payout-delete-other-history').get()).get('beneficiaryRef'), 'RCP_other');
+    for (const id of ['payout-delete-pending', 'payout-delete-success', 'payout-delete-failed', 'payout-delete-reversed']) {
+      assert.equal((await db.collection('creatorPayoutRequests').doc(id).get()).get('beneficiaryRef'), undefined);
+    }
     const audit = await db.collection('creatorPayoutAuditEvents').doc('payout-delete-audit').get();
     assert.equal(audit.exists, true);
     assert.equal(audit.get('accountDeleted'), true);
