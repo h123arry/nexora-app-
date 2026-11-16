@@ -29,6 +29,7 @@ export type LegacyMediaOutcome =
 
 export interface LegacyMediaSummary {
   dryRun: boolean;
+  inspectedMoments: number;
   scanned: number;
   wouldRevokeAndClear: number;
   wouldClearRevokedToken: number;
@@ -139,7 +140,7 @@ export async function runLegacyWorldWeaveMediaMigration(
     throw new Error('maxMoments must be an integer between 1 and 100000.');
   }
   const summary: LegacyMediaSummary = {
-    dryRun, scanned: 0, wouldRevokeAndClear: 0, wouldClearRevokedToken: 0,
+    dryRun, inspectedMoments: 0, scanned: 0, wouldRevokeAndClear: 0, wouldClearRevokedToken: 0,
     revokedAndCleared: 0, clearedRevokedToken: 0, alreadyClear: 0,
     unsafeReference: 0, missingObject: 0, changedDuringMigration: 0,
     failed: 0, stoppedAtLimit: false,
@@ -159,10 +160,11 @@ export async function runLegacyWorldWeaveMediaMigration(
         const moments = await momentQuery.get();
         if (moments.empty) break;
         for (const moment of moments.docs) {
-          if (summary.scanned >= maxMoments) {
+          if (summary.inspectedMoments >= maxMoments) {
             summary.stoppedAtLimit = true;
             return summary;
           }
+          summary.inspectedMoments += 1;
           const outcome = await migrateMoment(db, bucket, moment, dryRun);
           if (outcome) increment(summary, outcome);
         }
