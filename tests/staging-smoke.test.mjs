@@ -14,11 +14,11 @@ test('health response must identify the expected API and release', () => {
 });
 
 test('readiness requires Firebase, Firestore and Storage to be available', () => {
-  validateHealthResponse('/readyz', { ok: true, status: 200 }, {
+  validateHealthResponse('/readyz', { ok: true, status: 200, headers: secureHeaders }, {
     status: 'ready',
     dependencies: { firebase: 'available', firestore: 'available', storage: 'available' },
   });
-  assert.throws(() => validateHealthResponse('/readyz', { ok: true, status: 200 }, {
+  assert.throws(() => validateHealthResponse('/readyz', { ok: true, status: 200, headers: secureHeaders }, {
     status: 'ready',
     dependencies: { firebase: 'available', firestore: 'available', storage: 'missing_configuration' },
   }), /storage/);
