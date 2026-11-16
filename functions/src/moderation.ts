@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { HttpsError } from 'firebase-functions/v2/https';
+import { onCallWithSession as onCall } from './callableSession.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { consumeModerationReportQuota } from './moderationPolicy.js';
 import { shouldOpenImpersonationCase } from './identityVerificationPolicy.js';
