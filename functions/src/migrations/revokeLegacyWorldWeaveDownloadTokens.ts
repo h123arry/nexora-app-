@@ -11,7 +11,7 @@ const DOWNLOAD_TOKEN_KEY = 'firebaseStorageDownloadTokens';
 
 type StorageFileLike = {
   exists(): Promise<[boolean]>;
-  getMetadata(): Promise<[{ metadata?: Record<string, string> }]>;
+  getMetadata(): Promise<[{ metadata?: Record<string, string> }, unknown]>;
   setMetadata(metadata: { metadata: Record<string, string> }): Promise<unknown>;
 };
 type StorageBucketLike = { file(path: string): StorageFileLike };
