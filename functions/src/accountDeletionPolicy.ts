@@ -105,6 +105,7 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string, on
     const ref = db.collection(collection).doc(userId);
     if ((await ref.get()).exists) {
       await ref.delete();
+      deleted += 1;
       await onBatch?.();
     }
   }
