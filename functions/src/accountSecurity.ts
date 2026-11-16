@@ -39,34 +39,56 @@ export const revokeAllSessions = onCall({ maxInstances: 5 }, async request => {
     status: 'started',
     createdAt: FieldValue.serverTimestamp(),
   });
-  // Publish the direct-client enforcement cutoff before revoking refresh tokens.
-  // Firestore and Storage rules compare token auth_time against this server-owned marker.
-  // Round up to the next whole second because Firebase auth_time is expressed in seconds.
-  const cutoffSeconds = Math.ceil(Date.now() / 1000);
-  const cutoff = Timestamp.fromMillis(cutoffSeconds * 1000);
+  // Deny every direct-client session before revoking Auth refresh tokens. This
+  // closes the race where a fresh sign-in could otherwise occur between the
+  // cutoff write and revokeRefreshTokens(). Pending remains fail-closed if either
+  // the Auth revoke or final cutoff publication fails.
+  const statusRef = db.collection('accountStatus').doc(uid);
   try {
-    await db.collection('accountStatus').doc(uid).set({
+    await statusRef.set({
       accountId: uid,
-      sessionsRevokedAfter: cutoff,
-      sessionsRevocationUpdatedAt: FieldValue.serverTimestamp(),
+      sessionRevocationPending: true,
+      sessionRevocationStartedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
   } catch {
-    await auditRef.update({ status: 'failed', failureStage: 'write_session_cutoff', updatedAt: FieldValue.serverTimestamp() }).catch(() => undefined);
-    throw new HttpsError('internal', 'NEXORA could not secure direct data access for session revocation. Please try again.');
+    await auditRef.update({ status: 'failed', failureStage: 'write_session_revocation_pending', updatedAt: FieldValue.serverTimestamp() }).catch(() => undefined);
+    throw new HttpsError('internal', 'NEXORA could not safely start session revocation. Please try again.');
   }
 
   try {
     await auth.revokeRefreshTokens(uid);
   } catch {
-    // Keep the cutoff in place: old ID tokens are already denied by Firestore/Storage rules.
-    // A fresh sign-in after the cutoff can recover access while an operator retries Auth revocation.
+    // Do not clear pending: all direct Firestore/Storage access remains blocked
+    // until a retry successfully completes Firebase Auth revocation.
     await auditRef.update({
       status: 'failed',
       failureStage: 'revoke_refresh_tokens',
-      directAccessBlockedAfter: cutoff,
+      directAccessBlocked: true,
       updatedAt: FieldValue.serverTimestamp(),
     }).catch(() => undefined);
-    throw new HttpsError('internal', 'Existing sessions are blocked from direct data access, but NEXORA could not complete token revocation. Please sign in again and retry.');
+    throw new HttpsError('internal', 'Sessions are temporarily blocked while NEXORA retries revocation. Sign in again and retry.');
+  }
+
+  // Publish the final auth_time cutoff only after Auth revocation has completed.
+  // Round up to the next whole second because Firebase auth_time is second-based.
+  const cutoffSeconds = Math.ceil(Date.now() / 1000);
+  const cutoff = Timestamp.fromMillis(cutoffSeconds * 1000);
+  try {
+    await statusRef.set({
+      accountId: uid,
+      sessionsRevokedAfter: cutoff,
+      sessionRevocationPending: false,
+      sessionsRevocationUpdatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  } catch {
+    // Pending remains true, so no direct client can bypass the unfinished finalization.
+    await auditRef.update({
+      status: 'failed',
+      failureStage: 'publish_session_revocation_cutoff',
+      directAccessBlocked: true,
+      updatedAt: FieldValue.serverTimestamp(),
+    }).catch(() => undefined);
+    throw new HttpsError('internal', 'Your sessions were revoked, but access protection is still finalizing. Sign in again and retry.');
   }
   await auditRef.update({
     status: 'completed',
