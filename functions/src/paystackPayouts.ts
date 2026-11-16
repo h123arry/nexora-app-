@@ -37,6 +37,17 @@ async function verifyPayoutSession(request: PayoutCallableRequest, requireRecent
     throw new HttpsError('unauthenticated', 'Your session is expired or has been revoked. Sign in again.');
   }
   if (decoded.uid !== uid) throw new HttpsError('unauthenticated', 'The authenticated session no longer matches this account.');
+  const accountStatus = (await db.collection('accountStatus').doc(uid).get()).data() || {};
+  if (accountStatus.sessionRevocationPending === true) {
+    throw new HttpsError('unauthenticated', 'Your sessions are being secured. Sign in again and retry shortly.');
+  }
+  const cutoff = accountStatus.sessionsRevokedAfter;
+  if (cutoff && typeof (cutoff as { toMillis?: unknown }).toMillis === 'function') {
+    const cutoffSeconds = (cutoff as { toMillis: () => number }).toMillis() / 1000;
+    if (!Number.isSafeInteger(decoded.auth_time) || decoded.auth_time < cutoffSeconds) {
+      throw new HttpsError('unauthenticated', 'Your session has been revoked. Sign in again to continue.');
+    }
+  }
   if (requireRecent) {
     const authTime = decoded.auth_time;
     const now = Date.now() / 1000;
