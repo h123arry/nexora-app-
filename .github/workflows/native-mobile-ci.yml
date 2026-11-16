@@ -70,6 +70,9 @@ jobs:
       - name: Type-check application
         run: npm run lint
 
+      - name: Generate official Android app icons and splash resources
+        run: npm run mobile:assets:android
+
       - name: Install isolated media worker dependencies
         run: npm install --prefix services/media-worker --no-audit --no-fund
 
@@ -119,6 +122,9 @@ jobs:
 
       - name: Type-check application
         run: npm run lint
+
+      - name: Generate official iOS app icon and launch resources
+        run: npm run mobile:assets:ios
 
       - name: Build web application
         run: npm run build:web
