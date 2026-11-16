@@ -60,10 +60,10 @@ export function firebaseDownloadTokenObjectPath(value: unknown): string | null {
   }
 }
 
-export function withoutFirebaseDownloadTokens(metadata: CustomStorageMetadata | undefined): CustomStorageMetadata {
-  const next = { ...(metadata || {}) };
-  delete next[DOWNLOAD_TOKEN_KEY];
-  return next;
+export function metadataWithRevokedFirebaseDownloadTokens(metadata: CustomStorageMetadata | undefined): CustomStorageMetadata {
+  // Cloud Storage metadata PATCH requires an explicit null to delete one custom key.
+  // Omitting the key leaves it untouched because custom metadata is merge-patched.
+  return { ...(metadata || {}), [DOWNLOAD_TOKEN_KEY]: null };
 }
 
 function increment(summary: LegacyMediaSummary, outcome: LegacyMediaOutcome): void {
@@ -109,7 +109,7 @@ async function migrateMoment(
     if (dryRun) return hasTokenMetadata ? 'would-revoke-and-clear' : 'would-clear-revoked-token';
 
     if (hasTokenMetadata) {
-      await file.setMetadata({ metadata: withoutFirebaseDownloadTokens(customMetadata) });
+      await file.setMetadata({ metadata: metadataWithRevokedFirebaseDownloadTokens(customMetadata) });
     }
 
     const result = await db.runTransaction(async transaction => {
