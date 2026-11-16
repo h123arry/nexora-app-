@@ -89,6 +89,45 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string, on
     if (rows.size < PAGE_SIZE) break;
   }
 
+  // Financial settlement records are retained for reconciliation and legal/accounting evidence.
+  // Do not erase a beneficiary while a provider transfer may still settle or need reconciliation.
+  const activePayouts = await db.collection('creatorPayoutRequests')
+    .where('creatorId', '==', userId)
+    .where('status', 'in', ['submitting', 'processing', 'submission_unknown', 'awaiting_provider_approval'])
+    .limit(1).get();
+  if (!activePayouts.empty) {
+    throw new Error('Account deletion is paused because a creator payout is still pending provider settlement or reconciliation.');
+  }
+
+  // Once all payouts are terminal, remove the bank-beneficiary and compliance documents.
+  // Historical payout requests, provider events, wallet records and double-entry ledger rows remain intact.
+  for (const collection of ['creatorPayoutBeneficiaries', 'creatorPayoutCompliance']) {
+    const ref = db.collection(collection).doc(userId);
+    if ((await ref.get()).exists) {
+      await ref.delete();
+      await onBatch?.();
+    }
+  }
+
+  // Keep payout audit evidence, but remove personal bank and account identifiers.
+  while (true) {
+    const rows = await db.collection('creatorPayoutAuditEvents').where('creatorId', '==', userId).limit(PAGE_SIZE).get();
+    if (rows.empty) break;
+    const batch = db.batch();
+    rows.docs.forEach(row => batch.update(row.ref, {
+      creatorId: FieldValue.delete(),
+      actorId: FieldValue.delete(),
+      accountNumberLast4: FieldValue.delete(),
+      bankCode: FieldValue.delete(),
+      beneficiaryRef: FieldValue.delete(),
+      evidenceReference: FieldValue.delete(),
+      accountDeleted: true,
+    }));
+    await batch.commit();
+    await onBatch?.();
+    if (rows.size < PAGE_SIZE) break;
+  }
+
   // Keep audit history but remove account identifiers and free-text review notes.
   for (const field of ['userId', 'reviewerId', 'actorId']) {
     while (true) {
