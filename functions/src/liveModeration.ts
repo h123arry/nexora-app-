@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { createLiveKitJwt } from './liveKitTokenPolicy.js';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { HttpsError } from 'firebase-functions/v2/https';
+import { onCallWithSession as onCall } from './callableSession.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { calculateLiveWatchDurationMs } from './liveSessionsPolicy.js';
 
