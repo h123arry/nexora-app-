@@ -28,7 +28,7 @@ async function requireUid(request: Request): Promise<string> {
 }
 
 async function currentIdentityReviewerClaims(request: Request): Promise<{ uid: string; claims: Record<string, unknown> }> {
-  const uid = await await requireUid(request);
+  const uid = await requireUid(request);
   const authorization = request.rawRequest?.headers?.authorization || '';
   const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
   if (!token) throw new HttpsError('unauthenticated', 'A current authenticated session is required.');
@@ -61,7 +61,7 @@ async function requireIdentityApprover(request: Request): Promise<string> {
 }
 
 export const submitIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {
-  const uid = requireUid(request as Request);
+  const uid = await requireUid(request as Request);
   let input;
   try { input = validateIdentityApplicationInput(request.data || {}); }
   catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Invalid identity application.'); }
@@ -134,7 +134,7 @@ export const submitIdentityVerificationApplication = onCall({ maxInstances: 10 }
 });
 
 export const getMyIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {
-  const uid = requireUid(request as Request);
+  const uid = await requireUid(request as Request);
   const snapshot = await db.collection('identityVerificationApplications').doc(uid).get();
   if (!snapshot.exists) return { application: null };
   const data = snapshot.data() || {};
