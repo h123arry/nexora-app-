@@ -39,7 +39,7 @@ test('mobile asset commands regenerate Android, iOS and PWA outputs from the sou
   const sync = await read('../scripts/sync-nexora-brand-assets.mjs');
   assert.match(sync, /publicDir, 'nexora-mark\.svg'/);
   assert.match(sync, /icon-192\.png/);
-  assert.match(sync, /image\/png/);
+  assert.ok(sync.includes("type: 'image/png'"));
 });
 
 test('native CI regenerates the matching platform assets before compiling', async () => {
