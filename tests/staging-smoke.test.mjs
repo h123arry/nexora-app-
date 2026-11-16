@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { probeEndpoint, validateHealthResponse, verifyStaging } from '../scripts/smoke-staging.mjs';
 
+const secureHeaders = { get: (name) => ({ 'x-request-id': 'request-12345678', 'x-content-type-options': 'nosniff' })[name] ?? null };
+
 test('health response must identify the expected API and release', () => {
-  validateHealthResponse('/healthz', { ok: true, status: 200 }, {
+  validateHealthResponse('/healthz', { ok: true, status: 200, headers: secureHeaders }, {
     status: 'ok', service: 'nexora-api', version: 'release-123',
   }, 'release-123');
   assert.throws(() => validateHealthResponse('/healthz', { ok: true, status: 200 }, {
