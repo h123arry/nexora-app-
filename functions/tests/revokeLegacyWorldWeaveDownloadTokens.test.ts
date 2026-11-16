@@ -20,6 +20,7 @@ function tokenUrl(path: string, token = 'legacy-token') {
 
 async function cleanup(): Promise<void> {
   await db.recursiveDelete(db.collection('worldWeaves').doc('legacy-media-migration-test'));
+  await db.recursiveDelete(db.collection('worldWeaves').doc('legacy-media-public-test'));
   await bucket.deleteFiles({ prefix: 'users/legacy-media-author/media/' }).catch(() => undefined);
 }
 
@@ -101,6 +102,27 @@ describe('legacy WorldWeave download-token migration', () => {
 
     const rerun = await runLegacyWorldWeaveMediaMigration(db, bucket, { dryRun: false, maxMoments: 10 });
     assert.equal(rerun.scanned, 0);
+  });
+
+  it('leaves intentionally public WorldWeave media and its existing token untouched', async () => {
+    const weave = db.collection('worldWeaves').doc('legacy-media-public-test');
+    const moment = weave.collection('moments').doc('public-image');
+    const storagePath = 'users/legacy-media-author/media/public-image';
+    const file = bucket.file(storagePath);
+    await file.save(Buffer.from('public image fixture'), {
+      contentType: 'image/jpeg',
+      metadata: { metadata: { firebaseStorageDownloadTokens: 'public-legacy-token', ownerId: 'legacy-media-author' } },
+    });
+    await weave.set({ id: weave.id, ownerId: 'legacy-media-owner', visibility: 'public' });
+    await moment.set({
+      id: moment.id, weaveId: weave.id, authorId: 'legacy-media-author',
+      mediaType: 'image', mediaUrl: tokenUrl(storagePath, 'public-legacy-token'), storagePath,
+    });
+
+    const summary = await runLegacyWorldWeaveMediaMigration(db, bucket, { dryRun: false, maxMoments: 10 });
+    assert.equal(summary.skippedPublic, 1);
+    assert.equal((await moment.get()).get('mediaUrl'), tokenUrl(storagePath, 'public-legacy-token'));
+    assert.equal((await file.getMetadata())[0].metadata?.firebaseStorageDownloadTokens, 'public-legacy-token');
   });
 
   it('does not clear a URL when the Storage object is missing or its path binding is unsafe', async () => {
