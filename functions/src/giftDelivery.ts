@@ -1,6 +1,7 @@
 import { FieldValue, Timestamp, getFirestore, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { assertCallableSessionActive } from './callableSession.js';
 import { findNexoraGift } from './giftCatalogPolicy.js';
 import { validateGiftDeliveryInput, giftDeliveryReferences, isLiveGiftDeliveryEnabled } from './giftDeliveryPolicy.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
@@ -18,6 +19,7 @@ function counter(value: unknown): number {
 export const sendNexGift = onCall({ maxInstances: 20 }, async (request) => {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in before sending a gift.');
   const senderId = request.auth.uid;
+  await assertCallableSessionActive(db, senderId, request.auth.token?.auth_time);
   let input;
   try { input = validateGiftDeliveryInput(request.data); }
   catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Gift details are invalid.'); }
