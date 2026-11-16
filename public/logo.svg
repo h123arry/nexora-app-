@@ -1,14 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Nexora">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="NEXORA">
   <defs>
-    <linearGradient id="violet" x1="72" y1="72" x2="440" y2="440" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#A78BFA"/>
-      <stop offset=".52" stop-color="#7138FF"/>
-      <stop offset="1" stop-color="#4D22BD"/>
+    <linearGradient id="nexora-ribbon" x1="180" y1="240" x2="900" y2="820" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F044E8"/>
+      <stop offset=".32" stop-color="#8B20FF"/>
+      <stop offset=".62" stop-color="#174BFF"/>
+      <stop offset="1" stop-color="#00E5F2"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="108" fill="#050505"/>
-  <ellipse cx="256" cy="256" rx="180" ry="96" transform="rotate(45 256 256)" fill="none" stroke="url(#violet)" stroke-width="48" stroke-linecap="round"/>
-  <ellipse cx="256" cy="256" rx="180" ry="96" transform="rotate(-45 256 256)" fill="none" stroke="#fff" stroke-width="48" stroke-linecap="round"/>
-  <circle cx="256" cy="256" r="48" fill="#050505" stroke="#fff" stroke-width="18"/>
-  <circle cx="256" cy="256" r="22" fill="#8B5CF6"/>
+  <rect width="1024" height="1024" fill="#000"/>
+  <path fill="url(#nexora-ribbon)" d="M201 825V344c0-91 73-165 165-165 62 0 105 28 146 82l280 365c25 32 51 46 84 46 43 0 72-31 72-80V199l76-58v453c0 106-61 174-157 174-65 0-108-28-151-84L435 319c-22-28-42-40-70-40-38 0-62 27-62 67v420z"/>
 </svg>
