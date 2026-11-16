@@ -2,7 +2,15 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() {
-      return request.auth != null;
+      return request.auth != null
+        && (
+          !firestore.exists(/databases/(default)/documents/accountStatus/$(request.auth.uid))
+          || (firestore.get(/databases/(default)/documents/accountStatus/$(request.auth.uid)).data.get('sessionRevocationPending', false) != true
+            && (!firestore.get(/databases/(default)/documents/accountStatus/$(request.auth.uid)).data.keys().hasAny(['sessionsRevokedAfter'])
+              || (request.auth.token.keys().hasAny(['auth_time'])
+                && request.auth.token.auth_time is int
+                && request.auth.token.auth_time >= firestore.get(/databases/(default)/documents/accountStatus/$(request.auth.uid)).data.sessionsRevokedAfter.toMillis() / 1000)))
+        );
     }
 
     function isOwner(userId) {
@@ -36,9 +44,10 @@ service firebase.storage {
       allow delete: if isOwner(userId);
     }
 
-    // Chat metadata lives in a named Firestore database. Storage Rules can only
-    // look up the default database, so private chat media is served by the
-    // authenticated API after it checks membership in the actual database.
+    // Private chat media remains server-proxied even though the current app uses
+    // Firestore (default): the API verifies chat membership and message linkage,
+    // then streams the private object with no-store headers. Do not add direct
+    // client reads or permanent download-token URLs for chat media.
     // Studio source assets are private editing material, not published media.
     // This path intentionally does not match the media lifecycle/transcoding trigger.
     match /users/{userId}/studio-drafts/{draftId}/assets/{assetId} {

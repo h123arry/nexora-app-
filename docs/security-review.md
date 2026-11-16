@@ -23,3 +23,11 @@ A repository scanner checks tracked files for private keys, service-account JSON
 ## Remaining security blockers
 
 Production Auth providers, authorized domains, email/SMS quotas, App Check enforcement, MFA/trusted devices, abuse throttles, Functions IAM, configured `default` Firestore database deployment, Storage lifecycle policy, backup/restore, monitoring destinations, legal/privacy review, and provider configuration remain external verification requirements. The repository is not a production security certification and should not be described as one.
+
+## Revoked-session enforcement
+
+The `revokeAllSessions` callable first sets `accountStatus/{uid}.sessionRevocationPending=true`, causing Firestore and Storage rules to deny **all** direct client sessions during the handoff. It then revokes Firebase Auth refresh tokens and only afterwards publishes `sessionsRevokedAfter` and clears the pending flag. This ordering prevents a fresh sign-in racing between cutoff publication and Auth revocation. If Auth revocation or final cutoff publication fails, the pending flag remains true and direct Firestore/Storage access stays fail-closed until a successful retry. The Express authenticated API middleware and sensitive payout callables also enforce the pending flag and auth-time cutoff.
+
+Storage Rules use the documented cross-service Firestore lookup against the **default** Firestore database. Enabling this integration requires the Firebase/Google Cloud service permission when prompted by Firebase CLI or Console. Verify the integration in the target project before deploying the Storage rules. This repository change does not grant IAM permissions or alter production configuration.
+
+Emulator regressions cover old-token denial and post-cutoff token access for both Firestore and Storage. Production rollout still requires staging verification and owner-controlled Firebase configuration.
