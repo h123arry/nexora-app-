@@ -2,11 +2,11 @@ import React from 'react';
 
 type Props = { className?: string };
 
-/** Reuse the approved NEXORA mark from public/logo.svg everywhere in the app. */
+/** Reuse the approved NEXORA mark from public/nexora-mark.svg everywhere in the app. */
 export default function NexoraPremiumLogo({ className = '' }: Props) {
   return (
     <img
-      src="/logo.svg"
+      src="/nexora-mark.svg"
       alt="NEXORA"
       aria-label="NEXORA"
       className={className}
