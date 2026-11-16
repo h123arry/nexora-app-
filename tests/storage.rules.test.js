@@ -22,20 +22,20 @@ const audio = () => new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'audio/webm
 describe('Firebase Storage authorization regression tests', () => {
   it('blocks Storage access for ID tokens issued before the account session cutoff', async () => {
     const cutoffSeconds = Math.ceil(Date.now() / 1000);
-    const oldStorage = ctxWithAuthTime('alice', cutoffSeconds - 10).storage();
-    const objectPath = 'users/alice/media/revocation-test';
+    const oldStorage = ctxWithAuthTime('revocation-test-user', cutoffSeconds - 10).storage();
+    const objectPath = 'users/revocation-test-user/media/revocation-test';
     await assertSucceeds(uploadBytes(ref(oldStorage, objectPath), audio(), {
       contentType: 'audio/webm',
-      customMetadata: { ownerId: 'alice', mediaId: 'revocation-test' }
+      customMetadata: { ownerId: 'revocation-test-user', mediaId: 'revocation-test' }
     }));
     await env.withSecurityRulesDisabled(async context => {
-      await setDoc(doc(context.firestore(), 'accountStatus', 'alice'), {
-        accountId: 'alice',
+      await setDoc(doc(context.firestore(), 'accountStatus', 'revocation-test-user'), {
+        accountId: 'revocation-test-user',
         sessionsRevokedAfter: Timestamp.fromMillis(cutoffSeconds * 1000)
       });
     });
     await assertFails(getBytes(ref(oldStorage, objectPath)));
-    const freshStorage = ctxWithAuthTime('alice', cutoffSeconds).storage();
+    const freshStorage = ctxWithAuthTime('revocation-test-user', cutoffSeconds).storage();
     await assertSucceeds(getBytes(ref(freshStorage, objectPath)));
   });
 
