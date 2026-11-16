@@ -1,5 +1,6 @@
-import type { Firestore } from 'firebase-admin/firestore';
-import { HttpsError } from 'firebase-functions/v2/https';
+import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { HttpsError, onCall as firebaseOnCall } from 'firebase-functions/v2/https';
+import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
 type SessionStatus = {
   sessionRevocationPending?: unknown;
@@ -29,3 +30,19 @@ export async function assertCallableSessionActive(
     throw new HttpsError('unauthenticated', 'Your session is being secured or has been revoked. Sign in again to continue.');
   }
 }
+
+
+const callableSessionDb = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
+
+/**
+ * Drop-in onCall wrapper for Admin-SDK callable modules. Public callables remain
+ * public when no user is signed in; authenticated requests must pass the server
+ * revocation-state check before their handler runs.
+ */
+export const onCallWithSession = ((options: any, handler: (request: any) => any) =>
+  firebaseOnCall(options, async (request: any) => {
+    if (request.auth?.uid) {
+      await assertCallableSessionActive(callableSessionDb, request.auth.uid, request.auth.token?.auth_time);
+    }
+    return handler(request);
+  })) as typeof firebaseOnCall;
