@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { ref, uploadBytes, getBytes, deleteObject } from 'firebase/storage';
+import { doc, setDoc, Timestamp } from 'firebase/firestore';
 
 const projectId = 'demo-nexora-storage-rules';
 let env;
@@ -15,9 +16,29 @@ before(async () => {
 });
 after(async () => env?.cleanup());
 const ctx = (uid) => env.authenticatedContext(uid);
+const ctxWithAuthTime = (uid, authTime) => env.authenticatedContext(uid, { auth_time: authTime });
 const audio = () => new Blob([new Uint8Array([1, 2, 3, 4])], { type: 'audio/webm' });
 
 describe('Firebase Storage authorization regression tests', () => {
+  it('blocks Storage access for ID tokens issued before the account session cutoff', async () => {
+    const cutoffSeconds = Math.ceil(Date.now() / 1000);
+    const oldStorage = ctxWithAuthTime('alice', cutoffSeconds - 10).storage();
+    const objectPath = 'users/alice/media/revocation-test';
+    await assertSucceeds(uploadBytes(ref(oldStorage, objectPath), audio(), {
+      contentType: 'audio/webm',
+      customMetadata: { ownerId: 'alice', mediaId: 'revocation-test' }
+    }));
+    await env.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(), 'accountStatus', 'alice'), {
+        accountId: 'alice',
+        sessionsRevokedAfter: Timestamp.fromMillis(cutoffSeconds * 1000)
+      });
+    });
+    await assertFails(getBytes(ref(oldStorage, objectPath)));
+    const freshStorage = ctxWithAuthTime('alice', cutoffSeconds).storage();
+    await assertSucceeds(getBytes(ref(freshStorage, objectPath)));
+  });
+
   it('binds uploaded user media metadata to the exact object path ID', async () => {
     const storage = ctx('alice').storage();
     await assertSucceeds(uploadBytes(ref(storage, 'users/alice/media/media-1'), audio(), {
