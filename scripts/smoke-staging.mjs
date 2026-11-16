@@ -6,6 +6,13 @@ const REQUEST_TIMEOUT_MS = 10_000;
 
 export function validateHealthResponse(path, response, payload, expectedVersion) {
   if (!response.ok) throw new Error(`${path} returned HTTP ${response.status}`);
+  const requestId = response.headers?.get?.('x-request-id');
+  if (typeof requestId !== 'string' || !/^[A-Za-z0-9._:-]{8,120}$/.test(requestId)) {
+    throw new Error(`${path} did not return a valid X-Request-Id`);
+  }
+  if (response.headers?.get?.('x-content-type-options') !== 'nosniff') {
+    throw new Error(`${path} is missing the nosniff security header`);
+  }
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
     throw new Error(`${path} returned an invalid JSON response`);
   }
