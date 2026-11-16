@@ -1,13 +1,15 @@
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { assertCallableSessionActive } from './callableSession.js';
 import { CREATOR_MEMBERSHIP_TIER_LIMIT, validateCreatorMembershipTierId, validateCreatorMembershipTierInput } from './creatorMembershipPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const tiers = db.collection('creatorMembershipTiers');
 
-function requireCreator(request: { auth?: { uid: string } | null }): string {
+async function requireCreator(request: { auth?: { uid: string; token?: Record<string, unknown> } | null }): Promise<string> {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to manage creator memberships.');
+  await assertCallableSessionActive(db, request.auth.uid, request.auth.token?.auth_time);
   return request.auth.uid;
 }
 function asIso(value: any): string | null { return value?.toDate?.()?.toISOString?.() || null; }
@@ -21,7 +23,7 @@ function validateId(value: unknown) {
 }
 
 export const listCreatorMembershipTiers = onCall({ maxInstances: 10 }, async request => {
-  const creatorId = requireCreator(request);
+  const creatorId = await requireCreator(request);
   const snapshot = await tiers.where('creatorId', '==', creatorId).limit(10).get();
   return { checkoutEnabled: false as const, tiers: snapshot.docs.map(doc => {
     const data = doc.data();
@@ -31,7 +33,7 @@ export const listCreatorMembershipTiers = onCall({ maxInstances: 10 }, async req
 });
 
 export const createCreatorMembershipTier = onCall({ maxInstances: 10 }, async request => {
-  const creatorId = requireCreator(request);
+  const creatorId = await requireCreator(request);
   const input = validateInput(request.data);
   const ref = tiers.doc();
   try {
@@ -50,7 +52,7 @@ export const createCreatorMembershipTier = onCall({ maxInstances: 10 }, async re
 });
 
 export const updateCreatorMembershipTier = onCall({ maxInstances: 10 }, async request => {
-  const creatorId = requireCreator(request);
+  const creatorId = await requireCreator(request);
   const tierId = validateId(request.data?.tierId);
   const input = validateInput(request.data?.tier);
   const ref = tiers.doc(tierId);
@@ -69,7 +71,7 @@ export const updateCreatorMembershipTier = onCall({ maxInstances: 10 }, async re
 });
 
 export const archiveCreatorMembershipTier = onCall({ maxInstances: 10 }, async request => {
-  const creatorId = requireCreator(request);
+  const creatorId = await requireCreator(request);
   const tierId = validateId(request.data?.tierId);
   const ref = tiers.doc(tierId);
   try {
