@@ -6,20 +6,20 @@ For the complete handover, use [`docs/production-architecture.md`](docs/producti
 
 ## Configured Firebase resources
 
-The canonical production target is Firebase project `nexora-prod-voiceharrison`. The checked-in web configuration is an owner-supplied template until the project web app registration provides the real app ID, API key, Auth domain, messaging sender ID, named Firestore database ID, and Storage bucket. Do not deploy until those values are verified in the owner-controlled project. The `apiKey` in Firebase web config is a public client identifier; do not add service-account keys or other secrets to the repository.
+The canonical production target is Firebase project `nexora-prod-voiceharrison`. The checked-in `firebase-applet-config.json` currently identifies that project's registered web app and configures the Firestore database as `default` and the Storage bucket as `nexora-prod-voiceharrison.appspot.com`. These values are repository configuration, not proof that the project is deployed or that the live Console settings and IAM permissions are correct; verify them in the owner-controlled Firebase project before deployment. The Firebase web `apiKey` is a public client identifier; never add service-account keys or other private credentials to the repository.
 
 The server and Cloud Functions use Firebase Admin credentials from the hosting environment's Application Default Credentials. Set and verify:
 
 | Variable | Purpose |
 |---|---|
 | `GCLOUD_PROJECT` or `FIREBASE_PROJECT_ID` | Firebase/GCP project ID used by the Express API. |
-| `FIRESTORE_DATABASE_ID` | Actual named Firestore database; required in production and defaulted only for local development. |
+| `FIRESTORE_DATABASE_ID` | Firestore database ID. The checked-in web config and `firebase.json` currently use `default`; the hosting value must match both. |
 | `FIREBASE_STORAGE_BUCKET` | Actual Firebase Storage bucket used by the private chat-media proxy and account cleanup. |
 | `GEMINI_API_KEY` | Server-only Gemini credential required for VOH generation; keep in the hosting secret manager. |
 | `GEMINI_MODEL` | Optional server model override; default is `gemini-2.5-flash`. |
 | `PORT` | Optional Express listening port; the host normally supplies it. |
 
-Cloud Functions use the Node.js 22 runtime configured in `firebase.json`. Verify the target platform's supported runtime, region, service identity, Firestore access to the named database, and Storage permissions. Do not use a development service-account file in production.
+Cloud Functions use the Node.js 22 runtime configured in `firebase.json`. Verify the target platform's supported runtime, region, service identity, Firestore access to the configured database (`default` in the current checked-in web configuration), and Storage permissions. Do not use a development service-account file in production.
 
 ## Authentication and account operations
 
@@ -31,11 +31,11 @@ Firebase's native account-protection controls and provider rate limits must be r
 
 Run the production API as the same Express application that serves the built frontend, or deliberately route `/api/voh-ai/*` and `/api/private-chat-media/*` to the authenticated API service. VOH and private chat-media routes require Firebase ID tokens. VOH also requires the server-only Gemini key. Chat voice upload/playback requires server access to the configured Firestore database and private Storage bucket; Storage Rules deliberately deny direct client access to `chats/**`. Playback checks that the caller is still a chat participant and that a message refers to the object, then responds with `Cache-Control: private, no-store`. Do not replace this with a public download-token URL.
 
-The integration tests cover this HTTP boundary in demo emulators, not the production account, named database, bucket, IAM role, network routing, or Cloud Run/server environment. Verify those in a staging project before release.
+The integration tests cover this HTTP boundary in demo emulators, not the production account, configured Firestore database, bucket, IAM role, network routing, or Cloud Run/server environment. Verify those in a staging project before release.
 
 ## Firebase deployment
 
-Rules and indexes live in `firestore.rules`, `storage.rules`, and `firestore.indexes.json`. The `firebase.json` configuration includes both `(default)` and the configured named database. The Firebase Emulator currently warns that it does not model multiple Firestore databases; tests explicitly load the rules into the emulator test environment. Validate named-database rule deployment and queries in a non-production Firebase project before any production rollout.
+Rules and indexes live in `firestore.rules`, `storage.rules`, and `firestore.indexes.json`. The current `firebase.json` contains one Firestore deployment entry for `default`, matching `firebase-applet-config.json`. The Firebase Emulator currently warns that it does not model multiple Firestore databases; tests explicitly load the rules into the emulator test environment. Validate rules, indexes, queries, and Admin SDK access against the actual `default` database in a non-production Firebase project before any production rollout.
 
 Before a release:
 
@@ -43,7 +43,7 @@ Before a release:
 2. Run `npm ci`, `npm ci --prefix functions`, `npm run lint`, `npm run functions:build`, and `npm run build`.
 3. Run `npm run test:unit`, `npm run test:rules`, `npm run test:storage`, `npm run test:migration`, `npm run test:engagement`, and `npm run test:voh-security`.
 4. Run `npm audit` and `npm audit --prefix functions --omit=dev` against the final lockfiles.
-5. Deploy indexes and reviewed Firestore rules for the intended database(s), then Storage rules and Functions. Verify index readiness before app rollout.
+5. Deploy indexes and reviewed Firestore rules for the verified `default` database, then Storage rules and Functions. Verify index readiness before app rollout.
 6. Smoke-test both allowed and denied user paths in staging: public-only feeds, account/profile privacy, post likes/notifications, chat access and audio proxy, unauthenticated VOH rejection, and account deletion.
 7. Observe Firebase permission denials, API/function errors, index state, storage failures, quotas, and billing before expanding rollout.
 
