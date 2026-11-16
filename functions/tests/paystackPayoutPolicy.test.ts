@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { advanceBankLookupQuota, advancePayoutOtpQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from '../src/paystackPayoutPolicy.ts';
+import { accountDeletionBlocksPayout, advanceBankLookupQuota, advancePayoutOtpQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from '../src/paystackPayoutPolicy.ts';
 
 const body = Buffer.from('{"event":"transfer.success","data":{"reference":"nxp_example","amount":125000,"currency":"NGN"}}');
 const webhookSecret = ['whsec','test','placeholder'].join('_');
@@ -75,4 +75,14 @@ test('payout OTP quota resets after expiry and rejects corrupt counters', () => 
   assert.equal(reset.allowed, true);
   assert.equal(reset.attempts, 1);
   assert.equal(advancePayoutOtpQuota({ windowStartedAt: 'bad', attempts: 2 }, 10_000).allowed, false);
+});
+
+
+test('account deletion blocks new payouts until deletion is cancelled or completed', () => {
+  assert.equal(accountDeletionBlocksPayout([{ type: 'delete_account', status: 'pending' }]), true);
+  assert.equal(accountDeletionBlocksPayout([{ type: 'delete_account', status: 'processing' }]), true);
+  assert.equal(accountDeletionBlocksPayout([{ type: 'delete_account', status: 'failed' }]), true);
+  assert.equal(accountDeletionBlocksPayout([{ type: 'delete_account', status: 'completed' }]), false);
+  assert.equal(accountDeletionBlocksPayout([{ type: 'delete_account', status: 'cancelled' }]), false);
+  assert.equal(accountDeletionBlocksPayout([{ type: 'export_data', status: 'processing' }]), false);
 });
