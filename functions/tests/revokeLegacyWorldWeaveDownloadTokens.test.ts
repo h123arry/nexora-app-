@@ -65,9 +65,11 @@ describe('legacy WorldWeave download-token migration', () => {
     await file.save(Buffer.from('legacy image fixture'), {
       contentType: 'image/jpeg',
       metadata: {
-        firebaseStorageDownloadTokens: 'legacy-token',
-        ownerId: 'legacy-media-author',
-        purpose: 'worldweave',
+        metadata: {
+          firebaseStorageDownloadTokens: 'legacy-token',
+          ownerId: 'legacy-media-author',
+          purpose: 'worldweave',
+        },
       },
     });
     await weave.set({
@@ -125,6 +127,9 @@ describe('legacy WorldWeave download-token migration', () => {
     await weave.set({ id: weave.id, ownerId: 'legacy-media-owner', visibility: 'private' });
     await weave.collection('moments').doc('plain-text').set({
       id: 'plain-text', weaveId: weave.id, authorId: 'legacy-media-author', mediaType: 'text', mediaUrl: '',
+    });
+    await weave.collection('moments').doc('plain-text-2').set({
+      id: 'plain-text-2', weaveId: weave.id, authorId: 'legacy-media-author', mediaType: 'text', mediaUrl: '',
     });
     const summary = await runLegacyWorldWeaveMediaMigration(db, bucket, { dryRun: true, maxMoments: 1 });
     assert.equal(summary.inspectedMoments, 1);
