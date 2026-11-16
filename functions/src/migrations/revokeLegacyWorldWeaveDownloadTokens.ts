@@ -9,10 +9,12 @@ const MOMENT_PAGE_SIZE = 100;
 const MEDIA_ID = /^[A-Za-z0-9_-]{1,128}$/;
 const DOWNLOAD_TOKEN_KEY = 'firebaseStorageDownloadTokens';
 
+type CustomStorageMetadata = Record<string, string | number | boolean | null>;
+
 type StorageFileLike = {
   exists(): Promise<[boolean]>;
-  getMetadata(): Promise<[{ metadata?: Record<string, string> }, unknown]>;
-  setMetadata(metadata: { metadata: Record<string, string> }): Promise<unknown>;
+  getMetadata(): Promise<[{ metadata?: CustomStorageMetadata }, unknown]>;
+  setMetadata(metadata: { metadata: CustomStorageMetadata }): Promise<unknown>;
 };
 type StorageBucketLike = { file(path: string): StorageFileLike };
 
@@ -58,7 +60,7 @@ export function firebaseDownloadTokenObjectPath(value: unknown): string | null {
   }
 }
 
-export function withoutFirebaseDownloadTokens(metadata: Record<string, string> | undefined): Record<string, string> {
+export function withoutFirebaseDownloadTokens(metadata: CustomStorageMetadata | undefined): CustomStorageMetadata {
   const next = { ...(metadata || {}) };
   delete next[DOWNLOAD_TOKEN_KEY];
   return next;
