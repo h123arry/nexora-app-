@@ -1,24 +1,30 @@
-# Nexora brand mark
+# NEXORA brand system
 
-## Direction
+## Official mark
 
-The Nexora mark is a pair of connected orbital ribbons around a shared live node. The interlocking form reads as an abstract `N`, while the orbit suggests a network that is always moving, discovering, and connecting people.
+The approved primary mark is the continuous ribbon-style capital **N** supplied by the founder on 16 November 2026. It is rendered in a luminous gradient that moves from magenta through electric violet and royal blue into cyan, on a pure black field.
 
-## Production assets
-
-- `../public/logo.svg` — primary app icon and favicon source.
-- `../public/logo.png` — raster app icon used by the web manifest.
-- `../src/components/NexoraPremiumLogo.tsx` — inline vector mark for the React UI.
-- `nexora-mark-orbit.png`, `nexora-mark-pulse.png`, `nexora-mark-portal.png` — exploratory concept renders.
+- `public/logo.svg` — canonical scalable brand mark, favicon and web/PWA identity.
+- `assets/logo.svg` — source asset mirror.
+- `src/components/NexoraPremiumLogo.tsx` — shared React mark component used by branding and watermark components.
+- `public/logo.png` — legacy raster asset; do not use for new UI. Regenerate from the canonical mark when native raster exports are produced.
+- Android adaptive icon: `mipmap-anydpi-v26/ic_launcher.xml` with `drawable-v24/ic_launcher_foreground.xml`.
+- Android legacy launcher and splash resources should be generated from the canonical mark before publishing a native build.
+- iOS AppIcon and Splash asset-catalog PNGs must be regenerated from the canonical mark before publishing an iOS build.
 
 ## Palette
 
-- Midnight: `#050505`
-- White: `#FFFFFF`
-- Electric violet: `#7138FF`
-- Lilac highlight: `#A78BFA`
-- Deep violet: `#4D22BD`
+- Background: `#000000`
+- Magenta highlight: `#F044E8`
+- Electric violet: `#8B20FF`
+- Royal blue: `#174BFF`
+- Cyan highlight: `#00E5F2`
+- Wordmark text: `#FFFFFF`
 
 ## Usage
 
-Use the mark on midnight, white, or calm neutral surfaces with generous clear space. The white orbit should remain visible; do not place the mark over busy imagery or recolor it with unrelated gradients. Pair with the existing Plus Jakarta Sans wordmark and the tagline “The World's Living Social Network”.
+Use the official mark without redrawing, distorting, rotating, recolouring, or adding effects to the symbol itself. Preserve generous clear space. The black field is part of the approved app-icon treatment. Pair the mark with the NEXORA wordmark in Plus Jakarta Sans and the tagline “The World's Living Social Network”.
+
+## Brand migration note
+
+The ribbon N replaces the former interlocking orbital mark. All shared web branding and watermark UI must reference `/logo.svg`; do not reintroduce the old orbital design.
