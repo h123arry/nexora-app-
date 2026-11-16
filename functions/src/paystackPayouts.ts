@@ -6,7 +6,7 @@ import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirebaseProjectId, resolveFirestoreDatabaseId, PRODUCTION_FIREBASE_PROJECT_ID } from './runtimeConfig.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
-import { advanceBankLookupQuota, advancePayoutOtpQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from './paystackPayoutPolicy.js';
+import { accountDeletionBlocksPayout, advanceBankLookupQuota, advancePayoutOtpQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from './paystackPayoutPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const PAYSTACK_SECRET_KEY = defineSecret('PAYSTACK_SECRET_KEY');
@@ -344,6 +344,10 @@ export const setCreatorPayoutBeneficiary = onCall({ secrets: [PAYSTACK_SECRET_KE
     || !/^[A-Za-z0-9_-]{2,12}$/.test(bankCode) || !safeText(expectedAccountName, 160)) {
     throw new HttpsError('invalid-argument', 'Verified account details and confirmation of the displayed account name are required.');
   }
+  const pendingDeletionRequests = await db.collection('accountLifecycleRequests').where('requesterId', '==', creatorId).get();
+  if (accountDeletionBlocksPayout(pendingDeletionRequests.docs.map(doc => doc.data()))) {
+    throw new HttpsError('failed-precondition', 'Account deletion has already been requested. Payout setup is unavailable.');
+  }
   await consumeBankLookupQuota(creatorId);
   try {
     const resolved = await paystack('/bank/resolve?account_number=' + encodeURIComponent(accountNumber) + '&bank_code=' + encodeURIComponent(bankCode), 'GET');
@@ -367,7 +371,11 @@ export const setCreatorPayoutBeneficiary = onCall({ secrets: [PAYSTACK_SECRET_KE
     }
     const ref = db.collection('creatorPayoutBeneficiaries').doc(creatorId);
     await db.runTransaction(async tx => {
-      const prior = await tx.get(ref);
+      const deletionRequestsQuery = db.collection('accountLifecycleRequests').where('requesterId', '==', creatorId);
+      const [prior, deletionRequests] = await Promise.all([tx.get(ref), tx.get(deletionRequestsQuery)]);
+      if (accountDeletionBlocksPayout(deletionRequests.docs.map(doc => doc.data()))) {
+        throw new HttpsError('failed-precondition', 'Account deletion has already been requested. Payout setup is unavailable.');
+      }
       tx.set(ref, {
         creatorId, provider: 'paystack', currency: 'NGN', providerBeneficiaryRef: recipient.recipient_code,
         status: 'verified', accountName: resolved.account_name, accountNumberLast4: accountNumber.slice(-4),
@@ -620,8 +628,14 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   const walletRef = db.collection('nexWallets').doc(creatorId);
   const activePayoutsQuery = db.collection('creatorPayoutRequests').where('creatorId', '==', creatorId)
     .where('status', 'in', ['submitting','processing','submission_unknown','awaiting_provider_approval']).limit(1);
+  const deletionRequestsQuery = db.collection('accountLifecycleRequests').where('requesterId', '==', creatorId);
   await db.runTransaction(async tx => {
-    const [idem, wallet, activePayouts] = await Promise.all([tx.get(idemRef), tx.get(walletRef), tx.get(activePayoutsQuery)]);
+    const [idem, wallet, activePayouts, deletionRequests] = await Promise.all([
+      tx.get(idemRef), tx.get(walletRef), tx.get(activePayoutsQuery), tx.get(deletionRequestsQuery),
+    ]);
+    if (accountDeletionBlocksPayout(deletionRequests.docs.map(doc => doc.data()))) {
+      throw new HttpsError('failed-precondition', 'Account deletion has already been requested. Withdrawals are unavailable.');
+    }
     if (idem.exists) throw new HttpsError('already-exists', 'This withdrawal request key has already been used.');
     if (!activePayouts.empty) throw new HttpsError('failed-precondition', 'A previous withdrawal is still being processed. Wait for its provider confirmation before requesting another.');
     const data = wallet.data() || {};

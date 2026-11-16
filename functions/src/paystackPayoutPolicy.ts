@@ -8,6 +8,12 @@ export interface LivePayoutApprovals {
   webhookVerified?: unknown;
   liveTestTransferVerified?: unknown;
 }
+/** Blocks new payout activity while account deletion is pending, running, or awaiting retry. */
+export function accountDeletionBlocksPayout(requests: ReadonlyArray<{ type?: unknown; status?: unknown }>): boolean {
+  return requests.some(request => request.type === 'delete_account'
+    && ['pending', 'processing', 'failed'].includes(String(request.status)));
+}
+
 export function livePayoutGatesPassed(policy: LivePayoutApprovals): boolean {
   return policy.liveSettlementApproved === true
     && policy.providerBusinessVerified === true

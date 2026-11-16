@@ -23,3 +23,9 @@ A repository scanner checks tracked files for private keys, service-account JSON
 ## Remaining security blockers
 
 Production Auth providers, authorized domains, email/SMS quotas, App Check enforcement, MFA/trusted devices, abuse throttles, Functions IAM, configured `default` Firestore database deployment, Storage lifecycle policy, backup/restore, monitoring destinations, legal/privacy review, and provider configuration remain external verification requirements. The repository is not a production security certification and should not be described as one.
+
+## Creator payout data during account deletion
+
+Account deletion now checks for payout requests in `submitting`, `processing`, `submission_unknown`, or `awaiting_provider_approval` before deleting any user-owned documents. If any such request exists, cleanup pauses and the lifecycle request is marked failed/retryable for operator reconciliation; it must not delete the beneficiary or remove the account while provider settlement is ambiguous.
+
+Once all payout requests are terminal (`success`, `failed`, or `reversed`), account cleanup deletes the creator's current `creatorPayoutBeneficiaries` and `creatorPayoutCompliance` documents and redacts creator/actor IDs, bank suffix, bank code, beneficiary reference, and compliance evidence reference from payout audit events. It retains payout requests, provider event records, wallet transactions, NEX ledger entries/transactions/requests, and non-identifying audit facts needed for financial reconciliation. This does not claim erasure from Paystack, backups, statutory records, or other external systems.
