@@ -187,7 +187,8 @@ describe('account deletion data and storage scope', () => {
     assert.equal((await db.collection('creatorPayoutCompliance').doc('payout-delete-test').get()).exists, true);
 
     await db.collection('creatorPayoutRequests').doc('payout-delete-pending').update({ status: 'success' });
-    await deleteUserOwnedDocuments(db, 'payout-delete-test');
+    const deleted = await deleteUserOwnedDocuments(db, 'payout-delete-test');
+    assert.equal(deleted, 2);
 
     assert.equal((await db.collection('creatorPayoutBeneficiaries').doc('payout-delete-test').get()).exists, false);
     assert.equal((await db.collection('creatorPayoutCompliance').doc('payout-delete-test').get()).exists, false);
