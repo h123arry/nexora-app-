@@ -25,6 +25,7 @@ export type LegacyMediaOutcome =
   | 'revoked-and-cleared'
   | 'cleared-revoked-token'
   | 'already-clear'
+  | 'skipped-public'
   | 'unsafe-reference'
   | 'missing-object'
   | 'changed-during-migration'
@@ -39,6 +40,7 @@ export interface LegacyMediaSummary {
   revokedAndCleared: number;
   clearedRevokedToken: number;
   alreadyClear: number;
+  skippedPublic: number;
   unsafeReference: number;
   missingObject: number;
   changedDuringMigration: number;
@@ -76,6 +78,7 @@ function increment(summary: LegacyMediaSummary, outcome: LegacyMediaOutcome): vo
     case 'revoked-and-cleared': summary.revokedAndCleared += 1; break;
     case 'cleared-revoked-token': summary.clearedRevokedToken += 1; break;
     case 'already-clear': summary.alreadyClear += 1; break;
+    case 'skipped-public': summary.skippedPublic += 1; break;
     case 'unsafe-reference': summary.unsafeReference += 1; break;
     case 'missing-object': summary.missingObject += 1; break;
     case 'changed-during-migration': summary.changedDuringMigration += 1; break;
@@ -87,11 +90,14 @@ async function migrateMoment(
   db: Firestore,
   bucket: StorageBucketLike,
   moment: QueryDocumentSnapshot,
+  weaveVisibility: unknown,
   dryRun: boolean,
 ): Promise<LegacyMediaOutcome | null> {
   const mediaUrl = moment.get('mediaUrl');
   const urlObjectPath = firebaseDownloadTokenObjectPath(mediaUrl);
   if (!urlObjectPath) return null;
+  if (weaveVisibility === 'public') return 'skipped-public';
+  if (weaveVisibility !== 'private') return 'unsafe-reference';
 
   const authorId = moment.get('authorId');
   const storagePath = moment.get('storagePath');
@@ -145,7 +151,7 @@ export async function runLegacyWorldWeaveMediaMigration(
   }
   const summary: LegacyMediaSummary = {
     dryRun, inspectedMoments: 0, scanned: 0, wouldRevokeAndClear: 0, wouldClearRevokedToken: 0,
-    revokedAndCleared: 0, clearedRevokedToken: 0, alreadyClear: 0,
+    revokedAndCleared: 0, clearedRevokedToken: 0, alreadyClear: 0, skippedPublic: 0,
     unsafeReference: 0, missingObject: 0, changedDuringMigration: 0,
     failed: 0, stoppedAtLimit: false,
   };
@@ -169,7 +175,7 @@ export async function runLegacyWorldWeaveMediaMigration(
             return summary;
           }
           summary.inspectedMoments += 1;
-          const outcome = await migrateMoment(db, bucket, moment, dryRun);
+          const outcome = await migrateMoment(db, bucket, moment, weave.get('visibility'), dryRun);
           if (outcome) increment(summary, outcome);
         }
         momentCursor = moments.docs[moments.docs.length - 1];
