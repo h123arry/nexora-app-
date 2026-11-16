@@ -134,7 +134,7 @@ async function consumeBankLookupQuota(uid: string): Promise<void> {
     tx.set(ref, {
       windowStartedAt: decision.windowStartedAt,
       attempts: decision.attempts,
-      expiresAt: now + BANK_LOOKUP_WINDOW_MS * 2,
+      expiresAt: new Date(now + BANK_LOOKUP_WINDOW_MS * 2),
       updatedAt: FieldValue.serverTimestamp(),
     });
   });
