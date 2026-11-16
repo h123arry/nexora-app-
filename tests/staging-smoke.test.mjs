@@ -8,7 +8,7 @@ test('health response must identify the expected API and release', () => {
   validateHealthResponse('/healthz', { ok: true, status: 200, headers: secureHeaders }, {
     status: 'ok', service: 'nexora-api', version: 'release-123',
   }, 'release-123');
-  assert.throws(() => validateHealthResponse('/healthz', { ok: true, status: 200 }, {
+  assert.throws(() => validateHealthResponse('/healthz', { ok: true, status: 200, headers: secureHeaders }, {
     status: 'ok', service: 'nexora-api', version: 'old-release',
   }, 'release-123'), /release mismatch/);
 });
