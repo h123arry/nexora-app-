@@ -1,12 +1,14 @@
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { assertCallableSessionActive } from './callableSession.js';
 import { assessGiftRisk, isSupportedDisplayCurrency, validatePayoutRequest } from './giftEconomyPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const PAYOUT_PROVIDER_CONFIGURED = false; // Fail closed until provider credentials, NGN pricing and verified beneficiary operations are provisioned.
-function uid(request: { auth?: { uid: string } | null }): string {
+async function uid(request: { auth?: { uid: string; token?: Record<string, unknown> } | null }): Promise<string> {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to continue.');
+  await assertCallableSessionActive(db, request.auth.uid, request.auth.token?.auth_time);
   return request.auth.uid;
 }
 function finance(request: { auth?: { token?: Record<string, unknown> } | null }): boolean {
@@ -18,7 +20,7 @@ function safeId(value: unknown): value is string {
 }
 
 export const getCreatorPayoutReadiness = onCall({ maxInstances: 10 }, async request => {
-  const creatorId = uid(request);
+  const creatorId = await uid(request);
   const [profile, beneficiary] = await Promise.all([
     db.collection('users').doc(creatorId).get(),
     db.collection('creatorPayoutBeneficiaries').doc(creatorId).get(),
@@ -37,7 +39,7 @@ export const getCreatorPayoutReadiness = onCall({ maxInstances: 10 }, async requ
 });
 
 export const requestCreatorPayout = onCall({ maxInstances: 5 }, async request => {
-  const creatorId = uid(request);
+  const creatorId = await uid(request);
   let input;
   try { input = validatePayoutRequest(request.data); }
   catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Payout request is invalid.'); }
@@ -56,7 +58,7 @@ export const requestCreatorPayout = onCall({ maxInstances: 5 }, async request =>
 });
 
 export const setCreatorEconomyDisplayCurrency = onCall({ maxInstances: 10 }, async request => {
-  const creatorId = uid(request);
+  const creatorId = await uid(request);
   const currency = request.data?.currency;
   if (!isSupportedDisplayCurrency(currency)) throw new HttpsError('invalid-argument', 'Choose a supported display currency.');
   await db.collection('users').doc(creatorId).set({ creatorEconomyDisplayCurrency: currency, creatorEconomyDisplayCurrencyUpdatedAt: FieldValue.serverTimestamp() }, { merge: true });
@@ -64,7 +66,7 @@ export const setCreatorEconomyDisplayCurrency = onCall({ maxInstances: 10 }, asy
 });
 
 export const getCreatorGiftAnalytics = onCall({ maxInstances: 10 }, async request => {
-  const creatorId = uid(request);
+  const creatorId = await uid(request);
   const days = request.data?.days ?? 30;
   if (!Number.isInteger(days) || days < 7 || days > 90) throw new HttpsError('invalid-argument', 'Choose an analytics window between 7 and 90 days.');
   const start = Timestamp.fromMillis(Date.now() - days * 86400000);
@@ -95,7 +97,7 @@ export const getCreatorGiftAnalytics = onCall({ maxInstances: 10 }, async reques
 });
 
 export const createGiftCompetition = onCall({ maxInstances: 5 }, async request => {
-  const actorId = uid(request);
+  const actorId = await uid(request);
   if (!finance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required to publish a GIFTVERSE competition.');
   const { title, liveSessionId, startsAt, endsAt } = request.data || {};
   if (typeof title !== 'string' || title.trim().length < 4 || title.trim().length > 80 || !safeId(liveSessionId)
@@ -113,7 +115,7 @@ export const createGiftCompetition = onCall({ maxInstances: 5 }, async request =
 });
 
 export const getActiveGiftCompetitions = onCall({ maxInstances: 10 }, async request => {
-  uid(request);
+  await uid(request);
   const now = Timestamp.now();
   const snapshot = await db.collection('giftCompetitions').where('status', 'in', ['scheduled','active']).orderBy('startsAt', 'asc').limit(30).get();
   return { competitions: snapshot.docs.map(doc => {
@@ -127,7 +129,7 @@ export const getActiveGiftCompetitions = onCall({ maxInstances: 10 }, async requ
 });
 
 export const getGiftCompetitionLeaderboard = onCall({ maxInstances: 10 }, async request => {
-  uid(request);
+  await uid(request);
   const competitionId = request.data?.competitionId;
   if (!safeId(competitionId)) throw new HttpsError('invalid-argument', 'A valid competition is required.');
   const competition = await db.collection('giftCompetitions').doc(competitionId).get();
@@ -142,14 +144,14 @@ export const getGiftCompetitionLeaderboard = onCall({ maxInstances: 10 }, async 
 });
 
 export const getGiftRiskReviewQueue = onCall({ maxInstances: 5 }, async request => {
-  uid(request);
+  await uid(request);
   if (!finance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
   const snapshot = await db.collection('giftRiskSignals').where('disposition', '==', 'review_only').where('tier', 'in', ['review','high']).orderBy('createdAt', 'desc').limit(100).get();
   return { records: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || null })) };
 });
 
 export const setCreatorPayoutBeneficiary = onCall({ maxInstances: 5 }, async request => {
-  const actorId = uid(request);
+  const actorId = await uid(request);
   if (!finance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
   const creatorId = request.data?.creatorId;
   const providerBeneficiaryRef = request.data?.providerBeneficiaryRef;
@@ -173,7 +175,7 @@ export const setCreatorPayoutBeneficiary = onCall({ maxInstances: 5 }, async req
 });
 
 export const resolveGiftRiskSignal = onCall({ maxInstances: 5 }, async request => {
-  const actorId = uid(request);
+  const actorId = await uid(request);
   if (!finance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
   const signalId = request.data?.signalId;
   const outcome = request.data?.outcome;
