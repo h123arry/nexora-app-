@@ -43,6 +43,9 @@ before(async () => {
   assert.ok(emulatorHost, 'VOH API security test requires Firebase Auth Emulator.');
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Private media tests require Firestore Emulator.');
   process.env.STORAGE_EMULATOR_HOST ||= '127.0.0.1:9199';
+  await getAdminStorage(testAdminApp).bucket('demo-nexora-voh.firebasestorage.app')
+    .file('_nexora-readiness-probe')
+    .save(Buffer.from('ready'), { resumable: false });
   server = spawn('node', ['--import', 'tsx', 'server.ts'], {
     cwd: process.cwd(),
     env: {
@@ -86,9 +89,28 @@ after(async () => {
   if (server && server.exitCode === null) server.kill('SIGTERM');
   await testDb.recursiveDelete(testDb.collection('chats'));
   await Promise.all([uid, nonMemberUid].filter(Boolean).map(userId => testDb.collection('vohUserMemory').doc(userId).delete().catch(() => undefined)));
+  await getAdminStorage(testAdminApp).bucket('demo-nexora-voh.firebasestorage.app').file('_nexora-readiness-probe').delete().catch(() => undefined);
   await getAdminStorage(testAdminApp).bucket('demo-nexora-voh.firebasestorage.app').deleteFiles({ prefix: 'chats/' }).catch(() => undefined);
   await Promise.all([uid, nonMemberUid].filter(Boolean).map(userId => getAdminAuth(testAdminApp).deleteUser(userId).catch(() => undefined)));
   await deleteApp(testAdminApp);
+});
+
+describe('operational health boundary', () => {
+  it('reports service health and Firestore readiness without exposing infrastructure identifiers', async () => {
+    const health = await fetch(`${baseUrl}/healthz`);
+    assert.equal(health.status, 200);
+    assert.equal(health.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(health.headers.get('x-frame-options'), 'DENY');
+    assert.equal(health.headers.get('strict-transport-security'), 'max-age=31536000; includeSubDomains');
+    assert.match(health.headers.get('x-request-id') || '', /^[0-9a-f-]{36}$/i);
+    assert.deepEqual(await health.json(), { status: 'ok', service: 'nexora-api', version: 'test' });
+
+    const readiness = await fetch(`${baseUrl}/readyz`);
+    assert.equal(readiness.status, 200);
+    const report = await readiness.json() as { status: string; dependencies: Record<string, string> };
+    assert.deepEqual(report, { status: 'ready', dependencies: { firebase: 'available', firestore: 'available', storage: 'available' } });
+    assert.equal(JSON.stringify(report).includes('demo-nexora-voh'), false);
+  });
 });
 
 describe('VOH API security boundary', () => {
@@ -226,6 +248,12 @@ describe('private chat media boundary', () => {
     assert.deepEqual(Buffer.from(await playback.arrayBuffer()), audioBytes);
     const denied = await fetch(`${baseUrl}${playbackPath}`, { headers: { authorization: `Bearer ${nonMemberToken}` } });
     assert.equal(denied.status, 404);
+    for (let index = 0; index < 59; index += 1) {
+      const allowedPlayback = await fetch(`${baseUrl}${playbackPath}`, { headers: { authorization: `Bearer ${idToken}` } });
+      assert.equal(allowedPlayback.status, 200);
+    }
+    const rateLimitedPlayback = await fetch(`${baseUrl}${playbackPath}`, { headers: { authorization: `Bearer ${idToken}` } });
+    assert.equal(rateLimitedPlayback.status, 429);
   });
 });
 

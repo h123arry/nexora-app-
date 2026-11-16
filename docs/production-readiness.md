@@ -16,7 +16,8 @@
 - Production server startup requires explicit target configuration and release ID.
 - Legacy custom OTP routes are disabled; native Firebase Auth is the supported verification/reset flow.
 - Client-side transactional email writes are disabled and mail writes are denied by Firestore rules.
-- Health/readiness endpoints, request IDs, bounded structured request logs, and rollback/runbook documentation exist.
+- Health/readiness endpoints distinguish service liveness from Firebase, Firestore, and Storage dependency readiness; request IDs, bounded structured request logs, and rollback/runbook documentation exist.
+- Private chat audio upload and playback have separate transaction-backed per-user quotas, with playback authorization checked before the quota is consumed.
 
 ## B. Verified in staging or an isolated test environment
 

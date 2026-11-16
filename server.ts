@@ -104,12 +104,15 @@ app.get('/readyz', async (_req, res) => {
     return res.status(503).json({ status: 'not_ready', dependencies: { firebase: 'missing_configuration' } });
   }
   try {
-    const probe = serverDb.listCollections();
+    if (!mediaBucket) {
+      return res.status(503).json({ status: 'not_ready', dependencies: { firebase: 'configured', firestore: 'unknown', storage: 'missing_configuration' } });
+    }
+    const probe = Promise.all([serverDb.listCollections(), mediaBucket.getFiles({ maxResults: 1 })]);
     await Promise.race([
       probe,
       new Promise((_, reject) => setTimeout(() => reject(new Error('readiness timeout')), 2_000)),
     ]);
-    return res.status(200).json({ status: 'ready', dependencies: { firebase: 'available', firestore: 'available' } });
+    return res.status(200).json({ status: 'ready', dependencies: { firebase: 'available', firestore: 'available', storage: 'available' } });
   } catch {
     return res.status(503).json({ status: 'not_ready', dependencies: { firebase: 'unavailable' } });
   }
@@ -149,6 +152,25 @@ async function allowChatMediaUpload(uid: string): Promise<boolean> {
     const count = previous?.windowStart === windowStart ? Number(previous.count) || 0 : 0;
     if (count >= 6) return false;
     transaction.set(ref, { windowStart, count: count + 1, expiresAt: new Date(windowStart + windowMs * 10), updatedAt: FieldValue.serverTimestamp() });
+    return true;
+  });
+}
+
+async function allowChatMediaPlayback(uid: string): Promise<boolean> {
+  const windowMs = 60_000;
+  const windowStart = Math.floor(Date.now() / windowMs) * windowMs;
+  const ref = serverDb.collection('chatMediaPlaybackRateLimits').doc(createHash('sha256').update(uid).digest('hex'));
+  return serverDb.runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    const previous = snapshot.data();
+    const count = previous?.windowStart === windowStart ? Number(previous.count) || 0 : 0;
+    if (count >= 60) return false;
+    transaction.set(ref, {
+      windowStart,
+      count: count + 1,
+      expiresAt: new Date(windowStart + windowMs * 10),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
     return true;
   });
 }
@@ -207,6 +229,13 @@ privateChatMediaRouter.get('/chat/:chatId/audio/:uploaderId/:mediaId', async (re
     if (!chat.exists || !Array.isArray(chat.get('participants')) || !chat.get('participants').includes(uid)) return res.status(404).end();
     const linkedMessage = await chatRef.collection('messages').where('voiceAudioUrl', '==', storagePath).limit(1).get();
     if (linkedMessage.empty) return res.status(404).end();
+    let playbackAllowed: boolean;
+    try {
+      playbackAllowed = await allowChatMediaPlayback(uid);
+    } catch {
+      return res.status(503).json({ error: 'Voice playback is temporarily unavailable. Please retry.' });
+    }
+    if (!playbackAllowed) return res.status(429).json({ error: 'Voice playback limit reached. Please wait a minute and try again.' });
     const file = mediaBucket.file(storagePath);
     const [metadata] = await file.getMetadata();
     if (Number(metadata.size) > 5 * 1024 * 1024 || !String(metadata.contentType || '').startsWith('audio/')) return res.status(404).end();

@@ -54,7 +54,7 @@ Set `GEMINI_API_KEY` only if VOH is intentionally enabled, and store it as a ser
 5. Deploy Functions with Node.js 22, the intended region, named database, bucket, and secret configuration.
 6. Deploy the frontend/Express artifact only after backend compatibility and required indexes are ready.
 7. Smoke-test authentication, profile ownership, public feed visibility, private data denial, chat membership, private audio upload/playback, media access, account deletion request, admin denial, and trusted like/engagement behavior using non-production accounts.
-8. Check `/healthz`, `/readyz`, structured request logs, Firebase Functions logs, Firestore permission failures, Storage failures, index state, quota errors, and billing signals.
+8. Check `/healthz` for service liveness and `/readyz` for Firebase, Firestore, and Storage dependency availability. Also review structured request logs, Firebase Functions logs, Firestore permission failures, Storage failures, index state, quota errors, and billing signals.
 9. Expand traffic only after the staging/production evidence is recorded and the release owner approves.
 
 The legacy public-post audience migration is a separate guarded operation. Use a reviewed manifest, dry-run first, backup, second-person review, and the documented `--confirm-production` guard. Never run it merely because the application deploy succeeded.
