@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('canonical web and native NEXORA logo sources stay identical', async () => {
   const [web, native] = await Promise.all([
-    read('../public/logo.svg'),
+    read('../public/nexora-mark.svg'),
     read('../assets/logo.svg'),
   ]);
   assert.equal(web, native);
@@ -36,6 +36,10 @@ test('mobile asset commands regenerate Android, iOS and PWA outputs from the sou
   assert.match(pkg.scripts['mobile:assets:pwa'], /capacitor-assets generate --pwa/);
   assert.match(pkg.scripts['mobile:assets'], /mobile:assets:android.*mobile:assets:ios.*mobile:assets:pwa/);
   assert.ok(pkg.devDependencies['@capacitor/assets']);
+  const sync = await read('../scripts/sync-nexora-brand-assets.mjs');
+  assert.match(sync, /publicDir, 'nexora-mark\\.svg'/);
+  assert.match(sync, /icon-192\\.png/);
+  assert.match(sync, /image\\/png/);
 });
 
 test('native CI regenerates the matching platform assets before compiling', async () => {
