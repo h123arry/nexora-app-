@@ -24,7 +24,7 @@ test('shared app branding and watermark use the canonical public mark', async ()
     read('../src/components/NexoraBranding.tsx'),
     read('../src/components/branding/NexoraWatermark.tsx'),
   ]);
-  assert.match(logo, /src="\/logo\.svg"/);
+  assert.match(logo, /src="\/nexora-mark\.svg"/);
   assert.match(brand, /NexoraPremiumLogo/);
   assert.match(watermark, /NexoraPremiumLogo/);
 });
@@ -37,9 +37,9 @@ test('mobile asset commands regenerate Android, iOS and PWA outputs from the sou
   assert.match(pkg.scripts['mobile:assets'], /mobile:assets:android.*mobile:assets:ios.*mobile:assets:pwa/);
   assert.ok(pkg.devDependencies['@capacitor/assets']);
   const sync = await read('../scripts/sync-nexora-brand-assets.mjs');
-  assert.match(sync, /publicDir, 'nexora-mark\\.svg'/);
-  assert.match(sync, /icon-192\\.png/);
-  assert.match(sync, /image\\/png/);
+  assert.match(sync, /publicDir, 'nexora-mark\.svg'/);
+  assert.match(sync, /icon-192\.png/);
+  assert.match(sync, /image\/png/);
 });
 
 test('native CI regenerates the matching platform assets before compiling', async () => {
