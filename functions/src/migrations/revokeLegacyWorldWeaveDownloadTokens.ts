@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { FieldPath, FieldValue, getFirestore, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
@@ -60,10 +61,11 @@ export function firebaseDownloadTokenObjectPath(value: unknown): string | null {
   }
 }
 
-export function metadataWithRevokedFirebaseDownloadTokens(metadata: CustomStorageMetadata | undefined): CustomStorageMetadata {
-  // Cloud Storage metadata PATCH requires an explicit null to delete one custom key.
-  // Omitting the key leaves it untouched because custom metadata is merge-patched.
-  return { ...(metadata || {}), [DOWNLOAD_TOKEN_KEY]: null };
+export function metadataWithRotatedFirebaseDownloadToken(metadata: CustomStorageMetadata | undefined): CustomStorageMetadata {
+  // Rotate to a fresh, undistributed token. Cloud Storage metadata PATCH merges
+  // custom keys, so replacing the token invalidates every previously issued URL
+  // without risking accidental loss of unrelated metadata.
+  return { ...(metadata || {}), [DOWNLOAD_TOKEN_KEY]: randomUUID() };
 }
 
 function increment(summary: LegacyMediaSummary, outcome: LegacyMediaOutcome): void {
@@ -109,7 +111,7 @@ async function migrateMoment(
     if (dryRun) return hasTokenMetadata ? 'would-revoke-and-clear' : 'would-clear-revoked-token';
 
     if (hasTokenMetadata) {
-      await file.setMetadata({ metadata: metadataWithRevokedFirebaseDownloadTokens(customMetadata) });
+      await file.setMetadata({ metadata: metadataWithRotatedFirebaseDownloadToken(customMetadata) });
     }
 
     const result = await db.runTransaction(async transaction => {
