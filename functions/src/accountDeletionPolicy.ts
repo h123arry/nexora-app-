@@ -109,23 +109,27 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string, on
     }
   }
 
-  // Keep payout audit evidence, but remove personal bank and account identifiers.
-  while (true) {
-    const rows = await db.collection('creatorPayoutAuditEvents').where('creatorId', '==', userId).limit(PAGE_SIZE).get();
-    if (rows.empty) break;
-    const batch = db.batch();
-    rows.docs.forEach(row => batch.update(row.ref, {
-      creatorId: FieldValue.delete(),
-      actorId: FieldValue.delete(),
-      accountNumberLast4: FieldValue.delete(),
-      bankCode: FieldValue.delete(),
-      beneficiaryRef: FieldValue.delete(),
-      evidenceReference: FieldValue.delete(),
-      accountDeleted: true,
-    }));
-    await batch.commit();
-    await onBatch?.();
-    if (rows.size < PAGE_SIZE) break;
+  // Keep payout audit evidence, but remove only the deleted account's identity.
+  // Preserve a different creator or finance operator identity when that person is not
+  // the account being deleted; always remove bank and beneficiary references.
+  for (const identityField of ['creatorId', 'actorId'] as const) {
+    while (true) {
+      const rows = await db.collection('creatorPayoutAuditEvents')
+        .where(identityField, '==', userId).limit(PAGE_SIZE).get();
+      if (rows.empty) break;
+      const batch = db.batch();
+      rows.docs.forEach(row => batch.update(row.ref, {
+        [identityField]: FieldValue.delete(),
+        accountNumberLast4: FieldValue.delete(),
+        bankCode: FieldValue.delete(),
+        beneficiaryRef: FieldValue.delete(),
+        evidenceReference: FieldValue.delete(),
+        accountDeleted: true,
+      }));
+      await batch.commit();
+      await onBatch?.();
+      if (rows.size < PAGE_SIZE) break;
+    }
   }
 
   // Keep audit history but remove account identifiers and free-text review notes.
