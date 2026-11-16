@@ -97,3 +97,14 @@ export function advanceBankLookupQuota(
   }
   return { allowed: true, windowStartedAt: startedAt as number, attempts: (attempts as number) + 1, retryAfterMs: 0 };
 }
+
+
+/** Fixed-window quota for sensitive provider operations such as payout OTP finalization. */
+export function advancePayoutOtpQuota(
+  state: { windowStartedAt?: unknown; attempts?: unknown } | null | undefined,
+  nowMs: number,
+  maxAttempts = 5,
+  windowMs = 15 * 60 * 1000,
+): BankLookupQuotaDecision {
+  return advanceBankLookupQuota(state, nowMs, maxAttempts, windowMs);
+}

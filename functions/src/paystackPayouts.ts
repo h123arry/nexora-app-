@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
@@ -6,7 +6,7 @@ import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirebaseProjectId, resolveFirestoreDatabaseId, PRODUCTION_FIREBASE_PROJECT_ID } from './runtimeConfig.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
-import { advanceBankLookupQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from './paystackPayoutPolicy.js';
+import { advanceBankLookupQuota, advancePayoutOtpQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from './paystackPayoutPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const PAYSTACK_SECRET_KEY = defineSecret('PAYSTACK_SECRET_KEY');
@@ -91,6 +91,30 @@ function normalizeAccountName(value: string): string {
 
 const BANK_LOOKUP_WINDOW_MS = 15 * 60 * 1000;
 const BANK_LOOKUP_MAX_ATTEMPTS = 10;
+async function consumePayoutOtpQuota(actorId: string, reference: string): Promise<void> {
+  const now = Date.now();
+  const windowMs = 15 * 60 * 1000;
+  const operatorRef = db.collection('payoutOtpRateLimits').doc(createHash('sha256').update('operator:' + actorId).digest('hex'));
+  const payoutRef = db.collection('payoutOtpRateLimits').doc(createHash('sha256').update('payout:' + reference).digest('hex'));
+  let retryAfterMs = 0;
+  await db.runTransaction(async tx => {
+    const [operatorSnapshot, payoutSnapshot] = await Promise.all([tx.get(operatorRef), tx.get(payoutRef)]);
+    const operatorDecision = advancePayoutOtpQuota(operatorSnapshot.exists ? operatorSnapshot.data() : null, now, 10, windowMs);
+    const payoutDecision = advancePayoutOtpQuota(payoutSnapshot.exists ? payoutSnapshot.data() : null, now, 5, windowMs);
+    if (!operatorDecision.allowed || !payoutDecision.allowed) {
+      retryAfterMs = Math.max(operatorDecision.retryAfterMs, payoutDecision.retryAfterMs);
+      return;
+    }
+    const expiresAt = new Date(now + windowMs * 2);
+    tx.set(operatorRef, { windowStartedAt: operatorDecision.windowStartedAt, attempts: operatorDecision.attempts, expiresAt, updatedAt: FieldValue.serverTimestamp() });
+    tx.set(payoutRef, { windowStartedAt: payoutDecision.windowStartedAt, attempts: payoutDecision.attempts, expiresAt, updatedAt: FieldValue.serverTimestamp() });
+  });
+  if (retryAfterMs > 0) {
+    throw new HttpsError('resource-exhausted', 'Too many payout OTP attempts. Try again after the rate limit resets.',
+      { retryAfterSeconds: Math.ceil(retryAfterMs / 1000) });
+  }
+}
+
 async function consumeBankLookupQuota(uid: string): Promise<void> {
   const ref = db.collection('ngnBankLookupRateLimits').doc(uid);
   const now = Date.now();
@@ -202,6 +226,7 @@ export const finalizeNgnPayoutTransfer = onCall({ secrets: [PAYSTACK_SECRET_KEY]
   if (!payout.exists || payout.data()?.status !== 'awaiting_provider_approval' || !safeText(payout.data()?.providerTransferCode, 120)) {
     throw new HttpsError('failed-precondition', 'This payout is not waiting for provider OTP approval.');
   }
+  await consumePayoutOtpQuota(actorId, reference);
   try {
     const result = await paystack('/transfer/finalize_transfer', 'POST', {
       transfer_code: payout.data()?.providerTransferCode, otp,
