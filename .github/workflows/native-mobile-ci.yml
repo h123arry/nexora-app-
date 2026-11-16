@@ -42,6 +42,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
+  publish-brand-assets:
+    name: Generate and commit official brand assets
+    if: github.event_name == 'push' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate iOS, Android and PWA assets from approved SVG
+        run: npm run mobile:assets
+
+      - name: Commit generated native and PWA assets
+        run: |
+          if git diff --quiet; then
+            echo "Generated brand assets are already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add android/app/src/main/res ios/App/App/Assets.xcassets public
+          git commit -m "build(branding): regenerate native and PWA NEXORA assets"
+          git push
+
   android:
     name: Android debug build and tests
     runs-on: ubuntu-latest
