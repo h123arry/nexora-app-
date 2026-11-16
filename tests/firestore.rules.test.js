@@ -61,7 +61,8 @@ const publicProfile = (uid) => ({
     await seed(async adminDb => {
       await setDoc(doc(adminDb, 'accountStatus', 'alice'), {
         accountId: 'alice',
-        sessionsRevokedAfter: Timestamp.fromMillis(cutoffSeconds * 1000)
+        sessionsRevokedAfter: Timestamp.fromMillis(cutoffSeconds * 1000),
+        sessionRevocationPending: true
       });
       await setDoc(doc(adminDb, 'users', 'alice'), profile('alice'));
     });
@@ -73,6 +74,10 @@ const publicProfile = (uid) => ({
     }).firestore();
     await assertFails(getDoc(doc(revokedDb, 'users', 'alice')));
     await assertFails(getDoc(doc(dbFor('alice'), 'users', 'alice')));
+    await assertFails(getDoc(doc(freshDb, 'users', 'alice')));
+    await seed(async adminDb => setDoc(doc(adminDb, 'accountStatus', 'alice'), {
+      sessionRevocationPending: false
+    }, { merge: true }));
     await assertSucceeds(getDoc(doc(freshDb, 'users', 'alice')));
   });
 
