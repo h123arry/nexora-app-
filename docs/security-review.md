@@ -27,7 +27,7 @@ Production Auth providers, authorized domains, email/SMS quotas, App Check enfor
 
 ## Revoked-session enforcement
 
-The `revokeAllSessions` callable now writes a server-owned `accountStatus/{uid}.sessionsRevokedAfter` cutoff before asking Firebase Auth to revoke refresh tokens. Firestore and Storage rules reject authenticated requests whose ID-token `auth_time` predates that cutoff. If writing the cutoff fails, refresh-token revocation is not attempted; if Auth revocation fails after the cutoff is written, direct Firestore/Storage access remains blocked for older tokens and the audit event records the partial failure.
+The `revokeAllSessions` callable first sets `accountStatus/{uid}.sessionRevocationPending=true`, causing Firestore and Storage rules to deny **all** direct client sessions during the handoff. It then revokes Firebase Auth refresh tokens and only afterwards publishes `sessionsRevokedAfter` and clears the pending flag. This ordering prevents a fresh sign-in racing between cutoff publication and Auth revocation. If Auth revocation or final cutoff publication fails, the pending flag remains true and direct Firestore/Storage access stays fail-closed until a successful retry. The Express authenticated API middleware and sensitive payout callables also enforce the pending flag and auth-time cutoff.
 
 Storage Rules use the documented cross-service Firestore lookup against the **default** Firestore database. Enabling this integration requires the Firebase/Google Cloud service permission when prompted by Firebase CLI or Console. Verify the integration in the target project before deploying the Storage rules. This repository change does not grant IAM permissions or alter production configuration.
 
