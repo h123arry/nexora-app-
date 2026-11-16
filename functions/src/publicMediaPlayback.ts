@@ -1,6 +1,7 @@
 import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { HttpsError } from 'firebase-functions/v2/https';
+import { onCallWithSession as onCall } from './callableSession.js';
 import { getFirebaseAdminApp, resolveFirebaseStorageBucket, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { canResolvePublicPostMedia, canViewPublicPostMedia, chooseVideoRendition, safeVideoRenditions } from './publicMediaPlaybackPolicy.js';
 
