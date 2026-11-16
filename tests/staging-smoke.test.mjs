@@ -30,6 +30,7 @@ test('probe rejects redirects and non-JSON responses', async () => {
 
 test('staging smoke verifies both endpoints and exact deployed release', async () => {
   const calls = [];
+  const headers = { get: (name) => ({ 'x-request-id': 'request-12345678', 'x-content-type-options': 'nosniff' })[name] ?? null };
   const result = await verifyStaging({
     baseUrl: 'https://staging.example',
     expectedVersion: 'abc123',
@@ -38,8 +39,8 @@ test('staging smoke verifies both endpoints and exact deployed release', async (
       const path = new URL(url).pathname;
       calls.push(path);
       return path === '/healthz'
-        ? { ok: true, status: 200, json: async () => ({ status: 'ok', service: 'nexora-api', version: 'abc123' }) }
-        : { ok: true, status: 200, json: async () => ({ status: 'ready', dependencies: { firebase: 'available', firestore: 'available', storage: 'available' } }) };
+        ? { ok: true, status: 200, headers, json: async () => ({ status: 'ok', service: 'nexora-api', version: 'abc123' }) }
+        : { ok: true, status: 200, headers, json: async () => ({ status: 'ready', dependencies: { firebase: 'available', firestore: 'available', storage: 'available' } }) };
     },
   });
   assert.deepEqual(calls, ['/healthz', '/readyz']);
@@ -54,6 +55,7 @@ test('staging smoke fails closed when the release is not the deployed release', 
     attempts: 1,
     fetchImpl: async () => ({
       ok: true, status: 200,
+      headers: { get: (name) => ({ 'x-request-id': 'request-12345678', 'x-content-type-options': 'nosniff' })[name] ?? null },
       json: async () => ({ status: 'ok', service: 'nexora-api', version: 'old' }),
     }),
   }), /release mismatch/);
@@ -66,4 +68,10 @@ test('staging smoke rejects insecure and credential-bearing URLs', async () => {
   await assert.rejects(verifyStaging({
     baseUrl: 'https://user:pass@staging.example', expectedVersion: 'v1', attempts: 1,
   }), /HTTPS/);
+});
+
+test('staging smoke requires request correlation and security headers', () => {
+  assert.throws(() => validateHealthResponse('/healthz', {
+    ok: true, status: 200, headers: { get: () => null },
+  }, { status: 'ok', service: 'nexora-api', version: 'v1' }, 'v1'), /X-Request-Id/);
 });
