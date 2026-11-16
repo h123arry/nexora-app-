@@ -4,7 +4,7 @@ This migration retires legacy Firebase download-token URLs from WorldWeave momen
 
 ## What the migration changes
 
-For each WorldWeave moment with a Firebase Storage URL containing a `token` query parameter, the migration:
+For each **private** WorldWeave moment with a Firebase Storage URL containing a `token` query parameter, the migration:
 
 1. Confirms the URL host is `firebasestorage.googleapis.com` and decodes the exact object path.
 2. Confirms the moment's author, moment ID, and canonical `users/{authorId}/media/{momentId}` storage path agree.
@@ -12,7 +12,7 @@ For each WorldWeave moment with a Firebase Storage URL containing a `token` quer
 4. Rotates `firebaseStorageDownloadTokens` to a fresh, undistributed random value on that exact object, invalidating all previously issued download URLs while preserving unrelated custom metadata. The new token is not returned or logged.
 5. Clears `mediaUrl` only if the Firestore moment still points to the same URL and storage path.
 
-Missing objects, unsafe path bindings, and concurrent edits are reported and left untouched. The migration never logs URLs, tokens, object metadata, or message content. It does not delete media objects.
+Public WorldWeaves are explicitly skipped, so intentionally public published media is not blanket-revoked. Missing objects, unknown visibility values, unsafe path bindings, and concurrent edits are reported and left untouched. The migration never logs URLs, tokens, object metadata, or message content. It does not delete media objects.
 
 ## Safe execution
 
@@ -59,4 +59,4 @@ Production apply requires both `--confirm-project=nexora-prod-voiceharrison` and
 
 The operation is idempotent: rerunning it skips moments whose `mediaUrl` has already been cleared. If Storage token removal succeeds but the Firestore update is interrupted, a subsequent run can clear the still-present URL once the object metadata confirms the legacy token has been rotated.
 
-This does not revoke URLs copied outside Firebase metadata, erase backups, or delete external copies. It only invalidates prior Firebase download tokens attached to the exact WorldWeave Storage objects found by this migration; a new undistributed token remains in Storage metadata.
+This does not revoke URLs copied outside Firebase metadata, erase backups, or delete external copies. It only invalidates prior Firebase download tokens attached to exact private WorldWeave Storage objects found by this migration; public WorldWeave objects remain untouched and a new undistributed token remains in private objects' Storage metadata.
