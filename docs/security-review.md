@@ -23,3 +23,12 @@ A repository scanner checks tracked files for private keys, service-account JSON
 ## Remaining security blockers
 
 Production Auth providers, authorized domains, email/SMS quotas, App Check enforcement, MFA/trusted devices, abuse throttles, Functions IAM, named-database deployment, Storage lifecycle policy, backup/restore, monitoring destinations, legal/privacy review, and provider configuration remain external verification requirements. The repository is not a production security certification and should not be described as one.
+
+
+## Revoked-session enforcement
+
+The `revokeAllSessions` callable now writes a server-owned `accountStatus/{uid}.sessionsRevokedAfter` cutoff before asking Firebase Auth to revoke refresh tokens. Firestore and Storage rules reject authenticated requests whose ID-token `auth_time` predates that cutoff. If writing the cutoff fails, refresh-token revocation is not attempted; if Auth revocation fails after the cutoff is written, direct Firestore/Storage access remains blocked for older tokens and the audit event records the partial failure.
+
+Storage Rules use the documented cross-service Firestore lookup against the **default** Firestore database. Enabling this integration requires the Firebase/Google Cloud service permission when prompted by Firebase CLI or Console. Verify the integration in the target project before deploying the Storage rules. This repository change does not grant IAM permissions or alter production configuration.
+
+Emulator regressions cover old-token denial and post-cutoff token access for both Firestore and Storage. Production rollout still requires staging verification and owner-controlled Firebase configuration.
