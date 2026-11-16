@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { assertCallableSessionActive } from './callableSession.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
 import { calculateGiftRevenueSplit, CREATOR_REVENUE_SHARE_BPS, PLATFORM_REVENUE_SHARE_BPS, GIFT_REVENUE_POLICY_VERSION, isGiftRiskClearedForSettlement } from './giftEarningsPolicy.js';
 import { CREATOR_EARNINGS_PAGE_SIZE, validateCreatorEarningsCursor } from './creatorEarningsPolicy.js';
@@ -10,8 +11,9 @@ const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const ESCROW_ACCOUNT = 'gift_escrow';
 const PLATFORM_ACCOUNT = 'platform_treasury';
 
-function requireUid(request: { auth?: { uid: string } | null }): string {
+async function requireUid(request: { auth?: { uid: string; token?: Record<string, unknown> } | null }): Promise<string> {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to view creator earnings.');
+  await assertCallableSessionActive(db, request.auth.uid, request.auth.token?.auth_time);
   return request.auth.uid;
 }
 function isFinanceAdmin(request: { auth?: { token?: Record<string, unknown> } | null }): boolean {
@@ -34,7 +36,7 @@ function iso(value: any): string | null {
 }
 
 export const getCreatorEarningsSnapshot = onCall({ maxInstances: 10 }, async (request) => {
-  const uid = requireUid(request);
+  const uid = await requireUid(request);
   let cursorId: string | undefined;
   try { cursorId = validateCreatorEarningsCursor(request.data?.cursor); }
   catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Earnings cursor is invalid.'); }
@@ -94,7 +96,7 @@ export const getCreatorEarningsSnapshot = onCall({ maxInstances: 10 }, async (re
 });
 
 export const settleGiftCreatorEarning = onCall({ maxInstances: 5 }, async (request) => {
-  requireUid(request);
+  await requireUid(request);
   if (!isFinanceAdmin(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
   const transactionId = request.data?.transactionId;
   if (typeof transactionId !== 'string' || !/^gift_[a-f0-9]{64}$/.test(transactionId)) {
@@ -222,7 +224,7 @@ export const settleGiftCreatorEarning = onCall({ maxInstances: 5 }, async (reque
 });
 
 export const getPendingGiftEarningsForFinance = onCall({ maxInstances: 5 }, async (request) => {
-  requireUid(request);
+  await requireUid(request);
   if (!isFinanceAdmin(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
   try {
     const snapshot = await db.collection('creatorEarnings')
