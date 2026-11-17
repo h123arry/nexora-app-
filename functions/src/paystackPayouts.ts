@@ -5,6 +5,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirebaseProjectId, resolveFirestoreDatabaseId, PRODUCTION_FIREBASE_PROJECT_ID } from './runtimeConfig.js';
+import { assertCallableSessionActive } from './callableSession.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
 import { accountDeletionBlocksPayout, advanceBankLookupQuota, advancePayoutOtpQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from './paystackPayoutPolicy.js';
 
@@ -37,6 +38,7 @@ async function verifyPayoutSession(request: PayoutCallableRequest, requireRecent
     throw new HttpsError('unauthenticated', 'Your session is expired or has been revoked. Sign in again.');
   }
   if (decoded.uid !== uid) throw new HttpsError('unauthenticated', 'The authenticated session no longer matches this account.');
+  await assertCallableSessionActive(db, uid, decoded.auth_time);
   if (requireRecent) {
     const authTime = decoded.auth_time;
     const now = Date.now() / 1000;

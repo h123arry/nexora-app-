@@ -4,13 +4,15 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { assertCallableSessionActive } from './callableSession.js';
 import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings, validateLiveGuestDecision, validateLiveGuestId, calculateLiveWatchDurationMs } from './liveSessionsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const sessions = db.collection('liveSessions');
 
-function uid(request: { auth?: { uid: string } | null }): string {
+async function uid(request: { auth?: { uid: string; token?: Record<string, unknown> } | null }): Promise<string> {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to use live rooms.');
+  await assertCallableSessionActive(db, request.auth.uid, request.auth.token?.auth_time);
   return request.auth.uid;
 }
 function valid<T>(fn: () => T): T {
@@ -27,7 +29,7 @@ function rateDocId(sessionId: string, userId: string): string {
 }
 
 export const startLiveSession = onCall({ maxInstances: 10, secrets: [liveKitApiKey, liveKitApiSecret] }, async request => {
-  const hostId = uid(request);
+  const hostId = await uid(request);
   const liveKitUrl = process.env.LIVEKIT_URL?.trim() || 'wss://nexora-live-is43sh5r.livekit.cloud';
   if (!liveKitApiKey.value().trim() || !liveKitApiSecret.value().trim() || !/^wss:\/\//i.test(liveKitUrl)) {
     throw new HttpsError('failed-precondition', 'NEXORA Live video is not configured on the server yet. Please try again later.');
@@ -58,7 +60,7 @@ export const startLiveSession = onCall({ maxInstances: 10, secrets: [liveKitApiK
 });
 
 export const endLiveSession = onCall({ maxInstances: 10, secrets: [liveKitApiKey, liveKitApiSecret] }, async request => {
-  const hostId = uid(request);
+  const hostId = await uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
   const ref = sessions.doc(sessionId);
   try {
@@ -78,7 +80,7 @@ export const endLiveSession = onCall({ maxInstances: 10, secrets: [liveKitApiKey
 });
 
 export const updateLiveSessionSettings = onCall({ maxInstances: 10 }, async request => {
-  const hostId = uid(request);
+  const hostId = await uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
   const settings = valid(() => validateLiveSessionSettings(request.data?.settings));
   const ref = sessions.doc(sessionId);
@@ -99,7 +101,7 @@ export const updateLiveSessionSettings = onCall({ maxInstances: 10 }, async requ
 });
 
 export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
-  const viewerId = uid(request);
+  const viewerId = await uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
   const connectionId = valid(() => validateLiveConnectionId(request.data?.connectionId));
   const sessionRef = sessions.doc(sessionId);
@@ -140,7 +142,7 @@ export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
 });
 
 export const requestLiveGuestAccess = onCall({ maxInstances: 20 }, async request => {
-  const guestId = uid(request);
+  const guestId = await uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
   const connectionId = valid(() => validateLiveConnectionId(request.data?.connectionId));
   const sessionRef = sessions.doc(sessionId);
@@ -178,7 +180,7 @@ export const requestLiveGuestAccess = onCall({ maxInstances: 20 }, async request
 });
 
 export const reviewLiveGuestAccess = onCall({ maxInstances: 10 }, async request => {
-  const hostId = uid(request);
+  const hostId = await uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
   const guestId = valid(() => validateLiveGuestId(request.data?.guestId));
   const decision = valid(() => validateLiveGuestDecision(request.data?.decision));
@@ -200,7 +202,7 @@ export const reviewLiveGuestAccess = onCall({ maxInstances: 10 }, async request 
 });
 
 export const heartbeatLiveSession = onCall({ maxInstances: 20 }, async request => {
-  const viewerId = uid(request);
+  const viewerId = await uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
   const connectionId = valid(() => validateLiveConnectionId(request.data?.connectionId));
   const sessionRef = sessions.doc(sessionId);
@@ -224,7 +226,7 @@ export const heartbeatLiveSession = onCall({ maxInstances: 20 }, async request =
   }
 });
 export const leaveLiveSession = onCall({ maxInstances: 20 }, async request => {
-  const viewerId = uid(request);
+  const viewerId = await uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
   const connectionId = valid(() => validateLiveConnectionId(request.data?.connectionId));
   const sessionRef = sessions.doc(sessionId);
@@ -266,7 +268,7 @@ export const leaveLiveSession = onCall({ maxInstances: 20 }, async request => {
 });
 
 export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request => {
-  const senderId = uid(request);
+  const senderId = await uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
   const connectionId = valid(() => validateLiveConnectionId(request.data?.connectionId));
   const message = valid(() => validateLiveChatMessage(request.data?.message));

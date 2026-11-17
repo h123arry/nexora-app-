@@ -3,6 +3,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { assertCallableSessionActive } from './callableSession.js';
 import {
   canReviewIdentityApplication,
   canSubmitIdentityApplication,
@@ -20,19 +21,21 @@ const auth = getAuth(app);
 const db = getFirestore(app, resolveFirestoreDatabaseId());
 type Request = { auth?: { uid: string; token?: Record<string, unknown> } | null; data?: Record<string, unknown>; rawRequest?: { headers?: { authorization?: string } } };
 
-function requireUid(request: Request): string {
+async function requireUid(request: Request): Promise<string> {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to continue.');
+  await assertCallableSessionActive(db, request.auth.uid, request.auth.token?.auth_time);
   return request.auth.uid;
 }
 
 async function currentIdentityReviewerClaims(request: Request): Promise<{ uid: string; claims: Record<string, unknown> }> {
-  const uid = requireUid(request);
+  const uid = await requireUid(request);
   const authorization = request.rawRequest?.headers?.authorization || '';
   const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
   if (!token) throw new HttpsError('unauthenticated', 'A current authenticated session is required.');
   try {
     const decoded = await auth.verifyIdToken(token, true);
     if (decoded.uid !== uid) throw new HttpsError('unauthenticated', 'The authenticated session no longer matches this account.');
+    await assertCallableSessionActive(db, uid, decoded.auth_time);
     return { uid, claims: decoded as Record<string, unknown> };
   } catch {
     throw new HttpsError('unauthenticated', 'Your session is expired or has been revoked. Sign in again.');
@@ -58,7 +61,7 @@ async function requireIdentityApprover(request: Request): Promise<string> {
 }
 
 export const submitIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {
-  const uid = requireUid(request as Request);
+  const uid = await requireUid(request as Request);
   let input;
   try { input = validateIdentityApplicationInput(request.data || {}); }
   catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Invalid identity application.'); }
@@ -131,7 +134,7 @@ export const submitIdentityVerificationApplication = onCall({ maxInstances: 10 }
 });
 
 export const getMyIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {
-  const uid = requireUid(request as Request);
+  const uid = await requireUid(request as Request);
   const snapshot = await db.collection('identityVerificationApplications').doc(uid).get();
   if (!snapshot.exists) return { application: null };
   const data = snapshot.data() || {};
