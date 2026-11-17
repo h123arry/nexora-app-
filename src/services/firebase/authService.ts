@@ -15,6 +15,8 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   linkWithPopup,
+  linkWithCredential,
+  linkWithPhoneNumber,
   signOut,
   setPersistence,
   EmailAuthProvider,
