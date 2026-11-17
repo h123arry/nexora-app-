@@ -104,6 +104,16 @@ export class AuthService {
       case 'auth/app-not-authorized':
       case 'auth/configuration-not-found':
         return 'Firebase Authentication is not configured for this application. Check the project configuration.';
+      case 'permission-denied':
+        return 'Firebase created your account, but Firestore denied profile creation. Your account is safe; the NEXORA database access rules need investigation.';
+      case 'unavailable':
+        return 'Firebase created your account, but Firestore is temporarily unavailable. Your account is safe; please try signing in again shortly.';
+      case 'failed-precondition':
+        return 'Firebase created your account, but the database rejected profile setup because a required database condition is not met.';
+      case 'unauthenticated':
+        return 'Firebase created your account, but Firestore did not receive a valid authenticated session for profile setup.';
+      case 'profile-setup-failed':
+        return 'Firebase created your account, but NEXORA could not finish setting up your profile. Your account is safe; please try signing in again shortly.';
       case 'auth/invalid-action-code':
         return 'This recovery or verification link is invalid or has already been used.';
       default:
@@ -210,9 +220,17 @@ export class AuthService {
         { browser: navigator.userAgent }
       );
       return { firebaseUser: fbUser, user: userProfile };
-    } catch {
-      await signOut(auth).catch(() => undefined);
-      throw new Error('Authentication succeeded, but your Nexora profile could not be loaded. Please try signing in again.');
+    } catch (profileError: unknown) {
+      // Authentication succeeded. Preserve the session and surface the actual
+      // Firestore provisioning code so a partial account can be recovered.
+      const source = profileError as { code?: string } | null;
+      const code = source?.code || 'profile-setup-failed';
+      console.error('[NEXORA] Profile load failed after Firebase sign-in', { code });
+      const wrapped = new Error(
+        `Firebase signed you in, but NEXORA could not load your profile (${code}). Your account is safe; please retry after the database issue is resolved.`
+      ) as Error & { code?: string };
+      wrapped.code = code;
+      throw wrapped;
     }
   }
 
@@ -264,9 +282,19 @@ export class AuthService {
       );
 
       return { firebaseUser: fbUser, user: userProfile };
-    } catch {
-      await signOut(auth).catch(() => undefined);
-      throw new Error('Your Firebase account was created, but Nexora could not finish the profile setup. Please sign in again to retry.');
+    } catch (profileError: unknown) {
+      // Firebase Authentication has already created the account. Keep that
+      // session available so the user can retry profile provisioning after
+      // a transient Firestore/rules issue instead of making the account appear
+      // to have vanished behind a generic sign-up failure.
+      const source = profileError as { code?: string } | null;
+      const code = source?.code || 'profile-setup-failed';
+      console.error('[NEXORA] Profile setup failed after Firebase account creation', { code });
+      const wrapped = new Error(
+        `Your Firebase account was created, but NEXORA could not finish setting up your profile (${code}). Your account is safe. Please try signing in again shortly.`
+      ) as Error & { code?: string };
+      wrapped.code = code;
+      throw wrapped;
     }
   }
 
