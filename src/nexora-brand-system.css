@@ -1,0 +1,121 @@
+/* NEXORA official-brand design system
+ * One restrained violet identity across the existing product.
+ * Keep logo artwork untouched; brand colour is expressed through the interface.
+ */
+:root {
+  color-scheme: dark;
+  --nx-brand: #7138FF;
+  --nx-brand-strong: #4B10F2;
+  --nx-brand-bright: #A855F7;
+  --nx-brand-soft: rgba(113, 56, 255, .14);
+  --nx-brand-line: rgba(113, 56, 255, .34);
+  --nx-canvas: #080711;
+  --nx-canvas-deep: #05040B;
+  --nx-surface: #100D1B;
+  --nx-surface-2: #171226;
+  --nx-surface-3: #211936;
+  --nx-edge: #2A2340;
+  --nx-edge-strong: #453665;
+  --nx-text: #F7F5FF;
+  --nx-muted: #A49BB9;
+  --nx-gradient: linear-gradient(120deg, #7138FF 0%, #4B10F2 100%);
+  --nx-gradient-soft: linear-gradient(120deg, rgba(113,56,255,.15), rgba(75,16,242,.07));
+  --nx-shadow: 0 24px 64px rgba(0,0,0,.42);
+  --nx-shadow-soft: 0 12px 34px rgba(0,0,0,.28);
+  --nx-radius-card: 1.125rem;
+  --nx-radius-control: .8rem;
+  --color-violet-300: #C4B5FD;
+  --color-violet-400: #A78BFA;
+  --color-violet-500: #8B5CF6;
+  --color-violet-600: #7138FF;
+  --color-violet-700: #4B10F2;
+}
+
+html, body, #root { background: var(--nx-canvas); color: var(--nx-text); }
+body { background: var(--nx-canvas); }
+::selection { color: #fff; background: rgba(113,56,255,.42); }
+:focus-visible { outline: 2px solid #A78BFA; outline-offset: 3px; }
+
+.nx-app-shell, .nx-app-shell-root, .nx-feed-stage { background: var(--nx-canvas) !important; color: var(--nx-text); }
+.nx-surface, .nx-soft-card, .nx-composer, .nx-post-card, .nx-discovery-card {
+  background: var(--nx-surface) !important;
+  border-color: var(--nx-edge) !important;
+  box-shadow: var(--nx-shadow-soft);
+}
+.nx-glass, .nx-glass-strong {
+  background: rgba(16,13,27,.9) !important;
+  border-color: var(--nx-edge) !important;
+  box-shadow: var(--nx-shadow-soft);
+  backdrop-filter: blur(20px) saturate(115%);
+  -webkit-backdrop-filter: blur(20px) saturate(115%);
+}
+.nx-glass-strong { background: rgba(8,7,17,.96) !important; }
+.nx-field {
+  background: var(--nx-surface-2) !important;
+  border-color: var(--nx-edge) !important;
+  color: var(--nx-text) !important;
+}
+.nx-field:hover, .nx-field:focus {
+  border-color: var(--nx-brand-line) !important;
+  background: var(--nx-surface-3) !important;
+  box-shadow: 0 0 0 3px rgba(113,56,255,.13) !important;
+}
+.nx-btn-primary {
+  background: var(--nx-gradient) !important;
+  border-color: rgba(196,181,253,.22) !important;
+  box-shadow: 0 9px 26px rgba(75,16,242,.25) !important;
+}
+.nx-btn-primary:hover { box-shadow: 0 12px 30px rgba(75,16,242,.34) !important; }
+.nx-btn-ghost, .nx-icon-button {
+  background: var(--nx-surface-2) !important;
+  border-color: var(--nx-edge) !important;
+}
+.nx-btn-ghost:hover, .nx-icon-button:hover {
+  background: var(--nx-surface-3) !important;
+  border-color: var(--nx-brand-line) !important;
+}
+.nx-sidebar-shell { background: #0B0914 !important; border-color: var(--nx-edge) !important; }
+.nx-sidebar-nav-item:hover { background: rgba(113,56,255,.08) !important; border-color: rgba(113,56,255,.18) !important; }
+.nx-sidebar-nav-item[data-active="true"] {
+  background: linear-gradient(90deg, rgba(113,56,255,.2), rgba(113,56,255,.055)) !important;
+  border-color: rgba(113,56,255,.28) !important;
+  box-shadow: inset 3px 0 0 var(--nx-brand) !important;
+}
+.nx-nav-icon { background: rgba(113,56,255,.12) !important; }
+.nx-sidebar-nav-item[data-active="true"] .nx-nav-icon { background: rgba(113,56,255,.25) !important; }
+.nx-create-action { border-color: rgba(113,56,255,.3) !important; background: rgba(113,56,255,.1) !important; }
+.nx-create-action-icon { background: var(--nx-gradient) !important; box-shadow: 0 8px 20px rgba(75,16,242,.25) !important; }
+.nx-feed-header, .nx-page-header { background: rgba(8,7,17,.94) !important; border-color: var(--nx-edge) !important; }
+.nx-post-card:hover { border-color: rgba(113,56,255,.3) !important; }
+.nx-story-ring { background: conic-gradient(from 35deg, #4B10F2, #A855F7, #7138FF, #4B10F2) !important; }
+
+/* Bring legacy utility-heavy screens into the same system without touching behaviour. */
+[class~="bg-slate-950"], [class~="bg-zinc-950"], [class~="bg-[#05030f]"] { background-color: var(--nx-canvas) !important; }
+[class~="bg-white/5"], [class~="bg-white/10"] { background-color: rgba(255,255,255,.045) !important; }
+[class~="border-white/5"], [class~="border-white/10"] { border-color: var(--nx-edge) !important; }
+[class~="text-zinc-500"], [class~="text-slate-500"] { color: #8F86A8 !important; }
+[class~="text-zinc-400"], [class~="text-slate-400"] { color: var(--nx-muted) !important; }
+[class~="text-violet-300"], [class~="text-violet-400"] { color: #BBA6FF !important; }
+[class~="bg-violet-950/40"], [class~="bg-violet-950/30"] { background-color: rgba(75,16,242,.12) !important; }
+[class*="to-pink-"] { --tw-gradient-to: #4B10F2 var(--tw-gradient-to-position) !important; }
+[class*="to-cyan-"], [class*="to-sky-"] { --tw-gradient-to: #4B10F2 var(--tw-gradient-to-position) !important; }
+[class*="from-fuchsia-"] { --tw-gradient-from: #7138FF var(--tw-gradient-from-position) !important; --tw-gradient-to: rgb(113 56 255 / 0) var(--tw-gradient-to-position) !important; }
+[class*="from-cyan-"], [class*="from-sky-"], [class*="from-blue-"] { --tw-gradient-from: #7138FF var(--tw-gradient-from-position) !important; --tw-gradient-to: rgb(113 56 255 / 0) var(--tw-gradient-to-position) !important; }
+[class*="text-cyan-"], [class*="text-sky-"], [class*="text-blue-"] { color: #BBA6FF !important; }
+[class*="border-cyan-"], [class*="border-sky-"], [class*="border-blue-"] { border-color: rgba(113,56,255,.28) !important; }
+[class*="bg-cyan-"], [class*="bg-sky-"], [class*="bg-blue-"] { background-color: rgba(113,56,255,.12) !important; }
+[class*="text-pink-"], [class*="text-fuchsia-"] { color: #BBA6FF !important; }
+[class*="border-pink-"], [class*="border-fuchsia-"] { border-color: rgba(113,56,255,.28) !important; }
+[class*="bg-pink-"], [class*="bg-fuchsia-"] { background-color: rgba(113,56,255,.12) !important; }
+
+/* Keep product areas visually related while allowing content to remain distinct. */
+input, textarea, select {
+  color: var(--nx-text);
+  accent-color: var(--nx-brand);
+}
+input::placeholder, textarea::placeholder { color: #827995; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button:disabled { cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
