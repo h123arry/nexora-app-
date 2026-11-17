@@ -135,7 +135,6 @@ export const resolveWorldWeaveMomentMediaUrl = onCallWithSession({ maxInstances:
     action: 'read',
     expires: Date.now() + SIGNED_URL_TTL_MS,
     responseDisposition: 'inline',
-    responseCacheControl: 'private, no-store, max-age=0',
   });
 
   // Re-read every mutable authorization input after signing. A moment can be
