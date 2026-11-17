@@ -51,7 +51,7 @@ interface Props {
 export default function MiniServicesHub({ onOpen, signedIn, onOpenVohAi, locale = 'en' }: Props) {
   const copy = getTranslations(locale);
   const services = getServices(copy);
-  return <section className="space-y-3" aria-labelledby="mini-services-title">
+  return <section className="nx-mini-services space-y-3" aria-labelledby="mini-services-title">
     <div className="flex items-end justify-between gap-3 px-1">
       <div><p className="text-[10px] font-mono uppercase tracking-[0.2em] text-violet-400">{copy.miniEcosystem}</p><h2 id="mini-services-title" className="text-lg font-bold text-white">{copy.miniServicesTitle}</h2><p className="text-xs text-slate-400">{copy.miniServicesDescription}</p></div>
       <CircleDot className="h-5 w-5 text-violet-300" aria-hidden="true" />
