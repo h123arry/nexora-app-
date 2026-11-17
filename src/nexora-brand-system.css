@@ -447,3 +447,16 @@ button:disabled { cursor: not-allowed; }
 }
 .nx-saved-page article { border-radius: 12px !important; }
 .nx-saved-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+
+
+/* Live video: reduce nested panels while keeping room actions and status clear. */
+.nx-live-page input {
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(164,139,230,.18) !important;
+  border-radius: 11px !important;
+}
+.nx-live-page [class*="rounded-2xl"][class*="border"] {
+  border-color: rgba(164,139,230,.15) !important;
+  box-shadow: none !important;
+}
+.nx-live-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
