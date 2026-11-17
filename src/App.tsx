@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'rea
 import { getDevicePerformanceProfile } from './utils/devicePerformance';
 import { playNexoraSound } from './services/soundExperience';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, HelpCircle, X, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward, Compass } from 'lucide-react';
+import { Sparkles, HelpCircle, X, ShieldCheck, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward, Compass } from 'lucide-react';
 import VohIcon from './components/VohIcon';
 
 import { Camera, Video as VideoIcon, Mic, BarChart2, FileText, Award, MapPin, Smile, ChevronRight, Play, Pause, Trash2, RefreshCw, Eye, WifiOff, FolderOpen } from 'lucide-react';
