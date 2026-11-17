@@ -9,9 +9,10 @@ const db = getFirestore(app);
 
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Directory search tests require the Firestore Emulator.');
-  await Promise.all(['viewer', 'public-person', 'private-person', 'blocked-person'].map(id => db.doc('users/' + id).delete().catch(() => undefined)));
+  await Promise.all(['viewer', 'public-person', 'private-person', 'blocked-person', 'visible-late', 'suspended-person'].map(id => db.doc('users/' + id).delete().catch(() => undefined)));
   await db.doc('users/viewer').set({ id: 'viewer', username: 'viewer' });
-  await db.doc('users/public-person').set({ id: 'public-person', username: 'nexora_public', name: 'Public Person' });
+  await db.doc('users/public-person').set({ id: 'public-person', username: 'nexora_public', name: 'Public Person', isVerified: false });
+  await db.doc('verifiedIdentities/public-person').set({ userId: 'public-person', status: 'verified', identityType: 'creator' });
   await db.doc('users/private-person').set({ id: 'private-person', username: 'nexora_private', name: 'Private Person' });
   await db.doc('users/blocked-person').set({ id: 'blocked-person', username: 'nexora_blocked', name: 'Blocked Person' });
   await db.doc('users/private-person/settings/preferences').set({ privacy: { isPrivate: true } });
@@ -22,7 +23,9 @@ before(async () => {
     await db.doc('users/' + id).set({ id, username: 'nexora_0' + index + '_blocked' });
     await db.doc('users/' + id + '/settings/preferences').set({ privacy: { blockedUserIds: ['viewer'] } });
   }
-  await db.doc('users/visible-late').set({ id: 'visible-late', username: 'nexora_zz_visible', name: 'Visible Late' });
+  await db.doc('users/visible-late').set({ id: 'visible-late', username: 'nexora_zz_visible', name: 'Visible Late', isVerified: true });
+  await db.doc('users/suspended-person').set({ id: 'suspended-person', username: 'suspended_nexora', name: 'Suspended Person' });
+  await db.doc('accountStatus/suspended-person').set({ suspended: true, expiresAt: new Date(Date.now() + 60_000) });
   await db.doc('pages/nexora-business').set({ id: 'nexora-business', username: 'nexora_business', name: 'Nexora Business', category: 'Business' });
   for (let index = 0; index < 8; index += 1) {
     const id = 'nexora-business-' + index;
@@ -32,7 +35,7 @@ before(async () => {
 });
 
 after(async () => {
-  for (const path of ['users/viewer','users/public-person','users/private-person','users/blocked-person','users/visible-late','pages/nexora-business','communities/nexora-circle']) await db.doc(path).delete().catch(() => undefined);
+  for (const path of ['users/viewer','users/public-person','users/private-person','users/blocked-person','users/visible-late','users/suspended-person','accountStatus/suspended-person','verifiedIdentities/public-person','pages/nexora-business','communities/nexora-circle']) await db.doc(path).delete().catch(() => undefined);
   for (let index = 0; index < 8; index += 1) await db.doc('pages/nexora-business-' + index).delete().catch(() => undefined);
   for (let index = 0; index < 8; index += 1) {
     const id = 'blocked-prefix-' + index;
@@ -50,8 +53,16 @@ describe('server-backed directory search', () => {
     assert.ok(firstPage.nextCursor, 'Full query pages should provide a continuation cursor');
     const secondPage = await searchPublicDirectory(db, 'viewer', 'nexora', firstPage.nextCursor);
     assert.deepEqual(secondPage.people.map(item => item.id), ['public-person', 'visible-late']);
+    assert.equal(secondPage.people.find(item => item.id === 'public-person')?.isVerified, true,
+      'the public badge comes from the server-approved verifiedIdentities record');
+    assert.equal(secondPage.people.find(item => item.id === 'visible-late')?.isVerified, false,
+      'legacy contact-verification flags must never become public identity badges');
     assert.equal(secondPage.pages.length, 1);
     assert.equal(secondPage.nextCursor, null);
+  });
+  it('filters active server-side account suspensions even without legacy profile flags', async () => {
+    const result = await searchPublicDirectory(db, 'viewer', 'suspended');
+    assert.deepEqual(result.people, []);
   });
   it('requires a bounded query and authenticated viewer', async () => {
     await assert.rejects(searchPublicDirectory(db, '', 'nexora'), /Sign in/);
