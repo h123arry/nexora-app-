@@ -120,9 +120,10 @@ async function migrateMoment(
       && customMetadata[DOWNLOAD_TOKEN_KEY].trim().length > 0;
     if (dryRun) return hasTokenMetadata ? 'would-revoke-and-clear' : 'would-clear-revoked-token';
 
-    if (hasTokenMetadata) {
-      await file.setMetadata({ cacheControl: 'private, no-store, max-age=0', metadata: metadataWithRotatedFirebaseDownloadToken(customMetadata) });
-    }
+    await file.setMetadata({
+      cacheControl: 'private, no-store, max-age=0',
+      metadata: hasTokenMetadata ? metadataWithRotatedFirebaseDownloadToken(customMetadata) : customMetadata,
+    });
 
     const result = await db.runTransaction(async transaction => {
       const latest = await transaction.get(moment.ref);
