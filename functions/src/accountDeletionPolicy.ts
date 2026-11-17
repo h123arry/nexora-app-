@@ -162,8 +162,9 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string, on
       if (rows.empty) break;
       const batch = db.batch();
       rows.docs.forEach(row => batch.update(row.ref, {
-        userId: FieldValue.delete(), reviewerId: FieldValue.delete(), actorId: FieldValue.delete(),
-        reviewNote: FieldValue.delete(), accountDeleted: true,
+        [field]: FieldValue.delete(),
+        reviewNote: FieldValue.delete(),
+        accountDeleted: true,
       }));
       await batch.commit();
       await onBatch?.();
