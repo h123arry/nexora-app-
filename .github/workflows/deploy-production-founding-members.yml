@@ -1,10 +1,10 @@
-name: Deploy NEXORA Production Founding Member Function
+name: Deploy NEXORA Production Founding and Beta Access Functions
 
 on:
   workflow_dispatch:
     inputs:
       confirm_production_deploy:
-        description: Confirm deployment of the Founding 300 account-provisioning function to NEXORA production
+        description: Confirm deployment of Founding 300 and anonymous beta access functions plus Firestore and Storage security rules to NEXORA production
         required: true
         type: boolean
         default: false
@@ -85,4 +85,5 @@ jobs:
           echo "## NEXORA production Functions deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "- Project: $NEXORA_PRODUCTION_PROJECT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "- Firestore database: $FIRESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Deployed callable: createFoundingMemberAccount" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Deployed callables: createFoundingMemberAccount, createBetaInviteLink, claimBetaInvite" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Deployed security rules: Firestore and Storage" >> "$GITHUB_STEP_SUMMARY"
