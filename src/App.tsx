@@ -186,6 +186,14 @@ export default function App() {
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
   const [authPromptReason, setAuthPromptReason] = useState<string>('Join Nexora to like, comment, follow creators, and personalize your experience.');
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || authInitializing || isLoggedIn) return;
+    const betaCode = new URLSearchParams(window.location.search).get('beta');
+    if (!betaCode) return;
+    setAuthPromptReason('You have a private invitation to join the NEXORA Founding Beta.');
+    setShowAuthModal(true);
+  }, [authInitializing, isLoggedIn]);
+
   const requireAuth = (action: () => void, reason = 'Join Nexora to like, comment, follow creators, and personalize your experience.') => {
     if (!isLoggedIn) {
       setAuthPromptReason(reason);
