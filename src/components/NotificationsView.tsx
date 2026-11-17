@@ -429,7 +429,7 @@ export default function NotificationsView({
   // RENDERING COMPONENTS
   // ---------------------------------------------------------------------------
   return (
-    <div id="nexora-notification-suite" className="nx-page-shell nx-soft-card space-y-6 rounded-2xl p-4 sm:p-5 relative select-none">
+    <div id="nexora-notification-suite" className="nx-notifications-page nx-page-shell space-y-6 relative select-none">
       
       {/* Toast Feedback Layer */}
       <div className="fixed bottom-10 right-10 z-50 flex flex-col gap-2 max-w-sm">
