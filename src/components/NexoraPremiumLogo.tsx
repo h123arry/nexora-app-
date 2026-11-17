@@ -2,17 +2,17 @@ import React from 'react';
 
 type Props = { className?: string };
 
-/** Reuse the approved NEXORA mark from public/nexora-mark.png everywhere in the app. */
+/**
+ * Render the repository's approved NEXORA mark as a luminance mask.
+ * The source PNG is RGB with a black canvas, so using its luminance as the
+ * mask removes that canvas without redrawing or changing the original mark.
+ */
 export default function NexoraPremiumLogo({ className = '' }: Props) {
   return (
-    <img
-      src="/nexora-mark.png"
-      alt="NEXORA"
+    <span
+      role="img"
       aria-label="NEXORA"
-      className={className}
-      loading="eager"
-      decoding="async"
-      draggable={false}
+      className={`nx-brand-mark ${className}`}
     />
   );
 }
