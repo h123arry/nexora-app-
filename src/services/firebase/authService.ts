@@ -220,9 +220,17 @@ export class AuthService {
         { browser: navigator.userAgent }
       );
       return { firebaseUser: fbUser, user: userProfile };
-    } catch {
-      await signOut(auth).catch(() => undefined);
-      throw new Error('Authentication succeeded, but your Nexora profile could not be loaded. Please try signing in again.');
+    } catch (profileError: unknown) {
+      // Authentication succeeded. Preserve the session and surface the actual
+      // Firestore provisioning code so a partial account can be recovered.
+      const source = profileError as { code?: string } | null;
+      const code = source?.code || 'profile-setup-failed';
+      console.error('[NEXORA] Profile load failed after Firebase sign-in', { code });
+      const wrapped = new Error(
+        `Firebase signed you in, but NEXORA could not load your profile (${code}). Your account is safe; please retry after the database issue is resolved.`
+      ) as Error & { code?: string };
+      wrapped.code = code;
+      throw wrapped;
     }
   }
 
