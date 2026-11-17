@@ -56,7 +56,7 @@ export const createFoundingMemberAccount = onCall({ maxInstances: 3 }, async req
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in with an administrator account.');
   await assertCallableSessionActive(db, uid, request.auth?.token?.auth_time);
 
-  const claims = request.auth?.token || {};
+  const claims = (request.auth?.token || {}) as Record<string, unknown>;
   const role = typeof claims.role === 'string' ? claims.role : '';
   if (!(claims.admin === true || claims.founder === true || role === 'admin' || role === 'founder')) {
     throw new HttpsError('permission-denied', 'Only an administrator can create founding member accounts.');
