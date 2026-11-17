@@ -78,7 +78,7 @@ if (duplicates.length) {
     for (const file of group) console.log(`    - ${file.path}`);
   }
 }
-console.log(`\\nMedia budget: ${format(TOTAL_MEDIA_BUDGET)}`);
+console.log(`\nMedia budget: ${format(TOTAL_MEDIA_BUDGET)}`);
 if (total > TOTAL_MEDIA_BUDGET) {
   console.warn("WARNING: media assets exceed the 80 MiB review threshold.");
   console.warn("Review compression, duplicate platform assets, and delivery strategy.");
