@@ -96,8 +96,10 @@ async function migrateMoment(
   dryRun: boolean,
 ): Promise<LegacyMediaOutcome | null> {
   const mediaUrl = moment.get('mediaUrl');
+  if (mediaUrl === undefined || mediaUrl === null || mediaUrl === '') return null;
+  if (typeof mediaUrl !== 'string') return 'unsafe-reference';
   const urlObjectPath = firebaseDownloadTokenObjectPath(mediaUrl, bucket.name);
-  if (!urlObjectPath) return null;
+  if (!urlObjectPath) return 'unsafe-reference';
   if (weaveVisibility === 'public') return 'skipped-public';
   if (weaveVisibility !== 'private') return 'unsafe-reference';
 
