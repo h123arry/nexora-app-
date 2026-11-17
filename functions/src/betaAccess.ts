@@ -38,12 +38,12 @@ export const createBetaInviteLink = onCall({ maxInstances: 2 }, async request =>
     active: true,
     maxClaims: COHORT_LIMIT,
     claims: 0,
-    createdBy: request.auth.uid,
+    createdBy: caller.uid,
     createdAt: FieldValue.serverTimestamp(),
   });
 
   await db.collection('adminAuditEvents').add({
-    actorUid: request.auth.uid,
+    actorUid: caller.uid,
     action: 'beta_invite_link_created',
     cohort: COHORT_ID,
     maxClaims: COHORT_LIMIT,
