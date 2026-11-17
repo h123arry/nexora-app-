@@ -217,6 +217,9 @@ export class AuthService {
           avatar: currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
         }, '');
       }
+      // Notify the auth-state listener after the beta profile exists so the app
+      // hydrates this same UID as a full NEXORA member.
+      await currentUser.getIdToken(true);
 
       return { firebaseUser: currentUser, user: userProfile };
     } catch (error) {
