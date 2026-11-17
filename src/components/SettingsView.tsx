@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
+import type { ConfirmationResult } from 'firebase/auth';
 import { motion } from 'motion/react';
 import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Bug, Scale } from 'lucide-react';
 import { User as UserType, ThemeMood } from '../types';
@@ -39,6 +40,14 @@ export default function SettingsView({
   const [linkingGoogle, setLinkingGoogle] = useState(false);
   const [linkedAccountMessage, setLinkedAccountMessage] = useState('');
   const [linkedAccountError, setLinkedAccountError] = useState('');
+  const [securityEmail, setSecurityEmail] = useState('');
+  const [securityPassword, setSecurityPassword] = useState('');
+  const [securityPhone, setSecurityPhone] = useState('');
+  const [securityOtp, setSecurityOtp] = useState('');
+  const [phoneLinkConfirmation, setPhoneLinkConfirmation] = useState<ConfirmationResult | null>(null);
+  const [linkingEmail, setLinkingEmail] = useState(false);
+  const [sendingPhoneCode, setSendingPhoneCode] = useState(false);
+  const [confirmingPhone, setConfirmingPhone] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -107,6 +116,60 @@ export default function SettingsView({
       setLinkedAccountError(error instanceof Error ? error.message : 'Google could not be connected. Try again.');
     } finally {
       setLinkingGoogle(false);
+    }
+  };
+
+  const connectEmailAccount = async () => {
+    if (linkingEmail) return;
+    setLinkingEmail(true);
+    setLinkedAccountError('');
+    setLinkedAccountMessage('');
+    try {
+      await AuthService.linkEmailAccount(securityEmail, securityPassword);
+      setLinkedProviders(AuthService.getLinkedProviders());
+      setSecurityEmail('');
+      setSecurityPassword('');
+      setLinkedAccountMessage('Email connected to this account. Check your inbox to verify it.');
+    } catch (error) {
+      setLinkedAccountError(error instanceof Error ? error.message : 'Email could not be connected. Please try again.');
+    } finally {
+      setLinkingEmail(false);
+    }
+  };
+
+  const sendPhoneLinkCode = async () => {
+    if (sendingPhoneCode) return;
+    setSendingPhoneCode(true);
+    setLinkedAccountError('');
+    setLinkedAccountMessage('');
+    try {
+      const verifier = AuthService.initRecaptchaVerifier('nexora-phone-link-recaptcha');
+      const confirmation = await AuthService.sendPhoneLinkCode(securityPhone, verifier);
+      setPhoneLinkConfirmation(confirmation);
+      setLinkedAccountMessage('Verification code sent. Enter the code to connect this phone to your current account.');
+    } catch (error) {
+      setLinkedAccountError(error instanceof Error ? error.message : 'A verification code could not be sent.');
+    } finally {
+      setSendingPhoneCode(false);
+    }
+  };
+
+  const confirmPhoneLinkCode = async () => {
+    if (!phoneLinkConfirmation || confirmingPhone) return;
+    setConfirmingPhone(true);
+    setLinkedAccountError('');
+    setLinkedAccountMessage('');
+    try {
+      await AuthService.confirmPhoneLink(phoneLinkConfirmation, securityOtp);
+      setLinkedProviders(AuthService.getLinkedProviders());
+      setPhoneLinkConfirmation(null);
+      setSecurityOtp('');
+      setSecurityPhone('');
+      setLinkedAccountMessage('Your phone number is now verified and connected to this same NEXORA account.');
+    } catch (error) {
+      setLinkedAccountError(error instanceof Error ? error.message : 'Phone verification could not be completed.');
+    } finally {
+      setConfirmingPhone(false);
     }
   };
 
@@ -405,6 +468,43 @@ export default function SettingsView({
                 )}
               </div>
               <p className="text-[10px] leading-relaxed text-zinc-500">Connecting a provider adds another sign-in method to this same account. It does not merge separate NEXORA accounts. Sign in again first if your current session is older than five minutes.</p>
+              <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4 space-y-3">
+                <div>
+                  <p className="text-xs font-bold text-white">Secure this NEXORA account</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-violet-100/80">Add and verify an email address and phone number. These credentials are linked to your existing account, so your profile, posts, messages and uploads stay with the same UID.</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold text-white">Email and password</p>
+                  {linkedProviders.includes('password') ? (
+                    <p className="text-[11px] text-emerald-300">Email sign-in is connected. Check your inbox if email verification is still pending.</p>
+                  ) : (
+                    <>
+                      <input type="email" value={securityEmail} onChange={event => setSecurityEmail(event.target.value)} placeholder="Email address" autoComplete="email" className="w-full nx-field px-3 py-2.5 text-xs" />
+                      <input type="password" value={securityPassword} onChange={event => setSecurityPassword(event.target.value)} placeholder="Create a password (8+ characters)" autoComplete="new-password" className="w-full nx-field px-3 py-2.5 text-xs" />
+                      <button type="button" disabled={linkingEmail || !securityEmail.trim() || securityPassword.length < 8} onClick={() => void connectEmailAccount()} className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2 text-[10px] font-semibold text-violet-200 disabled:opacity-40">{linkingEmail ? 'Connecting email…' : 'Connect email'}</button>
+                    </>
+                  )}
+                </div>
+                <div className="border-t border-white/10 pt-3 space-y-2">
+                  <p className="text-[11px] font-semibold text-white">Phone number</p>
+                  {linkedProviders.includes('phone') ? (
+                    <p className="text-[11px] text-emerald-300">A verified phone number is connected to this account.</p>
+                  ) : (
+                    <>
+                      <input type="tel" value={securityPhone} onChange={event => setSecurityPhone(event.target.value)} placeholder="Phone number, e.g. +2348012345678" autoComplete="tel" className="w-full nx-field px-3 py-2.5 text-xs" />
+                      <div id="nexora-phone-link-recaptcha" />
+                      {!phoneLinkConfirmation ? (
+                        <button type="button" disabled={sendingPhoneCode || !securityPhone.trim()} onClick={() => void sendPhoneLinkCode()} className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2 text-[10px] font-semibold text-violet-200 disabled:opacity-40">{sendingPhoneCode ? 'Sending code…' : 'Send phone verification code'}</button>
+                      ) : (
+                        <div className="space-y-2">
+                          <input inputMode="numeric" value={securityOtp} onChange={event => setSecurityOtp(event.target.value)} placeholder="6-digit verification code" className="w-full nx-field px-3 py-2.5 text-xs" />
+                          <button type="button" disabled={confirmingPhone || securityOtp.trim().length < 4} onClick={() => void confirmPhoneLinkCode()} className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2 text-[10px] font-semibold text-violet-200 disabled:opacity-40">{confirmingPhone ? 'Verifying…' : 'Verify and connect phone'}</button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
               {linkedAccountMessage && <p role="status" className="text-xs text-emerald-300">{linkedAccountMessage}</p>}
               {linkedAccountError && <p role="alert" className="text-xs text-rose-300">{linkedAccountError}</p>}
             </div>
