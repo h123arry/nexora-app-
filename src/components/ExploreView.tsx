@@ -281,7 +281,7 @@ export default function ExploreView({
             : searchPeople.length + filteredPosts.length + filteredVideos.length + directoryEntryCount;
 
   return (
-    <div id="explore-view-master-panel" className="nx-page-shell space-y-6 pb-12 max-w-4xl mx-auto px-4 sm:px-6">
+    <div id="explore-view-master-panel" className="nx-explore-page nx-page-shell space-y-6 pb-12 max-w-4xl mx-auto px-4 sm:px-6">
       
       {/* Search Header & Input */}
       <div className="nx-page-header sticky top-0 z-30 pb-4 pt-3 px-3 sm:px-0 space-y-3 border-b">

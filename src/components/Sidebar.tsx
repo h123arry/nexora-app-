@@ -54,7 +54,7 @@ export default function Sidebar({
         <NexoraBranding size="md" showSubtitle={true} />
       </div>
 
-      <div className="mb-6 rounded-3xl border border-white/10 bg-white/[0.035] p-3.5 shadow-[0_12px_30px_rgba(1,4,13,0.2)]">
+      <div className="nx-profile-card mb-6 rounded-3xl border border-white/10 bg-white/[0.035] p-3.5 shadow-[0_12px_30px_rgba(1,4,13,0.2)]">
         <div className="flex items-center gap-3">
           <div className="relative shrink-0">
             <img
@@ -85,7 +85,7 @@ export default function Sidebar({
         )}
       </div>
 
-      <div className="mb-3 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{copy.navNavigate}</div>
+      <div className="nx-section-label mb-3 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{copy.navNavigate}</div>
       <nav className="space-y-1.5" aria-label={copy.navPrimaryNavigation}>
         {destinations.map(({ id, label, hint, icon: Icon, count }) => {
           const isActive = activeTab === id;
@@ -121,7 +121,7 @@ export default function Sidebar({
         })}
       </nav>
 
-      <div className="my-6 h-px bg-white/[0.08]" />
+      <div className="nx-sidebar-divider my-6 h-px bg-white/[0.08]" />
       <div className="mb-3 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{copy.navCreateDiscover}</div>
       <div className="space-y-1.5">
         <button onClick={onOpenCreatePost} aria-label="Open the create menu" className="nx-create-action group flex w-full items-center gap-3 rounded-2xl border border-[#7138FF]/35 bg-[#7138FF]/10 px-3 py-3 text-left transition-all hover:border-[#B69BFF]/60 hover:bg-[#7138FF]/20">
@@ -138,8 +138,8 @@ export default function Sidebar({
         </button>
       </div>
 
-      <div className="mt-auto pt-8">
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-violet-500/12 via-transparent to-indigo-500/8 p-3">
+      <div className="nx-sidebar-footer mt-auto pt-8">
+        <div className="nx-network-card rounded-2xl border border-white/10 bg-gradient-to-br from-violet-500/12 via-transparent to-indigo-500/8 p-3">
           <div className="flex items-center gap-2"><NexoraPremiumLogo className="h-7 w-7" /><span className="text-xs font-bold text-slate-200">Nexora Network</span></div>
           <p className="mt-2 text-[10px] leading-relaxed text-slate-500">A more intentional place to connect, create, and belong.</p>
         </div>

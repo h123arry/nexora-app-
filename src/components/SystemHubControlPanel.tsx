@@ -211,7 +211,7 @@ export default function SystemHubControlPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto font-sans" dir="ltr">
+    <div className="nx-preferences-modal fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto font-sans" dir="ltr">
       
       {/* Backdrop */}
       <motion.div 
@@ -251,8 +251,8 @@ export default function SystemHubControlPanel({
               <div>
                 <h2 className={`text-xs font-mono font-black uppercase tracking-wider ${
                   isHighContrast ? 'text-white' : 'text-violet-400'
-                }`}>SYSTEM HUB</h2>
-                <h1 className="text-base font-black tracking-tight text-white uppercase leading-none mt-0.5">Nexora Core</h1>
+                }`}>PREFERENCES</h2>
+                <h1 className="text-base font-black tracking-tight text-white uppercase leading-none mt-0.5">NEXORA SETTINGS</h1>
               </div>
             </div>
 
@@ -300,7 +300,7 @@ export default function SystemHubControlPanel({
             isHighContrast ? 'border border-white bg-black' : 'bg-black/35 border border-white/5'
           } hidden md:block`}>
             <div className="flex items-center justify-between text-[9px] font-mono text-zinc-500">
-              <span>LOCAL DEVICE STATUS</span>
+              <span>CONNECTION</span>
               <span className={`flex items-center gap-1 ${isOffline ? 'text-red-400' : 'text-emerald-400 font-bold'}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-red-400' : 'bg-emerald-400 animate-ping'}`} />
                 {isOffline ? 'OFFLINE' : 'ONLINE'}
@@ -309,11 +309,11 @@ export default function SystemHubControlPanel({
             
             <div className="grid grid-cols-2 gap-1 mt-2.5 pt-2 border-t border-white/5 font-mono text-[10px]">
               <div>
-                <span className="block text-zinc-600 text-[8px] uppercase">Local frame sample</span>
+                <span className="block text-zinc-600 text-[8px] uppercase">Motion setting</span>
                 <span className="font-bold text-white text-xs">{fps} FPS</span>
               </div>
               <div>
-                <span className="block text-zinc-600 text-[8px] uppercase">Local timing sample</span>
+                <span className="block text-zinc-600 text-[8px] uppercase">Response sample</span>
                 <span className="font-bold text-violet-400 text-xs">{latency}ms</span>
               </div>
             </div>
@@ -329,18 +329,18 @@ export default function SystemHubControlPanel({
             {/* Tab Title header */}
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Workspace Layer</h3>
+                <h3 className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Settings</h3>
                 <h2 className="text-lg font-black text-white uppercase tracking-tight font-sans">
                   {activeTab === 'ux' && '🎨 UX, Themes & Tactile Motion'}
                   {activeTab === 'accessibility' && '👁️ Accessibility & Legibility Suite'}
-                  {activeTab === 'performance' && '⚡ Performance Benchmarks & Caches'}
+                  {activeTab === 'performance' && '⚡ Storage & performance'}
                   {activeTab === 'trust' && '🛡️ Privacy, Trust & Permission Ledger'}
                 </h2>
               </div>
               
               <button
                 onClick={onClose}
-                onMouseEnter={() => speakAnnouncement("Close control center.")}
+                onMouseEnter={() => speakAnnouncement("Close settings.")}
                 className={`p-2 rounded-xl cursor-pointer ${
                   isHighContrast ? 'border border-white hover:bg-white hover:text-black' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white'
                 } transition-all`}
@@ -356,13 +356,13 @@ export default function SystemHubControlPanel({
                 {/* 1. Interactive Theme Picker */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 block">
-                    Choose Visual Protocol
+                    Choose a theme
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { id: 'neon-cyber', label: 'Cyber Void', color: 'bg-[#0c0a15] text-purple-400 border-white/10', style: 'border-[#8B5CF6]/40 text-[#8B5CF6]' },
                       { id: 'stealth-dark', label: 'Stealth Slate', color: 'bg-zinc-900 text-zinc-400 border-zinc-700', style: 'border-zinc-500 text-zinc-300' },
-                      { id: 'emerald-glass', label: 'Matrix Emerald', color: 'bg-[#040e09] text-emerald-400 border-emerald-950', style: 'border-emerald-500 text-emerald-400' },
+                      { id: 'emerald-glass', label: 'Emerald', color: 'bg-[#040e09] text-emerald-400 border-emerald-950', style: 'border-emerald-500 text-emerald-400' },
                       { id: 'platinum-light', label: 'Ivory Platinum', color: 'bg-white text-slate-900 border-slate-200', style: 'border-slate-400 text-slate-800' }
                     ].map((t) => (
                       <button
@@ -842,7 +842,7 @@ export default function SystemHubControlPanel({
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-violet-400" />
                     <h4 className="text-[11px] font-sans font-black text-white uppercase tracking-wider">
-                      Zero-Knowledge Privacy Protocol
+                      Private browsing history
                     </h4>
                   </div>
                   <p className="text-[10px] text-zinc-400 leading-relaxed font-sans">

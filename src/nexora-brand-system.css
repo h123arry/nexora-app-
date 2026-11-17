@@ -1,0 +1,506 @@
+/* NEXORA official-brand design system
+ * One restrained violet identity across the existing product.
+ * Keep logo artwork untouched; brand colour is expressed through the interface.
+ */
+:root {
+  color-scheme: dark;
+  --nx-brand: #7138FF;
+  --nx-brand-strong: #4B10F2;
+  --nx-brand-bright: #A855F7;
+  --nx-brand-soft: rgba(113, 56, 255, .14);
+  --nx-brand-line: rgba(113, 56, 255, .34);
+  --nx-canvas: #080711;
+  --nx-canvas-deep: #05040B;
+  --nx-surface: #100D1B;
+  --nx-surface-2: #171226;
+  --nx-surface-3: #211936;
+  --nx-edge: #2A2340;
+  --nx-edge-strong: #453665;
+  --nx-text: #F7F5FF;
+  --nx-muted: #A49BB9;
+  --nx-gradient: linear-gradient(120deg, #7138FF 0%, #4B10F2 100%);
+  --nx-gradient-soft: linear-gradient(120deg, rgba(113,56,255,.15), rgba(75,16,242,.07));
+  --nx-shadow: 0 24px 64px rgba(0,0,0,.42);
+  --nx-shadow-soft: 0 12px 34px rgba(0,0,0,.28);
+  --nx-radius-card: 1.125rem;
+  --nx-radius-control: .8rem;
+  --color-violet-300: #C4B5FD;
+  --color-violet-400: #A78BFA;
+  --color-violet-500: #8B5CF6;
+  --color-violet-600: #7138FF;
+  --color-violet-700: #4B10F2;
+}
+
+html, body, #root { background: var(--nx-canvas); color: var(--nx-text); }
+body { background: var(--nx-canvas); }
+::selection { color: #fff; background: rgba(113,56,255,.42); }
+:focus-visible { outline: 2px solid #A78BFA; outline-offset: 3px; }
+
+.nx-app-shell, .nx-app-shell-root, .nx-feed-stage { background: var(--nx-canvas) !important; color: var(--nx-text); }
+.nx-surface, .nx-soft-card, .nx-composer, .nx-post-card, .nx-discovery-card {
+  background: var(--nx-surface) !important;
+  border-color: var(--nx-edge) !important;
+  box-shadow: var(--nx-shadow-soft);
+}
+.nx-glass, .nx-glass-strong {
+  background: rgba(16,13,27,.9) !important;
+  border-color: var(--nx-edge) !important;
+  box-shadow: var(--nx-shadow-soft);
+  backdrop-filter: blur(20px) saturate(115%);
+  -webkit-backdrop-filter: blur(20px) saturate(115%);
+}
+.nx-glass-strong { background: rgba(8,7,17,.96) !important; }
+.nx-field {
+  background: var(--nx-surface-2) !important;
+  border-color: var(--nx-edge) !important;
+  color: var(--nx-text) !important;
+}
+.nx-field:hover, .nx-field:focus {
+  border-color: var(--nx-brand-line) !important;
+  background: var(--nx-surface-3) !important;
+  box-shadow: 0 0 0 3px rgba(113,56,255,.13) !important;
+}
+.nx-btn-primary {
+  background: var(--nx-gradient) !important;
+  border-color: rgba(196,181,253,.22) !important;
+  box-shadow: 0 9px 26px rgba(75,16,242,.25) !important;
+}
+.nx-btn-primary:hover { box-shadow: 0 12px 30px rgba(75,16,242,.34) !important; }
+.nx-btn-ghost, .nx-icon-button {
+  background: var(--nx-surface-2) !important;
+  border-color: var(--nx-edge) !important;
+}
+.nx-btn-ghost:hover, .nx-icon-button:hover {
+  background: var(--nx-surface-3) !important;
+  border-color: var(--nx-brand-line) !important;
+}
+.nx-sidebar-shell { background: #0B0914 !important; border-color: var(--nx-edge) !important; }
+.nx-sidebar-nav-item:hover { background: rgba(113,56,255,.08) !important; border-color: rgba(113,56,255,.18) !important; }
+.nx-sidebar-nav-item[data-active="true"] {
+  background: linear-gradient(90deg, rgba(113,56,255,.2), rgba(113,56,255,.055)) !important;
+  border-color: rgba(113,56,255,.28) !important;
+  box-shadow: inset 3px 0 0 var(--nx-brand) !important;
+}
+.nx-nav-icon { background: rgba(113,56,255,.12) !important; }
+.nx-sidebar-nav-item[data-active="true"] .nx-nav-icon { background: rgba(113,56,255,.25) !important; }
+.nx-create-action { border-color: rgba(113,56,255,.3) !important; background: rgba(113,56,255,.1) !important; }
+.nx-create-action-icon { background: var(--nx-gradient) !important; box-shadow: 0 8px 20px rgba(75,16,242,.25) !important; }
+.nx-feed-header, .nx-page-header { background: rgba(8,7,17,.94) !important; border-color: var(--nx-edge) !important; }
+.nx-post-card:hover { border-color: rgba(113,56,255,.3) !important; }
+.nx-story-ring { background: conic-gradient(from 35deg, #4B10F2, #A855F7, #7138FF, #4B10F2) !important; }
+
+/* Bring legacy utility-heavy screens into the same system without touching behaviour. */
+[class~="bg-slate-950"], [class~="bg-zinc-950"], [class~="bg-[#05030f]"] { background-color: var(--nx-canvas) !important; }
+[class~="bg-white/5"], [class~="bg-white/10"] { background-color: rgba(255,255,255,.045) !important; }
+[class~="border-white/5"], [class~="border-white/10"] { border-color: var(--nx-edge) !important; }
+[class~="text-zinc-500"], [class~="text-slate-500"] { color: #8F86A8 !important; }
+[class~="text-zinc-400"], [class~="text-slate-400"] { color: var(--nx-muted) !important; }
+[class~="text-violet-300"], [class~="text-violet-400"] { color: #BBA6FF !important; }
+[class~="bg-violet-950/40"], [class~="bg-violet-950/30"] { background-color: rgba(75,16,242,.12) !important; }
+[class*="to-pink-"] { --tw-gradient-to: #4B10F2 var(--tw-gradient-to-position) !important; }
+[class*="to-cyan-"], [class*="to-sky-"] { --tw-gradient-to: #4B10F2 var(--tw-gradient-to-position) !important; }
+[class*="from-fuchsia-"] { --tw-gradient-from: #7138FF var(--tw-gradient-from-position) !important; --tw-gradient-to: rgb(113 56 255 / 0) var(--tw-gradient-to-position) !important; }
+[class*="from-cyan-"], [class*="from-sky-"], [class*="from-blue-"] { --tw-gradient-from: #7138FF var(--tw-gradient-from-position) !important; --tw-gradient-to: rgb(113 56 255 / 0) var(--tw-gradient-to-position) !important; }
+[class*="text-cyan-"], [class*="text-sky-"], [class*="text-blue-"] { color: #BBA6FF !important; }
+[class*="border-cyan-"], [class*="border-sky-"], [class*="border-blue-"] { border-color: rgba(113,56,255,.28) !important; }
+[class*="bg-cyan-"], [class*="bg-sky-"], [class*="bg-blue-"] { background-color: rgba(113,56,255,.12) !important; }
+[class*="text-pink-"], [class*="text-fuchsia-"] { color: #BBA6FF !important; }
+[class*="border-pink-"], [class*="border-fuchsia-"] { border-color: rgba(113,56,255,.28) !important; }
+[class*="bg-pink-"], [class*="bg-fuchsia-"] { background-color: rgba(113,56,255,.12) !important; }
+
+/* Keep product areas visually related while allowing content to remain distinct. */
+input, textarea, select {
+  color: var(--nx-text);
+  accent-color: var(--nx-brand);
+}
+input::placeholder, textarea::placeholder { color: #827995; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button:disabled { cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+
+/* Screen-level composition: navigation, discovery, stories and the social feed. */
+.nx-profile-card {
+  background: linear-gradient(145deg, rgba(28,20,48,.88), rgba(14,11,24,.96)) !important;
+  border-color: rgba(164,139,230,.17) !important;
+  box-shadow: 0 14px 34px rgba(0,0,0,.2);
+}
+.nx-profile-card img { box-shadow: 0 0 0 2px rgba(113,56,255,.25); }
+.nx-section-label, .nx-eyebrow { color: #9B8DBB !important; letter-spacing: .17em; }
+.nx-sidebar-divider { background: linear-gradient(90deg, transparent, rgba(164,139,230,.22), transparent) !important; }
+.nx-sidebar-footer .nx-network-card {
+  background: linear-gradient(135deg, rgba(113,56,255,.13), rgba(18,14,29,.72) 58%, rgba(75,16,242,.08)) !important;
+  border-color: rgba(164,139,230,.17) !important;
+}
+.nx-sidebar-nav-item { min-height: 58px; border-radius: 15px !important; }
+.nx-sidebar-nav-item[data-active="true"] {
+  background: linear-gradient(100deg, rgba(113,56,255,.19), rgba(113,56,255,.055)) !important;
+  border-color: rgba(164,139,230,.22) !important;
+}
+.nx-sidebar-nav-item[data-active="true"] .nx-nav-icon {
+  color: #fff !important;
+  background: linear-gradient(145deg, rgba(113,56,255,.5), rgba(75,16,242,.22)) !important;
+  box-shadow: 0 5px 18px rgba(75,16,242,.2);
+}
+.nx-create-action {
+  background: linear-gradient(110deg, rgba(113,56,255,.17), rgba(75,16,242,.07)) !important;
+  border-color: rgba(164,139,230,.26) !important;
+}
+.nx-create-action-icon { background: var(--nx-gradient) !important; }
+
+.nx-pulse-card {
+  background: radial-gradient(circle at 88% 4%, rgba(113,56,255,.2), transparent 40%), linear-gradient(145deg, #171127, #0E0B18 72%) !important;
+  border-color: rgba(164,139,230,.2) !important;
+}
+.nx-discovery-card {
+  background: linear-gradient(150deg, rgba(22,17,36,.96), rgba(13,11,22,.96)) !important;
+  border: 1px solid rgba(164,139,230,.15) !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,.17);
+}
+.nx-discovery-card button:hover { background-color: rgba(113,56,255,.075) !important; }
+.nx-discovery-card button[aria-pressed="true"] {
+  background: rgba(113,56,255,.15) !important;
+  box-shadow: inset 0 0 0 1px rgba(164,139,230,.2);
+}
+
+.nx-story-rail { border-bottom: 1px solid rgba(164,139,230,.11); }
+.nx-story-track { scrollbar-width: none; }
+.nx-story-track > button { transition: transform .18s ease; }
+.nx-story-track > button:active { transform: scale(.96); }
+.nx-story-ring { box-shadow: 0 0 0 1px rgba(164,139,230,.18), 0 5px 18px rgba(75,16,242,.15); }
+
+.nx-feed-post {
+  margin: 0 0 14px;
+  padding: 18px 0 17px !important;
+  border: 1px solid rgba(164,139,230,.13) !important;
+  border-radius: 18px;
+  background: linear-gradient(155deg, rgba(19,15,30,.97), rgba(12,10,20,.97)) !important;
+  box-shadow: 0 10px 28px rgba(0,0,0,.15);
+  overflow: clip;
+}
+.nx-feed-post:hover { border-color: rgba(164,139,230,.24) !important; }
+.nx-feed-post .nx-post-avatar { box-shadow: 0 0 0 2px rgba(113,56,255,.28); }
+.nx-feed-post [class*="text-violet-"] { color: #BBA6FF; }
+.nx-feed-post [class*="bg-violet-600"] { background-color: var(--nx-brand-strong); }
+.nx-feed-post [class*="border-white/5"] { border-color: rgba(164,139,230,.12); }
+
+.nx-app-shell button:focus-visible,
+.nx-app-shell a:focus-visible,
+.nx-app-shell input:focus-visible,
+.nx-app-shell textarea:focus-visible,
+.nx-app-shell select:focus-visible {
+  outline-color: #BBA6FF;
+}
+.nx-app-shell input:not([type="checkbox"]):not([type="radio"]),
+.nx-app-shell textarea,
+.nx-app-shell select {
+  border-color: var(--nx-edge);
+}
+.nx-app-shell input:not([type="checkbox"]):not([type="radio"]):focus,
+.nx-app-shell textarea:focus,
+.nx-app-shell select:focus {
+  border-color: rgba(164,139,230,.62);
+  box-shadow: 0 0 0 3px rgba(113,56,255,.12);
+}
+.nx-app-shell ::-webkit-scrollbar-thumb { background: rgba(164,139,230,.2); border-radius: 99px; }
+.nx-app-shell ::-webkit-scrollbar-thumb:hover { background: rgba(164,139,230,.34); }
+
+@media (min-width: 1280px) {
+  .nx-sidebar-shell { padding-left: 1.15rem; padding-right: 1.15rem; }
+}
+@media (max-width: 639px) {
+  .nx-feed-post { margin-bottom: 10px; border-radius: 14px; }
+  .nx-story-rail { padding-bottom: 2px; }
+}
+
+
+/* Consistent screen language for the deeper product areas. */
+.nx-screen-inbox, .nx-screen-communities, .nx-screen-creator, .nx-screen-settings, .nx-screen-giftverse {
+  color: var(--nx-text);
+}
+.nx-screen-inbox {
+  background: radial-gradient(ellipse at 18% 0%, rgba(113,56,255,.075), transparent 34%), var(--nx-canvas);
+  border: 1px solid rgba(164,139,230,.12);
+  border-radius: 20px;
+}
+.nx-screen-inbox .nx-inbox-sidebar {
+  background: rgba(14,11,23,.94) !important;
+  border-color: var(--nx-edge) !important;
+}
+.nx-screen-inbox input, .nx-screen-inbox textarea {
+  background: var(--nx-surface-2) !important;
+  border-color: var(--nx-edge) !important;
+  color: var(--nx-text) !important;
+}
+.nx-screen-communities {
+  background: radial-gradient(ellipse at 92% 0%, rgba(113,56,255,.07), transparent 32%);
+}
+.nx-screen-communities .nx-page-header {
+  border-color: rgba(164,139,230,.16) !important;
+}
+.nx-screen-creator > div[class*="rounded-"],
+.nx-screen-settings > div[class*="rounded-"] {
+  border-color: rgba(164,139,230,.16) !important;
+}
+.nx-screen-creator [class*="bg-[#0a071f]"],
+.nx-screen-settings [class*="bg-zinc-900"],
+.nx-screen-settings [class*="bg-black"] {
+  background-color: var(--nx-surface) !important;
+}
+.nx-screen-giftverse > section:first-of-type {
+  background: radial-gradient(circle at 84% 8%, rgba(113,56,255,.24), transparent 34%), linear-gradient(135deg, #171127, #0B0914 70%) !important;
+  border-color: rgba(164,139,230,.24) !important;
+  box-shadow: 0 18px 44px rgba(0,0,0,.25);
+}
+.nx-screen-giftverse section[class*="rounded-"][class*="border"] {
+  border-color: rgba(164,139,230,.16);
+}
+.nx-screen-giftverse input, .nx-screen-giftverse select {
+  background-color: var(--nx-surface-2) !important;
+  border-color: var(--nx-edge) !important;
+}
+
+
+/* Calm, editorial layouts: let content breathe instead of boxing every section. */
+.nx-matrix-page { color: var(--nx-text); }
+.nx-matrix-page > div:first-child { border-color: rgba(164,139,230,.13); }
+.nx-matrix-page > div:nth-child(2) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.35rem;
+  border-bottom: 1px solid rgba(164,139,230,.13);
+  padding: 0 0 .65rem;
+}
+.nx-matrix-page > div:nth-child(2) > button {
+  min-height: 38px;
+  padding: .35rem 0 .65rem;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(247,245,255,.68) !important;
+}
+.nx-matrix-page > div:nth-child(2) > button[aria-current="page"],
+.nx-matrix-page > div:nth-child(2) > button:focus-visible {
+  color: #fff !important;
+}
+.nx-matrix-page > div:nth-child(2) > button:hover { color: #fff !important; }
+.nx-matrix-page > div:nth-child(3) { padding: 0 !important; }
+.nx-matrix-page form { max-width: 100%; }
+.nx-matrix-page form textarea, .nx-matrix-page form input {
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(164,139,230,.16) !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+}
+.nx-matrix-page form label { font-family: inherit !important; letter-spacing: .02em !important; text-transform: none !important; font-size: 12px !important; }
+.nx-matrix-page form button[type="submit"] { border-radius: 10px !important; }
+.nx-matrix-page .nx-ai-card, .nx-matrix-page .nx-control-panel { box-shadow: none !important; }
+.nx-matrix-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+.nx-matrix-page [class*="rounded-3xl"][class*="border"] {
+  border-color: rgba(164,139,230,.14) !important;
+  box-shadow: none !important;
+}
+.nx-matrix-page [class*="from-violet-600"][class*="to-violet-950"] {
+  background: rgba(113,56,255,.12) !important;
+}
+
+
+/* Wallet: present balances as a clean summary, not a stack of dashboard cards. */
+.nx-wallet-page > header {
+  padding: 0 0 1.25rem !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.14) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-wallet-page > header > span { display: none !important; }
+.nx-wallet-page > section[aria-label="Current balances"] { gap: 2rem !important; }
+.nx-wallet-page > section[aria-label="Current balances"] article,
+.nx-wallet-page > section[aria-label="Wallet totals"] > div {
+  padding: 1rem 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.12) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-wallet-page > section[aria-label="Current balances"] article h2 { color: var(--nx-muted) !important; }
+.nx-wallet-page > section[aria-label="Current balances"] article p:first-of-type {
+  margin-top: .8rem !important;
+  font-size: clamp(2rem, 5vw, 2.65rem) !important;
+  letter-spacing: -.045em !important;
+}
+.nx-wallet-page > section[aria-labelledby="ledger-title"] {
+  padding: 1.25rem 0 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(164,139,230,.14) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-wallet-page > section[aria-labelledby="ledger-title"] li { border-color: rgba(164,139,230,.1) !important; }
+.nx-wallet-page > section[aria-labelledby="ledger-title"] li > span { background: rgba(113,56,255,.1) !important; }
+
+
+/* Discovery and notifications should read like social app pages, not admin panels. */
+.nx-explore-page > .nx-page-header {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  background: transparent !important;
+  border-bottom-color: rgba(164,139,230,.13) !important;
+}
+.nx-explore-page .nx-surface {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.nx-explore-page [class*="rounded-3xl"][class*="border"] {
+  border-color: rgba(164,139,230,.12) !important;
+  box-shadow: none !important;
+}
+.nx-notifications-page {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-notifications-page > [class*="rounded-3xl"][class*="border"],
+.nx-notifications-page > [class*="rounded-2xl"][class*="border"] {
+  background: transparent !important;
+  border-color: rgba(164,139,230,.12) !important;
+  box-shadow: none !important;
+}
+.nx-notifications-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+
+
+/* Settings: clear section links and a quiet content area. */
+.nx-settings-page > .nx-settings-heading {
+  padding: 0 0 1.25rem !important;
+  border-bottom: 1px solid rgba(164,139,230,.14) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-settings-page > .grid { gap: 1.5rem !important; }
+.nx-settings-page > .grid > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem !important;
+}
+.nx-settings-page > .grid > div:first-child > button {
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: .75rem .65rem !important;
+}
+.nx-settings-page > .grid > div:first-child > button:hover {
+  background: rgba(255,255,255,.045) !important;
+}
+.nx-settings-page > .grid > div:first-child > button > div:first-child > div:first-child {
+  background: transparent !important;
+  color: var(--nx-muted) !important;
+  padding: .25rem !important;
+}
+.nx-settings-page > .grid > div:first-child > button span:first-child { font-size: 13px !important; }
+.nx-settings-page > .grid > div:first-child > button span:last-child { font-size: 11px !important; }
+.nx-settings-page > .grid > .nx-settings-content {
+  padding: .5rem 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-settings-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+
+/* Creator overview: remove the mini-dashboard tile aesthetic. */
+.nx-creator-page [class*="grid"] > [class*="rounded-2xl"][class*="border"] {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.13) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-creator-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+
+/* Saved content: open page layout with simple collection tools. */
+.nx-saved-page > div:first-child {
+  padding: 0 0 1.25rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.14) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nx-saved-page > section[aria-label="Saved collections"] {
+  padding: 1rem 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.13) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nx-saved-page article { border-radius: 12px !important; }
+.nx-saved-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+
+
+/* Live video: reduce nested panels while keeping room actions and status clear. */
+.nx-live-page input {
+  background: rgba(255,255,255,.045) !important;
+  border-color: rgba(164,139,230,.18) !important;
+  border-radius: 11px !important;
+}
+.nx-live-page [class*="rounded-2xl"][class*="border"] {
+  border-color: rgba(164,139,230,.15) !important;
+  box-shadow: none !important;
+}
+.nx-live-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+
+
+/* Preferences: make the panel feel like part of the app, not a sci-fi console. */
+.nx-preferences-modal > [class*="max-w-2xl"] {
+  border-radius: 22px !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.42) !important;
+}
+.nx-preferences-modal [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+.nx-preferences-modal h2, .nx-preferences-modal h1, .nx-preferences-modal h3 { text-transform: none !important; }
+.nx-preferences-modal nav button { border-radius: 10px !important; }
+.nx-preferences-modal nav button span:first-child { font-weight: 600 !important; }
+
+
+/* Quick links: keep them lightweight, with no miniature card wall. */
+.nx-mini-services > .grid > button {
+  min-height: 0 !important;
+  padding: .65rem .4rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.11) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nx-mini-services > .grid > button:hover {
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(164,139,230,.2) !important;
+}
+.nx-mini-services > .grid > button > span:first-child {
+  width: 30px !important;
+  height: 30px !important;
+  margin-bottom: .35rem !important;
+  background: transparent !important;
+  color: var(--nx-violet-bright) !important;
+}
+.nx-mini-services > .grid > button > span:nth-child(2) {
+  font-family: inherit !important;
+  font-size: 10px !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  color: var(--nx-muted) !important;
+}
+.nx-mini-services > .grid > button > span:nth-child(3) { font-size: 13px !important; font-weight: 600 !important; }
+.nx-mini-services > .grid > button > span:nth-child(4) { font-size: 11px !important; line-height: 1.45 !important; }
+.nx-mini-services > div:first-child > p { font-family: inherit !important; letter-spacing: normal !important; text-transform: none !important; }

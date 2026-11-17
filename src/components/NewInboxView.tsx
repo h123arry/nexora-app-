@@ -549,7 +549,7 @@ export default function NewInboxView({
   };
 
   return (
-    <div className="nx-page-shell nx-inbox-shell flex flex-col md:flex-row h-full w-full text-white font-sans overflow-hidden relative">
+    <div className="nx-page-shell nx-inbox-shell nx-screen-inbox flex flex-col md:flex-row h-full w-full text-white font-sans overflow-hidden relative">
       
       {/* LEFT COLUMN: Conversation List */}
       <div className={`nx-inbox-sidebar w-full md:w-96 border-r border-[var(--nx-edge)] flex flex-col h-full bg-[var(--nx-surface)] ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
