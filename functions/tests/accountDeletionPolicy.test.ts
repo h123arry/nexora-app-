@@ -17,6 +17,9 @@ async function cleanupIdentityFixtures(): Promise<void> {
       await db.collection(collection).doc(userId).delete().catch(() => undefined);
     }
   }
+  for (const id of ['identity-delete-audit', 'identity-delete-audit-unrelated-reviewer']) {
+    await db.collection('identityVerificationAuditEvents').doc(id).delete().catch(() => undefined);
+  }
   const audit = await db.collection('identityVerificationAuditEvents').where('userId', '==', 'identity-delete-test').get();
   for (const row of audit.docs) await row.ref.delete();
   const reporterRows = await db.collectionGroup('reporters').where('reporterId', '==', 'identity-delete-test').get();
