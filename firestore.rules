@@ -9,7 +9,7 @@ service cloud.firestore {
           && (!get(statusPath).data.keys().hasAny(['sessionsRevokedAfter'])
             || (request.auth.token.keys().hasAny(['auth_time'])
               && request.auth.token.auth_time is int
-              && request.auth.token.auth_time >= get(statusPath).data.sessionsRevokedAfter.toMillis() / 1000)));
+              && request.auth.token.auth_time > get(statusPath).data.sessionsRevokedAfter.toMillis() / 1000)));
     }
     function signedIn() {
       return request.auth != null && sessionNotRevoked(request.auth.uid);
