@@ -139,8 +139,11 @@ async function requireFirebaseUser(req: express.Request, res: express.Response, 
     if (accountStatus.sessionRevocationPending === true) {
       return res.status(401).json({ error: 'Your sessions are being secured. Sign in again and retry shortly.' });
     }
-    const cutoff = accountStatus.sessionsRevokedAfter;
-    if (cutoff && typeof (cutoff as { toMillis?: unknown }).toMillis === 'function') {
+    if (Object.prototype.hasOwnProperty.call(accountStatus, 'sessionsRevokedAfter')) {
+      const cutoff = accountStatus.sessionsRevokedAfter;
+      if (!cutoff || typeof (cutoff as { toMillis?: unknown }).toMillis !== 'function') {
+        return res.status(401).json({ error: 'Your session security state is invalid. Sign in again to continue.' });
+      }
       const cutoffSeconds = (cutoff as { toMillis: () => number }).toMillis() / 1000;
       if (!Number.isSafeInteger(decoded.auth_time) || decoded.auth_time <= cutoffSeconds) {
         return res.status(401).json({ error: 'Your session has been revoked. Sign in again to continue.' });
