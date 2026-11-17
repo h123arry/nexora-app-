@@ -83,24 +83,25 @@ export const createFoundingMemberAccount = onCall({ maxInstances: 3 }, async req
     const publicProfileRef = db.collection('publicProfiles').doc(identity.uid);
     const usernameRef = db.collection('usernames').doc(username);
     const foundingMemberRef = db.collection('foundingMembers').doc(identity.uid);
+    const cohortCounterRef = db.collection('foundingMemberCohorts').doc('founding_300');
     const existingPublicProfiles = db.collection('publicProfiles')
       .where('username', '==', username).limit(1);
-    const foundingMemberQuery = db.collection('foundingMembers').limit(300);
     const joinedDate = `Joined ${new Date().toLocaleString('en-US', { month: 'long' })} ${new Date().getFullYear()}`;
     const reputationBreakdown = {
       contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0,
     };
 
     await db.runTransaction(async transaction => {
-      const [usernameClaim, matchingProfiles, foundingMembers] = await Promise.all([
+      const [usernameClaim, matchingProfiles, cohortCounter] = await Promise.all([
         transaction.get(usernameRef),
         transaction.get(existingPublicProfiles),
-        transaction.get(foundingMemberQuery),
+        transaction.get(cohortCounterRef),
       ]);
       if (usernameClaim.exists || !matchingProfiles.empty) {
         throw new HttpsError('already-exists', 'That username is already taken. Choose another handle.');
       }
-      if (foundingMembers.size >= 300) {
+      const cohortCount = Number(cohortCounter.get('count')) || 0;
+      if (cohortCount >= 300) {
         throw new HttpsError('resource-exhausted', 'The first 300 founding member accounts have already been allocated.');
       }
 
@@ -151,6 +152,11 @@ export const createFoundingMemberAccount = onCall({ maxInstances: 3 }, async req
         reputationBreakdown,
         skills: [],
       });
+      transaction.set(cohortCounterRef, {
+        cohort: 'founding_300',
+        count: cohortCount + 1,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
       transaction.create(foundingMemberRef, {
         uid: identity.uid,
         email,
@@ -176,7 +182,12 @@ export const createFoundingMemberAccount = onCall({ maxInstances: 3 }, async req
     };
   } catch (error) {
     if (createdUid) {
-      await auth.deleteUser(createdUid).catch(() => undefined);
+      try {
+        await auth.deleteUser(createdUid);
+      } catch {
+        console.error('[FoundingMembers] Auth rollback needs reconciliation.', { uid: createdUid });
+        throw new HttpsError('internal', 'Account provisioning failed and automatic rollback could not be confirmed. Contact NEXORA support with the account UID.');
+      }
     }
     if (error instanceof HttpsError) throw error;
     const code = (error as { code?: string } | null)?.code;
