@@ -1026,3 +1026,250 @@ body {
   .nx-feed-stage .nx-composer,
   .nx-feed-stage .nx-field { transition: none !important; }
 }
+
+
+/* Home finishing pass: states, discovery affordances, comments and feed pacing. */
+.nx-feed-stage .nx-feed-header [role="group] button { -webkit-tap-highlight-color: transparent; }
+.nx-feed-stage .nx-feed-header [role="group"] button {
+  position: relative;
+  letter-spacing: -.025em;
+}
+.nx-feed-stage .nx-feed-header [role="group"] button[aria-pressed="true"] {
+  color: #fff;
+}
+.nx-feed-stage .nx-feed-header [role="group"] button[aria-pressed="true"] > span {
+  text-shadow: 0 0 22px rgba(138,63,252,.2);
+}
+.nx-feed-stage .nx-feed-header [role="group"] button > span + div {
+  background: linear-gradient(90deg,#E94BFF 0%,#7138FF 38%,#245BFF 72%,#00BBD8 100%) !important;
+  box-shadow: 0 0 15px rgba(113,56,255,.42);
+}
+.nx-feed-stage .nx-feed-header .nx-icon-button {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid rgba(151,119,220,.14);
+  border-radius: 13px;
+  background: rgba(17,12,31,.58);
+  color: #c7bddc;
+}
+.nx-feed-stage .nx-feed-header .nx-icon-button:hover {
+  border-color: rgba(138,63,252,.42);
+  background: rgba(113,56,255,.13);
+  color: #fff;
+}
+.nx-feed-stage .nx-story-track > button:first-child > span:first-child {
+  border: 1px dashed rgba(173,143,255,.58);
+  background: linear-gradient(145deg,rgba(113,56,255,.18),rgba(36,91,255,.08));
+  color: #d9caff;
+  box-shadow: inset 0 0 18px rgba(113,56,255,.08);
+}
+.nx-feed-stage .nx-story-track > button:first-child:hover > span:first-child {
+  border-style: solid;
+  background: linear-gradient(145deg,rgba(113,56,255,.3),rgba(36,91,255,.15));
+}
+.nx-feed-stage .nx-story-track > button:focus-visible,
+.nx-feed-stage .nx-story-track > button:focus-visible > span:first-child {
+  outline: 2px solid #a78bfa;
+  outline-offset: 4px;
+}
+.nx-feed-stage .nx-composer > div:first-child > button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nx-feed-stage .nx-composer > div:last-child {
+  flex-wrap: wrap;
+}
+.nx-feed-stage .nx-composer > div:last-child button {
+  min-height: 38px;
+  border-radius: 999px;
+  padding-inline: 12px;
+}
+.nx-feed-stage .nx-composer > div:last-child .nx-btn-primary {
+  min-height: 38px;
+  border-radius: 999px;
+  background: linear-gradient(110deg,#7138FF,#315BFF);
+  box-shadow: 0 5px 18px rgba(75,16,242,.2);
+}
+.nx-feed-stage > div.w-full.h-full.overflow-y-auto > .mx-4.md\:mx-0.bg-red-950\/80 {
+  max-width: 948px;
+  margin: 12px auto;
+  background: rgba(65,30,14,.28);
+  border-color: rgba(245,158,11,.2);
+}
+.nx-feed-stage > div.w-full.h-full.overflow-y-auto > .shrink-0.flex.items-center.justify-between {
+  max-width: 948px;
+  margin: 12px auto;
+  background: rgba(113,56,255,.08);
+  border-color: rgba(151,119,220,.2);
+  border-radius: 14px;
+}
+.nx-feed-stage > div.w-full.h-full.overflow-y-auto > .p-6.md\:p-8 {
+  max-width: 948px;
+  margin: 24px auto;
+  padding: clamp(28px,5vw,52px);
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid rgba(151,119,220,.16);
+  background:
+    radial-gradient(circle at 15% 0%,rgba(113,56,255,.12),transparent 42%),
+    radial-gradient(circle at 100% 100%,rgba(36,91,255,.08),transparent 38%),
+    linear-gradient(145deg,rgba(17,12,31,.92),rgba(7,5,14,.98));
+  box-shadow: 0 18px 48px rgba(0,0,0,.22);
+}
+.nx-feed-stage > div.w-full.h-full.overflow-y-auto > .p-6.md\:p-8 h4 {
+  letter-spacing: -.035em;
+  font-size: clamp(19px,2.5vw,24px);
+}
+.nx-feed-stage > div.w-full.h-full.overflow-y-auto > .p-6.md\:p-8 p {
+  color: #aaa1c1;
+  font-size: 13px;
+}
+.nx-feed-stage > div.w-full.h-full.overflow-y-auto > .p-6.md\:p-8 section[aria-label="Suggested creators to follow"] {
+  padding: 18px;
+  border: 1px solid rgba(151,119,220,.14);
+  border-radius: 18px;
+  background: rgba(5,4,11,.36);
+}
+.nx-feed-stage > div.w-full.h-full.overflow-y-auto > .p-6.md\:p-8 section[aria-label="Suggested creators to follow"] > div > div {
+  gap: 10px;
+}
+.nx-feed-stage > div.w-full.h-full.overflow-y-auto > .p-6.md\:p-8 section[aria-label="Suggested creators to follow"] img {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+}
+.nx-feed-stage .nx-post-card .comments-container {
+  border: 1px solid rgba(151,119,220,.22);
+  border-bottom: 0;
+  border-radius: 24px 24px 0 0;
+  padding: 18px;
+  box-shadow: 0 -20px 60px rgba(0,0,0,.5);
+  background: rgba(7,5,15,.98);
+}
+.nx-feed-stage .nx-post-card .comments-container > div:first-child {
+  min-height: 44px;
+}
+.nx-feed-stage .nx-post-card .comments-container > div:first-child > span {
+  font-size: 11px;
+  letter-spacing: .13em;
+}
+.nx-feed-stage .nx-post-card .comments-container input {
+  min-height: 44px;
+  border-radius: 999px;
+  padding-inline: 16px;
+  background: #100b20;
+  border-color: rgba(151,119,220,.2);
+}
+.nx-feed-stage .nx-post-card .comments-container button[aria-label*="Send"] {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg,#7138FF,#315BFF);
+}
+.nx-feed-stage .nx-post-card .comments-container button:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+.nx-feed-stage .nx-post-card .comments-container > div:nth-child(2) > div {
+  border-radius: 16px;
+  background: rgba(17,12,31,.7);
+  border-color: rgba(151,119,220,.12);
+}
+.nx-feed-stage .nx-post-card .comments-container p {
+  line-height: 1.65;
+}
+.nx-feed-stage .nx-post-card [role="menu"] {
+  border: 1px solid rgba(151,119,220,.22);
+  border-radius: 16px;
+  box-shadow: 0 20px 55px rgba(0,0,0,.55);
+  backdrop-filter: blur(18px);
+}
+.nx-feed-stage .nx-post-card [role="menu"] button {
+  min-height: 42px;
+}
+.nx-feed-stage .nx-post-card [role="menu"] button:hover {
+  background: rgba(113,56,255,.12);
+}
+.nx-feed-stage .nx-feed-stage-empty,
+.nx-feed-stage [aria-label="Suggested creators to follow"] {
+  color: #e9e2ff;
+}
+.nx-feed-stage .nx-post-card img {
+  image-rendering: auto;
+}
+.nx-feed-stage .nx-post-card [class*="text-slate-400"],
+.nx-feed-stage .nx-post-card [class*="text-zinc-500"] {
+  color: #9b92b2;
+}
+.nx-feed-stage .nx-post-card [class*="border-white/5"],
+.nx-feed-stage .nx-post-card [class*="border-white/10"] {
+  border-color: rgba(151,119,220,.13);
+}
+.nx-feed-stage .nx-post-card .nx-btn-primary,
+.nx-feed-stage .nx-composer .nx-btn-primary {
+  background: linear-gradient(110deg,#7138FF,#315BFF);
+  border: 1px solid rgba(190,166,255,.18);
+  box-shadow: 0 6px 20px rgba(75,16,242,.2);
+}
+.nx-feed-stage .nx-post-card .nx-btn-primary:hover,
+.nx-feed-stage .nx-composer .nx-btn-primary:hover {
+  filter: brightness(1.12);
+  box-shadow: 0 8px 25px rgba(75,16,242,.28);
+}
+.nx-feed-stage .nx-post-card .nx-field:focus,
+.nx-feed-stage .nx-composer .nx-field:focus {
+  border-color: rgba(167,139,250,.58);
+  box-shadow: 0 0 0 3px rgba(113,56,255,.12);
+}
+.nx-feed-stage .nx-post-card + .py-8 {
+  color: #aaa1c1;
+}
+.nx-feed-stage .nx-post-card ~ .py-8 p {
+  letter-spacing: .01em;
+}
+@media (max-width: 640px) {
+  .nx-feed-stage > div.w-full.h-full.overflow-y-auto > .mx-4.md\:mx-0.bg-red-950\/80 {
+    margin-inline: 12px;
+  }
+  .nx-feed-stage > div.w-full.h-full.overflow-y-auto > .shrink-0.flex.items-center.justify-between {
+    margin-inline: 12px;
+  }
+  .nx-feed-stage > div.w-full.h-full.overflow-y-auto > .p-6.md\:p-8 {
+    margin: 16px 10px;
+    padding: 28px 18px;
+    border-radius: 20px;
+  }
+  .nx-feed-stage .nx-post-card .comments-container {
+    height: min(76%, 680px);
+    padding: 15px 13px max(14px,env(safe-area-inset-bottom));
+    border-radius: 22px 22px 0 0;
+  }
+  .nx-feed-stage .nx-post-card .comments-container > div:nth-child(2) > div {
+    padding: 11px;
+  }
+  .nx-feed-stage .nx-post-card [role="menu"] {
+    max-width: calc(100vw - 32px);
+  }
+}
+@media (min-width: 641px) and (max-width: 1023px) {
+  .nx-feed-stage .nx-post-card,
+  .nx-feed-stage .nx-composer,
+  .nx-feed-stage .nx-story-rail {
+    max-width: 760px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-feed-stage .nx-story-track *,
+  .nx-feed-stage .nx-feed-header *,
+  .nx-feed-stage .nx-post-card * {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
