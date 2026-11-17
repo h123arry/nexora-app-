@@ -87,6 +87,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
   if (!db) return Promise.reject(new Error('Media storage is not configured for this environment.'));
   const uploadMetadata: UploadMetadata = {
     contentType,
+    ...(options.metadata?.purpose === 'worldweave' ? { cacheControl: 'private, no-store, max-age=0' } : {}),
     customMetadata: {
       ...options.metadata,
       ownerId: userId,
