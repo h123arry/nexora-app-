@@ -344,3 +344,35 @@ button:disabled { cursor: not-allowed; }
 }
 .nx-wallet-page > section[aria-labelledby="ledger-title"] li { border-color: rgba(164,139,230,.1) !important; }
 .nx-wallet-page > section[aria-labelledby="ledger-title"] li > span { background: rgba(113,56,255,.1) !important; }
+
+
+/* Discovery and notifications should read like social app pages, not admin panels. */
+.nx-explore-page > .nx-page-header {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  background: transparent !important;
+  border-bottom-color: rgba(164,139,230,.13) !important;
+}
+.nx-explore-page .nx-surface {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+.nx-explore-page [class*="rounded-3xl"][class*="border"] {
+  border-color: rgba(164,139,230,.12) !important;
+  box-shadow: none !important;
+}
+.nx-notifications-page {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-notifications-page > [class*="rounded-3xl"][class*="border"],
+.nx-notifications-page > [class*="rounded-2xl"][class*="border"] {
+  background: transparent !important;
+  border-color: rgba(164,139,230,.12) !important;
+  box-shadow: none !important;
+}
+.nx-notifications-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
