@@ -79,5 +79,6 @@
   },
   "engines": {
     "node": "22"
-  }
+  },
+  "description": "NEXORA social network application"
 }
