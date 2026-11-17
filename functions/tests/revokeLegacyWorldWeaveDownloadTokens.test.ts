@@ -95,7 +95,9 @@ describe('legacy WorldWeave download-token migration', () => {
     const applied = await runLegacyWorldWeaveMediaMigration(db, bucket, { dryRun: false, maxMoments: 10 });
     assert.equal(applied.revokedAndCleared, 1);
     assert.equal((await moment.get()).get('mediaUrl'), '');
-    const metadata = (await file.getMetadata())[0].metadata || {};
+    const storedMetadata = (await file.getMetadata())[0];
+    const metadata = storedMetadata.metadata || {};
+    assert.equal(storedMetadata.cacheControl, 'private, no-store, max-age=0');
     assert.equal(typeof metadata.firebaseStorageDownloadTokens, 'string');
     assert.notEqual(metadata.firebaseStorageDownloadTokens, 'legacy-token');
     assert.equal(metadata.ownerId, 'legacy-media-author');
