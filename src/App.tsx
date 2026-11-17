@@ -121,7 +121,7 @@ export default function App() {
       delete document.documentElement.dataset.nxSaveData;
     };
   }, []);
-  const isLoggedIn = !!firebaseUser && !firebaseUser.isAnonymous && firebaseProfile?.id === firebaseUser.uid;
+  const isLoggedIn = !!firebaseUser && firebaseProfile?.id === firebaseUser.uid;
   const initialCacheUserId = isLoggedIn && firebaseUser ? firebaseUser.uid : '';
   const [currentUser, setCurrentUser] = useState<User>(() => getRichUser({
       id: 'guest_visitor_id',
