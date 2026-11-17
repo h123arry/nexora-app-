@@ -15,7 +15,7 @@ export function callableSessionStatusAllows(status: SessionStatus | null | undef
   const cutoff = status.sessionsRevokedAfter as { toMillis?: () => number } | null | undefined;
   if (!cutoff || typeof cutoff.toMillis !== 'function') return false;
   const cutoffSeconds = cutoff.toMillis() / 1000;
-  return Number.isSafeInteger(authTime) && (authTime as number) >= cutoffSeconds;
+  return Number.isSafeInteger(authTime) && (authTime as number) > cutoffSeconds;
 }
 
 export async function assertCallableSessionActive(
