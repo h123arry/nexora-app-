@@ -5,6 +5,8 @@ import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Bug, Scal
 import { User as UserType, ThemeMood } from '../types';
 import { SettingsService } from '../services/firebase/settingsService';
 import { AuthService } from '../services/firebase/authService';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../lib/firebase';
 import { isNativeRuntime } from '../lib/nativeRuntime';
 import { readSoundPreferences, saveSoundPreferences, playNexoraSound, type SoundPreferences } from '../services/soundExperience';
 
@@ -48,6 +50,10 @@ export default function SettingsView({
   const [linkingEmail, setLinkingEmail] = useState(false);
   const [sendingPhoneCode, setSendingPhoneCode] = useState(false);
   const [confirmingPhone, setConfirmingPhone] = useState(false);
+  const [canIssueBetaInvite, setCanIssueBetaInvite] = useState(false);
+  const [creatingBetaInvite, setCreatingBetaInvite] = useState(false);
+  const [betaInviteLink, setBetaInviteLink] = useState('');
+  const [betaInviteError, setBetaInviteError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -65,6 +71,41 @@ export default function SettingsView({
     setLinkedProviders(AuthService.getLinkedProviders());
     return () => { active = false; };
   }, [currentUser.id]);
+
+  useEffect(() => {
+    let active = true;
+    AuthService.getCurrentUser()?.getIdTokenResult(true).then(token => {
+      const role = token.claims.role;
+      if (active) setCanIssueBetaInvite(token.claims.admin === true || token.claims.founder === true || role === 'admin' || role === 'founder');
+    }).catch(() => { if (active) setCanIssueBetaInvite(false); });
+    return () => { active = false; };
+  }, [currentUser.id]);
+
+  const generateBetaInviteLink = async () => {
+    if (creatingBetaInvite || !canIssueBetaInvite) return;
+    setCreatingBetaInvite(true);
+    setBetaInviteError('');
+    setBetaInviteLink('');
+    try {
+      const createInvite = httpsCallable<{}, { inviteUrl: string; maxClaims: number }>(functions, 'createBetaInviteLink');
+      const result = await createInvite({});
+      setBetaInviteLink(result.data.inviteUrl);
+    } catch (error) {
+      setBetaInviteError(error instanceof Error ? error.message : 'The beta invitation link could not be created.');
+    } finally {
+      setCreatingBetaInvite(false);
+    }
+  };
+
+  const copyBetaInviteLink = async () => {
+    if (!betaInviteLink) return;
+    try {
+      await navigator.clipboard.writeText(betaInviteLink);
+      setLinkedAccountMessage('The 300-person beta invitation link has been copied.');
+    } catch {
+      setBetaInviteError('Copy was blocked by this browser. Select and copy the link manually.');
+    }
+  };
 
   const saveSetting = async (key: string, save: () => Promise<void>) => {
     if (!settingsReady || savingSetting) return;
@@ -384,6 +425,23 @@ export default function SettingsView({
 
           {activeSection === 'beta' && (
             <div className="space-y-4">
+              {canIssueBetaInvite && (
+                <div className="rounded-2xl border border-violet-400/25 bg-violet-500/10 p-4 space-y-3">
+                  <div>
+                    <p className="text-xs font-bold text-white">Founding 300 invitation link</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-violet-100/80">Create one reusable private link for the first 300 eligible beta members. The server enforces the cap across all invitation claims and administrator-created founding accounts.</p>
+                  </div>
+                  <button type="button" disabled={creatingBetaInvite} onClick={() => void generateBetaInviteLink()} className="rounded-xl bg-violet-600 px-4 py-2.5 text-[11px] font-bold text-white disabled:opacity-50">{creatingBetaInvite ? 'Creating secure link…' : 'Generate 300-person invitation link'}</button>
+                  {betaInviteLink && (
+                    <div className="space-y-2">
+                      <input readOnly value={betaInviteLink} onFocus={event => event.currentTarget.select()} className="w-full nx-field px-3 py-2.5 text-[11px]" aria-label="Founding beta invitation link" />
+                      <button type="button" onClick={() => void copyBetaInviteLink()} className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2 text-[10px] font-semibold text-violet-200">Copy invitation link</button>
+                    </div>
+                  )}
+                  {betaInviteError && <p role="alert" className="text-[11px] text-rose-300">{betaInviteError}</p>}
+                </div>
+              )}
+
               <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Beta feedback</h3>
               <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4 space-y-2">
                 <p className="text-xs font-semibold text-white">Help us reproduce the problem</p>
