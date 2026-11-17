@@ -538,7 +538,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         const data = await res.json();
         if (typeof data.text === 'string' && data.text.trim()) {
           setQuery(data.text);
-          showToast("Command polished successfully! ✨");
+          showToast("Your text has been improved.");
         }
       } else {
         const payload = await res.json().catch(() => ({}));
@@ -709,7 +709,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 bg-violet-950/40 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-mono">
             <VohIcon size={15} animated variant="violet" />
-            <span className="font-black text-violet-300 uppercase">NEXORA CONTEXT</span>
+            <span className="font-black text-violet-300 uppercase">NEXORA ACCOUNT</span>
           </div>
 
           <button 
@@ -739,7 +739,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                 : 'bg-current/5 text-current/60 hover:text-current hover:bg-current/10'
             }`}
           >
-            {view}
+            {view === 'ecosystem' ? 'Creator tools' : view === 'moderation' ? 'Text check' : view === 'assistants' ? 'Assistants' : view === 'search' ? 'Search' : view === 'settings' ? 'Settings' : view === 'voice' ? 'Voice' : 'Chat'}
           </button>
         ))}
       </div>
@@ -1202,7 +1202,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       className="px-2.5 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-[10px] font-sans font-extrabold text-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95 animate-pulse"
                     >
                       <Sparkles className="w-3 h-3 text-amber-400 animate-spin" />
-                      <span>POLISH COMMAND</span>
+                      <span>IMPROVE TEXT</span>
                     </button>
                   )}
                 </div>
@@ -1393,7 +1393,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         {/* ======================================================== */}
         {activeSubView === 'assistants' && (
           <div className="lg:col-span-12 space-y-4">
-            <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">SELECT ASSISTANT BLUEPRINT</span>
+            <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">CHOOSE AN ASSISTANT</span>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {PromptEngine.getAssistantCards().map((card) => (
                 <div
@@ -1580,7 +1580,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             <div className="bg-[#03010b] border border-white/10 rounded-3xl p-6 space-y-6">
               
               <div>
-                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block mb-1">MODERATION & SECURITY INTELLIGENCE</span>
+                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block mb-1">CHECK TEXT FOR SPAM</span>
                 <p className="text-xs text-current/60">Run a local text heuristic assessment. These results do not automatically moderate content, submit reports, or change live enforcement decisions.</p>
               </div>
 
@@ -1588,7 +1588,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                 
                 {/* Spam analyzer */}
                 <div className="space-y-3 bg-white/2 border border-white/5 p-4 rounded-2xl">
-                  <span className="text-[9.5px] font-black text-cyan-400 uppercase block">Content Spam Scanner</span>
+                  <span className="text-[9.5px] font-black text-cyan-400 uppercase block">Spam check</span>
                   <textarea
                     placeholder="Type or paste post text to check spam score (e.g. 'earn money quickly! click here')..."
                     value={moderationText}
