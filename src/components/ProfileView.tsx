@@ -1065,7 +1065,7 @@ export default function ProfileView({
     <div className="nx-page-shell nx-profile-shell relative w-full min-h-screen text-white font-sans overflow-x-hidden pb-24">
       
       {/* 1. TOP NAVIGATION ACTION BAR */}
-      <div className="nx-page-header sticky top-0 z-40 py-2 px-4 flex items-center justify-between border-b">
+      <div className="nx-page-header nx-profile-topbar sticky top-0 z-40 py-2 px-4 flex items-center justify-between border-b">
         <div className="flex items-center gap-3 relative">
           <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none">NEXORA</span>
           {onCloseProfile && (
@@ -1200,11 +1200,11 @@ export default function ProfileView({
       </div>
 
       {/* 2. PROFILE HEADER (COMPRESSED) */}
-      <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
+      <div className="nx-profile-main w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
         
           {/* Profile Completion Prompts */}
           {isOwnProfile && (
-            <div className="mb-4 p-4 bg-violet-950/40 border border-white/10 rounded-2xl space-y-2.5">
+            <div className="nx-profile-completion mb-4 p-4 bg-violet-950/40 border border-white/10 rounded-2xl space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-violet-300 uppercase tracking-wider">✨ Profile Setup & Completion</span>
                 <span className="text-[10px] font-mono text-zinc-400">
@@ -1269,7 +1269,7 @@ export default function ProfileView({
           )}
 
           {/* Profile Identity Header (Stage 2 Redesign) */}
-          <div className="flex flex-col space-y-1.5 sm:space-y-2 text-left mb-1">
+          <div className="nx-profile-identity flex flex-col space-y-1.5 sm:space-y-2 text-left mb-1">
             {/* Identity & Action Bar */}
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
@@ -1369,7 +1369,7 @@ export default function ProfileView({
             </div>
 
             {/* Nexora 6 Statistics Grid */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-y-1.5 gap-x-1 sm:gap-x-2 text-center mt-2 sm:mt-3">
+            <div className="nx-profile-stats grid grid-cols-3 sm:grid-cols-6 gap-y-1.5 gap-x-1 sm:gap-x-2 text-center mt-2 sm:mt-3">
               {[
                 { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
                 { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
@@ -1410,7 +1410,7 @@ export default function ProfileView({
           </div>
 
           {/* Profile content navigation */}
-          <div role="group" aria-label="Profile content views" className="sticky top-0 nx-glass z-30 border-y border-white/10 mt-4 px-0 w-full">
+          <div role="group" aria-label="Profile content views" className="nx-profile-tabbar sticky top-0 nx-glass z-30 border-y border-white/10 mt-4 px-0 w-full">
             <div className={`w-full mx-auto grid gap-2 p-2 ${isOwnProfile ? 'max-w-4xl grid-cols-3' : 'max-w-2xl grid-cols-2 sm:grid-cols-4'}`}>
               {[
                 { id: 'media', label: 'Posts', icon: Camera },
