@@ -9,10 +9,10 @@ For each **private** WorldWeave moment with a Firebase Storage URL containing a 
 1. Confirms the URL host is `firebasestorage.googleapis.com` and decodes the exact object path.
 2. Confirms the moment's author, moment ID, and canonical `users/{authorId}/media/{momentId}` storage path agree.
 3. Confirms the Storage object exists.
-4. Rotates `firebaseStorageDownloadTokens` to a fresh, undistributed random value on that exact object, invalidating all previously issued download URLs while preserving unrelated custom metadata. The new token is not returned or logged.
+4. Rotates `firebaseStorageDownloadTokens` to a fresh, undistributed random value on that exact object, invalidating all previously issued download URLs while preserving unrelated custom metadata. The new token is not returned or logged. It also applies `Cache-Control: private, no-store, max-age=0` to the object.
 5. Clears `mediaUrl` only if the Firestore moment still points to the same URL and storage path.
 
-Public WorldWeaves are explicitly skipped, so intentionally public published media is not blanket-revoked. Missing objects, unknown visibility values, unsafe path bindings, and concurrent edits are reported and left untouched. The migration never logs URLs, tokens, object metadata, or message content. It does not delete media objects.
+Public WorldWeaves are explicitly skipped, so intentionally public published media is not blanket-revoked. Missing objects, unknown visibility values, and unsafe path bindings are reported and left untouched. If a concurrent Firestore edit is detected after Storage metadata is updated, the Firestore URL is left untouched but the old Storage token has already been revoked; reconcile the edit and rerun to clear the stale URL. The migration never logs URLs, tokens, object metadata, or message content. It does not delete media objects.
 
 ## Safe execution
 
