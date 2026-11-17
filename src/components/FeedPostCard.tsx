@@ -159,7 +159,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       id={`post-${post.id}`}
       data-post-id={post.id}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 450px' }}
-      className={`nx-post-card py-4 sm:py-5 border-b border-white/5 transition-colors duration-150 group text-left relative space-y-3 transform-gpu ${
+      className={`nx-post-card nx-feed-post py-4 sm:py-5 border-b border-white/5 transition-colors duration-150 group text-left relative space-y-3 transform-gpu ${
         post.isBroadcastPost
           ? 'bg-gradient-to-b from-amber-500/5 to-transparent'
           : post.userId === 'user-0'
@@ -205,7 +205,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               alt=""
               loading="lazy"
               decoding="async"
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/40"
+              className="nx-post-avatar w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/40"
             />
           </button>
           <div>
