@@ -1,11 +1,12 @@
 import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { HttpsError } from 'firebase-functions/v2/https';
+import { onCallWithSession } from './callableSession.js';
 import { getFirebaseAdminApp, resolveFirebaseStorageBucket, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
-const bucket = getStorage(app).bucket(resolveFirebaseStorageBucket());
+const getMediaBucket = () => getStorage(app).bucket(resolveFirebaseStorageBucket());
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 const SIGNED_URL_TTL_MS = 10 * 60 * 1000;
 
@@ -40,7 +41,7 @@ export function canReadWorldWeaveMedia(input: {
  * visibility and membership. Private uploads should persist an empty mediaUrl
  * and their canonical storagePath; never persist a permanent download token.
  */
-export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, async request => {
+export const resolveWorldWeaveMomentMediaUrl = onCallWithSession({ maxInstances: 20 }, async request => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in to view this WorldWeave media.');
 
@@ -69,16 +70,18 @@ export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, asyn
     throw new HttpsError('failed-precondition', 'This moment does not have a valid private media asset.');
   }
 
-  const [viewerSettingsSnapshot, ownerSettingsSnapshot, authorSettingsSnapshot, ownerStatusSnapshot, authorStatusSnapshot] = await Promise.all([
+  const [viewerSettingsSnapshot, ownerSettingsSnapshot, authorSettingsSnapshot, viewerStatusSnapshot, ownerStatusSnapshot, authorStatusSnapshot] = await Promise.all([
     db.collection('users').doc(uid).collection('settings').doc('preferences').get(),
     db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
     db.collection('users').doc(authorId).collection('settings').doc('preferences').get(),
+    db.collection('accountStatus').doc(uid).get(),
     db.collection('accountStatus').doc(ownerId).get(),
     db.collection('accountStatus').doc(authorId).get(),
   ]);
   const viewerSettings = viewerSettingsSnapshot.data() || {};
   const ownerSettings = ownerSettingsSnapshot.data() || {};
   const authorSettings = authorSettingsSnapshot.data() || {};
+  const viewerStatus = viewerStatusSnapshot.data() || {};
   const ownerStatus = ownerStatusSnapshot.data() || {};
   const authorStatus = authorStatusSnapshot.data() || {};
   const activeRestriction = (status: Record<string, unknown>) => {
@@ -88,7 +91,7 @@ export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, asyn
       : status.expiresAt instanceof Date ? status.expiresAt.getTime() : 0;
     return expiry === 0 || expiry > Date.now();
   };
-  if (activeRestriction(ownerStatus) || activeRestriction(authorStatus)) {
+  if (activeRestriction(viewerStatus) || activeRestriction(ownerStatus) || activeRestriction(authorStatus)) {
     throw new HttpsError('permission-denied', 'This WorldWeave media is unavailable.');
   }
   if (weave.get('visibility') === 'public') {
@@ -124,7 +127,7 @@ export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, asyn
     throw new HttpsError('permission-denied', 'You no longer have access to this WorldWeave media.');
   }
 
-  const file = bucket.file(storagePath);
+  const file = getMediaBucket().file(storagePath);
   const [exists] = await file.exists();
   if (!exists) throw new HttpsError('not-found', 'The original media file is no longer available.');
 
@@ -138,11 +141,12 @@ export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, asyn
   // deleted/replaced, membership revoked, a block added, an account restricted,
   // or a private-profile follow removed while the URL is being minted.
   const [latestWeave, latestMoment, latestViewerSettings, latestOwnerSettings, latestAuthorSettings,
-    latestOwnerStatus, latestAuthorStatus] = await Promise.all([
+    latestViewerStatus, latestOwnerStatus, latestAuthorStatus] = await Promise.all([
     weaveRef.get(), momentRef.get(),
     db.collection('users').doc(uid).collection('settings').doc('preferences').get(),
     db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
     db.collection('users').doc(authorId).collection('settings').doc('preferences').get(),
+    db.collection('accountStatus').doc(uid).get(),
     db.collection('accountStatus').doc(ownerId).get(),
     db.collection('accountStatus').doc(authorId).get(),
   ]);
@@ -155,6 +159,7 @@ export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, asyn
     || latestMoment.get('authorId') !== authorId
     || latestMoment.get('storagePath') !== storagePath
     || !['image', 'video', 'audio'].includes(String(latestMoment.get('mediaType')))
+    || activeRestriction(latestViewerStatus.data() || {})
     || activeRestriction(latestOwnerStatus.data() || {})
     || activeRestriction(latestAuthorStatus.data() || {})
     || !canReadWorldWeaveMedia({
