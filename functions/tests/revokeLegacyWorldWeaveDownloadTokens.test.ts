@@ -107,6 +107,32 @@ describe('legacy WorldWeave download-token migration', () => {
     assert.equal(rerun.scanned, 0);
   });
 
+  it('clears an already-revoked token URL and still applies no-store metadata', async () => {
+    const weave = db.collection('worldWeaves').doc('legacy-media-migration-test');
+    const moment = weave.collection('moments').doc('already-revoked');
+    const storagePath = 'users/legacy-media-author/media/already-revoked';
+    const file = bucket.file(storagePath);
+    await file.save(Buffer.from('already revoked image fixture'), {
+      contentType: 'image/jpeg',
+      metadata: { metadata: { ownerId: 'legacy-media-author', purpose: 'worldweave' } },
+    });
+    await weave.set({
+      id: weave.id, ownerId: 'legacy-media-owner', visibility: 'private',
+      participantIds: ['legacy-media-owner', 'legacy-media-author'],
+    }, { merge: true });
+    await moment.set({
+      id: moment.id, weaveId: weave.id, authorId: 'legacy-media-author',
+      mediaType: 'image', mediaUrl: tokenUrl(storagePath), storagePath,
+    });
+
+    const summary = await runLegacyWorldWeaveMediaMigration(db, bucket, { dryRun: false, maxMoments: 10 });
+    assert.equal(summary.clearedRevokedToken, 1);
+    assert.equal((await moment.get()).get('mediaUrl'), '');
+    const metadata = (await file.getMetadata())[0];
+    assert.equal(metadata.cacheControl, 'private, no-store, max-age=0');
+    assert.equal(metadata.metadata?.firebaseStorageDownloadTokens, undefined);
+  });
+
   it('leaves intentionally public WorldWeave media and its existing token untouched', async () => {
     const weave = db.collection('worldWeaves').doc('legacy-media-public-test');
     const moment = weave.collection('moments').doc('public-image');
