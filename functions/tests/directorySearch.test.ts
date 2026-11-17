@@ -9,7 +9,11 @@ const db = getFirestore(app);
 
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Directory search tests require the Firestore Emulator.');
-  await Promise.all(['viewer', 'public-person', 'private-person', 'blocked-person', 'visible-late', 'suspended-person'].map(id => db.doc('users/' + id).delete().catch(() => undefined)));
+  await Promise.all([
+    ...['viewer', 'public-person', 'private-person', 'blocked-person', 'visible-late', 'suspended-person'].map(id => db.doc('users/' + id).delete().catch(() => undefined)),
+    db.doc('accountStatus/suspended-person').delete().catch(() => undefined),
+    db.doc('verifiedIdentities/public-person').delete().catch(() => undefined),
+  ]);
   await db.doc('users/viewer').set({ id: 'viewer', username: 'viewer' });
   await db.doc('users/public-person').set({ id: 'public-person', username: 'nexora_public', name: 'Public Person', isVerified: false });
   await db.doc('verifiedIdentities/public-person').set({ userId: 'public-person', status: 'verified', identityType: 'creator' });
