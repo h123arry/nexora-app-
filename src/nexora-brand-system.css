@@ -119,3 +119,98 @@ button:disabled { cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+
+/* Screen-level composition: navigation, discovery, stories and the social feed. */
+.nx-profile-card {
+  background: linear-gradient(145deg, rgba(28,20,48,.88), rgba(14,11,24,.96)) !important;
+  border-color: rgba(164,139,230,.17) !important;
+  box-shadow: 0 14px 34px rgba(0,0,0,.2);
+}
+.nx-profile-card img { box-shadow: 0 0 0 2px rgba(113,56,255,.25); }
+.nx-section-label, .nx-eyebrow { color: #9B8DBB !important; letter-spacing: .17em; }
+.nx-sidebar-divider { background: linear-gradient(90deg, transparent, rgba(164,139,230,.22), transparent) !important; }
+.nx-sidebar-footer .nx-network-card {
+  background: linear-gradient(135deg, rgba(113,56,255,.13), rgba(18,14,29,.72) 58%, rgba(75,16,242,.08)) !important;
+  border-color: rgba(164,139,230,.17) !important;
+}
+.nx-sidebar-nav-item { min-height: 58px; border-radius: 15px !important; }
+.nx-sidebar-nav-item[data-active="true"] {
+  background: linear-gradient(100deg, rgba(113,56,255,.19), rgba(113,56,255,.055)) !important;
+  border-color: rgba(164,139,230,.22) !important;
+}
+.nx-sidebar-nav-item[data-active="true"] .nx-nav-icon {
+  color: #fff !important;
+  background: linear-gradient(145deg, rgba(113,56,255,.5), rgba(75,16,242,.22)) !important;
+  box-shadow: 0 5px 18px rgba(75,16,242,.2);
+}
+.nx-create-action {
+  background: linear-gradient(110deg, rgba(113,56,255,.17), rgba(75,16,242,.07)) !important;
+  border-color: rgba(164,139,230,.26) !important;
+}
+.nx-create-action-icon { background: var(--nx-gradient) !important; }
+
+.nx-pulse-card {
+  background: radial-gradient(circle at 88% 4%, rgba(113,56,255,.2), transparent 40%), linear-gradient(145deg, #171127, #0E0B18 72%) !important;
+  border-color: rgba(164,139,230,.2) !important;
+}
+.nx-discovery-card {
+  background: linear-gradient(150deg, rgba(22,17,36,.96), rgba(13,11,22,.96)) !important;
+  border: 1px solid rgba(164,139,230,.15) !important;
+  box-shadow: 0 12px 30px rgba(0,0,0,.17);
+}
+.nx-discovery-card button:hover { background-color: rgba(113,56,255,.075) !important; }
+.nx-discovery-card button[aria-pressed="true"] {
+  background: rgba(113,56,255,.15) !important;
+  box-shadow: inset 0 0 0 1px rgba(164,139,230,.2);
+}
+
+.nx-story-rail { border-bottom: 1px solid rgba(164,139,230,.11); }
+.nx-story-track { scrollbar-width: none; }
+.nx-story-track > button { transition: transform .18s ease; }
+.nx-story-track > button:active { transform: scale(.96); }
+.nx-story-ring { box-shadow: 0 0 0 1px rgba(164,139,230,.18), 0 5px 18px rgba(75,16,242,.15); }
+
+.nx-feed-post {
+  margin: 0 0 14px;
+  padding: 18px 0 17px !important;
+  border: 1px solid rgba(164,139,230,.13) !important;
+  border-radius: 18px;
+  background: linear-gradient(155deg, rgba(19,15,30,.97), rgba(12,10,20,.97)) !important;
+  box-shadow: 0 10px 28px rgba(0,0,0,.15);
+  overflow: clip;
+}
+.nx-feed-post:hover { border-color: rgba(164,139,230,.24) !important; }
+.nx-feed-post .nx-post-avatar { box-shadow: 0 0 0 2px rgba(113,56,255,.28); }
+.nx-feed-post [class*="text-violet-"] { color: #BBA6FF; }
+.nx-feed-post [class*="bg-violet-600"] { background-color: var(--nx-brand-strong); }
+.nx-feed-post [class*="border-white/5"] { border-color: rgba(164,139,230,.12); }
+
+.nx-app-shell button:focus-visible,
+.nx-app-shell a:focus-visible,
+.nx-app-shell input:focus-visible,
+.nx-app-shell textarea:focus-visible,
+.nx-app-shell select:focus-visible {
+  outline-color: #BBA6FF;
+}
+.nx-app-shell input:not([type="checkbox"]):not([type="radio"]),
+.nx-app-shell textarea,
+.nx-app-shell select {
+  border-color: var(--nx-edge);
+}
+.nx-app-shell input:not([type="checkbox"]):not([type="radio"]):focus,
+.nx-app-shell textarea:focus,
+.nx-app-shell select:focus {
+  border-color: rgba(164,139,230,.62);
+  box-shadow: 0 0 0 3px rgba(113,56,255,.12);
+}
+.nx-app-shell ::-webkit-scrollbar-thumb { background: rgba(164,139,230,.2); border-radius: 99px; }
+.nx-app-shell ::-webkit-scrollbar-thumb:hover { background: rgba(164,139,230,.34); }
+
+@media (min-width: 1280px) {
+  .nx-sidebar-shell { padding-left: 1.15rem; padding-right: 1.15rem; }
+}
+@media (max-width: 639px) {
+  .nx-feed-post { margin-bottom: 10px; border-radius: 14px; }
+  .nx-story-rail { padding-bottom: 2px; }
+}
