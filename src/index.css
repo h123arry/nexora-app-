@@ -2391,4 +2391,7 @@ body {
     animation: none;
     background-position: 50% 50%;
   }
+  .nx-loader-orbit::before {
+    animation: none;
+  }
 }
