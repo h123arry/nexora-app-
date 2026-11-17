@@ -306,3 +306,41 @@ button:disabled { cursor: not-allowed; }
 .nx-matrix-page [class*="from-violet-600"][class*="to-violet-950"] {
   background: rgba(113,56,255,.12) !important;
 }
+
+
+/* Wallet: present balances as a clean summary, not a stack of dashboard cards. */
+.nx-wallet-page > header {
+  padding: 0 0 1.25rem !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.14) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-wallet-page > header > span { display: none !important; }
+.nx-wallet-page > section[aria-label="Current balances"] { gap: 2rem !important; }
+.nx-wallet-page > section[aria-label="Current balances"] article,
+.nx-wallet-page > section[aria-label="Wallet totals"] > div {
+  padding: 1rem 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.12) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-wallet-page > section[aria-label="Current balances"] article h2 { color: var(--nx-muted) !important; }
+.nx-wallet-page > section[aria-label="Current balances"] article p:first-of-type {
+  margin-top: .8rem !important;
+  font-size: clamp(2rem, 5vw, 2.65rem) !important;
+  letter-spacing: -.045em !important;
+}
+.nx-wallet-page > section[aria-labelledby="ledger-title"] {
+  padding: 1.25rem 0 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-top: 1px solid rgba(164,139,230,.14) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-wallet-page > section[aria-labelledby="ledger-title"] li { border-color: rgba(164,139,230,.1) !important; }
+.nx-wallet-page > section[aria-labelledby="ledger-title"] li > span { background: rgba(113,56,255,.1) !important; }
