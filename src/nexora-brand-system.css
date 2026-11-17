@@ -471,3 +471,36 @@ button:disabled { cursor: not-allowed; }
 .nx-preferences-modal h2, .nx-preferences-modal h1, .nx-preferences-modal h3 { text-transform: none !important; }
 .nx-preferences-modal nav button { border-radius: 10px !important; }
 .nx-preferences-modal nav button span:first-child { font-weight: 600 !important; }
+
+
+/* Quick links: keep them lightweight, with no miniature card wall. */
+.nx-mini-services > .grid > button {
+  min-height: 0 !important;
+  padding: .65rem .4rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.11) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nx-mini-services > .grid > button:hover {
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(164,139,230,.2) !important;
+}
+.nx-mini-services > .grid > button > span:first-child {
+  width: 30px !important;
+  height: 30px !important;
+  margin-bottom: .35rem !important;
+  background: transparent !important;
+  color: var(--nx-violet-bright) !important;
+}
+.nx-mini-services > .grid > button > span:nth-child(2) {
+  font-family: inherit !important;
+  font-size: 10px !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  color: var(--nx-muted) !important;
+}
+.nx-mini-services > .grid > button > span:nth-child(3) { font-size: 13px !important; font-weight: 600 !important; }
+.nx-mini-services > .grid > button > span:nth-child(4) { font-size: 11px !important; line-height: 1.45 !important; }
+.nx-mini-services > div:first-child > p { font-family: inherit !important; letter-spacing: normal !important; text-transform: none !important; }
