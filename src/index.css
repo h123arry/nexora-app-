@@ -1865,3 +1865,211 @@ body {
     animation-duration: .01ms !important;
   }
 }
+
+
+/* NEXORA INBOX — premium two-pane messaging workspace. */
+.nx-inbox-shell {
+  min-height: min(760px,calc(100dvh - 110px));
+  border: 1px solid rgba(151,119,220,.16);
+  border-radius: 24px;
+  background: #07050f;
+  box-shadow: 0 22px 65px rgba(0,0,0,.22);
+  isolation: isolate;
+}
+.nx-inbox-sidebar {
+  min-width: 0;
+  border-color: rgba(151,119,220,.16);
+  background:
+    radial-gradient(ellipse at 0% 0%,rgba(113,56,255,.1),transparent 42%),
+    linear-gradient(180deg,#100b20 0%,#090714 100%);
+}
+.nx-inbox-sidebar > .nx-page-header {
+  min-height: 68px;
+  padding: 16px 18px;
+  border-color: rgba(151,119,220,.15);
+  background: rgba(9,7,20,.84);
+  box-shadow: 0 8px 26px rgba(0,0,0,.16);
+}
+.nx-inbox-sidebar > .nx-page-header h1 {
+  font-size: 16px;
+  letter-spacing: -.035em;
+}
+.nx-inbox-sidebar > .nx-page-header .nx-icon-button {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  border: 1px solid rgba(151,119,220,.18);
+  background: rgba(18,12,34,.8);
+  color: #c8b6ff;
+}
+.nx-inbox-sidebar > .nx-page-header .nx-icon-button:hover {
+  border-color: rgba(167,139,250,.45);
+  background: rgba(113,56,255,.16);
+  color: #fff;
+}
+.nx-inbox-sidebar > .p-3.border-b {
+  padding: 13px 14px;
+  border-color: rgba(151,119,220,.12);
+  background: rgba(5,4,11,.32);
+}
+.nx-inbox-sidebar .nx-segmented {
+  padding: 4px;
+  gap: 3px;
+  border: 1px solid rgba(151,119,220,.13);
+  border-radius: 14px;
+  background: rgba(5,4,11,.62);
+}
+.nx-inbox-sidebar .nx-segmented button {
+  min-height: 39px;
+  border-radius: 10px;
+  color: #a69bbd;
+  font-size: 11px;
+}
+.nx-inbox-sidebar .nx-segmented button[aria-selected="true"] {
+  background: linear-gradient(110deg,rgba(113,56,255,.36),rgba(36,91,255,.2));
+  box-shadow: inset 0 0 0 1px rgba(190,166,255,.14),0 5px 14px rgba(0,0,0,.18);
+  color: #fff;
+}
+.nx-inbox-sidebar .nx-field {
+  min-height: 43px;
+  border-radius: 13px;
+  padding-left: 38px;
+  border-color: rgba(151,119,220,.16);
+  background: rgba(17,12,31,.82);
+  color: #f5f0ff;
+}
+.nx-inbox-sidebar .nx-field:focus {
+  border-color: rgba(167,139,250,.6);
+  box-shadow: 0 0 0 3px rgba(113,56,255,.12);
+}
+.nx-inbox-sidebar > .flex-1.overflow-y-auto > button {
+  min-height: 82px;
+  padding: 13px 15px;
+  border-bottom: 1px solid rgba(151,119,220,.08);
+}
+.nx-inbox-sidebar > .flex-1.overflow-y-auto > button:hover {
+  background: rgba(113,56,255,.075);
+}
+.nx-inbox-sidebar > .flex-1.overflow-y-auto > button[aria-pressed="true"] {
+  background: linear-gradient(90deg,rgba(113,56,255,.18),rgba(36,91,255,.055));
+  border-left: 3px solid #8b5cf6;
+}
+.nx-inbox-sidebar > .flex-1.overflow-y-auto > button > div:first-child {
+  border-radius: 17px;
+  border-color: rgba(167,139,250,.2);
+  box-shadow: 0 7px 20px rgba(0,0,0,.2);
+}
+.nx-inbox-chat {
+  min-width: 0;
+  background:
+    radial-gradient(ellipse at 50% 0%,rgba(113,56,255,.075),transparent 48%),
+    #07050f;
+}
+.nx-inbox-chat > div:first-child {
+  min-height: 72px;
+  padding: 13px 18px;
+  border-color: rgba(151,119,220,.14);
+  background: rgba(9,7,20,.88);
+  box-shadow: 0 8px 24px rgba(0,0,0,.14);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.nx-inbox-chat > div:first-child > div:first-child > div:nth-child(2) {
+  border-radius: 15px;
+  border-color: rgba(167,139,250,.18);
+}
+.nx-inbox-chat > div:first-child button {
+  border: 1px solid rgba(151,119,220,.15);
+  border-radius: 12px;
+  background: rgba(18,12,34,.72);
+}
+.nx-inbox-chat > div:first-child button:hover {
+  border-color: rgba(167,139,250,.42);
+  color: #fff;
+  background: rgba(113,56,255,.13);
+}
+.nx-inbox-chat > div:nth-child(2) {
+  background:
+    radial-gradient(ellipse at 50% 0%,rgba(113,56,255,.055),transparent 48%),
+    #07050f;
+  padding: 20px clamp(14px,3vw,30px);
+  scrollbar-color: rgba(151,119,220,.28) transparent;
+}
+.nx-inbox-chat > div:last-child {
+  border-color: rgba(151,119,220,.14);
+  background: rgba(9,7,20,.94);
+  padding: 13px 16px max(13px,env(safe-area-inset-bottom));
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.nx-inbox-chat input[aria-label="Message"] {
+  min-height: 46px;
+  border-radius: 999px;
+  padding-inline: 17px;
+  border-color: rgba(151,119,220,.2);
+  background: #100b20;
+  font-size: 13px;
+}
+.nx-inbox-chat input[aria-label="Message"]:focus {
+  border-color: rgba(167,139,250,.58);
+  box-shadow: 0 0 0 3px rgba(113,56,255,.12);
+}
+.nx-inbox-chat button[aria-label="Send message"] {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg,#7138FF,#315BFF);
+  box-shadow: 0 5px 18px rgba(75,16,242,.2);
+}
+.nx-inbox-chat button[aria-label="Open attachment options"],
+.nx-inbox-chat button[aria-label*="emoji picker"],
+.nx-inbox-chat button[aria-label="Record a voice note"] {
+  min-width: 42px;
+  min-height: 42px;
+  border: 1px solid rgba(151,119,220,.13);
+  border-radius: 50%;
+  background: rgba(18,12,34,.76);
+}
+.nx-inbox-chat button:focus-visible,
+.nx-inbox-sidebar button:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+.nx-inbox-shell > div {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(151,119,220,.25) transparent;
+}
+@media (max-width: 767px) {
+  .nx-inbox-shell {
+    min-height: calc(100dvh - 78px);
+    height: calc(100dvh - 78px);
+    border-radius: 18px;
+    border-inline: 0;
+  }
+  .nx-inbox-sidebar {
+    width: 100%;
+    border-right: 0;
+  }
+  .nx-inbox-sidebar > .nx-page-header {
+    padding: 13px 15px;
+  }
+  .nx-inbox-sidebar > .flex-1.overflow-y-auto > button {
+    min-height: 78px;
+    padding: 12px 14px;
+  }
+  .nx-inbox-chat > div:first-child {
+    min-height: 64px;
+    padding: 10px 12px;
+  }
+  .nx-inbox-chat > div:nth-child(2) {
+    padding: 14px 12px;
+  }
+  .nx-inbox-chat > div:last-child {
+    padding: 10px 10px max(12px,env(safe-area-inset-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-inbox-shell *,
+  .nx-inbox-shell *::before,
+  .nx-inbox-shell *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
