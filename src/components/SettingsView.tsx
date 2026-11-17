@@ -18,15 +18,17 @@ interface SettingsViewProps {
   theme: ThemeMood;
   setTheme: (theme: ThemeMood) => void;
   onUpdateProfile?: (updatedData: Partial<UserType>) => void;
+  initialSection?: 'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta' | 'origin';
 }
 
 export default function SettingsView({
   currentUser,
   theme,
   setTheme,
-  onUpdateProfile
+  onUpdateProfile,
+  initialSection = 'account'
 }: SettingsViewProps) {
-  const [activeSection, setActiveSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta' | 'origin'>('account');
+  const [activeSection, setActiveSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta' | 'origin'>(initialSection);
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
   const [isPrivateAccount, setIsPrivateAccount] = useState(false);
   const [allowDms, setAllowDms] = useState(true);
@@ -74,7 +76,12 @@ export default function SettingsView({
 
   useEffect(() => {
     let active = true;
-    AuthService.getCurrentUser()?.getIdTokenResult(true).then(token => {
+    const firebaseUser = AuthService.getCurrentUser();
+    if (!firebaseUser) {
+      setCanIssueBetaInvite(false);
+      return () => { active = false; };
+    }
+    firebaseUser.getIdTokenResult(true).then(token => {
       const role = token.claims.role;
       if (active) setCanIssueBetaInvite(token.claims.admin === true || token.claims.founder === true || role === 'admin' || role === 'founder');
     }).catch(() => { if (active) setCanIssueBetaInvite(false); });
