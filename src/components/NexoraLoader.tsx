@@ -10,11 +10,11 @@ interface NexoraLoaderProps {
 
 export default function NexoraLoader({ size = 'md', className = '', center = false, label }: NexoraLoaderProps) {
   const sizeMap = {
-    xs: 'w-4 h-4',
-    sm: 'w-5 h-5',
-    md: 'w-7 h-7',
-    lg: 'w-9 h-9',
-    xl: 'w-12 h-12',
+    xs: 'w-5 h-5',
+    sm: 'w-6 h-6',
+    md: 'w-8 h-8',
+    lg: 'w-10 h-10',
+    xl: 'w-14 h-14',
   };
 
   const content = (
@@ -24,7 +24,10 @@ export default function NexoraLoader({ size = 'md', className = '', center = fal
       aria-label={label || 'Loading NEXORA'}
       className={`inline-flex flex-col items-center justify-center gap-2 ${className}`}
     >
-      <NexoraPremiumLogo className={`nx-loader-mark ${sizeMap[size] || sizeMap.md}`} />
+      {/* The N stays still; the surrounding signal ring makes this a clear loading state. */}
+      <span className={`nx-loader-orbit relative inline-flex items-center justify-center rounded-full ${sizeMap[size] || sizeMap.md}`} aria-hidden="true">
+        <NexoraPremiumLogo className="nx-loader-mark relative z-10 h-[58%] w-[58%]" />
+      </span>
       {label && (
         <span className="text-[10px] font-mono font-medium text-violet-300/80 tracking-wider uppercase">
           {label}
