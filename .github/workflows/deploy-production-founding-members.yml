@@ -1,0 +1,88 @@
+name: Deploy NEXORA Production Founding Member Function
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_production_deploy:
+        description: Confirm deployment of the Founding 300 account-provisioning function to NEXORA production
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: nexora-production-functions-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: inputs.confirm_production_deploy == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: nexora-production
+    env:
+      NEXORA_ENV: production
+      NODE_ENV: production
+      NEXORA_PRODUCTION_PROJECT_ID: nexora-prod-voiceharrison
+      GCLOUD_PROJECT: nexora-prod-voiceharrison
+      FIRESTORE_DATABASE_ID: default
+      FIREBASE_STORAGE_BUCKET: nexora-prod-voiceharrison.appspot.com
+    steps:
+      - name: Check out reviewed production release
+        uses: actions/checkout@v4
+
+      - name: Require the pinned NEXORA production target
+        run: |
+          test "$NEXORA_PRODUCTION_PROJECT_ID" = "nexora-prod-voiceharrison"
+          test "$GCLOUD_PROJECT" = "$NEXORA_PRODUCTION_PROJECT_ID"
+          test "$FIRESTORE_DATABASE_ID" = "default"
+          test "$FIREBASE_STORAGE_BUCKET" = "nexora-prod-voiceharrison.appspot.com"
+          test -n "${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}"
+          test -n "${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}"
+
+      - name: Authenticate to Google Cloud using production Workload Identity Federation
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}
+          project_id: nexora-prod-voiceharrison
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: nexora-prod-voiceharrison
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Install and build trusted Firebase Functions
+        run: |
+          npm ci --prefix functions --no-audit --no-fund
+          npm run functions:build
+
+      - name: Prepare explicit production Functions runtime configuration
+        run: |
+          printf 'NEXORA_ENV=production\nGCLOUD_PROJECT=%s\nFIRESTORE_DATABASE_ID=%s\nFIREBASE_STORAGE_BUCKET=%s\n' \
+            "$NEXORA_PRODUCTION_PROJECT_ID" "$FIRESTORE_DATABASE_ID" "$FIREBASE_STORAGE_BUCKET" \
+            > "functions/.env.$NEXORA_PRODUCTION_PROJECT_ID"
+
+      - name: Deploy only the reviewed Founding 300 callable
+        run: |
+          npx --yes firebase-tools@15.33.0 deploy \
+            --only functions:createFoundingMemberAccount \
+            --project "$NEXORA_PRODUCTION_PROJECT_ID" \
+            --non-interactive
+
+      - name: Record deployment target
+        run: |
+          echo "## NEXORA production Functions deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Project: $NEXORA_PRODUCTION_PROJECT_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Firestore database: $FIRESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Deployed callable: createFoundingMemberAccount" >> "$GITHUB_STEP_SUMMARY"
