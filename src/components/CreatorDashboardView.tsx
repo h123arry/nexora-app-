@@ -680,7 +680,7 @@ export default function CreatorDashboardView({
   );
 
   return (
-    <div className="nx-screen-creator text-white space-y-6 max-w-6xl mx-auto pb-16">
+    <div className="nx-creator-page nx-screen-creator text-white space-y-6 max-w-6xl mx-auto pb-16">
       {/* 1. Header Area with dynamic recovery bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/30 to-zinc-950/40 border border-white/10 backdrop-blur-md">
         <div>
@@ -816,12 +816,12 @@ export default function CreatorDashboardView({
                   return (
                     <div key={i} className="p-5 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-2 relative overflow-hidden group hover:border-white/10 transition-colors">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-zinc-500 font-extrabold uppercase tracking-widest">{card.label}</span>
+                        <span className="text-xs text-zinc-400 font-semibold tracking-wide">{card.label}</span>
                         <Icon className={`w-4 h-4 ${card.color}`} />
                       </div>
                       <div className="space-y-1">
                         <p className="text-2xl font-black text-white">{card.val}</p>
-                        <p className="text-[10px] text-zinc-500 font-mono">{card.sub}</p>
+                        <p className="text-xs text-zinc-500 font-sans">{card.sub}</p>
                       </div>
                       <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-600 to-pink-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
