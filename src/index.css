@@ -1273,3 +1273,302 @@ body {
     animation-iteration-count: 1 !important;
   }
 }
+
+
+/* NEXORA EXPLORE — visual discovery, topic momentum and creator-led browsing. */
+#explore-view-master-panel {
+  max-width: 1080px;
+  padding-top: 10px;
+  color: #f5f0ff;
+}
+#explore-view-master-panel .nx-page-header {
+  margin-inline: -1rem;
+  padding: 16px 1rem 15px;
+  border-color: rgba(151,119,220,.15);
+  background: rgba(5,4,11,.94);
+  box-shadow: 0 16px 40px rgba(0,0,0,.24);
+  -webkit-backdrop-filter: blur(24px) saturate(125%);
+  backdrop-filter: blur(24px) saturate(125%);
+}
+#explore-view-master-panel .nx-page-header > div:first-child {
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 3px;
+}
+#explore-view-master-panel .nx-page-header > div:first-child > span:first-child {
+  font-size: 23px;
+  letter-spacing: -.065em;
+  filter: drop-shadow(0 5px 18px rgba(113,56,255,.2));
+}
+#explore-view-master-panel .nx-page-header .nx-eyebrow {
+  color: #b9a6ef;
+  font-size: 10px;
+  letter-spacing: .2em;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+#explore-view-master-panel .nx-page-header .nx-field {
+  min-height: 50px;
+  border-radius: 16px;
+  padding-left: 46px;
+  padding-right: 44px;
+  background: linear-gradient(110deg,rgba(18,12,34,.98),rgba(10,9,23,.98));
+  border: 1px solid rgba(151,119,220,.2);
+  color: #f5f0ff;
+  box-shadow: inset 0 1px rgba(255,255,255,.025),0 8px 24px rgba(0,0,0,.14);
+  font-size: 14px;
+}
+#explore-view-master-panel .nx-page-header .nx-field::placeholder {
+  color: #8f86a8;
+}
+#explore-view-master-panel .nx-page-header .nx-field:focus {
+  border-color: rgba(167,139,250,.65);
+  box-shadow: 0 0 0 3px rgba(113,56,255,.13),0 12px 28px rgba(0,0,0,.2);
+  outline: none;
+}
+#explore-view-master-panel .nx-page-header [role="group"] {
+  gap: 8px;
+  padding-top: 2px;
+  padding-bottom: 3px;
+  scrollbar-width: none;
+}
+#explore-view-master-panel .nx-explore-filter {
+  min-height: 37px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(151,119,220,.16);
+  background: rgba(17,12,31,.72);
+  color: #aaa1bd;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .015em;
+  text-transform: none;
+  transition: color 160ms ease,border-color 160ms ease,background 160ms ease,box-shadow 160ms ease;
+}
+#explore-view-master-panel .nx-explore-filter[aria-pressed="true"] {
+  color: #fff;
+  border-color: rgba(167,139,250,.5);
+  background: linear-gradient(110deg,rgba(113,56,255,.24),rgba(36,91,255,.15));
+  box-shadow: inset 0 0 0 1px rgba(190,166,255,.07),0 5px 16px rgba(75,16,242,.12);
+}
+#explore-view-master-panel .nx-explore-filter:hover:not([aria-pressed="true"]) {
+  color: #e9e2ff;
+  border-color: rgba(167,139,250,.3);
+  background: rgba(113,56,255,.1);
+}
+#explore-view-master-panel > .space-y-6 {
+  padding-top: 22px;
+}
+#explore-view-master-panel .nx-surface,
+#explore-view-master-panel .nx-soft-card {
+  border: 1px solid rgba(151,119,220,.15);
+  background: linear-gradient(145deg,rgba(17,12,31,.94),rgba(8,6,16,.98));
+  box-shadow: 0 12px 34px rgba(0,0,0,.16);
+}
+#explore-view-master-panel .nx-soft-card:hover,
+#explore-view-master-panel .nx-surface:hover {
+  border-color: rgba(138,63,252,.32);
+}
+#explore-view-master-panel .nx-soft-card {
+  border-radius: 18px;
+}
+#explore-view-master-panel > .space-y-6 > .grid:first-child {
+  gap: 12px;
+}
+#explore-view-master-panel > .space-y-6 > .grid:first-child > button {
+  min-height: 88px;
+  padding: 17px;
+  border-radius: 20px;
+  border-color: rgba(151,119,220,.16);
+  background:
+    radial-gradient(circle at 100% 0%,rgba(113,56,255,.13),transparent 55%),
+    linear-gradient(145deg,rgba(17,12,31,.92),rgba(8,6,16,.98));
+  box-shadow: 0 12px 30px rgba(0,0,0,.16);
+}
+#explore-view-master-panel > .space-y-6 > .grid:first-child > button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(167,139,250,.42);
+  background:
+    radial-gradient(circle at 100% 0%,rgba(113,56,255,.2),transparent 55%),
+    linear-gradient(145deg,#17102b,#090714);
+}
+#explore-view-master-panel > .space-y-6 > .grid:first-child > button > span:first-child {
+  width: 46px;
+  height: 46px;
+  border-radius: 15px;
+  background: linear-gradient(145deg,rgba(113,56,255,.24),rgba(36,91,255,.13));
+  border: 1px solid rgba(167,139,250,.17);
+}
+#explore-view-master-panel > .space-y-6 > .nx-surface.rounded-3xl {
+  padding: clamp(18px,3vw,26px);
+  border-radius: 23px;
+  background:
+    radial-gradient(ellipse at 100% 0%,rgba(113,56,255,.13),transparent 45%),
+    linear-gradient(145deg,rgba(17,12,31,.96),rgba(7,5,14,.98));
+}
+#explore-view-master-panel > .space-y-6 > .nx-surface.rounded-3xl h3 {
+  color: #d4c6ff;
+  letter-spacing: .14em;
+}
+#explore-view-master-panel > .space-y-6 > .nx-surface.rounded-3xl h3 svg {
+  color: #b99aff;
+  filter: drop-shadow(0 0 10px rgba(138,63,252,.3));
+}
+#explore-view-master-panel > .space-y-6 > .nx-surface.rounded-3xl button {
+  min-height: 43px;
+  border-radius: 13px;
+  padding: 11px 13px;
+  border-color: rgba(151,119,220,.13);
+  background: rgba(5,4,11,.34);
+}
+#explore-view-master-panel > .space-y-6 > .nx-surface.rounded-3xl button:hover {
+  border-color: rgba(167,139,250,.34);
+  background: rgba(113,56,255,.12);
+}
+#explore-view-master-panel > .space-y-6 > .nx-surface.rounded-3xl button > span:first-child {
+  color: #c8b6ff;
+  font-weight: 700;
+}
+#explore-view-master-panel > .space-y-6 > .nx-surface.rounded-3xl button > span:last-child {
+  color: #9e94b5;
+}
+#explore-view-master-panel > .space-y-6 > .space-y-3 > .flex.gap-3 > div {
+  min-height: 205px;
+  width: 164px;
+  padding: 18px 15px;
+  border-radius: 20px;
+  border-color: rgba(151,119,220,.15);
+  background: linear-gradient(155deg,rgba(20,14,39,.96),rgba(8,6,16,.98));
+}
+#explore-view-master-panel > .space-y-6 > .space-y-3 > .flex.gap-3 > div:hover {
+  transform: translateY(-3px);
+  border-color: rgba(167,139,250,.35);
+  box-shadow: 0 18px 38px rgba(0,0,0,.28);
+}
+#explore-view-master-panel > .space-y-6 > .space-y-3 > .flex.gap-3 > div > img {
+  width: 58px;
+  height: 58px;
+  border-radius: 19px;
+  box-shadow: 0 0 0 1px rgba(167,139,250,.22),0 8px 18px rgba(0,0,0,.2);
+}
+#explore-view-master-panel > .space-y-6 > .space-y-3 > .flex.gap-3 > div > button {
+  min-height: 36px;
+  border-radius: 999px;
+  background: linear-gradient(110deg,#7138FF,#315BFF);
+  box-shadow: 0 5px 16px rgba(75,16,242,.18);
+}
+#explore-view-master-panel #explore-search-results {
+  padding-top: 8px;
+}
+#explore-view-master-panel #explore-search-results > div:first-child {
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(151,119,220,.13);
+  border-radius: 15px;
+  background: rgba(17,12,31,.65);
+}
+#explore-view-master-panel #explore-search-results > div:first-child h2 {
+  color: #c8b6ff;
+  font-size: 10px;
+  line-height: 1.5;
+}
+#explore-view-master-panel #explore-search-results section > div:first-child {
+  border-color: rgba(151,119,220,.18);
+}
+#explore-view-master-panel #explore-search-results section > div:first-child h3,
+#explore-view-master-panel #explore-search-results > div > div > h3 {
+  color: #c8b6ff;
+  letter-spacing: .13em;
+}
+#explore-view-master-panel #explore-search-results .nx-soft-card {
+  padding: 15px;
+  border-radius: 17px;
+  background: linear-gradient(145deg,rgba(18,13,34,.94),rgba(8,6,16,.98));
+}
+#explore-view-master-panel #explore-search-results .nx-soft-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(167,139,250,.4);
+}
+#explore-view-master-panel #explore-search-results .nx-surface {
+  border-radius: 18px;
+  background: linear-gradient(145deg,rgba(17,12,31,.94),rgba(8,6,16,.98));
+}
+#explore-view-master-panel #explore-search-results [role="status"],
+#explore-view-master-panel #explore-search-results [role="alert"] {
+  padding: 11px 14px;
+  border-radius: 13px;
+  border: 1px solid rgba(151,119,220,.14);
+  background: rgba(17,12,31,.68);
+}
+#explore-view-master-panel #explore-search-results button:focus-visible,
+#explore-view-master-panel .nx-page-header button:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+#explore-view-master-panel .nx-page-header,
+#explore-view-master-panel .nx-explore-filter,
+#explore-view-master-panel .nx-soft-card,
+#explore-view-master-panel .nx-surface {
+  transition: border-color 180ms ease,background-color 180ms ease,box-shadow 180ms ease,transform 180ms ease;
+}
+@media (min-width: 768px) {
+  #explore-view-master-panel .nx-page-header {
+    margin-inline: -1.5rem;
+    padding-inline: 1.5rem;
+    border-radius: 0 0 22px 22px;
+  }
+  #explore-view-master-panel > .space-y-6 {
+    padding-top: 26px;
+  }
+}
+@media (max-width: 640px) {
+  #explore-view-master-panel {
+    padding-inline: 12px;
+    padding-top: 0;
+  }
+  #explore-view-master-panel .nx-page-header {
+    margin-inline: -12px;
+    padding: 14px 14px 12px;
+  }
+  #explore-view-master-panel .nx-page-header .nx-field {
+    min-height: 48px;
+    border-radius: 15px;
+  }
+  #explore-view-master-panel .nx-explore-filter {
+    min-height: 36px;
+    padding-inline: 12px;
+    font-size: 10px;
+  }
+  #explore-view-master-panel > .space-y-6 {
+    padding-top: 17px;
+    gap: 19px;
+  }
+  #explore-view-master-panel > .space-y-6 > .grid:first-child > button {
+    min-height: 82px;
+    padding: 12px;
+    gap: 9px;
+    border-radius: 17px;
+  }
+  #explore-view-master-panel > .space-y-6 > .grid:first-child > button > span:last-child > span:first-child {
+    font-size: 12px;
+  }
+  #explore-view-master-panel > .space-y-6 > .nx-surface.rounded-3xl {
+    padding: 17px 14px;
+    border-radius: 19px;
+  }
+  #explore-view-master-panel > .space-y-6 > .space-y-3 > .flex.gap-3 > div {
+    width: 148px;
+    min-height: 195px;
+    padding: 15px 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #explore-view-master-panel .nx-page-header,
+  #explore-view-master-panel .nx-explore-filter,
+  #explore-view-master-panel .nx-soft-card,
+  #explore-view-master-panel .nx-surface { transition: none !important; }
+  #explore-view-master-panel > .space-y-6 > .grid:first-child > button:hover,
+  #explore-view-master-panel > .space-y-6 > .space-y-3 > .flex.gap-3 > div:hover { transform: none; }
+}
