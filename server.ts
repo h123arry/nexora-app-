@@ -142,7 +142,7 @@ async function requireFirebaseUser(req: express.Request, res: express.Response, 
     const cutoff = accountStatus.sessionsRevokedAfter;
     if (cutoff && typeof (cutoff as { toMillis?: unknown }).toMillis === 'function') {
       const cutoffSeconds = (cutoff as { toMillis: () => number }).toMillis() / 1000;
-      if (!Number.isSafeInteger(decoded.auth_time) || decoded.auth_time < cutoffSeconds) {
+      if (!Number.isSafeInteger(decoded.auth_time) || decoded.auth_time <= cutoffSeconds) {
         return res.status(401).json({ error: 'Your session has been revoked. Sign in again to continue.' });
       }
     }
