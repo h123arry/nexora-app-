@@ -65,7 +65,9 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             if (currentSequence === sequence) setInitializing(false);
             return;
           }
-          const profile = await ProfileService.getOrCreateProfile(fbUser);
+          const profile = fbUser.isAnonymous
+            ? await ProfileService.getProfile(fbUser.uid)
+            : await ProfileService.getOrCreateProfile(fbUser);
           if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setUser(profile);
         } catch {
           if (currentSequence === sequence) setError('Unable to load your account profile. Please retry or sign out.');
