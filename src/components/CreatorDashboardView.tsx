@@ -680,7 +680,7 @@ export default function CreatorDashboardView({
   );
 
   return (
-    <div className="text-white space-y-6 max-w-6xl mx-auto pb-16">
+    <div className="nx-screen-creator text-white space-y-6 max-w-6xl mx-auto pb-16">
       {/* 1. Header Area with dynamic recovery bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/30 to-zinc-950/40 border border-white/10 backdrop-blur-md">
         <div>
