@@ -460,3 +460,14 @@ button:disabled { cursor: not-allowed; }
   box-shadow: none !important;
 }
 .nx-live-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+
+
+/* Preferences: make the panel feel like part of the app, not a sci-fi console. */
+.nx-preferences-modal > [class*="max-w-2xl"] {
+  border-radius: 22px !important;
+  box-shadow: 0 24px 80px rgba(0,0,0,.42) !important;
+}
+.nx-preferences-modal [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+.nx-preferences-modal h2, .nx-preferences-modal h1, .nx-preferences-modal h3 { text-transform: none !important; }
+.nx-preferences-modal nav button { border-radius: 10px !important; }
+.nx-preferences-modal nav button span:first-child { font-weight: 600 !important; }
