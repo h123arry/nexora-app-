@@ -4,6 +4,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import './nexora-brand-system.css';
 import {FirebaseProvider} from './context/FirebaseContext.tsx';
 import {ErrorBoundary} from './components/ErrorBoundary.tsx';
 
