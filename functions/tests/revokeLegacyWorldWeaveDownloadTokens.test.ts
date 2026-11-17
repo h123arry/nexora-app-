@@ -141,12 +141,21 @@ describe('legacy WorldWeave download-token migration', () => {
       id: unsafe.id, weaveId: weave.id, authorId: 'legacy-media-author',
       mediaType: 'image', mediaUrl: tokenUrl(unsafePath), storagePath: unsafePath,
     });
+    const foreignBucket = weave.collection('moments').doc('foreign-bucket');
+    const foreignBucketPath = 'users/legacy-media-author/media/foreign-bucket';
+    await foreignBucket.set({
+      id: foreignBucket.id, weaveId: weave.id, authorId: 'legacy-media-author',
+      mediaType: 'image',
+      mediaUrl: `https://firebasestorage.googleapis.com/v0/b/another-bucket/o/${encodeURIComponent(foreignBucketPath)}?alt=media&token=foreign-token`,
+      storagePath: foreignBucketPath,
+    });
 
     const summary = await runLegacyWorldWeaveMediaMigration(db, bucket, { dryRun: false, maxMoments: 10 });
     assert.equal(summary.missingObject, 1);
-    assert.equal(summary.unsafeReference, 1);
+    assert.equal(summary.unsafeReference, 2);
     assert.equal((await missing.get()).get('mediaUrl'), tokenUrl(missingPath));
     assert.equal((await unsafe.get()).get('mediaUrl'), tokenUrl(unsafePath));
+    assert.equal((await foreignBucket.get()).get('mediaUrl'), `https://firebasestorage.googleapis.com/v0/b/another-bucket/o/${encodeURIComponent(foreignBucketPath)}?alt=media&token=foreign-token`);
   });
 
   it('enforces the maximum inspected-record bound', async () => {
