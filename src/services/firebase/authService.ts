@@ -566,6 +566,53 @@ export class AuthService {
       .filter(providerId => typeof providerId === 'string' && providerId.length > 0);
   }
 
+  /** Link an email/password credential to the current UID; never create a replacement account. */
+  static async linkEmailAccount(email: string, password: string): Promise<void> {
+    this.requireConfigured();
+    const currentUser = auth.currentUser;
+    const cleanEmail = email.trim().toLowerCase();
+    if (!currentUser) throw new Error('Sign in before adding an email address.');
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) throw new Error('Enter a valid email address.');
+    if (password.length < 8) throw new Error('Choose a password with at least 8 characters.');
+    try {
+      const result = await linkWithCredential(currentUser, EmailAuthProvider.credential(cleanEmail, password));
+      await sendEmailVerification(result.user);
+      await result.user.getIdToken(true);
+    } catch (error) {
+      const code = (error as { code?: string })?.code;
+      if (code === 'auth/credential-already-in-use' || code === 'auth/email-already-in-use') {
+        throw new Error('That email already belongs to another NEXORA account. Sign in to that account instead; NEXORA will not merge accounts automatically.');
+      }
+      throw this.publicAuthError(error);
+    }
+  }
+
+  /** Begin SMS verification by linking the phone credential to the existing UID. */
+  static async sendPhoneLinkCode(phoneNumber: string, verifier: RecaptchaVerifier): Promise<ConfirmationResult> {
+    this.requireConfigured();
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Sign in before adding a phone number.');
+    try {
+      return await linkWithPhoneNumber(currentUser, phoneNumber, verifier);
+    } catch (error) {
+      throw this.publicAuthError(error);
+    }
+  }
+
+  static async confirmPhoneLink(confirmation: ConfirmationResult, code: string): Promise<void> {
+    this.requireConfigured();
+    try {
+      const result = await confirmation.confirm(code.trim());
+      await result.user.getIdToken(true);
+    } catch (error) {
+      const codeValue = (error as { code?: string })?.code;
+      if (codeValue === 'auth/credential-already-in-use' || codeValue === 'auth/phone-number-already-exists') {
+        throw new Error('That phone number is already connected to another NEXORA account. Sign in to that account instead.');
+      }
+      throw this.publicAuthError(error);
+    }
+  }
+
   /** Link Google to the currently signed-in account; never create or merge a second NEXORA account. */
   static async revokeAllSessions(): Promise<void> {
     this.requireConfigured();
