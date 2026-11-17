@@ -19,7 +19,8 @@ test('denies old and malformed auth times after the server cutoff but permits fr
   assert.equal(callableSessionStatusAllows(status, 199), false);
   assert.equal(callableSessionStatusAllows(status, undefined), false);
   assert.equal(callableSessionStatusAllows(status, '200'), false);
-  assert.equal(callableSessionStatusAllows(status, 200), true);
+  assert.equal(callableSessionStatusAllows(status, 200), false);
+  assert.equal(callableSessionStatusAllows(status, 201), true);
   assert.equal(callableSessionStatusAllows(status, 201), true);
 });
 
