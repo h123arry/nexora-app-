@@ -574,7 +574,7 @@ export class AuthService {
     const currentUser = auth.currentUser;
     const cleanEmail = email.trim().toLowerCase();
     if (!currentUser) throw new Error('Sign in before adding an email address.');
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(cleanEmail)) throw new Error('Enter a valid email address.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) throw new Error('Enter a valid email address.');
     if (password.length < 8) throw new Error('Choose a password with at least 8 characters.');
     try {
       const result = await linkWithCredential(currentUser, EmailAuthProvider.credential(cleanEmail, password));
