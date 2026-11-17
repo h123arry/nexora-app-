@@ -69,11 +69,13 @@ before(async () => {
   await db.doc('users/media-owner/settings/preferences').set({
     privacy: { blockedUserIds: ['media-author'] },
   });
+  await db.doc('accountStatus/media-suspended').set({ banned: true });
 });
 
 after(async () => {
   await db.recursiveDelete(weave);
   await db.recursiveDelete(db.doc('users/media-owner'));
+  await db.doc('accountStatus/media-suspended').delete();
   await deleteApp(app);
 });
 
@@ -82,6 +84,13 @@ describe('WorldWeave media resolver authorization', () => {
     await assert.rejects(
       callResolver('media-outsider', { weaveId: weave.id, momentId: 'private-image' }),
       /no longer have access/,
+    );
+  });
+
+  it('denies a suspended viewer before attempting to sign the Storage object', async () => {
+    await assert.rejects(
+      callResolver('media-suspended', { weaveId: weave.id, momentId: 'private-image' }),
+      /unavailable/,
     );
   });
 
