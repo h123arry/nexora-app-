@@ -58,7 +58,7 @@ const duplicates = [...duplicateGroups.values()].filter(group => group.length > 
 const large = files.filter(file => file.size >= LARGE_FILE_WARNING);
 const format = bytes => (bytes / MiB).toFixed(2) + " MiB";
 
-console.log("\\nNEXORA repository media audit");
+console.log("\nNEXORA repository media audit");
 console.log("=============================");
 console.log(`Media files: ${files.length}`);
 console.log(`Combined media size: ${format(total)}`);
@@ -66,13 +66,13 @@ console.log(`Files at least 5 MiB: ${large.length}`);
 console.log(`Byte-identical duplicate groups: ${duplicates.length}`);
 
 if (large.length) {
-  console.log("\\nLargest assets:");
+  console.log("\nLargest assets:");
   for (const file of large.slice(0, 30)) {
     console.log(`  ${format(file.size).padStart(10)}  ${file.path}`);
   }
 }
 if (duplicates.length) {
-  console.log("\\nExact duplicate files (same SHA-256):");
+  console.log("\nExact duplicate files (same SHA-256):");
   for (const group of duplicates) {
     console.log(`  ${format(group[0].size)} each`);
     for (const file of group) console.log(`    - ${file.path}`);
