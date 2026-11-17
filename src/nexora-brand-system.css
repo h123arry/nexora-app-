@@ -376,3 +376,74 @@ button:disabled { cursor: not-allowed; }
   box-shadow: none !important;
 }
 .nx-notifications-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+
+
+/* Settings: clear section links and a quiet content area. */
+.nx-settings-page > .nx-settings-heading {
+  padding: 0 0 1.25rem !important;
+  border-bottom: 1px solid rgba(164,139,230,.14) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-settings-page > .grid { gap: 1.5rem !important; }
+.nx-settings-page > .grid > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem !important;
+}
+.nx-settings-page > .grid > div:first-child > button {
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: .75rem .65rem !important;
+}
+.nx-settings-page > .grid > div:first-child > button:hover {
+  background: rgba(255,255,255,.045) !important;
+}
+.nx-settings-page > .grid > div:first-child > button > div:first-child > div:first-child {
+  background: transparent !important;
+  color: var(--nx-muted) !important;
+  padding: .25rem !important;
+}
+.nx-settings-page > .grid > div:first-child > button span:first-child { font-size: 13px !important; }
+.nx-settings-page > .grid > div:first-child > button span:last-child { font-size: 11px !important; }
+.nx-settings-page > .grid > .nx-settings-content {
+  padding: .5rem 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-settings-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+
+/* Creator overview: remove the mini-dashboard tile aesthetic. */
+.nx-creator-page [class*="grid"] > [class*="rounded-2xl"][class*="border"] {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.13) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.nx-creator-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+
+/* Saved content: open page layout with simple collection tools. */
+.nx-saved-page > div:first-child {
+  padding: 0 0 1.25rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.14) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nx-saved-page > section[aria-label="Saved collections"] {
+  padding: 1rem 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(164,139,230,.13) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nx-saved-page article { border-radius: 12px !important; }
+.nx-saved-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
