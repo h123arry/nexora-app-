@@ -41,7 +41,8 @@
     "mobile:assets:android": "capacitor-assets generate --android --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#000000' --splashBackgroundColorDark '#000000' --logoSplashScale 0.64",
     "mobile:assets:ios": "capacitor-assets generate --ios --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#000000' --splashBackgroundColorDark '#000000' --logoSplashScale 0.64",
     "mobile:assets:pwa": "capacitor-assets generate --pwa --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#000000' --splashBackgroundColorDark '#000000' --logoSplashScale 0.64 && node scripts/sync-nexora-brand-assets.mjs",
-    "test:branding": "node --test tests/nexora-branding-assets.test.mjs"
+    "test:branding": "node --test tests/nexora-branding-assets.test.mjs",
+    "audit:assets": "node scripts/audit-repository-assets.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
