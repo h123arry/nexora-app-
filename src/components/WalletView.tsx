@@ -63,7 +63,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
     : '0';
 
   return (
-    <main className="nx-page-shell mx-auto w-full max-w-4xl space-y-6 px-4 pb-28 pt-6 sm:px-6 sm:pb-12" aria-labelledby="wallet-title">
+    <main className="nx-wallet-page nx-page-shell mx-auto w-full max-w-4xl space-y-6 px-4 pb-28 pt-6 sm:px-6 sm:pb-12" aria-labelledby="wallet-title">
       <header className="flex flex-col gap-3 rounded-2xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-5 text-left sm:flex-row sm:items-center">
         <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-[var(--nx-edge)] bg-[var(--nx-surface-2)] text-[var(--nx-violet-bright)]"><Wallet aria-hidden="true" /></span>
         <div className="min-w-0 flex-1">
