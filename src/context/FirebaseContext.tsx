@@ -54,7 +54,9 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
       const currentSequence = ++sequence;
       setFirebaseUser(fbUser);
-      setUser(null);
+      // Preserve the loaded profile during token refreshes for the same UID.
+      // A different account (or sign-out) still clears the previous profile.
+      setUser(current => current?.id === fbUser?.uid ? current : null);
       setError(null);
       setInitializing(true);
       if (fbUser) {
@@ -62,7 +64,10 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const token = await fbUser.getIdTokenResult();
           const isApprovedBetaMember = token.claims.betaMember === true;
           if (fbUser.isAnonymous && !isApprovedBetaMember) {
-            if (currentSequence === sequence) setInitializing(false);
+            if (currentSequence === sequence) {
+              setUser(null);
+              setInitializing(false);
+            }
             return;
           }
           const profile = fbUser.isAnonymous
