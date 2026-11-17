@@ -2325,3 +2325,49 @@ body {
   .nx-profile-shell *::before,
   .nx-profile-shell *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+
+/* NEXORA identity: use the existing mark's luminance as its transparency mask.
+   This removes the source PNG's black canvas while retaining its exact silhouette. */
+.nx-brand-mark {
+  display: inline-block;
+  flex: 0 0 auto;
+  aspect-ratio: 1 / 1;
+  background-image: linear-gradient(135deg, #7138FF 0%, #A855F7 34%, #8B5CF6 62%, #4B22C9 100%);
+  background-size: 100% 100%;
+  background-position: 50% 50%;
+  -webkit-mask-image: url('/nexora-mark.png');
+  mask-image: url('/nexora-mark.png');
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  mask-mode: luminance;
+  -webkit-mask-mode: luminance;
+}
+
+.nx-loader-mark {
+  background-image: linear-gradient(135deg, #7138FF 0%, #A855F7 28%, #C084FC 48%, #7138FF 72%, #4B22C9 100%);
+  background-size: 240% 240%;
+  animation: nx-loader-signal-flow 2.4s ease-in-out infinite, nx-loader-signal-glow 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 7px rgba(113, 56, 255, 0.32));
+}
+
+@keyframes nx-loader-signal-flow {
+  0%, 100% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+}
+
+@keyframes nx-loader-signal-glow {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(113, 56, 255, 0.24)); }
+  50% { filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.62)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nx-loader-mark {
+    animation: none;
+    background-position: 50% 50%;
+  }
+}
