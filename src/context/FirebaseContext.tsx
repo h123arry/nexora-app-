@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { onAuthStateChanged, User as FirebaseUser, ConfirmationResult } from 'firebase/auth';
+import { onIdTokenChanged, User as FirebaseUser, ConfirmationResult } from 'firebase/auth';
 import { User } from '../types';
 import { ProfileService } from '../services/firebase/profileService';
 import { AuthService } from '../services/firebase/authService';
@@ -51,14 +51,20 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     let sequence = 0;
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+    const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
       const currentSequence = ++sequence;
       setFirebaseUser(fbUser);
       setUser(null);
       setError(null);
       setInitializing(true);
-      if (fbUser && !fbUser.isAnonymous) {
+      if (fbUser) {
         try {
+          const token = await fbUser.getIdTokenResult();
+          const isApprovedBetaMember = token.claims.betaMember === true;
+          if (fbUser.isAnonymous && !isApprovedBetaMember) {
+            if (currentSequence === sequence) setInitializing(false);
+            return;
+          }
           const profile = await ProfileService.getOrCreateProfile(fbUser);
           if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setUser(profile);
         } catch {
@@ -210,7 +216,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{
         firebaseUser,
         user,
-        isAuthenticated: !!firebaseUser && !firebaseUser.isAnonymous && !!user && user.id === firebaseUser.uid,
+        isAuthenticated: !!firebaseUser && !!user && user.id === firebaseUser.uid,
         initializing,
         loading,
         error,
