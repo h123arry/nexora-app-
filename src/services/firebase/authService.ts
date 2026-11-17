@@ -1,5 +1,6 @@
 import { 
   createUserWithEmailAndPassword, 
+  signInAnonymously,
   signInWithEmailAndPassword, 
   browserLocalPersistence,
   browserSessionPersistence,
@@ -182,6 +183,44 @@ export class AuthService {
     const clean = identifier.toLowerCase().trim();
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(`nexora_lockout_${clean}`);
+    }
+  }
+
+  /** Join the private beta on this device, preserving Firebase's device-local anonymous UID. */
+  static async joinBetaWithInvite(code: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+    this.requireConfigured();
+    const cleanCode = code.trim();
+    if (!cleanCode) throw new Error('Open the official NEXORA beta invitation link to continue.');
+
+    let currentUser = auth.currentUser;
+    if (currentUser && !currentUser.isAnonymous) {
+      throw new Error('You are already signed in to a NEXORA account. Sign out before claiming a beta invitation.');
+    }
+
+    try {
+      if (!currentUser) {
+        const credential = await signInAnonymously(auth);
+        currentUser = credential.user;
+      }
+
+      const claim = httpsCallable<{ code: string }, { claimed: boolean; alreadyClaimed: boolean; cohort: string }>(functions, 'claimBetaInvite');
+      await claim({ code: cleanCode });
+      await currentUser.getIdToken(true);
+
+      let userProfile = await ProfileService.getProfile(currentUser.uid);
+      if (!userProfile) {
+        const username = `member_${currentUser.uid.slice(0, 10).toLowerCase()}`;
+        await ProfileService.reserveUsername(currentUser.uid, username);
+        userProfile = await ProfileService.createProfile(currentUser.uid, {
+          name: 'NEXORA Member',
+          username,
+          avatar: currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        }, '');
+      }
+
+      return { firebaseUser: currentUser, user: userProfile };
+    } catch (error) {
+      throw this.publicAuthError(error);
     }
   }
 
