@@ -77,7 +77,7 @@ const MAX_FAILED_ATTEMPTS = 5;
 
 export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps) {
   // Navigation & Auth Flow Modes
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('beta') ? 'signup' : 'login');
   const [betaInviteCode] = useState(() => typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('beta') || '' : '');
   
   // Method selection in signup: 'choose' | 'email' | 'phone'
