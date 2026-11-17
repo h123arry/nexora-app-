@@ -73,10 +73,10 @@ jobs:
             "$NEXORA_PRODUCTION_PROJECT_ID" "$FIRESTORE_DATABASE_ID" "$FIREBASE_STORAGE_BUCKET" \
             > "functions/.env.$NEXORA_PRODUCTION_PROJECT_ID"
 
-      - name: Deploy only the reviewed Founding 300 callable
+      - name: Deploy reviewed Founding 300 and beta access functions and security rules
         run: |
           npx --yes firebase-tools@15.33.0 deploy \
-            --only functions:createFoundingMemberAccount \
+            --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,firestore:rules,storage \
             --project "$NEXORA_PRODUCTION_PROJECT_ID" \
             --non-interactive
 
