@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { FieldValue, Timestamp, getFirestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
-import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { HttpsError } from 'firebase-functions/v2/https';
+import { onCallWithSession as onCall } from './callableSession.js';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 

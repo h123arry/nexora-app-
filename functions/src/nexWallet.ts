@@ -1,6 +1,7 @@
 import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { assertCallableSessionActive } from './callableSession.js';
 import {
   applyNexBalanceEntries,
   buildNexTransferEntries,
@@ -159,6 +160,7 @@ export const getNexWalletSnapshot = onCall({ maxInstances: 10 }, async (request)
     throw new HttpsError('unauthenticated', 'Sign in to view your Nex Coin wallet.');
   }
   const uid = request.auth.uid;
+  await assertCallableSessionActive(db, uid, request.auth.token?.auth_time);
   const walletRef = db.collection('nexWallets').doc(uid);
 
   try {

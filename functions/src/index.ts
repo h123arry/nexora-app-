@@ -28,6 +28,7 @@ import { searchPublicDirectory } from './directorySearch.js';
 import { syncUniversalSearchRecord, searchNexoraContent, getNexoraTrending } from './universalSearch.js';
 import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageChannelUpdate as deletePageChannelUpdateRecord } from './pageChannels.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { assertCallableSessionActive } from './callableSession.js';
 import { createDailySessionRecorder } from './retention.js';
 export { saveCreatorStudioTemplate, listCreatorStudioTemplates, deleteCreatorStudioTemplate } from './creatorStudio.js';
 export { saveCreatorLens, submitCreatorLensForReview, reviewCreatorLens, listMyCreatorLenses, listPublishedCreatorLenses } from './creatorLenses.js';
@@ -186,6 +187,7 @@ export const indexPageChannelUpdateForSearch = onDocumentWritten('pages/{pageId}
 
 export const searchNexora = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to search NEXORA.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await searchNexoraContent(adminDb, request.auth.uid, request.data?.query, request.data?.cursor, request.data?.kinds);
   } catch (error) {
@@ -198,6 +200,7 @@ export const searchNexora = onCall({ maxInstances: 10 }, async request => {
 });
 export const getNexoraTrendingTopics = onCall({ maxInstances: 5 }, async request => {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to view NEXORA trends.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return { topics: await getNexoraTrending(adminDb) }; }
   catch { throw new HttpsError('unavailable', 'Trending topics are temporarily unavailable.'); }
 });
@@ -208,6 +211,7 @@ export const backfillNexoraSearchIndex = onCall({ maxInstances: 2, timeoutSecond
   if (!request.auth?.uid || !(claims?.admin === true || claims?.role === 'admin' || claims?.role === 'founder' || claims?.role === 'super_admin')) {
     throw new HttpsError('permission-denied', 'Only NEXORA administrators can rebuild the search index.');
   }
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   const source = request.data?.source;
   const sources = ['users','posts','pages','communities','liveSessions','circlePosts','circleEvents','circlePolls','circleAnnouncements','pageServices','pageUpdates'];
   if (typeof source !== 'string' || !sources.includes(source)) throw new HttpsError('invalid-argument', 'Choose a supported search index source.');
@@ -294,6 +298,7 @@ export const processAccountLifecycleRequest = onDocumentCreated(
 
 export const createCommunityPoll = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create a Circle poll.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await createCirclePoll(adminDb, request.auth.uid, request.data?.communityId, request.data?.question, request.data?.options);
   } catch (error) {
@@ -308,6 +313,7 @@ export const createCommunityPoll = onCall({ maxInstances: 10 }, async (request) 
 
 export const voteInCommunityPoll = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to vote in a Circle poll.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await castCirclePollVote(adminDb, request.auth.uid, request.data?.communityId, request.data?.pollId, request.data?.optionId);
   } catch (error) {
@@ -324,6 +330,7 @@ export const voteInCommunityPoll = onCall({ maxInstances: 10 }, async (request) 
 
 export const createCommunityEvent = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create a Circle event.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await createCircleEvent(adminDb, request.auth.uid, request.data?.communityId, request.data?.title, request.data?.startsAt, request.data?.location);
   } catch (error) {
@@ -336,6 +343,7 @@ export const createCommunityEvent = onCall({ maxInstances: 10 }, async (request)
 
 export const respondToCommunityEvent = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to RSVP.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await setCircleEventRsvp(adminDb, request.auth.uid, request.data?.communityId, request.data?.eventId, request.data?.attending);
   } catch (error) {
@@ -349,6 +357,7 @@ export const respondToCommunityEvent = onCall({ maxInstances: 10 }, async (reque
 
 export const createCommunityAnnouncement = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish a Circle announcement.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await createCircleAnnouncement(adminDb, request.auth.uid, request.data?.communityId, request.data?.title, request.data?.body);
   } catch (error) {
@@ -361,6 +370,7 @@ export const createCommunityAnnouncement = onCall({ maxInstances: 10 }, async (r
 
 export const setCommunityAnnouncementPinned = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage Circle announcements.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await setCircleAnnouncementPinned(adminDb, request.auth.uid, request.data?.communityId, request.data?.announcementId, request.data?.pinned);
   } catch (error) {
@@ -374,6 +384,7 @@ export const setCommunityAnnouncementPinned = onCall({ maxInstances: 10 }, async
 
 export const addPublicPostCommentEntry = onCall({ maxInstances: 20 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to comment on a post.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   const postId = request.data?.postId;
   const commentId = request.data?.commentId;
   const content = request.data?.content;
@@ -397,6 +408,7 @@ export const addPublicPostCommentEntry = onCall({ maxInstances: 20 }, async requ
 
 export const setPublicPostLike = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to like a post.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   const postId = request.data?.postId;
   const liked = request.data?.liked;
   if (typeof postId !== 'string' || postId.length < 1 || postId.length > 150 || postId.includes('/')) {
@@ -419,6 +431,7 @@ export const setPublicPostLike = onCall({ maxInstances: 10 }, async (request) =>
 
 export const deletePublicPostCommentEntry = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to delete comments.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await deletePublicPostComment(adminDb, request.auth.uid, request.data?.postId, request.data?.commentId);
   } catch (error) {
@@ -432,6 +445,7 @@ export const deletePublicPostCommentEntry = onCall({ maxInstances: 10 }, async r
 
 export const setPublicPostCommentLikeState = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to react to comments.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   const { postId, commentId, liked } = request.data || {};
   if (typeof liked !== 'boolean') throw new HttpsError('invalid-argument', 'A boolean reaction state is required.');
   try {
@@ -446,6 +460,7 @@ export const setPublicPostCommentLikeState = onCall({ maxInstances: 10 }, async 
 
 export const replyToPublicPostComment = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to reply to comments.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await addPublicPostCommentReply(
       adminDb, request.auth.uid, request.data?.postId, request.data?.commentId,
@@ -462,6 +477,7 @@ export const replyToPublicPostComment = onCall({ maxInstances: 10 }, async reque
 
 export const repostPublicPost = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to repost.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   const postId = request.data?.postId;
   if (typeof postId !== 'string' || postId.length < 1 || postId.length > 150 || postId.includes('/')) {
     throw new HttpsError('invalid-argument', 'A valid post ID is required.');
@@ -479,6 +495,7 @@ export const repostPublicPost = onCall({ maxInstances: 10 }, async (request) => 
 
 export const setCommunityMemberRole = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage Circle roles.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await setCircleMemberRole(
       adminDb,
@@ -504,6 +521,7 @@ export const setCommunityMemberRole = onCall({ maxInstances: 10 }, async (reques
 
 export const listCommunityBans = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to review Circle moderation records.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await listCircleBans(adminDb, request.auth.uid, request.data?.communityId);
   } catch (error) {
@@ -516,6 +534,7 @@ export const listCommunityBans = onCall({ maxInstances: 10 }, async request => {
 
 export const moderateCommunityMember = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to moderate Circle members.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await moderateCircleMember(
       adminDb,
@@ -542,6 +561,7 @@ export const moderateCommunityMember = onCall({ maxInstances: 10 }, async reques
 
 export const submitCommunityReport = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to report Circle content.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await submitCircleReport(
       adminDb, request.auth.uid, request.data?.communityId,
@@ -558,6 +578,7 @@ export const submitCommunityReport = onCall({ maxInstances: 10 }, async request 
 
 export const listCommunityReports = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to review Circle reports.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await listCircleReports(adminDb, request.auth.uid, request.data?.communityId);
   } catch (error) {
@@ -570,6 +591,7 @@ export const listCommunityReports = onCall({ maxInstances: 10 }, async request =
 
 export const resolveCommunityReport = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to review Circle reports.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await resolveCircleReport(
       adminDb, request.auth.uid, request.data?.communityId,
@@ -588,6 +610,7 @@ export const resolveCommunityReport = onCall({ maxInstances: 10 }, async request
 
 export const createCommunityInvite = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to invite people to a Circle.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await createCircleInvite(adminDb, request.auth.uid, request.data?.communityId, request.data?.expiresInDays, request.data?.maxUses);
   } catch (error) {
@@ -600,6 +623,7 @@ export const createCommunityInvite = onCall({ maxInstances: 10 }, async (request
 
 export const redeemCommunityInvite = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to accept a Circle invitation.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await redeemCircleInvite(adminDb, request.auth.uid, request.data?.token);
   } catch (error) {
@@ -612,6 +636,7 @@ export const redeemCommunityInvite = onCall({ maxInstances: 10 }, async (request
 
 export const revokeCommunityInvite = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to revoke a Circle invitation.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     await revokeCircleInvite(adminDb, request.auth.uid, request.data?.token);
     return { revoked: true };
@@ -626,6 +651,7 @@ export const revokeCommunityInvite = onCall({ maxInstances: 10 }, async (request
 
 export const getPageFollowerCount = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view Page audience metrics.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   const pageId = request.data?.pageId;
   if (typeof pageId !== 'string' || pageId.length < 1 || pageId.length > 150 || pageId.includes('/')) {
     throw new HttpsError('invalid-argument', 'A valid Page ID is required.');
@@ -644,6 +670,7 @@ export const getPageFollowerCount = onCall({ maxInstances: 10 }, async (request)
 
 export const createBusinessBookingRequest = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to request a business booking.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await createPageBookingRequest(adminDb, request.auth.uid, request.data?.pageId, request.data?.serviceId, request.data?.requestedAt, request.data?.note ?? '', request.data?.idempotencyKey);
   } catch (error) {
@@ -658,6 +685,7 @@ export const createBusinessBookingRequest = onCall({ maxInstances: 10 }, async (
 
 export const respondToBusinessBookingRequest = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage business bookings.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await respondToPageBookingRequest(adminDb, request.auth.uid, request.data?.bookingId, request.data?.decision);
   } catch (error) {
@@ -673,6 +701,7 @@ export const respondToBusinessBookingRequest = onCall({ maxInstances: 10 }, asyn
 
 export const cancelBusinessBookingRequest = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to cancel a business booking.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await cancelPageBookingRequest(adminDb, request.auth.uid, request.data?.bookingId);
   } catch (error) {
@@ -689,6 +718,7 @@ export const cancelBusinessBookingRequest = onCall({ maxInstances: 10 }, async (
 
 export const publishBusinessServiceListing = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish a business service.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await publishBusinessService(adminDb, request.auth.uid, request.data?.pageId, request.data);
   } catch (error) {
@@ -701,6 +731,7 @@ export const publishBusinessServiceListing = onCall({ maxInstances: 10 }, async 
 
 export const setBusinessServiceListingStatus = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage business services.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await setBusinessServiceStatus(adminDb, request.auth.uid, request.data?.pageId, request.data?.serviceId, request.data?.status);
   } catch (error) {
@@ -715,6 +746,7 @@ export const setBusinessServiceListingStatus = onCall({ maxInstances: 10 }, asyn
 
 export const searchNexoraDirectory = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to search NEXORA.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await searchPublicDirectory(adminDb, request.auth.uid, request.data?.query, request.data?.cursor);
   } catch (error) {
@@ -729,6 +761,7 @@ export const searchNexoraDirectory = onCall({ maxInstances: 10 }, async (request
 
 export const createGroupChat = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create a group conversation.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await createGroupChatRecord(adminDb, request.auth.uid, request.data?.name, request.data?.description, request.data?.participantIds);
   } catch (error) {
@@ -742,6 +775,7 @@ export const createGroupChat = onCall({ maxInstances: 10 }, async (request) => {
 
 export const publishPageChannelUpdate = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish a Page channel update.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await publishPageChannelUpdateRecord(adminDb, request.auth.uid, request.data?.pageId, request.data?.content, request.data?.idempotencyKey);
   } catch (error) {
@@ -755,6 +789,7 @@ export const publishPageChannelUpdate = onCall({ maxInstances: 10 }, async (requ
 
 export const deletePageChannelUpdate = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage Page channel updates.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     await deletePageChannelUpdateRecord(adminDb, request.auth.uid, request.data?.pageId, request.data?.updateId);
     return { deleted: true };
@@ -786,39 +821,48 @@ function academyFailure(error: unknown): HttpsError {
 
 export const academySaveCourseDraft = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to author an Academy course.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await saveAcademyCourseDraft(adminDb, request.auth.uid, request.data); } catch (error) { throw academyFailure(error); }
 });
 export const academySaveLesson = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to author an Academy lesson.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await saveAcademyLesson(adminDb, request.auth.uid, request.data); } catch (error) { throw academyFailure(error); }
 });
 export const academySubmitCourseForReview = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to submit an Academy course.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await submitAcademyCourseForReview(adminDb, request.auth.uid, request.data?.courseId); } catch (error) { throw academyFailure(error); }
 });
 export const academyReviewCourse = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to review an Academy course.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await reviewAcademyCourse(adminDb, request.auth.uid, request.data?.courseId, request.data?.decision, request.data?.note); } catch (error) { throw academyFailure(error); }
 });
 export const academyGetPublishedCourse = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to access the Academy.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await getPublishedAcademyCourse(adminDb, request.data?.courseId); } catch (error) { throw academyFailure(error); }
 });
 
 export const academyListPublishedCourses = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to browse the Academy.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await listPublishedAcademyCourses(adminDb); } catch (error) { throw academyFailure(error); }
 });
 export const academyCreateAssessment = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create an Academy assessment.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await createAcademyAssessment(adminDb, request.auth.uid, request.data); } catch (error) { throw academyFailure(error); }
 });
 export const academyPublishAssessment = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish an Academy assessment.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await publishAcademyAssessment(adminDb, request.auth.uid, request.data?.courseId, request.data?.assessmentId); } catch (error) { throw academyFailure(error); }
 });
 export const academyCompleteLesson = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to save Academy progress.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await completeAcademyLesson(adminDb, request.auth.uid, request.data?.courseId, request.data?.lessonId);
   } catch (error) {
@@ -834,10 +878,12 @@ export const academyCompleteLesson = onCall({ maxInstances: 10 }, async request 
 
 export const academySubmitAssessment = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to take an Academy assessment.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await submitAcademyAssessment(adminDb, request.auth.uid, request.data?.courseId, request.data?.assessmentId, request.data?.answers); } catch (error) { throw academyFailure(error); }
 });
 export const academyIssueCertificate = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to request your Academy certificate.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await issueAcademyCertificate(adminDb, request.auth.uid, request.data?.courseId, request.data?.assessmentId); } catch (error) { throw academyFailure(error); }
 });
 export const academyVerifyCertificate = onCall({ maxInstances: 10 }, async request => {
@@ -845,23 +891,28 @@ export const academyVerifyCertificate = onCall({ maxInstances: 10 }, async reque
 });
 export const academyRevokeCertificate = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to revoke an Academy certificate.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await revokeAcademyCertificate(adminDb, request.auth.uid, request.data?.certificateId, request.data?.reason); } catch (error) { throw academyFailure(error); }
 });
 export const academyGetTutorContext = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to use the Creator Tutor.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await getAcademyTutorContext(adminDb, request.auth.uid, request.data?.courseId, request.data?.lessonIds); } catch (error) { throw academyFailure(error); }
 });
 export const academyCreateMentorshipSession = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to host an Academy session.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await createAcademyMentorshipSession(adminDb, request.auth.uid, request.data); } catch (error) { throw academyFailure(error); }
 });
 export const academyListMentorshipSessions = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to browse Academy mentorship sessions.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await listUpcomingAcademyMentorshipSessions(adminDb, request.auth.uid); } catch (error) { throw academyFailure(error); }
 });
 
 export const academyBookMentorshipSession = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to book an Academy session.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await bookAcademyMentorshipSession(adminDb, request.auth.uid, request.data?.sessionId); } catch (error) { throw academyFailure(error); }
 });
 
@@ -889,6 +940,7 @@ export const qualifyReferralOnFirstPublicPost = onDocumentCreated('posts/{postId
 
 export const voteOnFeedPoll = onCall({ maxInstances: 20 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to vote in this poll.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await voteOnPublicPostPoll(adminDb, request.auth.uid, request.data?.postId, request.data?.optionId); }
   catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -902,6 +954,7 @@ export const voteOnFeedPoll = onCall({ maxInstances: 20 }, async request => {
 
 export const getMyFeedPollVotes = onCall({ maxInstances: 20 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view your poll activity.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await getMyPublicPostPollVotes(adminDb, request.auth.uid, request.data?.postIds); }
   catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -912,6 +965,7 @@ export const getMyFeedPollVotes = onCall({ maxInstances: 20 }, async request => 
 
 export const createMyContentSeries = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create a content series.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await createContentSeriesRecord(adminDb, request.auth.uid, request.data || {}); }
   catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -922,6 +976,7 @@ export const createMyContentSeries = onCall({ maxInstances: 10 }, async request 
 
 export const addPostToMyContentSeries = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to organize your posts.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await appendPostToSeries(adminDb, request.auth.uid, request.data?.seriesId, request.data?.postId); }
   catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -933,12 +988,14 @@ export const addPostToMyContentSeries = onCall({ maxInstances: 10 }, async reque
 
 export const listMyContentSeries = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view your content series.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await listMyContentSeriesRecord(adminDb, request.auth.uid); }
   catch { throw new HttpsError('unavailable', 'Your content series are temporarily unavailable.'); }
 });
 
 export const listMyContentSeriesEpisodes = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view series episodes.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await listContentSeriesEpisodes(adminDb, request.auth.uid, request.data?.seriesId); }
   catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -950,6 +1007,7 @@ export const listMyContentSeriesEpisodes = onCall({ maxInstances: 10 }, async re
 
 export const createSocialChallenge = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to start a challenge.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await createSocialChallengeRecord(adminDb, request.auth.uid, request.data || {}); }
   catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -960,6 +1018,7 @@ export const createSocialChallenge = onCall({ maxInstances: 10 }, async request 
 
 export const joinSocialChallenge = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to join a challenge.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await joinSocialChallengeRecord(adminDb, request.auth.uid, request.data?.challengeId); }
   catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -971,6 +1030,7 @@ export const joinSocialChallenge = onCall({ maxInstances: 10 }, async request =>
 
 export const listSocialChallenges = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to explore challenges.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await listSocialChallengesRecords(adminDb); }
   catch { throw new HttpsError('unavailable', 'Challenges are temporarily unavailable.'); }
 });
@@ -994,6 +1054,7 @@ export const previewReferralInvite = onCall({ maxInstances: 10 }, async request 
 
 export const createMyReferralCode = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create your referral link.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await createReferralCode(adminDb, request.auth.uid); }
   catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -1004,6 +1065,7 @@ export const createMyReferralCode = onCall({ maxInstances: 10 }, async request =
 
 export const claimMyReferral = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to accept a referral.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     const identity = await getAuth(getFirebaseAdminApp()).getUser(request.auth.uid);
     const createdAt = Date.parse(identity.metadata.creationTime);
@@ -1023,12 +1085,14 @@ export const claimMyReferral = onCall({ maxInstances: 10 }, async request => {
 
 export const getMyReferralSummary = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view referral activity.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try { return await getReferralSummary(adminDb, request.auth.uid); }
   catch { throw new HttpsError('unavailable', 'Referral activity is temporarily unavailable.'); }
 });
 
 export const recordDailySession = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to record your NEXORA session.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
   try {
     return await createDailySessionRecorder(adminDb)(request.auth.uid);
   } catch (error) {

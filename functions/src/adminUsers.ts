@@ -2,6 +2,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { assertCallableSessionActive } from './callableSession.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -17,6 +18,7 @@ async function currentAdminClaims(request: Request): Promise<{ uid: string; clai
   try {
     const decoded = await auth.verifyIdToken(token, true);
     if (decoded.uid !== uid) throw new HttpsError('unauthenticated', 'The authenticated session no longer matches this account.');
+    await assertCallableSessionActive(db, uid, decoded.auth_time);
     return { uid, claims: decoded as unknown as Record<string, unknown> };
   } catch {
     throw new HttpsError('unauthenticated', 'Your session is expired or has been revoked. Sign in again.');
