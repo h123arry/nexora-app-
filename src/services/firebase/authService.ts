@@ -1,5 +1,6 @@
 import { 
   createUserWithEmailAndPassword, 
+  signInAnonymously,
   signInWithEmailAndPassword, 
   browserLocalPersistence,
   browserSessionPersistence,
@@ -14,6 +15,8 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   linkWithPopup,
+  linkWithCredential,
+  linkWithPhoneNumber,
   signOut,
   setPersistence,
   EmailAuthProvider,
@@ -114,6 +117,14 @@ export class AuthService {
         return 'Firebase created your account, but Firestore did not receive a valid authenticated session for profile setup.';
       case 'profile-setup-failed':
         return 'Firebase created your account, but NEXORA could not finish setting up your profile. Your account is safe; please try signing in again shortly.';
+      case 'functions/resource-exhausted':
+        return 'NEXORA Founding Beta is full. All 300 places have been claimed.';
+      case 'functions/permission-denied':
+        return 'This beta invitation is invalid or has been disabled. Ask the person who invited you for help.';
+      case 'functions/invalid-argument':
+        return 'This beta invitation link is invalid. Open the complete invitation link you received.';
+      case 'functions/failed-precondition':
+        return 'This invitation must be claimed from a new beta session. Sign out and reopen the invitation link.';
       case 'auth/invalid-action-code':
         return 'This recovery or verification link is invalid or has already been used.';
       default: {
@@ -182,6 +193,47 @@ export class AuthService {
     const clean = identifier.toLowerCase().trim();
     if (typeof localStorage !== 'undefined') {
       localStorage.removeItem(`nexora_lockout_${clean}`);
+    }
+  }
+
+  /** Join the private beta on this device, preserving Firebase's device-local anonymous UID. */
+  static async joinBetaWithInvite(code: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+    this.requireConfigured();
+    const cleanCode = code.trim();
+    if (!cleanCode) throw new Error('Open the official NEXORA beta invitation link to continue.');
+
+    let currentUser = auth.currentUser;
+    if (currentUser && !currentUser.isAnonymous) {
+      throw new Error('You are already signed in to a NEXORA account. Sign out before claiming a beta invitation.');
+    }
+
+    try {
+      if (!currentUser) {
+        const credential = await signInAnonymously(auth);
+        currentUser = credential.user;
+      }
+
+      const claim = httpsCallable<{ code: string }, { claimed: boolean; alreadyClaimed: boolean; cohort: string }>(functions, 'claimBetaInvite');
+      await claim({ code: cleanCode });
+      await currentUser.getIdToken(true);
+
+      let userProfile = await ProfileService.getProfile(currentUser.uid);
+      if (!userProfile) {
+        const username = `member_${currentUser.uid.slice(0, 10).toLowerCase()}`;
+        await ProfileService.reserveUsername(currentUser.uid, username);
+        userProfile = await ProfileService.createProfile(currentUser.uid, {
+          name: 'NEXORA Member',
+          username,
+          avatar: currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        }, '');
+      }
+      // Notify the auth-state listener after the beta profile exists so the app
+      // hydrates this same UID as a full NEXORA member.
+      await currentUser.getIdToken(true);
+
+      return { firebaseUser: currentUser, user: userProfile };
+    } catch (error) {
+      throw this.publicAuthError(error);
     }
   }
 
@@ -522,6 +574,53 @@ export class AuthService {
     return (auth.currentUser?.providerData || [])
       .map(provider => provider.providerId)
       .filter(providerId => typeof providerId === 'string' && providerId.length > 0);
+  }
+
+  /** Link an email/password credential to the current UID; never create a replacement account. */
+  static async linkEmailAccount(email: string, password: string): Promise<void> {
+    this.requireConfigured();
+    const currentUser = auth.currentUser;
+    const cleanEmail = email.trim().toLowerCase();
+    if (!currentUser) throw new Error('Sign in before adding an email address.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) throw new Error('Enter a valid email address.');
+    if (password.length < 8) throw new Error('Choose a password with at least 8 characters.');
+    try {
+      const result = await linkWithCredential(currentUser, EmailAuthProvider.credential(cleanEmail, password));
+      await sendEmailVerification(result.user);
+      await result.user.getIdToken(true);
+    } catch (error) {
+      const code = (error as { code?: string })?.code;
+      if (code === 'auth/credential-already-in-use' || code === 'auth/email-already-in-use') {
+        throw new Error('That email already belongs to another NEXORA account. Sign in to that account instead; NEXORA will not merge accounts automatically.');
+      }
+      throw this.publicAuthError(error);
+    }
+  }
+
+  /** Begin SMS verification by linking the phone credential to the existing UID. */
+  static async sendPhoneLinkCode(phoneNumber: string, verifier: RecaptchaVerifier): Promise<ConfirmationResult> {
+    this.requireConfigured();
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Sign in before adding a phone number.');
+    try {
+      return await linkWithPhoneNumber(currentUser, phoneNumber, verifier);
+    } catch (error) {
+      throw this.publicAuthError(error);
+    }
+  }
+
+  static async confirmPhoneLink(confirmation: ConfirmationResult, code: string): Promise<void> {
+    this.requireConfigured();
+    try {
+      const result = await confirmation.confirm(code.trim());
+      await result.user.getIdToken(true);
+    } catch (error) {
+      const codeValue = (error as { code?: string })?.code;
+      if (codeValue === 'auth/credential-already-in-use' || codeValue === 'auth/phone-number-already-exists') {
+        throw new Error('That phone number is already connected to another NEXORA account. Sign in to that account instead.');
+      }
+      throw this.publicAuthError(error);
+    }
   }
 
   /** Link Google to the currently signed-in account; never create or merge a second NEXORA account. */

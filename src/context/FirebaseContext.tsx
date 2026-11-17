@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { onAuthStateChanged, User as FirebaseUser, ConfirmationResult } from 'firebase/auth';
+import { onIdTokenChanged, User as FirebaseUser, ConfirmationResult } from 'firebase/auth';
 import { User } from '../types';
 import { ProfileService } from '../services/firebase/profileService';
 import { AuthService } from '../services/firebase/authService';
@@ -51,15 +51,28 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     let sequence = 0;
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+    const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
       const currentSequence = ++sequence;
       setFirebaseUser(fbUser);
-      setUser(null);
+      // Preserve the loaded profile during token refreshes for the same UID.
+      // A different account (or sign-out) still clears the previous profile.
+      setUser(current => current?.id === fbUser?.uid ? current : null);
       setError(null);
       setInitializing(true);
-      if (fbUser && !fbUser.isAnonymous) {
+      if (fbUser) {
         try {
-          const profile = await ProfileService.getOrCreateProfile(fbUser);
+          const token = await fbUser.getIdTokenResult();
+          const isApprovedBetaMember = token.claims.betaMember === true;
+          if (fbUser.isAnonymous && !isApprovedBetaMember) {
+            if (currentSequence === sequence) {
+              setUser(null);
+              setInitializing(false);
+            }
+            return;
+          }
+          const profile = fbUser.isAnonymous
+            ? await ProfileService.getProfile(fbUser.uid)
+            : await ProfileService.getOrCreateProfile(fbUser);
           if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setUser(profile);
         } catch {
           if (currentSequence === sequence) setError('Unable to load your account profile. Please retry or sign out.');
@@ -210,7 +223,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{
         firebaseUser,
         user,
-        isAuthenticated: !!firebaseUser && !firebaseUser.isAnonymous && !!user && user.id === firebaseUser.uid,
+        isAuthenticated: !!firebaseUser && !!user && user.id === firebaseUser.uid,
         initializing,
         loading,
         error,

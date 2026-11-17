@@ -123,10 +123,10 @@ jobs:
         run: npm run test:voh-security
 
       - name: Audit web production dependencies
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Audit Functions production dependencies
-        run: npm --prefix functions audit --audit-level=high
+        run: npm --prefix functions audit --omit=dev --audit-level=high
 
       - name: Build production artifacts
         run: npm run build

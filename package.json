@@ -45,8 +45,6 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "firebase": "^12.15.0",
@@ -55,7 +53,6 @@
     "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "vite": "^6.2.3",
     "@capacitor/core": "^8.6.0",
     "@capacitor/android": "^8.6.0",
     "@capacitor/ios": "^8.6.0"
@@ -73,12 +70,15 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.3",
     "@capacitor/cli": "^8.6.0",
-    "@capacitor/assets": "^4.0.0"
+    "@capacitor/assets": "^4.0.0",
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4"
   },
   "overrides": {
     "@grpc/grpc-js": "^1.13.6"
   },
   "engines": {
     "node": "22"
-  }
+  },
+  "description": "NEXORA social network application"
 }

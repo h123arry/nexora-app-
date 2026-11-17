@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'rea
 import { getDevicePerformanceProfile } from './utils/devicePerformance';
 import { playNexoraSound } from './services/soundExperience';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, HelpCircle, X, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward, Compass } from 'lucide-react';
+import { Sparkles, HelpCircle, X, ShieldCheck, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward, Compass } from 'lucide-react';
 import VohIcon from './components/VohIcon';
 
 import { Camera, Video as VideoIcon, Mic, BarChart2, FileText, Award, MapPin, Smile, ChevronRight, Play, Pause, Trash2, RefreshCw, Eye, WifiOff, FolderOpen } from 'lucide-react';
@@ -121,8 +121,41 @@ export default function App() {
       delete document.documentElement.dataset.nxSaveData;
     };
   }, []);
-  const isLoggedIn = !!firebaseUser && !firebaseUser.isAnonymous && firebaseProfile?.id === firebaseUser.uid;
+  const isLoggedIn = !!firebaseUser && firebaseProfile?.id === firebaseUser.uid;
   const initialCacheUserId = isLoggedIn && firebaseUser ? firebaseUser.uid : '';
+  const [securityReminderStep, setSecurityReminderStep] = useState(0);
+  useEffect(() => {
+    let active = true;
+    const evaluateReminder = async () => {
+      if (!firebaseUser || !isLoggedIn) {
+        if (active) setSecurityReminderStep(0);
+        return;
+      }
+      try {
+        const token = await firebaseUser.getIdTokenResult();
+        if (!active || token.claims.betaMember !== true) return;
+        const hasVerifiedEmail = firebaseUser.emailVerified;
+        const hasPhone = !!firebaseUser.phoneNumber;
+        if (hasVerifiedEmail && hasPhone) {
+          setSecurityReminderStep(0);
+          return;
+        }
+        const key = `nexora_beta_security_reminder_${firebaseUser.uid}`;
+        const stored = localStorage.getItem(key);
+        const state = stored ? JSON.parse(stored) as { joinedAt?: number; dismissedStep?: number } : {};
+        const joinedAt = state.joinedAt || (firebaseUser.metadata.creationTime ? Date.parse(firebaseUser.metadata.creationTime) : Date.now());
+        const daysSinceJoin = Math.floor((Date.now() - joinedAt) / 86400000);
+        const step = daysSinceJoin >= 30 ? 3 : daysSinceJoin >= 7 ? 2 : daysSinceJoin >= 3 ? 1 : 0;
+        if (!state.joinedAt) localStorage.setItem(key, JSON.stringify({ joinedAt, dismissedStep: state.dismissedStep || 0 }));
+        if (active) setSecurityReminderStep(step > (state.dismissedStep || 0) ? step : 0);
+      } catch {
+        if (active) setSecurityReminderStep(0);
+      }
+    };
+    void evaluateReminder();
+    return () => { active = false; };
+  }, [firebaseUser, isLoggedIn]);
+
   const [currentUser, setCurrentUser] = useState<User>(() => getRichUser({
       id: 'guest_visitor_id',
       username: 'visitor',
@@ -152,6 +185,14 @@ export default function App() {
   const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
   const [authPromptReason, setAuthPromptReason] = useState<string>('Join Nexora to like, comment, follow creators, and personalize your experience.');
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || authInitializing || isLoggedIn) return;
+    const betaCode = new URLSearchParams(window.location.search).get('beta');
+    if (!betaCode) return;
+    setAuthPromptReason('You have a private invitation to join the NEXORA Founding Beta.');
+    setShowAuthModal(true);
+  }, [authInitializing, isLoggedIn]);
 
   const requireAuth = (action: () => void, reason = 'Join Nexora to like, comment, follow creators, and personalize your experience.') => {
     if (!isLoggedIn) {
@@ -2324,6 +2365,7 @@ export default function App() {
                       currentUser={getRichUser(currentUser)}
                       theme={theme}
                       setTheme={setTheme}
+                      initialSection={securityReminderStep > 0 ? 'connected' : 'account'}
                     />
                   )}
                     </motion.div>
@@ -3212,6 +3254,28 @@ export default function App() {
                   setShowAuthModal(false);
                 }}
               /></Suspense>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {securityReminderStep > 0 && firebaseUser && (
+        <div className="fixed bottom-4 right-4 z-[70] w-[min(92vw,390px)] rounded-2xl border border-violet-400/30 bg-[#100b24] p-4 shadow-2xl shadow-black/50">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 rounded-xl bg-violet-500/15 p-2 text-violet-300"><ShieldCheck className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white">Secure your NEXORA account</p>
+              <p className="mt-1 text-xs leading-relaxed text-violet-100/75">Add a verified email and phone number so you can recover your account if you lose access to this device.</p>
+              <div className="mt-3 flex items-center gap-2">
+                <button type="button" onClick={() => setActiveTab('settings')} className="rounded-xl bg-violet-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-violet-500">Secure account</button>
+                <button type="button" onClick={() => {
+                  const key = `nexora_beta_security_reminder_${firebaseUser.uid}`;
+                  const stored = localStorage.getItem(key);
+                  const state = stored ? JSON.parse(stored) : {};
+                  localStorage.setItem(key, JSON.stringify({ ...state, dismissedStep: securityReminderStep }));
+                  setSecurityReminderStep(0);
+                }} className="rounded-xl border border-white/10 px-3 py-2 text-[11px] font-semibold text-zinc-300 hover:bg-white/5">Remind me later</button>
+              </div>
             </div>
           </div>
         </div>

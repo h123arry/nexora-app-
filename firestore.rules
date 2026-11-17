@@ -11,8 +11,14 @@ service cloud.firestore {
               && request.auth.token.auth_time is int
               && request.auth.token.auth_time > get(statusPath).data.sessionsRevokedAfter.toMillis() / 1000)));
     }
+    function approvedAnonymousSession() {
+      return request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous'
+        || request.auth.token.get('betaMember', false) == true;
+    }
     function signedIn() {
-      return request.auth != null && sessionNotRevoked(request.auth.uid);
+      return request.auth != null
+        && sessionNotRevoked(request.auth.uid)
+        && approvedAnonymousSession();
     }
     function owner(uid) { return signedIn() && request.auth.uid == uid; }
     function recentlyAuthenticated() {
