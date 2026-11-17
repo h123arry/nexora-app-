@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User as UserIcon, Shield, Search, Ban, CheckCircle, RotateCcw, Trash2, AlertTriangle, BarChart2, Activity, Globe, Users, FileText, Sparkles, Zap, RefreshCw, TrendingUp, Award } from 'lucide-react';
+import { User as UserIcon, Shield, Search, Ban, CheckCircle, RotateCcw, Trash2, AlertTriangle, BarChart2, Activity, Globe, Users, FileText, Sparkles, Zap, RefreshCw, TrendingUp, Award, UserPlus, Copy } from 'lucide-react';
 import { User, Post, Report, CrashLog } from '../types';
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -43,7 +43,7 @@ export default function AdminDashboardView({
   lang
 }: AdminDashboardViewProps) {
   // Navigation tabs of Dashboard
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'moderation' | 'identity' | 'analytics' | 'finance' | 'audit' | 'health'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'founding' | 'moderation' | 'identity' | 'analytics' | 'finance' | 'audit' | 'health'>('users');
   
   // Loaded state
   const [users, setUsers] = useState<User[]>([]);
@@ -69,6 +69,12 @@ export default function AdminDashboardView({
   const [financeSummary, setFinanceSummary] = useState<{ providerConfigured: boolean; transactions: unknown[]; checkoutAttempts: unknown[]; webhookFailures: unknown[] } | null>(null);
   const [auditState, setAuditState] = useState<'idle' | 'loading' | 'ready' | 'denied' | 'unavailable'>('idle');
   const [auditEvents, setAuditEvents] = useState<Array<{ id: string; actorUid: string; targetUid: string; action: string; previousRole?: string; newRole?: string; createdAt: string | null }>>([]);
+  const [foundingEmail, setFoundingEmail] = useState('');
+  const [foundingFullName, setFoundingFullName] = useState('');
+  const [foundingUsername, setFoundingUsername] = useState('');
+  const [foundingProvisioning, setFoundingProvisioning] = useState(false);
+  const [foundingError, setFoundingError] = useState('');
+  const [foundingResult, setFoundingResult] = useState<{ uid: string; email: string; username: string; passwordResetLink: string } | null>(null);
 
   // Load and refresh administrative data
   const loadData = async () => {
@@ -232,6 +238,33 @@ export default function AdminDashboardView({
     }
   };
 
+  const handleCreateFoundingMember = async () => {
+    if (!canManageUsers || foundingProvisioning) return;
+    setFoundingProvisioning(true);
+    setFoundingError('');
+    setFoundingResult(null);
+    try {
+      const result = await httpsCallable<
+        { email: string; fullName: string; username: string },
+        { created: boolean; uid: string; email: string; username: string; passwordResetLink: string; cohort: string }
+      >(getFunctions(), 'createFoundingMemberAccount')({
+        email: foundingEmail,
+        fullName: foundingFullName,
+        username: foundingUsername,
+      });
+      setFoundingResult(result.data);
+      setFoundingEmail('');
+      setFoundingFullName('');
+      setFoundingUsername('');
+      await loadData();
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Founding member account created in Firebase Authentication.' }));
+    } catch (error) {
+      setFoundingError(error instanceof Error ? error.message : 'The founding member account could not be created.');
+    } finally {
+      setFoundingProvisioning(false);
+    }
+  };
+
   const handleToggleBan = (user: User) => {
     void runUserAction(
       { action: 'ban', targetUid: user.id, enabled: !user.isBanned },
@@ -385,8 +418,18 @@ export default function AdminDashboardView({
           User Management
         </button>
         
+        {canManageUsers && (
+          <button
+            onClick={() => setActiveSubTab('founding')}
+            className={"flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer " + (activeSubTab === 'founding' ? 'bg-violet-600 border border-white/10 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5')}
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Founding 300
+          </button>
+        )}
+
         <button 
-          onClick={() => setActiveSubTab('moderation')}
+          onClick={() => setActiveSubTab('moderation')
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'moderation' ? 'bg-orange-600 border border-orange-500/30 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
         >
           <AlertTriangle className="w-3.5 h-3.5" />
@@ -436,6 +479,64 @@ export default function AdminDashboardView({
       {/* RENDER CONTENT PANES */}
       <div className="p-1">
         
+        {activeSubTab === 'founding' && canManageUsers && (
+          <div className="max-w-3xl space-y-5 p-4 text-left animate-fade-in">
+            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
+              <h3 className="text-sm font-black uppercase tracking-widest text-violet-200">Founding 300 account provisioning</h3>
+              <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+                Create a real Firebase Authentication account from the trusted admin backend. NEXORA creates its private profile, public profile and username reservation together. The member receives a one-time password-reset link to set their own password.
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-amber-200/80">
+                Transactional email delivery is not configured yet. Copy the reset link and share it privately with the invited member. Never post it publicly.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-1.5 text-xs font-semibold text-zinc-300">
+                Full name
+                <input value={foundingFullName} onChange={event => setFoundingFullName(event.target.value)} maxLength={80} autoComplete="name" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none focus:border-violet-500" placeholder="Member's full name" />
+              </label>
+              <label className="space-y-1.5 text-xs font-semibold text-zinc-300">
+                Username
+                <input value={foundingUsername} onChange={event => setFoundingUsername(event.target.value)} maxLength={20} autoComplete="off" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none focus:border-violet-500" placeholder="their.username" />
+              </label>
+              <label className="space-y-1.5 text-xs font-semibold text-zinc-300 sm:col-span-2">
+                Email address
+                <input type="email" value={foundingEmail} onChange={event => setFoundingEmail(event.target.value)} maxLength={254} autoComplete="email" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none focus:border-violet-500" placeholder="member@example.com" />
+              </label>
+            </div>
+            {foundingError && <p role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-3 text-xs text-rose-200">{foundingError}</p>}
+            <button
+              onClick={() => void handleCreateFoundingMember()}
+              disabled={foundingProvisioning || !foundingEmail.trim() || !foundingFullName.trim() || !foundingUsername.trim()}
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-xs font-black text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <UserPlus className="h-4 w-4" />
+              {foundingProvisioning ? 'Creating Firebase account…' : 'Create founding member account'}
+            </button>
+            {foundingResult && (
+              <div className="space-y-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+                <div>
+                  <p className="text-sm font-black text-emerald-200">Firebase account created</p>
+                  <p className="mt-1 text-xs text-zinc-300">{foundingResult.email} · @{foundingResult.username}</p>
+                  <p className="mt-1 break-all font-mono text-[10px] text-zinc-500">UID: {foundingResult.uid}</p>
+                  <p className="mt-2 text-xs text-zinc-400">The account now exists in Firebase Authentication → Users. Share this one-time reset link privately so the member can set their password, then sign in to NEXORA.</p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input readOnly value={foundingResult.passwordResetLink} className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-zinc-300" />
+                  <button
+                    onClick={() => void navigator.clipboard.writeText(foundingResult.passwordResetLink).then(
+                      () => window.dispatchEvent(new CustomEvent('toast', { detail: 'One-time password reset link copied.' }))
+                    ).catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Copy failed. Select and copy the link manually.' })))}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-500/30 px-4 py-2 text-xs font-bold text-violet-200 hover:bg-violet-500/10"
+                  >
+                    <Copy className="h-3.5 w-3.5" /> Copy reset link
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* TAB 1: USER MANAGEMENT */}
         {activeSubTab === 'users' && (
           <div className="space-y-4 text-left">
