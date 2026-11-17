@@ -152,7 +152,7 @@ const publicProfile = (uid) => ({
     audioBatch.set(doc(bobDb, 'worldWeaves', 'private-weave', 'moments', 'bob-voice-note'), {
       weaveId: 'private-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
       authorAvatar: '', text: 'A quick voice note from the ceremony.', mediaType: 'audio',
-      mediaUrl: 'https://storage.example.test/voice-note', storagePath: 'users/bob/media/voice-note',
+      mediaUrl: '', storagePath: 'users/bob/media/voice-note',
       createdAt: serverTimestamp()
     });
     audioBatch.update(doc(bobDb, 'worldWeaves', 'private-weave'), {
