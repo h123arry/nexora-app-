@@ -61,10 +61,11 @@ export const createBetaInviteLink = onCall({ maxInstances: 2 }, async request =>
  * counter with administrator-created founding accounts.
  */
 export const claimBetaInvite = onCall({ maxInstances: 20 }, async request => {
-  const uid = request.auth?.uid;
-  if (!uid) throw new HttpsError('unauthenticated', 'Start a NEXORA beta session first.');
+  const caller = request.auth;
+  const uid = caller?.uid;
+  if (!caller || !uid) throw new HttpsError('unauthenticated', 'Start a NEXORA beta session first.');
 
-  const firebaseClaims = (request.auth.token.firebase || {}) as Record<string, unknown>;
+  const firebaseClaims = (caller.token.firebase || {}) as Record<string, unknown>;
   if (firebaseClaims.sign_in_provider !== 'anonymous') {
     throw new HttpsError('failed-precondition', 'The beta invitation is only for new anonymous beta sessions.');
   }
