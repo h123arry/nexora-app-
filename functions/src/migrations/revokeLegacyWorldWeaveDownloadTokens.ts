@@ -17,7 +17,7 @@ type StorageFileLike = {
   getMetadata(): Promise<[{ metadata?: CustomStorageMetadata }, unknown]>;
   setMetadata(metadata: { metadata: CustomStorageMetadata }): Promise<unknown>;
 };
-type StorageBucketLike = { file(path: string): StorageFileLike };
+type StorageBucketLike = { name: string; file(path: string): StorageFileLike };
 
 export type LegacyMediaOutcome =
   | 'would-revoke-and-clear'
@@ -48,15 +48,17 @@ export interface LegacyMediaSummary {
   stoppedAtLimit: boolean;
 }
 
-export function firebaseDownloadTokenObjectPath(value: unknown): string | null {
+export function firebaseDownloadTokenObjectPath(value: unknown, expectedBucket?: string): string | null {
   if (typeof value !== 'string' || value.length > 4096) return null;
   try {
     const url = new URL(value);
     if (url.protocol !== 'https:' || url.hostname !== 'firebasestorage.googleapis.com'
       || !url.searchParams.has('token') || !url.searchParams.get('token')) return null;
-    const match = url.pathname.match(/^\/v0\/b\/[^/]+\/o\/(.+)$/);
+    const match = url.pathname.match(/^\/v0\/b\/([^/]+)\/o\/(.+)$/);
     if (!match) return null;
-    const path = decodeURIComponent(match[1]);
+    const bucketName = decodeURIComponent(match[1]);
+    if (expectedBucket && bucketName !== expectedBucket) return null;
+    const path = decodeURIComponent(match[2]);
     return path && !path.includes('..') && !path.includes('\\') ? path : null;
   } catch {
     return null;
@@ -94,7 +96,7 @@ async function migrateMoment(
   dryRun: boolean,
 ): Promise<LegacyMediaOutcome | null> {
   const mediaUrl = moment.get('mediaUrl');
-  const urlObjectPath = firebaseDownloadTokenObjectPath(mediaUrl);
+  const urlObjectPath = firebaseDownloadTokenObjectPath(mediaUrl, bucket.name);
   if (!urlObjectPath) return null;
   if (weaveVisibility === 'public') return 'skipped-public';
   if (weaveVisibility !== 'private') return 'unsafe-reference';
