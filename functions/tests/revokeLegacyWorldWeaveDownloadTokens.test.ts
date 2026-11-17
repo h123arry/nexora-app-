@@ -40,6 +40,8 @@ describe('legacy WorldWeave download-token migration', () => {
   it('recognizes only Firebase download URLs with a token and decodes their exact object path', () => {
     const path = 'users/legacy-media-author/media/legacy-image';
     assert.equal(firebaseDownloadTokenObjectPath(tokenUrl(path)), path);
+    assert.equal(firebaseDownloadTokenObjectPath(tokenUrl(path), 'another-bucket'), null);
+    assert.equal(firebaseDownloadTokenObjectPath(tokenUrl(path), bucket.name), path);
     assert.equal(firebaseDownloadTokenObjectPath('https://example.test/file?token=abc'), null);
     assert.equal(firebaseDownloadTokenObjectPath('https://firebasestorage.googleapis.com/v0/b/bucket/o/file?alt=media'), null);
     assert.equal(firebaseDownloadTokenObjectPath('http://firebasestorage.googleapis.com/v0/b/bucket/o/file?token=abc'), null);
