@@ -2355,6 +2355,27 @@ body {
   filter: drop-shadow(0 0 7px rgba(113, 56, 255, 0.32));
 }
 
+.nx-loader-orbit {
+  isolation: isolate;
+  background: rgba(113, 56, 255, 0.055);
+  box-shadow: 0 0 18px rgba(113, 56, 255, 0.12), inset 0 0 0 1px rgba(168, 85, 247, 0.14);
+}
+
+.nx-loader-orbit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(113, 56, 255, 0.12) 190deg, #A855F7 285deg, #C084FC 320deg, transparent 360deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  animation: nx-loader-orbit-spin 1.6s linear infinite;
+}
+
+@keyframes nx-loader-orbit-spin {
+  to { transform: rotate(360deg); }
+}
+
 @keyframes nx-loader-signal-flow {
   0%, 100% { background-position: 0% 0%; }
   50% { background-position: 100% 100%; }
