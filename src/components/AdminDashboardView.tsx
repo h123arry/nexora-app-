@@ -429,7 +429,7 @@ export default function AdminDashboardView({
         )}
 
         <button 
-          onClick={() => setActiveSubTab('moderation')
+          onClick={() => setActiveSubTab('moderation')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'moderation' ? 'bg-orange-600 border border-orange-500/30 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
         >
           <AlertTriangle className="w-3.5 h-3.5" />
@@ -524,7 +524,7 @@ export default function AdminDashboardView({
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input readOnly value={foundingResult.passwordResetLink} className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-zinc-300" />
                   <button
-                    onClick={() => void navigator.clipboard.writeText(foundingResult.passwordResetLink).then(
+                    onClick={() => void (navigator.clipboard?.writeText(foundingResult.passwordResetLink) || Promise.reject(new Error('Clipboard unavailable'))).then(
                       () => window.dispatchEvent(new CustomEvent('toast', { detail: 'One-time password reset link copied.' }))
                     ).catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Copy failed. Select and copy the link manually.' })))}
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-500/30 px-4 py-2 text-xs font-bold text-violet-200 hover:bg-violet-500/10"
