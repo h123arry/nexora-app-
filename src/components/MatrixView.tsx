@@ -53,16 +53,16 @@ export default function MatrixView({
   };
 
   const menuItems = [
-    { id: 'studio' as MatrixSubTab, label: 'Post Studio', desc: 'Create community posts & stories', icon: Paintbrush, color: 'text-fuchsia-400' },
-    { id: 'circles' as MatrixSubTab, label: 'Circles', desc: 'Your audiences & close network', icon: Users, color: 'text-emerald-400' },
-    { id: 'missions' as MatrixSubTab, label: 'Missions', desc: 'Goals, challenges & helpers', icon: Target, color: 'text-yellow-400' },
-    { id: 'messages' as MatrixSubTab, label: 'Messages', desc: 'Your direct messages', icon: MessageSquare, color: 'text-sky-400' }
+    { id: 'studio' as MatrixSubTab, label: 'Post Studio', desc: 'Write and share updates', icon: Paintbrush, color: 'text-fuchsia-400' },
+    { id: 'circles' as MatrixSubTab, label: 'Circles', desc: 'People you follow closely', icon: Users, color: 'text-emerald-400' },
+    { id: 'missions' as MatrixSubTab, label: 'Missions', desc: 'Challenges and goals', icon: Target, color: 'text-yellow-400' },
+    { id: 'messages' as MatrixSubTab, label: 'Messages', desc: 'Private conversations', icon: MessageSquare, color: 'text-sky-400' }
   ];
 
   return (
-    <div id="voh-matrix-centre" className="space-y-6 pb-28 sm:pb-12">
+    <div id="voh-matrix-centre" className="nx-matrix-page space-y-6 pb-28 sm:pb-12">
       
-      {/* Control Center Banner Header */}
+      {/* Page heading */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-5">
         <div>
           <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
@@ -71,7 +71,7 @@ export default function MatrixView({
               <VohIcon size={18} animated glow variant="brand" />
             </div>
             <h2 className="text-xl font-black font-sans tracking-tight text-current">
-              VOH AI Hub
+              VOH AI
             </h2>
           </div>
           <p className="text-xs text-current/60 font-sans">
@@ -81,7 +81,7 @@ export default function MatrixView({
 
     </div>
 
-      {/* Futuristic Menu Pills */}
+      {/* Section navigation */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 select-none">
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -100,7 +100,7 @@ export default function MatrixView({
                 <Icon className={`w-4 h-4 ${isActive ? item.color : 'text-current/40'}`} />
                 <span className="text-xs font-bold font-sans">{item.label}</span>
               </div>
-              <span className="text-[9px] font-mono leading-tight text-current/50 md:block hidden">
+              <span className="text-[9px] font-sans leading-tight text-current/50 md:block hidden">
                 {item.desc}
               </span>
             </button>
@@ -108,7 +108,7 @@ export default function MatrixView({
         })}
       </div>
 
-      {/* Main Dynamic View Box */}
+      {/* Selected section */}
       <div className="p-1 min-h-[460px]">
         <AnimatePresence mode="wait">
           <motion.div
@@ -145,13 +145,13 @@ export default function MatrixView({
                   {deploySuccess && (
                     <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono rounded-xl flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 shrink-0" />
-                      <span>POST SHARED SUCCESSFULLY! VISIBLE ON THE FEED.</span>
+                      <span>Your post has been shared.</span>
                     </div>
                   )}
 
                   <form onSubmit={handleStudioDeploy} className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-mono tracking-wider text-current/60 uppercase font-bold">What is on your mind?</label>
+                      <label className="text-[11px] font-sans tracking-wide text-current/60 uppercase font-bold">What is on your mind?</label>
                       <textarea
                         value={customPostContent}
                         onChange={(e) => setCustomPostContent(e.target.value)}
@@ -201,14 +201,14 @@ export default function MatrixView({
                           placeholder="https://images.unsplash.com/your-photo"
                           className="w-full px-3.5 py-2.5 rounded-xl bg-current/5 border border-current/10 outline-hidden text-current text-xs font-sans placeholder-current/40 focus:border-white/10 transition-colors"
                         />
-                        <p className="text-[9px] text-current/40 font-mono mt-1">Paste any direct link to a picture or graphic you want to show.</p>
+                        <p className="text-[11px] text-current/45 font-sans mt-1">Paste any direct link to a picture or graphic you want to show.</p>
                       </div>
                     </div>
 
                     <div className="pt-2 border-t border-current/5 flex items-center justify-end">
                       <button
                         type="submit"
-                        className="py-2.5 px-6 rounded-xl bg-linear-to-r from-violet-600 via-pink-600 to-cyan-500 hover:brightness-110 active:scale-98 text-white text-xs font-bold font-sans flex items-center gap-2 transition-all shadow-md"
+                        className="py-2.5 px-6 rounded-xl bg-violet-600 hover:brightness-110 active:scale-98 text-white text-sm font-semibold font-sans flex items-center gap-2 transition-all"
                       >
                         <PlusCircle className="w-4 h-4" />
                         <span>Post to Feed</span>
