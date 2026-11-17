@@ -647,3 +647,72 @@ body {
 :root[data-nx-performance="constrained"] .nx-dock-item[data-active="true"] svg {
   filter: none;
 }
+
+
+/* NEXORA deeper midnight finish: darker foundations, richer surfaces, original logo gradient retained for accents. */
+:root {
+  --nx-canvas: #05040B;
+  --nx-canvas-deep: #030208;
+  --nx-surface: #0B0817;
+  --nx-surface-2: #100B20;
+  --nx-surface-3: #17102B;
+  --nx-edge: #211832;
+  --nx-edge-strong: #382653;
+  --nx-muted: #A39BBF;
+  --nx-shadow: 0 24px 64px rgba(0, 0, 0, .58);
+  --nx-shadow-soft: 0 12px 34px rgba(0, 0, 0, .42);
+}
+html, body, #root,
+.nx-app-shell, .nx-app-shell-root, .nx-feed-stage, .nx-page-shell {
+  background-color: var(--nx-canvas);
+}
+body {
+  background:
+    radial-gradient(ellipse at 50% -24%, rgba(116, 43, 255, .085), transparent 48%),
+    var(--nx-canvas);
+}
+.nx-surface, .nx-soft-card, .nx-post-card, .nx-route-card, .nx-discovery-card {
+  background-color: var(--nx-surface);
+  border-color: var(--nx-edge);
+  box-shadow: var(--nx-shadow-soft);
+}
+.nx-sidebar-shell {
+  background: linear-gradient(180deg, #0A0714 0%, #05040B 78%);
+  border-color: rgba(139, 111, 210, .15) !important;
+}
+.nx-glass, .nx-glass-strong, .nx-mobile-dock {
+  background: rgba(8, 6, 16, .94);
+  border-color: rgba(139, 111, 210, .17) !important;
+}
+.nx-glass-strong { background: rgba(5, 4, 11, .97); }
+.nx-field, .nx-btn-ghost, .nx-icon-button {
+  background: #100B20;
+  border-color: #281D3D;
+}
+.nx-field:hover, .nx-btn-ghost:hover, .nx-icon-button:hover {
+  background: #17102B;
+  border-color: rgba(138, 63, 252, .48);
+}
+.nx-field:focus { background: #130D24; }
+.nx-feed-header, .nx-page-header, .nx-chat-header {
+  background: rgba(5, 4, 11, .96);
+  border-color: rgba(139, 111, 210, .16) !important;
+}
+.nx-composer { background: linear-gradient(145deg, #100B20, #0A0714); border-color: #281D3D !important; }
+.nx-inbox-list { background: linear-gradient(180deg, #0B0817 0%, #070510 100%); }
+.nx-chat-stage { background: radial-gradient(ellipse at 50% 0%, rgba(116, 43, 255, .055), transparent 48%), var(--nx-canvas); }
+.nx-pulse-card {
+  background: linear-gradient(145deg, rgba(116, 43, 255, .15), #0D091A 68%, #080611) !important;
+  border-color: rgba(138, 63, 252, .24) !important;
+}
+.nx-sidebar-nav-item[data-active="true"] {
+  background: linear-gradient(100deg, rgba(116, 43, 255, .19), rgba(49, 91, 255, .055));
+  border-color: rgba(138, 63, 252, .24);
+  box-shadow: inset 3px 0 0 #742BFF;
+}
+.nx-create-action { background: rgba(116, 43, 255, .1) !important; border-color: rgba(138, 63, 252, .25) !important; }
+.nx-create-action:hover { background: rgba(116, 43, 255, .17) !important; }
+.nx-post-card:hover, .nx-discovery-card:hover { border-color: rgba(138, 63, 252, .38); }
+.nx-dock-item[data-active="true"] { background: rgba(116, 43, 255, .13); }
+.nx-glow-violet { box-shadow: 0 0 38px -24px rgba(116, 43, 255, .5); }
+.nx-video-frame { background: #030208; }
