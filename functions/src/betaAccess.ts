@@ -3,6 +3,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { assertCallableSessionActive } from './callableSession.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -23,8 +24,10 @@ function isAdministrator(token: Record<string, unknown>): boolean {
  * only to an authenticated founder/admin; Firestore stores only its SHA-256 hash.
  */
 export const createBetaInviteLink = onCall({ maxInstances: 2 }, async request => {
-  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in with an administrator account.');
-  if (!isAdministrator((request.auth.token || {}) as Record<string, unknown>)) {
+  const caller = request.auth;
+  if (!caller?.uid) throw new HttpsError('unauthenticated', 'Sign in with an administrator account.');
+  await assertCallableSessionActive(db, caller.uid, caller.token?.auth_time);
+  if (!isAdministrator((caller.token || {}) as Record<string, unknown>)) {
     throw new HttpsError('permission-denied', 'Only a NEXORA founder or administrator can issue the beta link.');
   }
 
@@ -64,6 +67,7 @@ export const claimBetaInvite = onCall({ maxInstances: 20 }, async request => {
   const caller = request.auth;
   const uid = caller?.uid;
   if (!caller || !uid) throw new HttpsError('unauthenticated', 'Start a NEXORA beta session first.');
+  await assertCallableSessionActive(db, uid, caller.token?.auth_time);
 
   const firebaseClaims = (caller.token.firebase || {}) as Record<string, unknown>;
   if (firebaseClaims.sign_in_provider !== 'anonymous') {
