@@ -35,6 +35,7 @@ export { saveCreatorLens, submitCreatorLensForReview, reviewCreatorLens, listMyC
 export { getCreatorEarningsSnapshot, getPendingGiftEarningsForFinance, settleGiftCreatorEarning } from './giftEarnings.js';
 export { listAdminUsers, updateAdminUser, listAdminAuditEvents } from './adminUsers.js';
 export { createFoundingMemberAccount } from './foundingMembers.js';
+export { createBetaInviteLink, claimBetaInvite } from './betaAccess.js';
 export { setCreatorEconomyDisplayCurrency, getCreatorGiftAnalytics, createGiftCompetition, getActiveGiftCompetitions, getGiftCompetitionLeaderboard, getGiftRiskReviewQueue, resolveGiftRiskSignal } from './giftEconomy.js';
 export { getNgnPayoutProviderStatus, getNgnPayoutPolicyForFinance, getNgnPayoutOtpQueue, finalizeNgnPayoutTransfer, getCreatorPayoutComplianceQueue, configureNgnPayoutPolicy, reviewCreatorPayoutCompliance, getNgnBanks, resolveNgnBankAccount, setCreatorPayoutBeneficiary, getCreatorPayoutReadiness, requestCreatorPayout, paystackPayoutWebhook, reconcilePaystackCreatorPayouts } from './paystackPayouts.js';
 export { scheduleCreatorPost, cancelCreatorScheduledPost, listCreatorScheduledPosts, publishDueCreatorPosts } from './creatorScheduling.js';
