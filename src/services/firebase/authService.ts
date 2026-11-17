@@ -116,8 +116,12 @@ export class AuthService {
         return 'Firebase created your account, but NEXORA could not finish setting up your profile. Your account is safe; please try signing in again shortly.';
       case 'auth/invalid-action-code':
         return 'This recovery or verification link is invalid or has already been used.';
-      default:
-        return 'An authentication error occurred. Please try again or contact the account owner.';
+      default: {
+        // Keep unknown Firebase failures actionable in the UI. The code is safe to
+        // expose and lets us distinguish a rejected Auth request from later profile setup.
+        const diagnosticCode = code || 'unknown-error';
+        return `Firebase could not complete this request (${diagnosticCode}). Please contact Nexora support with this error code.`;
+      }
     }
   }
 

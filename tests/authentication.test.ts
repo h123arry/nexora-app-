@@ -28,7 +28,14 @@ test('maps Firebase configuration and credential failures without exposing provi
   assert.match(AuthService.mapFirebaseError({ code: 'auth/invalid-phone-number' }), /Invalid phone number/);
   assert.match(AuthService.mapFirebaseError({ code: 'auth/captcha-check-failed' }), /Phone verification could not be completed/);
   assert.doesNotMatch(AuthService.mapFirebaseError({ code: 'auth/email-already-in-use' }), /already exists/i);
-  assert.equal(AuthService.mapFirebaseError({ code: 'auth/internal-error', message: 'secret provider stack' }), 'An authentication error occurred. Please try again or contact the account owner.');
+  assert.equal(
+    AuthService.mapFirebaseError({ code: 'auth/internal-error', message: 'secret provider stack' }),
+    'Firebase could not complete this request (auth/internal-error). Please contact Nexora support with this error code.'
+  );
+  assert.doesNotMatch(
+    AuthService.mapFirebaseError({ code: 'auth/internal-error', message: 'secret provider stack' }),
+    /secret provider stack/
+  );
 });
 
 test('maps the remember-device choice to local or tab-session persistence', () => {
