@@ -17,9 +17,10 @@ export class ProfileService {
     try {
       const snap = await getDoc(doc(db, 'users', uid));
       return snap.exists() ? (snap.data() as User) : null;
-    } catch {
-      console.warn('Error fetching private user profile; details redacted.');
-      return null;
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code || 'unknown';
+      console.error('[NEXORA] Private profile read failed', { code });
+      throw error;
     }
   }
 
@@ -136,16 +137,23 @@ export class ProfileService {
         ...additionalData
       }, firebaseUser.email || '');
     } else if (db) {
-      // Existing users migrate only their own sanitized public projection at next authenticated session.
-      const settingsSnapshot = await getDoc(doc(db, 'users', firebaseUser.uid, 'settings', 'preferences'));
-      const includeLocation = settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone';
-      await setDoc(doc(db, 'publicProfiles', firebaseUser.uid), {
-        ...this.toPublicProfile(profile, includeLocation),
-        location: includeLocation && typeof profile.location === 'string' && profile.location.trim()
-          ? profile.location
-          : deleteField(),
-        interestDNA: deleteField(),
-      }, { merge: true });
+      // A private account profile is sufficient to establish an authenticated NEXORA
+      // session. Public-directory projection refresh is a secondary migration and must
+      // never lock an existing member out when older public-profile data/rules differ.
+      try {
+        const settingsSnapshot = await getDoc(doc(db, 'users', firebaseUser.uid, 'settings', 'preferences'));
+        const includeLocation = settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone';
+        await setDoc(doc(db, 'publicProfiles', firebaseUser.uid), {
+          ...this.toPublicProfile(profile, includeLocation),
+          location: includeLocation && typeof profile.location === 'string' && profile.location.trim()
+            ? profile.location
+            : deleteField(),
+          interestDNA: deleteField(),
+        }, { merge: true });
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code || 'unknown';
+        console.warn('[NEXORA] Public profile refresh deferred; private sign-in remains valid', { code });
+      }
     }
     return profile;
   }
