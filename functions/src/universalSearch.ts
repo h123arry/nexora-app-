@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { asDate, hasActiveAccountRestriction } from './accountStatusPolicy.js';
 
 export type SearchKind = 'person' | 'post' | 'video' | 'page' | 'circle' | 'live' | 'event' | 'service' | 'update' | 'hashtag' | 'poll' | 'announcement';
 export interface SearchHit {
@@ -32,28 +33,6 @@ function searchKeys(value: unknown): string[] {
     for (let i = 0; i < word.length - 1; i++) keys.add('b:' + word.slice(i, i + 2));
   }
   return [...keys].slice(0, 260);
-}
-function asDate(value: unknown): Date {
-  if (value instanceof Date) return value;
-  if (value && typeof value === 'object' && 'toDate' in value && typeof (value as {toDate?: unknown}).toDate === 'function') {
-    const date = (value as {toDate: () => Date}).toDate();
-    if (Number.isFinite(date.getTime())) return date;
-  }
-  if (typeof value === 'string' || typeof value === 'number') {
-    const date = new Date(value);
-    if (Number.isFinite(date.getTime())) return date;
-  }
-  return new Date(0);
-}
-
-function hasActiveAccountRestriction(profile: Record<string, unknown>, status: Record<string, unknown>): boolean {
-  if (profile.isSeedProfile === true) return true;
-  const statusIsAuthoritative = Object.prototype.hasOwnProperty.call(status, 'banned')
-    || Object.prototype.hasOwnProperty.call(status, 'suspended');
-  if (!statusIsAuthoritative) return profile.isBanned === true || profile.isSuspended === true;
-  if (status.banned !== true && status.suspended !== true) return false;
-  const expiry = asDate(status.expiresAt);
-  return expiry.getTime() === 0 || expiry.getTime() > Date.now();
 }
 function safeString(value: unknown, max = 500): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
