@@ -117,6 +117,14 @@ export class AuthService {
         return 'Firebase created your account, but Firestore did not receive a valid authenticated session for profile setup.';
       case 'profile-setup-failed':
         return 'Firebase created your account, but NEXORA could not finish setting up your profile. Your account is safe; please try signing in again shortly.';
+      case 'functions/resource-exhausted':
+        return 'NEXORA Founding Beta is full. All 300 places have been claimed.';
+      case 'functions/permission-denied':
+        return 'This beta invitation is invalid or has been disabled. Ask the person who invited you for help.';
+      case 'functions/invalid-argument':
+        return 'This beta invitation link is invalid. Open the complete invitation link you received.';
+      case 'functions/failed-precondition':
+        return 'This invitation must be claimed from a new beta session. Sign out and reopen the invitation link.';
       case 'auth/invalid-action-code':
         return 'This recovery or verification link is invalid or has already been used.';
       default: {
