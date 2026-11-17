@@ -78,6 +78,7 @@ const MAX_FAILED_ATTEMPTS = 5;
 export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps) {
   // Navigation & Auth Flow Modes
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>('login');
+  const [betaInviteCode] = useState(() => typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('beta') || '' : '');
   
   // Method selection in signup: 'choose' | 'email' | 'phone'
   const [signupMethod, setSignupMethod] = useState<'choose' | 'email' | 'phone'>('choose');
@@ -183,6 +184,26 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     setIsPending(false);
     setSmsSent(false);
     setVerificationCode('');
+  };
+
+  // Claim a one of the 300 private beta places and create a device-bound Firebase session.
+  const handleBetaJoin = async () => {
+    if (!betaInviteCode) {
+      setErrorMsg('This invitation link is missing its beta access code.');
+      return;
+    }
+    setErrorMsg('');
+    setIsPending(true);
+    setStatusMessage('Securing your NEXORA beta place...');
+    try {
+      const { user } = await AuthService.joinBetaWithInvite(betaInviteCode);
+      setIsPending(false);
+      window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+      onLoginSuccess(user);
+    } catch (error: any) {
+      setIsPending(false);
+      setErrorMsg(error?.message || 'NEXORA could not claim this beta invitation. Please try again.');
+    }
   };
 
   // Google Sign In Handler
@@ -1005,6 +1026,16 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
               {/* Method Chooser */}
               {signupMethod === 'choose' && (
                 <div className="space-y-3 pt-2">
+                  {betaInviteCode && (
+                    <div className="rounded-2xl border border-violet-400/30 bg-violet-500/10 p-4 space-y-2">
+                      <div className="text-sm font-black text-white">You’re invited to NEXORA Founding Beta</div>
+                      <p className="text-xs leading-relaxed text-violet-100/80">Join now without email or phone verification. Your account will stay on this device until you choose to secure it.</p>
+                      <button type="button" onClick={handleBetaJoin} disabled={isPending} className="w-full py-3.5 px-4 bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 disabled:opacity-50 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(109,40,217,0.3)] cursor-pointer">
+                        <Sparkles className="w-4 h-4" />
+                        <span>{isPending ? 'Joining NEXORA...' : 'Join the Founding Beta'}</span>
+                      </button>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={handleGoogleSignInClick}
