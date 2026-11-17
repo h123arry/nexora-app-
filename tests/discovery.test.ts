@@ -191,6 +191,29 @@ describe('discovery service', () => {
     assert.match(results[0].reason, /#ai/);
   });
 
+  it('does not rank posts higher because of legacy contact-verification flags', () => {
+    const now = Date.parse('2026-11-17T12:00:00.000Z');
+    const ranked = rankPosts([
+      post({ id: 'legacy-unverified', userId: 'same', isVerified: false, timestamp: new Date(now).toISOString() }),
+      post({ id: 'legacy-contact-verified', userId: 'same', isVerified: true, timestamp: new Date(now).toISOString() }),
+    ], { now });
+    assert.deepEqual(ranked.map(item => item.post.id), ['legacy-unverified', 'legacy-contact-verified']);
+  });
+
+  it('does not boost creator recommendations using legacy contact-verification flags', () => {
+    const creator = (id: string, isVerified: boolean) => ({
+      id, username: id, name: id, avatar: '', bio: '', location: '', website: '',
+      followers: 10, following: 0, isVerified, coverImage: '', joinedDate: '', reputationPoints: 0,
+      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+      interestDNA: { ai: 50 }, skills: [],
+    } as User);
+    const results = recommendCreators([
+      creator('legacy-unverified', false),
+      creator('legacy-contact-verified', true),
+    ], { interests: { ai: 50 } });
+    assert.deepEqual(results.map(item => item.creator.id), ['legacy-unverified', 'legacy-contact-verified']);
+  });
+
   it('trends topics using recent posts from distinct creators, excluding stale and single-author spikes', () => {
     const now = Date.now();
     const topics = rankTrendingTopics([
