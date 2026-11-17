@@ -2357,6 +2357,7 @@ export default function App() {
                       currentUser={getRichUser(currentUser)}
                       theme={theme}
                       setTheme={setTheme}
+                      initialSection={securityReminderStep > 0 ? 'connected' : 'account'}
                     />
                   )}
                     </motion.div>
