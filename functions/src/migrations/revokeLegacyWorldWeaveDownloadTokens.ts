@@ -15,7 +15,7 @@ type CustomStorageMetadata = Record<string, string | number | boolean | null>;
 type StorageFileLike = {
   exists(): Promise<[boolean]>;
   getMetadata(): Promise<[{ metadata?: CustomStorageMetadata }, unknown]>;
-  setMetadata(metadata: { metadata: CustomStorageMetadata }): Promise<unknown>;
+  setMetadata(metadata: { cacheControl?: string; metadata: CustomStorageMetadata }): Promise<unknown>;
 };
 type StorageBucketLike = { name: string; file(path: string): StorageFileLike };
 
@@ -121,7 +121,7 @@ async function migrateMoment(
     if (dryRun) return hasTokenMetadata ? 'would-revoke-and-clear' : 'would-clear-revoked-token';
 
     if (hasTokenMetadata) {
-      await file.setMetadata({ metadata: metadataWithRotatedFirebaseDownloadToken(customMetadata) });
+      await file.setMetadata({ cacheControl: 'private, no-store, max-age=0', metadata: metadataWithRotatedFirebaseDownloadToken(customMetadata) });
     }
 
     const result = await db.runTransaction(async transaction => {
