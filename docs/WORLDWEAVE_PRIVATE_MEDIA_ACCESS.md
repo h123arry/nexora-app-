@@ -19,13 +19,13 @@ The trusted `resolveWorldWeaveMomentMediaUrl` callable:
 6. respects private-profile follow requirements for public experiences and active account restrictions;
 7. confirms the Storage object exists;
 8. re-checks the experience immediately before returning the signed URL;
-9. returns a signed read URL that expires after 10 minutes.
+9. returns a signed read URL that expires after 10 minutes; the Storage object response is marked `private, no-store, max-age=0`.
 
 The callable does not return storage paths or membership records. A removed contributor cannot request a new signed URL. A URL already issued remains usable only until its short expiry.
 
 ## Client behavior
 
-The WorldWeave client requests a temporary URL only when a viewer explicitly loads media without a persisted download URL. The URL stays in component memory and is not written back to Firestore. If the URL expires, the viewer can request a fresh one while they remain authorized.
+The WorldWeave client uses the temporary resolver for every owner-scoped Storage object, even when an older `mediaUrl` field is still present. It never renders that legacy private URL directly. A direct URL fallback is retained only for older public moments that have no Storage path; private legacy moments without a safe Storage path are withheld. Viewers explicitly load media, the signed URL stays in component memory, and it is never written back to Firestore. If the URL expires, the viewer can request a fresh one while they remain authorized. New uploads and migrated private objects carry `private, no-store, max-age=0` cache metadata.
 
 ## Important legacy limitation
 
