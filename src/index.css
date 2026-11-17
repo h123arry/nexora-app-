@@ -1684,3 +1684,184 @@ body {
     padding: 13px;
   }
 }
+
+
+/* NEXORA CREATE — unified premium launchpad and focused publishing studio. */
+[role="dialog"][aria-labelledby="nexora-create-title"] {
+  max-width: 620px;
+  max-height: min(90dvh,900px);
+  padding: clamp(20px,3.5vw,30px);
+  border-color: rgba(151,119,220,.26);
+  background:
+    radial-gradient(ellipse at 100% 0%,rgba(113,56,255,.17),transparent 43%),
+    radial-gradient(ellipse at 0% 100%,rgba(36,91,255,.08),transparent 42%),
+    linear-gradient(150deg,#100b20 0%,#090714 60%,#06040d 100%);
+  box-shadow: 0 32px 110px rgba(0,0,0,.68),0 0 65px rgba(75,16,242,.13);
+  scrollbar-color: rgba(151,119,220,.35) transparent;
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] > div:first-child {
+  background: linear-gradient(90deg,#E94BFF,#7138FF,#245BFF);
+  box-shadow: 0 0 18px rgba(113,56,255,.4);
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] #nexora-create-title {
+  max-width: 470px;
+  font-size: clamp(24px,4vw,32px);
+  line-height: 1.08;
+  letter-spacing: -.055em;
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] > div:nth-child(2) {
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(151,119,220,.14);
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] > button {
+  min-height: 86px;
+  border-radius: 19px;
+  padding: 16px 18px;
+  border-color: rgba(151,119,220,.22);
+  background: linear-gradient(110deg,rgba(113,56,255,.16),rgba(36,91,255,.07));
+  box-shadow: inset 0 1px rgba(255,255,255,.025),0 10px 25px rgba(0,0,0,.14);
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] > button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(190,166,255,.56);
+  background: linear-gradient(110deg,rgba(113,56,255,.25),rgba(36,91,255,.12));
+  box-shadow: 0 14px 32px rgba(0,0,0,.24),0 0 24px rgba(113,56,255,.1);
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] > button > span:first-child {
+  width: 50px;
+  height: 50px;
+  border: 1px solid rgba(190,166,255,.18);
+  border-radius: 16px;
+  box-shadow: inset 0 1px rgba(255,255,255,.07);
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] > button > span:nth-child(2) > span:first-child {
+  font-size: 14px;
+  letter-spacing: -.015em;
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] > .grid {
+  gap: 10px;
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] > .grid > button {
+  min-height: 82px;
+  border-radius: 17px;
+  padding: 13px;
+  border-color: rgba(151,119,220,.15);
+  background: linear-gradient(145deg,rgba(19,13,38,.94),rgba(9,7,20,.98));
+  transition: transform 170ms ease,border-color 170ms ease,background 170ms ease,box-shadow 170ms ease;
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] > .grid > button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(167,139,250,.42);
+  background: linear-gradient(145deg,rgba(35,22,65,.96),rgba(12,9,27,.98));
+  box-shadow: 0 12px 26px rgba(0,0,0,.22);
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] > .grid > button > span:first-child {
+  border: 1px solid rgba(167,139,250,.15);
+  background: linear-gradient(145deg,rgba(113,56,255,.22),rgba(36,91,255,.1));
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] > .grid > button > span:last-child > span:first-child {
+  letter-spacing: -.015em;
+}
+[role="dialog"][aria-labelledby="nexora-create-title"] button:focus-visible {
+  outline: 2px solid #b9a6ef;
+  outline-offset: 3px;
+}
+#creation-studio-frame {
+  width: min(100%,1040px);
+  max-height: min(92dvh,980px);
+  padding: clamp(16px,2.5vw,26px);
+  border: 1px solid rgba(151,119,220,.25);
+  border-radius: 26px;
+  background:
+    radial-gradient(ellipse at 100% 0%,rgba(113,56,255,.11),transparent 40%),
+    linear-gradient(145deg,#100b20 0%,#090714 58%,#06040d 100%);
+  box-shadow: 0 30px 100px rgba(0,0,0,.62),0 0 55px rgba(75,16,242,.1);
+}
+#creation-studio-frame > div:first-child {
+  border-color: rgba(151,119,220,.18);
+}
+#creation-studio-frame > div:nth-child(2) {
+  border-color: rgba(151,119,220,.18);
+  background: rgba(5,4,11,.62);
+  padding: 5px;
+  border-radius: 15px;
+}
+#creation-studio-frame > div:nth-child(2) > button {
+  min-height: 40px;
+  border-radius: 11px;
+}
+#creation-studio-frame > div:nth-child(3) {
+  border-color: rgba(151,119,220,.16);
+  background: rgba(8,6,17,.52);
+}
+#creation-studio-frame > div:nth-child(3) > button {
+  min-height: 34px;
+  border-radius: 10px;
+}
+#creation-studio-frame .custom-scrollbar {
+  scrollbar-color: rgba(151,119,220,.32) transparent;
+}
+#creation-studio-frame input:not([type="file"]):not([type="checkbox"]):not([type="radio"]),
+#creation-studio-frame textarea,
+#creation-studio-frame select {
+  border-color: rgba(151,119,220,.2);
+  background-color: rgba(13,10,27,.92);
+  color: #f5f0ff;
+}
+#creation-studio-frame input:focus,
+#creation-studio-frame textarea:focus,
+#creation-studio-frame select:focus {
+  outline: none;
+  border-color: rgba(167,139,250,.65);
+  box-shadow: 0 0 0 3px rgba(113,56,255,.13);
+}
+#creation-studio-frame button:focus-visible,
+#creation-studio-frame label:focus-within {
+  outline-color: #a78bfa;
+  outline-offset: 3px;
+}
+#creation-studio-frame .animate-fadeIn > div > button,
+#creation-studio-frame .animate-fadeIn .rounded-2xl.border {
+  transition: border-color 170ms ease,background 170ms ease,transform 170ms ease,box-shadow 170ms ease;
+}
+#creation-studio-frame .animate-fadeIn > div > button:hover {
+  border-color: rgba(167,139,250,.42);
+}
+@media (max-width: 640px) {
+  [role="dialog"][aria-labelledby="nexora-create-title"] {
+    width: 100%;
+    max-height: min(88dvh,860px);
+    padding: 19px 16px max(24px,env(safe-area-inset-bottom));
+    border-radius: 25px 25px 0 0;
+  }
+  [role="dialog"][aria-labelledby="nexora-create-title"] > button {
+    min-height: 78px;
+    padding: 13px;
+    gap: 12px;
+  }
+  [role="dialog"][aria-labelledby="nexora-create-title"] > .grid > button {
+    min-height: 82px;
+    padding: 11px;
+  }
+  #creation-studio-frame {
+    max-height: calc(100dvh - 16px);
+    padding: 14px;
+    border-radius: 22px;
+  }
+  #creation-studio-frame > div:nth-child(3) {
+    gap: 3px;
+    overflow-x: auto;
+  }
+  #creation-studio-frame > div:nth-child(3) > button {
+    min-width: max-content;
+    padding-inline: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [role="dialog"][aria-labelledby="nexora-create-title"] > button,
+  [role="dialog"][aria-labelledby="nexora-create-title"] > .grid > button,
+  #creation-studio-frame * {
+    transition: none !important;
+    animation-duration: .01ms !important;
+  }
+}
