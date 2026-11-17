@@ -261,3 +261,48 @@ button:disabled { cursor: not-allowed; }
   background-color: var(--nx-surface-2) !important;
   border-color: var(--nx-edge) !important;
 }
+
+
+/* Calm, editorial layouts: let content breathe instead of boxing every section. */
+.nx-matrix-page { color: var(--nx-text); }
+.nx-matrix-page > div:first-child { border-color: rgba(164,139,230,.13); }
+.nx-matrix-page > div:nth-child(2) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.35rem;
+  border-bottom: 1px solid rgba(164,139,230,.13);
+  padding: 0 0 .65rem;
+}
+.nx-matrix-page > div:nth-child(2) > button {
+  min-height: 38px;
+  padding: .35rem 0 .65rem;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: rgba(247,245,255,.68) !important;
+}
+.nx-matrix-page > div:nth-child(2) > button[aria-current="page"],
+.nx-matrix-page > div:nth-child(2) > button:focus-visible {
+  color: #fff !important;
+}
+.nx-matrix-page > div:nth-child(2) > button:hover { color: #fff !important; }
+.nx-matrix-page > div:nth-child(3) { padding: 0 !important; }
+.nx-matrix-page form { max-width: 100%; }
+.nx-matrix-page form textarea, .nx-matrix-page form input {
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(164,139,230,.16) !important;
+  border-radius: 12px !important;
+  font-size: 14px !important;
+}
+.nx-matrix-page form label { font-family: inherit !important; letter-spacing: .02em !important; text-transform: none !important; font-size: 12px !important; }
+.nx-matrix-page form button[type="submit"] { border-radius: 10px !important; }
+.nx-matrix-page .nx-ai-card, .nx-matrix-page .nx-control-panel { box-shadow: none !important; }
+.nx-matrix-page [class*="font-mono"] { font-family: inherit !important; letter-spacing: normal !important; }
+.nx-matrix-page [class*="rounded-3xl"][class*="border"] {
+  border-color: rgba(164,139,230,.14) !important;
+  box-shadow: none !important;
+}
+.nx-matrix-page [class*="from-violet-600"][class*="to-violet-950"] {
+  background: rgba(113,56,255,.12) !important;
+}
