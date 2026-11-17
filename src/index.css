@@ -1029,7 +1029,7 @@ body {
 
 
 /* Home finishing pass: states, discovery affordances, comments and feed pacing. */
-.nx-feed-stage .nx-feed-header [role="group] button { -webkit-tap-highlight-color: transparent; }
+.nx-feed-stage .nx-feed-header [role="group"] button { -webkit-tap-highlight-color: transparent; }
 .nx-feed-stage .nx-feed-header [role="group"] button {
   position: relative;
   letter-spacing: -.025em;
