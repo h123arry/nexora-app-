@@ -1451,7 +1451,7 @@ export default function ProfileView({
           <div 
             onTouchStart={handleContentTouchStart}
             onTouchEnd={handleContentTouchEnd}
-            className="w-full pt-4 space-y-4 bg-black min-h-[350px] touch-pan-y"
+            className="nx-profile-content w-full pt-4 space-y-4 bg-black min-h-[350px] touch-pan-y"
           >
             {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} /> : filteredTabPosts.length === 0 ? (
               <div className="p-8 py-16 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 max-w-md mx-auto my-6">
