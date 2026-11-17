@@ -1,7 +1,6 @@
 import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
-import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { replaceTerminology } from './src/data/copyDictionary';
 import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app';
@@ -798,6 +797,7 @@ app.post('/api/auth/verify-email-otp', (_req, res) => {
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     // Mount Vite middleware in development
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
