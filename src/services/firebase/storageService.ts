@@ -8,7 +8,6 @@ import {
 import { doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, storage } from './config';
 import { mediaStoragePath } from './storagePaths';
-import { apiRequestUrl } from '../../lib/apiBaseUrl';
 
 export interface MediaUploadOptions {
   file: File | Blob;
@@ -19,6 +18,7 @@ export interface MediaUploadOptions {
   metadata?: Record<string, string>;
   onProgress?: (progress: number) => void;
   signal?: AbortSignal;
+  resolveDownloadUrl?: boolean;
 }
 
 export interface MediaUploadResult {
@@ -65,7 +65,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
         reader.onerror = () => reject(new Error('Could not read this voice recording.'));
         reader.readAsDataURL(file);
       });
-      const response = await fetch(apiRequestUrl(`/api/private-chat-media/chat/${encodeURIComponent(options.chatId!)}/audio`), {
+      const response = await fetch(`/api/private-chat-media/chat/${encodeURIComponent(options.chatId!)}/audio`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ audioBase64: dataUrl.slice(dataUrl.indexOf(',') + 1), mimeType: normalizedContentType }),
@@ -87,6 +87,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
   if (!db) return Promise.reject(new Error('Media storage is not configured for this environment.'));
   const uploadMetadata: UploadMetadata = {
     contentType,
+    ...(options.metadata?.purpose === 'worldweave' ? { cacheControl: 'private, no-store, max-age=0' } : {}),
     customMetadata: {
       ...options.metadata,
       ownerId: userId,
@@ -135,7 +136,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
           try {
             resolve({
               mediaId,
-              downloadUrl: await getDownloadURL(task.snapshot.ref),
+              downloadUrl: options.resolveDownloadUrl === false ? '' : await getDownloadURL(task.snapshot.ref),
               storagePath,
               contentType,
               size: file.size,

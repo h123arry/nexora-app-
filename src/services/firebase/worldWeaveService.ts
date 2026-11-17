@@ -197,14 +197,25 @@ export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: st
   if (text.trim().length > 2000) throw new Error('Moment text must be 2,000 characters or fewer.');
   const mediaType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : null;
   if (!mediaType) throw new Error('Choose a supported photo, video or voice note.');
+  const weaveSnapshot = await getDoc(doc(db, 'worldWeaves', weaveId));
+  if (!weaveSnapshot.exists()) throw new Error('This WorldWeave no longer exists.');
+  const weaveData = weaveSnapshot.data();
+  const participants: string[] = Array.isArray(weaveData.participantIds) ? weaveData.participantIds : [];
+  if (weaveData.ownerId !== user.uid && !participants.includes(user.uid)) {
+    throw new Error('Join this WorldWeave before adding a media moment.');
+  }
   const momentRef = doc(collection(db, 'worldWeaves', weaveId, 'moments'));
   let uploaded: Awaited<ReturnType<typeof uploadMediaFile>> | null = null;
   try {
-    uploaded = await uploadMediaFile({ file, userId: user.uid, mediaId: momentRef.id, metadata: { purpose: 'worldweave', weaveId, momentId: momentRef.id }, onProgress });
+    uploaded = await uploadMediaFile({
+      file, userId: user.uid, mediaId: momentRef.id,
+      metadata: { purpose: 'worldweave', weaveId, momentId: momentRef.id },
+      onProgress, resolveDownloadUrl: false,
+    });
     const batch = writeBatch(db);
     batch.set(momentRef, { weaveId, authorId: user.uid, authorName: author.name.slice(0, 80),
       authorUsername: author.username.slice(0, 40), authorAvatar: author.avatar || '', text: text.trim(),
-      mediaType, mediaUrl: uploaded.downloadUrl, storagePath: uploaded.storagePath, ...(chapterId ? { chapterId } : {}), createdAt: serverTimestamp() });
+      mediaType, mediaUrl: '', storagePath: uploaded.storagePath, ...(chapterId ? { chapterId } : {}), createdAt: serverTimestamp() });
     batch.update(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp(), lastMomentId: momentRef.id });
     await batch.commit();
   } catch (error) {
@@ -214,6 +225,19 @@ export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: st
     }
     throw error;
   }
+}
+
+export async function resolveWorldWeaveMomentMediaUrl(weaveId: string, momentId: string): Promise<string> {
+  requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/')
+    || !momentId || momentId.length > 128 || momentId.includes('/')) {
+    throw new Error('Choose a valid WorldWeave moment.');
+  }
+  const action = httpsCallable<{ weaveId: string; momentId: string }, { url: string; expiresInSeconds: number }>(
+    functions, 'resolveWorldWeaveMomentMediaUrl',
+  );
+  const result = await action({ weaveId, momentId });
+  return result.data.url;
 }
 
 export async function deleteWorldWeaveMoment(weaveId: string, moment: WorldWeaveMoment): Promise<void> {
