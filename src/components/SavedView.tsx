@@ -141,7 +141,7 @@ export default function SavedView({
   });
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6 pb-28 sm:pb-12">
+    <div className="nx-saved-page w-full max-w-4xl mx-auto space-y-6 pb-28 sm:pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/20 to-black border border-white/10 backdrop-blur-xl shadow-md">
         <div className="flex items-center gap-3">
@@ -151,13 +151,13 @@ export default function SavedView({
           <div>
             <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
             <h1 className="text-xl font-sans font-black tracking-tight text-white flex items-center gap-2">
-              Saved Collection
+              Saved
               <span className="text-xs font-mono font-bold text-violet-400 bg-violet-950/60 border border-white/10 px-2.5 py-0.5 rounded-full">
                 {displayPosts.length + otherItems.length} Items
               </span>
             </h1>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Your personal library of bookmarked posts, videos, voice clips, and opportunities
+              Posts, videos and other things you have saved
             </p>
           </div>
         </div>
@@ -178,7 +178,7 @@ export default function SavedView({
       <section className="rounded-3xl border border-violet-500/20 bg-violet-950/15 p-5 space-y-4" aria-label="Saved collections">
         <div className="flex items-center justify-between gap-3">
           <div><h2 className="text-sm font-bold text-white flex items-center gap-2"><FolderPlus className="w-4 h-4 text-violet-300" /> Your collections</h2>
-          <p className="text-xs text-zinc-400 mt-1">Private folders synced to your NEXORA account.</p></div>
+          <p className="text-xs text-zinc-400 mt-1">Keep your saved posts and pages organised.</p></div>
           <span className="text-[10px] text-zinc-500">{collections.length}/50</span>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
@@ -233,7 +233,7 @@ export default function SavedView({
       {otherItems.length > 0 && <section className="space-y-2" aria-label="Saved Pages, Circles and events">
         {otherItems.map(item => <article key={item.itemType + '_' + item.itemId} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0b1020] p-4">
           <div className="min-w-0">
-            <p className="text-[10px] font-mono uppercase tracking-wider text-violet-300">{item.itemType === 'circle' ? 'Circle' : item.itemType === 'page' ? 'Page' : 'Event'}</p>
+            <p className="text-[11px] font-sans font-semibold text-violet-300">{item.itemType === 'circle' ? 'Circle' : item.itemType === 'page' ? 'Page' : 'Event'}</p>
             <h3 className="truncate text-sm font-semibold text-white">{item.title}</h3>
             {item.subtitle && <p className="mt-1 truncate text-xs text-slate-400">{item.subtitle}</p>}
             {!item.available && <p className="mt-1 text-[10px] text-amber-200/70">Saved reference retained; content may have been removed or access changed.</p>}
