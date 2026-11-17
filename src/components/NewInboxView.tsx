@@ -549,10 +549,10 @@ export default function NewInboxView({
   };
 
   return (
-    <div className="nx-page-shell flex flex-col md:flex-row h-full w-full text-white font-sans overflow-hidden relative">
+    <div className="nx-page-shell nx-inbox-shell flex flex-col md:flex-row h-full w-full text-white font-sans overflow-hidden relative">
       
       {/* LEFT COLUMN: Conversation List */}
-      <div className={`w-full md:w-96 border-r border-[var(--nx-edge)] flex flex-col h-full bg-[var(--nx-surface)] ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`nx-inbox-sidebar w-full md:w-96 border-r border-[var(--nx-edge)] flex flex-col h-full bg-[var(--nx-surface)] ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
         
         {/* Header */}
         <div className="nx-page-header p-4 border-b flex items-center justify-between backdrop-blur-md">
@@ -705,7 +705,7 @@ export default function NewInboxView({
       </div>
 
       {/* RIGHT COLUMN: Active Chat Screen */}
-      <div className={`flex-1 flex flex-col h-full bg-[var(--nx-canvas)] ${!activeChatId ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`nx-inbox-chat flex-1 flex flex-col h-full bg-[var(--nx-canvas)] ${!activeChatId ? 'hidden md:flex' : 'flex'}`}>
         {activeChat ? (
           <>
             {/* Chat Header */}
