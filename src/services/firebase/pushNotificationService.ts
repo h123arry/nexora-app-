@@ -106,7 +106,7 @@ export class PushNotificationService {
           this.displayNativeNotification({
             title: payload.notification.title || 'Nexora Alert',
             body: payload.notification.body || '',
-            icon: payload.notification.icon || '/favicon.ico',
+            icon: payload.notification.icon || '/nexora-mark.png',
             data: payload.data as any
           });
         }
@@ -151,7 +151,7 @@ export class PushNotificationService {
       const notif = new Notification(payload.title, {
         body: payload.body,
         icon: nIcon,
-        badge: '/favicon.ico',
+        badge: '/icons/icon-48.png',
         tag: `nexora-${payload.data?.type || 'general'}-${Date.now()}`,
         data: payload.data,
         silent: false

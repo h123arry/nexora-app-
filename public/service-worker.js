@@ -1,11 +1,14 @@
-const CACHE_NAME = 'nexora-shell-cache-v2';
+const CACHE_NAME = 'nexora-shell-cache-v3';
 const MAX_DYNAMIC_ENTRIES = 80;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/logo.svg',
-  '/logo.png'
+  '/nexora-mark.png',
+  '/logo.png',
+  '/icons/icon-48.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png'
 ];
 
 async function trimCache(cache) {

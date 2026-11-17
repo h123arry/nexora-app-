@@ -23,7 +23,7 @@ export const INITIAL_USER: User = {
   id: 'guest',
   username: 'guest',
   name: 'Guest User',
-  avatar: '/logo.svg',
+  avatar: '/nexora-mark.png',
   bio: 'Welcome to Nexora',
   location: 'Nexora Core',
   website: '',

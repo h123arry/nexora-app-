@@ -1,10 +1,6 @@
 {
   "images": [
     {
-      "filename": "logo.svg",
-      "idiom": "universal"
-    },
-    {
       "idiom": "universal",
       "scale": "1x",
       "filename": "Default@1x~universal~anyany.png"
@@ -56,8 +52,5 @@
   "info": {
     "author": "xcode",
     "version": 1
-  },
-  "properties": {
-    "preserves-vector-representation": true
   }
 }

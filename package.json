@@ -37,9 +37,9 @@
     "mobile:assets": "npm run mobile:assets:android && npm run mobile:assets:ios && npm run mobile:assets:pwa",
     "mobile:build:ios": "npm run mobile:sync && xcodebuild -project ios/App/App.xcodeproj -scheme App -sdk iphonesimulator -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build",
     "test:origin-attribution": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-origin-attribution \"npx tsx --test functions/tests/originAttributionCases.integration.test.ts\"",
-    "mobile:assets:android": "capacitor-assets generate --android --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#000000' --splashBackgroundColorDark '#000000'",
-    "mobile:assets:ios": "capacitor-assets generate --ios --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#000000' --splashBackgroundColorDark '#000000'",
-    "mobile:assets:pwa": "capacitor-assets generate --pwa --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#000000' --splashBackgroundColorDark '#000000' && node scripts/sync-nexora-brand-assets.mjs",
+    "mobile:assets:android": "capacitor-assets generate --android --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#000000' --splashBackgroundColorDark '#000000' --logoSplashScale 0.64",
+    "mobile:assets:ios": "capacitor-assets generate --ios --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#000000' --splashBackgroundColorDark '#000000' --logoSplashScale 0.64",
+    "mobile:assets:pwa": "capacitor-assets generate --pwa --iconBackgroundColor '#000000' --iconBackgroundColorDark '#000000' --splashBackgroundColor '#000000' --splashBackgroundColorDark '#000000' --logoSplashScale 0.64 && node scripts/sync-nexora-brand-assets.mjs",
     "test:branding": "node --test tests/nexora-branding-assets.test.mjs"
   },
   "dependencies": {

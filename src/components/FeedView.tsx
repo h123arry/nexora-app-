@@ -1794,7 +1794,7 @@ export default function FeedView({
           {/* Brand row */}
           <div className="flex items-center justify-between gap-3 px-4 sm:px-7 pt-2.5 pb-1 sm:pt-4 sm:pb-2">
             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-              <NexoraPremiumLogo className="h-10 w-10 sm:h-11 sm:w-11 nx-brand-mark drop-shadow-[0_0_6px_rgba(167,139,250,0.3)]" />
+              <NexoraPremiumLogo className="h-10 w-10 sm:h-11 sm:w-11 nx-brand-mark" />
               <div className="min-w-0">
                 <div className="flex items-center gap-2"><span className="text-xl font-extrabold tracking-[-0.04em] nx-gradient-text leading-none sm:text-2xl">NEXORA</span><span className="hidden rounded-full border border-violet-300/20 bg-violet-400/10 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.14em] text-violet-200 sm:inline">For you</span></div>
                 <span className="mt-0.5 sm:mt-1 block truncate text-[11px] font-medium text-slate-500">The World&apos;s Living Social Network</span>
