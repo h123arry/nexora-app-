@@ -17,6 +17,9 @@ async function cleanupIdentityFixtures(): Promise<void> {
       await db.collection(collection).doc(userId).delete().catch(() => undefined);
     }
   }
+  for (const id of ['identity-delete-audit', 'identity-delete-audit-unrelated-reviewer']) {
+    await db.collection('identityVerificationAuditEvents').doc(id).delete().catch(() => undefined);
+  }
   const audit = await db.collection('identityVerificationAuditEvents').where('userId', '==', 'identity-delete-test').get();
   for (const row of audit.docs) await row.ref.delete();
   const reporterRows = await db.collectionGroup('reporters').where('reporterId', '==', 'identity-delete-test').get();
@@ -127,6 +130,10 @@ describe('account deletion data and storage scope', () => {
       userId: 'identity-delete-test', reviewerId: 'identity-delete-test', actorId: 'identity-delete-test',
       reviewNote: 'private reviewer note', event: 'identity_reviewed'
     });
+    await db.collection('identityVerificationAuditEvents').doc('identity-delete-audit-unrelated-reviewer').set({
+      userId: 'identity-delete-test', reviewerId: 'identity-delete-other', actorId: 'identity-delete-other',
+      reviewNote: 'private review note', event: 'identity_reviewed'
+    });
     await db.collection('securityAuditEvents').doc('session-delete-audit').set({
       userId: 'identity-delete-test', action: 'revoke_all_sessions', status: 'completed'
     });
@@ -148,6 +155,11 @@ describe('account deletion data and storage scope', () => {
     assert.equal(audit.get('userId'), undefined);
     assert.equal(audit.get('reviewerId'), undefined);
     assert.equal(audit.get('actorId'), undefined);
+    const unrelatedAudit = await db.collection('identityVerificationAuditEvents').doc('identity-delete-audit-unrelated-reviewer').get();
+    assert.equal(unrelatedAudit.get('userId'), undefined);
+    assert.equal(unrelatedAudit.get('reviewerId'), 'identity-delete-other');
+    assert.equal(unrelatedAudit.get('actorId'), 'identity-delete-other');
+    assert.equal(unrelatedAudit.get('reviewNote'), undefined);
     const securityAudit = await db.collection('securityAuditEvents').doc('session-delete-audit').get();
     assert.equal(securityAudit.exists, true);
     assert.equal(securityAudit.get('accountDeleted'), true);
