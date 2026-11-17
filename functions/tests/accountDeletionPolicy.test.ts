@@ -23,6 +23,20 @@ async function cleanupIdentityFixtures(): Promise<void> {
   for (const row of reporterRows.docs) await row.ref.delete();
 }
 
+async function cleanupPayoutFixtures(): Promise<void> {
+  for (const userId of ['payout-delete-test', 'payout-delete-other']) {
+    await db.collection('creatorPayoutBeneficiaries').doc(userId).delete().catch(() => undefined);
+    await db.collection('creatorPayoutCompliance').doc(userId).delete().catch(() => undefined);
+  }
+  for (const id of ['payout-delete-pending', 'payout-delete-submitting', 'payout-delete-unknown', 'payout-delete-approval',
+    'payout-delete-success', 'payout-delete-failed', 'payout-delete-reversed', 'payout-delete-other-history']) {
+    await db.collection('creatorPayoutRequests').doc(id).delete().catch(() => undefined);
+  }
+  for (const id of ['payout-delete-audit', 'payout-delete-creator-audit', 'payout-delete-actor-audit']) {
+    await db.collection('creatorPayoutAuditEvents').doc(id).delete().catch(() => undefined);
+  }
+}
+
 async function cleanupOriginFixtures(): Promise<void> {
   for (const userId of ['account-delete-test', 'account-delete-other']) {
     const origins = await db.collection('mediaOrigins').where('ownerUid', '==', userId).get();
@@ -38,6 +52,7 @@ before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Account deletion policy tests require the Firestore Emulator.');
   await cleanupOriginFixtures();
   await cleanupIdentityFixtures();
+  await cleanupPayoutFixtures();
   for (const collection of ['mediaAssets', 'academyProgress', 'academyLessonNotes', 'posts']) {
     const rows = await db.collection(collection).where('ownerId', '==', 'account-delete-test').get();
     for (const row of rows.docs) await row.ref.delete();
@@ -48,6 +63,7 @@ before(async () => {
 after(async () => {
   await cleanupOriginFixtures();
   await cleanupIdentityFixtures();
+  await cleanupPayoutFixtures();
   for (const collection of ['mediaAssets', 'academyProgress', 'academyLessonNotes', 'posts']) {
     for (const userId of ['account-delete-test', 'account-delete-other']) {
       const rows = await db.collection(collection).where('ownerId', '==', userId).get();
@@ -137,6 +153,106 @@ describe('account deletion data and storage scope', () => {
     assert.equal(securityAudit.get('accountDeleted'), true);
     assert.equal(securityAudit.get('userId'), undefined);
     assert.equal((await db.collection('identityVerificationApplications').doc('identity-delete-other').get()).exists, true);
+  });
+
+  it('pauses account deletion during active payouts, then removes bank PII while retaining settlement evidence', async () => {
+    await db.collection('creatorPayoutBeneficiaries').doc('payout-delete-test').set({
+      creatorId: 'payout-delete-test', providerBeneficiaryRef: 'RCP_test_123',
+      accountName: 'Test Creator', accountNumberLast4: '1234', bankName: 'Test Bank', status: 'verified'
+    });
+    await db.collection('creatorPayoutCompliance').doc('payout-delete-test').set({
+      creatorId: 'payout-delete-test', beneficiaryRef: 'RCP_test_123',
+      status: 'approved', evidenceReference: 'private-evidence-ref'
+    });
+    for (const [id, status] of [
+      ['payout-delete-pending', 'processing'],
+      ['payout-delete-submitting', 'submitting'],
+      ['payout-delete-unknown', 'submission_unknown'],
+      ['payout-delete-approval', 'awaiting_provider_approval'],
+    ] as const) {
+      await db.collection('creatorPayoutRequests').doc(id).set({
+        creatorId: 'payout-delete-test', reference: id,
+        amountNex: 1000, amountKobo: 100000, status, beneficiaryRef: 'RCP_test_123'
+      });
+    }
+    await db.collection('creatorPayoutBeneficiaries').doc('payout-delete-other').set({
+      creatorId: 'payout-delete-other', providerBeneficiaryRef: 'RCP_other',
+      accountName: 'Other Creator', accountNumberLast4: '9999', bankName: 'Other Bank', status: 'verified'
+    });
+    await db.collection('creatorPayoutCompliance').doc('payout-delete-other').set({
+      creatorId: 'payout-delete-other', beneficiaryRef: 'RCP_other', status: 'approved'
+    });
+    await db.collection('creatorPayoutRequests').doc('payout-delete-other-history').set({
+      creatorId: 'payout-delete-other', reference: 'payout-delete-other-history',
+      amountNex: 1000, amountKobo: 100000, status: 'success', beneficiaryRef: 'RCP_other'
+    });
+    await db.collection('creatorPayoutAuditEvents').doc('payout-delete-audit').set({
+      creatorId: 'payout-delete-test', actorId: 'payout-delete-test',
+      accountNumberLast4: '1234', bankCode: '058', beneficiaryRef: 'RCP_test_123',
+      evidenceReference: 'private-evidence-ref', action: 'beneficiary_verified'
+    });
+    await db.collection('creatorPayoutAuditEvents').doc('payout-delete-creator-audit').set({
+      creatorId: 'payout-delete-test', actorId: 'finance-operator',
+      accountNumberLast4: '5678', bankCode: '058', beneficiaryRef: 'RCP_creator_456',
+      evidenceReference: 'creator-evidence-ref', action: 'creator_payout_compliance_approved'
+    });
+    await db.collection('creatorPayoutAuditEvents').doc('payout-delete-actor-audit').set({
+      creatorId: 'another-creator', actorId: 'payout-delete-test',
+      accountNumberLast4: '9012', bankCode: '011', beneficiaryRef: 'RCP_actor_789',
+      evidenceReference: 'actor-evidence-ref', action: 'ngn_payout_policy_updated'
+    });
+
+    await assert.rejects(
+      deleteUserOwnedDocuments(db, 'payout-delete-test'),
+      /payout is still pending provider settlement or reconciliation/
+    );
+    assert.equal((await db.collection('creatorPayoutBeneficiaries').doc('payout-delete-test').get()).exists, true);
+    assert.equal((await db.collection('creatorPayoutCompliance').doc('payout-delete-test').get()).exists, true);
+
+    for (const [id, status] of [
+      ['payout-delete-pending', 'success'],
+      ['payout-delete-success', 'success'],
+      ['payout-delete-failed', 'failed'],
+      ['payout-delete-reversed', 'reversed'],
+    ] as const) {
+      await db.collection('creatorPayoutRequests').doc(id).set({
+        creatorId: 'payout-delete-test', reference: id,
+        amountNex: 1000, amountKobo: 100000, status
+      });
+    }
+    for (const id of ['payout-delete-submitting', 'payout-delete-unknown', 'payout-delete-approval']) {
+      await db.collection('creatorPayoutRequests').doc(id).delete();
+    }
+    const deleted = await deleteUserOwnedDocuments(db, 'payout-delete-test');
+    assert.equal(deleted, 2);
+
+    assert.equal((await db.collection('creatorPayoutBeneficiaries').doc('payout-delete-test').get()).exists, false);
+    assert.equal((await db.collection('creatorPayoutCompliance').doc('payout-delete-test').get()).exists, false);
+    for (const id of ['payout-delete-pending', 'payout-delete-success', 'payout-delete-failed', 'payout-delete-reversed']) {
+      assert.equal((await db.collection('creatorPayoutRequests').doc(id).get()).exists, true);
+    }
+    assert.equal((await db.collection('creatorPayoutBeneficiaries').doc('payout-delete-other').get()).exists, true);
+    assert.equal((await db.collection('creatorPayoutCompliance').doc('payout-delete-other').get()).exists, true);
+    assert.equal((await db.collection('creatorPayoutRequests').doc('payout-delete-other-history').get()).get('beneficiaryRef'), 'RCP_other');
+    for (const id of ['payout-delete-pending', 'payout-delete-success', 'payout-delete-failed', 'payout-delete-reversed']) {
+      assert.equal((await db.collection('creatorPayoutRequests').doc(id).get()).get('beneficiaryRef'), undefined);
+    }
+    const audit = await db.collection('creatorPayoutAuditEvents').doc('payout-delete-audit').get();
+    assert.equal(audit.exists, true);
+    assert.equal(audit.get('accountDeleted'), true);
+    for (const field of ['creatorId', 'actorId', 'accountNumberLast4', 'bankCode', 'beneficiaryRef', 'evidenceReference']) {
+      assert.equal(audit.get(field), undefined);
+    }
+    const creatorAudit = await db.collection('creatorPayoutAuditEvents').doc('payout-delete-creator-audit').get();
+    assert.equal(creatorAudit.get('creatorId'), undefined);
+    assert.equal(creatorAudit.get('actorId'), 'finance-operator');
+    assert.equal(creatorAudit.get('accountNumberLast4'), undefined);
+    assert.equal(creatorAudit.get('beneficiaryRef'), undefined);
+    const actorAudit = await db.collection('creatorPayoutAuditEvents').doc('payout-delete-actor-audit').get();
+    assert.equal(actorAudit.get('creatorId'), 'another-creator');
+    assert.equal(actorAudit.get('actorId'), undefined);
+    assert.equal(actorAudit.get('accountNumberLast4'), undefined);
+    assert.equal(actorAudit.get('beneficiaryRef'), undefined);
   });
 
   it('includes processed media renditions in the account storage deletion scope', () => {
