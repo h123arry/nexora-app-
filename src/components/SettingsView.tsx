@@ -124,31 +124,31 @@ export default function SettingsView({
   };
 
   const sections = [
-    { id: 'account', label: 'Account', icon: User, desc: 'Profile details & account identity' },
-    { id: 'privacy', label: 'Privacy', icon: Lock, desc: 'Public visibility & permissions' },
-    { id: 'notifications', label: 'Notifications', icon: Bell, desc: 'Push alerts & email summaries' },
-    { id: 'appearance', label: 'Appearance', icon: Palette, desc: 'Theme, contrast & font sizing' },
-    { id: 'security', label: 'Security', icon: ShieldCheck, desc: 'Two-factor & active sessions' },
-    { id: 'connected', label: 'Connected Accounts', icon: Link2, desc: 'OAuth & Workspace integrations' },
-    { id: 'about', label: 'About Nexora', icon: Info, desc: 'Platform version & legal info' },
-    { id: 'beta', label: 'Beta feedback', icon: Bug, desc: 'Report issues with useful context' },
-    { id: 'origin', label: 'NEXORA Origin', icon: Scale, desc: 'Attribution, corrections & disputes' }
+    { id: 'account', label: 'Account', icon: User, desc: 'Your profile and account details' },
+    { id: 'privacy', label: 'Privacy', icon: Lock, desc: 'Who can see and contact you' },
+    { id: 'notifications', label: 'Notifications', icon: Bell, desc: 'Choose what you hear about' },
+    { id: 'appearance', label: 'Appearance', icon: Palette, desc: 'Choose how NEXORA looks' },
+    { id: 'security', label: 'Security', icon: ShieldCheck, desc: 'Sign-in and device security' },
+    { id: 'connected', label: 'Connected Accounts', icon: Link2, desc: 'Apps and connected accounts' },
+    { id: 'about', label: 'About Nexora', icon: Info, desc: 'App information and legal details' },
+    { id: 'beta', label: 'Beta feedback', icon: Bug, desc: 'Tell us what needs fixing' },
+    { id: 'origin', label: 'Creator attribution', icon: Scale, desc: 'Attribution, corrections & disputes' }
   ];
 
   return (
-    <div className="nx-screen-settings w-full max-w-4xl mx-auto space-y-6 pb-28 sm:pb-12">
+    <div className="nx-settings-page nx-screen-settings w-full max-w-4xl mx-auto space-y-6 pb-28 sm:pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-zinc-900 via-purple-950/20 to-black border border-white/10 backdrop-blur-xl shadow-md text-left">
+      <div className="nx-settings-heading flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-left">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-zinc-800 text-violet-400 border border-white/10">
+          <div className="p-3 rounded-xl bg-violet-500/10 text-violet-300">
             <Sliders className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-xl font-sans font-black tracking-tight text-white flex items-center gap-2">
-              Settings & Preferences
+              Settings
             </h1>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Manage your Nexora account configuration, privacy controls, and app customization
+              Manage your account, privacy and preferences
             </p>
           </div>
         </div>
@@ -186,7 +186,7 @@ export default function SettingsView({
         </div>
 
         {/* Section Content Panel */}
-        <div className="md:col-span-2 p-6 rounded-3xl nx-surface shadow-md space-y-6">
+        <div className="nx-settings-content md:col-span-2 p-6 space-y-6">
           {activeSection === 'origin' && (
             <div className="space-y-3">
               <div>
