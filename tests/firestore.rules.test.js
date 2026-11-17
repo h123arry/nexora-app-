@@ -70,14 +70,19 @@ const publicProfile = (uid) => ({
       email: 'alice@example.test', email_verified: true, auth_time: cutoffSeconds - 1
     }).firestore();
     const freshDb = env.authenticatedContext('alice', {
+      email: 'alice@example.test', email_verified: true, auth_time: cutoffSeconds + 1
+    }).firestore();
+    const boundaryDb = env.authenticatedContext('alice', {
       email: 'alice@example.test', email_verified: true, auth_time: cutoffSeconds
     }).firestore();
     await assertFails(getDoc(doc(revokedDb, 'users', 'alice')));
     await assertFails(getDoc(doc(dbFor('alice'), 'users', 'alice')));
     await assertFails(getDoc(doc(freshDb, 'users', 'alice')));
+    await assertFails(getDoc(doc(boundaryDb, 'users', 'alice')));
     await seed(async adminDb => setDoc(doc(adminDb, 'accountStatus', 'alice'), {
       sessionRevocationPending: false
     }, { merge: true }));
+    await assertFails(getDoc(doc(boundaryDb, 'users', 'alice')));
     await assertSucceeds(getDoc(doc(freshDb, 'users', 'alice')));
   });
 
