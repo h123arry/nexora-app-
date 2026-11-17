@@ -86,7 +86,7 @@ export async function renderPostShareCard(input: PostShareCardInput): Promise<Bl
   let logoDrawn = false;
   try {
     const logo = new Image();
-    logo.src = '/logo.svg';
+    logo.src = '/nexora-mark.png';
     await logo.decode();
     context.drawImage(logo, 96, 190, 112, 112);
     logoDrawn = true;

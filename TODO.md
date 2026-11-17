@@ -51,6 +51,10 @@
 - [ ] Buttons, inputs, tabs, cards, avatars, modals, action rails, and bottom-dock states share consistent touch targets, focus rings, hover/pressed states, and reduced-motion behavior.
 - [ ] Browser metadata, PWA metadata, route manifest, and brand copy remain synchronized with the Nexora identity.
 
+## Outcome 9 — The approved NEXORA N mark is used consistently
+
+- [x] The exact newly uploaded square image—a glossy ribbon capital N with a black background and purple-to-blue-to-cyan gradient—replaces the flat vector N and previous orbit mark wherever they appeared, including shared app branding and loading UI, video watermarks and post-rolls, browser/favicon and social metadata, PWA and native launcher icons, splash screens, notification icons, no-avatar fallbacks, share cards, and brand documentation. Keep the uploaded composition and black background intact; only resize copies for platform requirements, and do not redraw, recolor, remove the background, or add filters.
+
 ## Validation and delivery
 
 - [x] Production build passes.

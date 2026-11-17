@@ -81,7 +81,7 @@ export function createNotificationPushDelivery(db: Firestore, app: App) {
           data,
           webpush: {
             fcmOptions: { link: data.url },
-            notification: { icon: '/logo.png', badge: '/favicon.ico' },
+            notification: { icon: '/logo.png', badge: '/icons/icon-48.png' },
           },
         });
         const staleTokenIds: string[] = [];

@@ -65,7 +65,7 @@ jobs:
       - name: Install application dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Generate iOS, Android and PWA assets from approved SVG
+      - name: Generate iOS, Android and PWA assets from approved PNG
         run: npm run mobile:assets
 
       - name: Commit generated native and PWA assets

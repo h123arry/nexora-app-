@@ -56,10 +56,10 @@ export default function NexoraLoader({ size = 'md', className = '', center = fal
 
         {/* Keep the approved NEXORA mark at the center of the loading indicator. */}
         <img
-          src="/logo.svg"
+          src="/nexora-mark.png"
           alt=""
           aria-hidden="true"
-          className="relative z-10 h-3.5 w-3.5 rounded-[3px] object-contain"
+          className="relative z-10 h-3.5 w-3.5 object-contain"
           loading="eager"
           decoding="async"
           draggable={false}
@@ -84,4 +84,3 @@ export default function NexoraLoader({ size = 'md', className = '', center = fal
 
   return content;
 }
-

@@ -29,7 +29,7 @@ export async function writeOriginAttributionCaseNotifications(
         type: 'origin_attribution',
         userId: 'system',
         username: 'NEXORA Origin',
-        avatar: '/logo.svg',
+        avatar: '/nexora-mark.png',
         content,
         targetId: caseId,
         isRead: false,

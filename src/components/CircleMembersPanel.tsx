@@ -105,7 +105,7 @@ export default function CircleMembersPanel({ communityId, currentUserId, canMana
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         {members.map(member => <div key={member.userId} className="p-3 bg-white/[0.01] border border-white/5 rounded-2xl flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <img src={member.avatar || '/logo.svg'} alt="" className="w-8 h-8 rounded-xl object-cover shrink-0" />
+            <img src={member.avatar || '/nexora-mark.png'} alt="" className="w-8 h-8 rounded-xl object-cover shrink-0" />
             <div className="min-w-0">
               <p className="text-xs font-bold text-white truncate">{member.name}</p>
               {member.username && <p className="text-[10px] text-violet-300/60 truncate">@{member.username}</p>}

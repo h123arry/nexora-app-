@@ -1,43 +1,35 @@
 # NEXORA brand system
 
-## Official mark
+## Official logo
 
-The founder-approved primary mark is the continuous ribbon-style capital **N** shown in the approved artwork on 16 November 2026. The canonical vector source is shared by the web app and native asset generator.
+The official NEXORA logo is the exact founder-supplied square PNG at `assets/logo.png`: a glossy continuous ribbon capital N on a black background, with a vivid purple-to-blue-to-cyan gradient. The black square and the full N composition are part of the artwork.
 
-- `assets/logo.svg` — canonical source for Capacitor native and PWA icon/splash generation.
-- `public/nexora-mark.svg` — stable public web mark URL for favicon, metadata, startup screen and shared React branding. (`capacitor-assets` removes `/logo.svg` when generating PWA icons, so the public URL intentionally uses a different filename.)
-- `src/components/NexoraPremiumLogo.tsx` — shared React mark used by brand lockups and watermarks.
+Do not redraw, vectorize, recolor, crop, remove the background, or add filters to the logo. The only permitted derivatives are direct size reductions needed for browser, PWA, Android, iOS, notification, and in-app display requirements. All derivatives must retain the original composition and black background.
+
+## Production assets
+
+- `assets/logo.png` — byte-for-byte user-supplied source image; canonical input to asset generation.
+- `public/icons/icon-48.png` through `public/icons/icon-512.png` — generated PWA/browser size variants.
+- `public/nexora-mark.png` and `public/logo.png` — stable 512px aliases generated from `public/icons/icon-512.png` for app UI and legacy notification URLs.
+- `src/components/NexoraPremiumLogo.tsx` — shared app logo used by wordmark lockups and loading UI.
 - `src/components/NexoraBranding.tsx` — NEXORA wordmark and tagline lockup.
 - `src/components/branding/NexoraWatermark.tsx` — content watermark.
 
-The source SVGs must remain byte-for-byte identical. Do not reintroduce the former orbital mark or use an untracked raster as the source of truth.
-
 ## Native and PWA assets
 
-The project uses `@capacitor/assets` (already in devDependencies) to generate platform-specific raster outputs from `assets/logo.svg`.
+The project uses the existing `@capacitor/assets` pipeline with `assets/logo.png` as its sole logo master.
 
-- `npm run mobile:assets` explicitly generates Android, iOS and PWA assets in sequence.
+- `npm run mobile:assets` regenerates Android, iOS, and PWA assets.
 - `npm run mobile:assets:android` generates Android launcher and splash assets.
-- `npm run mobile:assets:ios` generates iOS AppIcon and launch assets.
-- `npm run mobile:assets:pwa` generates PWA icons and updates the manifest, including the `public/icons/` icon set.
+- `npm run mobile:assets:ios` generates iOS app-icon and launch assets.
+- `npm run mobile:assets:pwa` generates PWA icons, normalizes them into `public/icons/`, updates the manifest, and refreshes the stable PNG aliases.
 
-The generator uses pure black (`#000000`) for light and dark icon/splash backgrounds so the app icon matches the approved artwork. A post-generation normalizer moves PWA outputs into `public/icons/`, corrects PNG file extensions and manifest MIME types, and restores the stable public SVG mark. Native CI runs the platform-specific generator before syncing and compiling. The main CI suite also runs `npm run test:branding`, which checks that the canonical SVG copies match, shared React branding uses `/logo.svg`, and native generation remains wired into CI. On pushes to `main`, the asset-generation job commits generated native and PWA outputs so the repository stays in sync with the canonical source.
-
-After changing the canonical SVG, run `npm run mobile:assets` and inspect generated outputs on iOS and Android before release.
-
-## Palette
-
-- Background: `#000000`
-- Magenta highlight: `#F044E8`
-- Electric violet: `#8B20FF`
-- Royal blue: `#174BFF`
-- Cyan highlight: `#00E5F2`
-- Wordmark text: `#FFFFFF`
+The source artwork already has a black background; native and PWA output backgrounds are black as well. Keep the exact source in Git and regenerate derived assets after any approved logo change.
 
 ## Usage
 
-Use the official mark without redrawing, distorting, rotating, recolouring, or adding effects to the symbol itself. Preserve generous clear space. Pair the mark with the NEXORA wordmark in Plus Jakarta Sans and the tagline “The World's Living Social Network”.
+Preserve the uploaded artwork exactly. Use it consistently for the app, browser, PWA, native app icons, splash screens, notifications, fallback avatars, share cards, and video branding. Pair the image with the existing NEXORA wordmark in Plus Jakarta Sans and the tagline “The World's Living Social Network”.
 
 ## Brand migration note
 
-The ribbon N replaces the former interlocking orbital mark. All shared web branding and watermark UI must reference `/nexora-mark.svg`. Native icons and launch assets must be generated from `assets/logo.svg`.
+This exact glossy ribbon N replaces the flat vector N and any legacy orbit mark. All active brand references must use assets generated from `assets/logo.png`.

@@ -80,7 +80,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
       currentUser.id,
       messages => setChatMessages(messages.map(message => ({
         sender: message.senderId === currentUser.id ? currentUser.name : 'Circle member',
-        avatar: message.senderId === currentUser.id ? currentUser.avatar : '/logo.svg',
+        avatar: message.senderId === currentUser.id ? currentUser.avatar : '/nexora-mark.png',
         text: message.content,
         time: message.time,
       }))),

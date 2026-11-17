@@ -2,7 +2,6 @@ import { access, copyFile, mkdir, readFile, readdir, rename, rm, writeFile } fro
 import { join } from 'node:path';
 
 const root = process.cwd();
-const assetsDir = join(root, 'assets');
 const publicDir = join(root, 'public');
 const rootIconsDir = join(root, 'icons');
 const publicIconsDir = join(publicDir, 'icons');
@@ -40,9 +39,16 @@ if (await exists(publicIconsDir)) {
   }
 }
 
-// Capacitor Assets removes /logo.svg during PWA generation. Keep a stable,
-// separate URL for the React app, favicon and social metadata.
-await copyFile(join(assetsDir, 'logo.svg'), join(publicDir, 'nexora-mark.svg'));
+const generatedIcon = join(publicIconsDir, 'icon-512.png');
+if (!(await exists(generatedIcon))) {
+  throw new Error('Expected generated PWA asset public/icons/icon-512.png was not found.');
+}
+
+// Keep one stable logo URL for UI, share cards, and legacy notification payloads.
+await copyFile(generatedIcon, join(publicDir, 'nexora-mark.png'));
+await copyFile(generatedIcon, join(publicDir, 'logo.png'));
+await rm(join(publicDir, 'nexora-mark.svg'), { force: true });
+await rm(join(publicDir, 'logo.svg'), { force: true });
 
 const manifestPath = join(publicDir, 'manifest.json');
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
