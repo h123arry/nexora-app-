@@ -36,13 +36,16 @@ describe('Firebase Storage authorization regression tests', () => {
       });
     });
     await assertFails(getBytes(ref(oldStorage, objectPath)));
-    const freshStorage = ctxWithAuthTime('revocation-test-user', cutoffSeconds).storage();
+    const boundaryStorage = ctxWithAuthTime('revocation-test-user', cutoffSeconds).storage();
+    const freshStorage = ctxWithAuthTime('revocation-test-user', cutoffSeconds + 1).storage();
+    await assertFails(getBytes(ref(boundaryStorage, objectPath)));
     await assertFails(getBytes(ref(freshStorage, objectPath)));
     await env.withSecurityRulesDisabled(async context => {
       await setDoc(doc(context.firestore(), 'accountStatus', 'revocation-test-user'), {
         sessionRevocationPending: false
       }, { merge: true });
     });
+    await assertFails(getBytes(ref(boundaryStorage, objectPath)));
     await assertSucceeds(getBytes(ref(freshStorage, objectPath)));
   });
 
