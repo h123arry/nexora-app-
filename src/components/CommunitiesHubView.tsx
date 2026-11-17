@@ -743,7 +743,7 @@ export default function CommunitiesHubView({
   const isActingAsPage = (currentUser as any).isPageIdentity;
 
   return (
-    <div className="nx-page-shell space-y-6 pb-28 sm:pb-12">
+    <div className="nx-page-shell nx-screen-communities space-y-6 pb-28 sm:pb-12">
       {/* 🔴 Section Title & Premium Controls */}
       <div className="nx-page-header flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5 text-left">
         <div>
