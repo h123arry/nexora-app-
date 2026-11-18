@@ -17,6 +17,8 @@ export interface User {
   joinedDate: string;
   email?: string;
   phone?: string;
+  /** Private date of birth used only for age eligibility and account safety. */
+  dateOfBirth?: string;
   role?: 'founder' | 'admin' | 'user';
   isBanned?: boolean;
   isSuspended?: boolean;
