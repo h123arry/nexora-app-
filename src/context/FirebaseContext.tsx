@@ -1,10 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { onIdTokenChanged, User as FirebaseUser, ConfirmationResult } from 'firebase/auth';
 import { User } from '../types';
 import { ProfileService } from '../services/firebase/profileService';
 import { AuthService } from '../services/firebase/authService';
+import { getAuthSessionIdentityKey, shouldHydrateAuthSession } from '../services/firebase/authSessionPolicy';
 
 interface FirebaseContextType {
   firebaseUser: FirebaseUser | null;
@@ -51,38 +52,86 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     let sequence = 0;
+    let observedUid = null as string | null;
+    let hydratedIdentity = null as string | null;
+    let inFlightHydration: { key: string; promise: Promise<User | null> } | null = null;
+
     const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
       const currentSequence = ++sequence;
+      const nextUid = fbUser?.uid ?? null;
+
       setFirebaseUser(fbUser);
-      // Preserve the loaded profile during token refreshes for the same UID.
-      // A different account (or sign-out) still clears the previous profile.
-      setUser(current => current?.id === fbUser?.uid ? current : null);
-      setError(null);
-      setInitializing(true);
-      if (fbUser) {
-        try {
-          const token = await fbUser.getIdTokenResult();
-          const isApprovedBetaMember = token.claims.betaMember === true;
-          if (fbUser.isAnonymous && !isApprovedBetaMember) {
-            if (currentSequence === sequence) {
-              setUser(null);
-              setInitializing(false);
-            }
-            return;
+      if (observedUid !== nextUid) {
+        observedUid = nextUid;
+        setUser(null);
+        setError(null);
+        setInitializing(true);
+      }
+
+      if (!fbUser) {
+        hydratedIdentity = null;
+        inFlightHydration = null;
+        setUser(null);
+        setError(null);
+        setInitializing(false);
+        return;
+      }
+
+      try {
+        const token = await fbUser.getIdTokenResult();
+        const isApprovedBetaMember = token.claims.betaMember === true;
+        const identityKey = getAuthSessionIdentityKey(fbUser, isApprovedBetaMember);
+
+        if (!shouldHydrateAuthSession(hydratedIdentity, identityKey)) {
+          if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setInitializing(false);
+          return;
+        }
+
+        if (fbUser.isAnonymous && !isApprovedBetaMember) {
+          if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) {
+            hydratedIdentity = identityKey;
+            setUser(null);
+            setError(null);
+            setInitializing(false);
           }
-          const profile = fbUser.isAnonymous
-            ? await ProfileService.getProfile(fbUser.uid)
-            : await ProfileService.getOrCreateProfile(fbUser);
-          if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setUser(profile);
-        } catch (error) {
-          const code = (error as { code?: string } | null)?.code || 'unknown';
-          console.error('[NEXORA] Auth-state profile hydration failed', { code, uid: fbUser.uid });
-          if (currentSequence === sequence) setError(`Unable to load your account profile (${code}). Please retry or contact NEXORA support with this code.`);
+          return;
+        }
+
+        // Reuse the same profile request if Firebase emits overlapping token changes.
+        let profilePromise: Promise<User | null>;
+        if (inFlightHydration?.key === identityKey) {
+          profilePromise = inFlightHydration.promise;
+        } else {
+          profilePromise = fbUser.isAnonymous
+            ? ProfileService.getProfile(fbUser.uid)
+            : ProfileService.getOrCreateProfile(fbUser);
+          inFlightHydration = { key: identityKey, promise: profilePromise };
+        }
+
+        const profile = await profilePromise;
+        if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) {
+          hydratedIdentity = identityKey;
+          setUser(profile);
+          setError(null);
+        }
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code || 'unknown';
+        console.error('[NEXORA] Auth-state profile hydration failed', { code, uid: fbUser.uid });
+        if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) {
+          setError(`Unable to load your account profile (${code}). Please retry or contact NEXORA support with this code.`);
+        }
+      } finally {
+        if (currentSequence === sequence) {
+          setInitializing(false);
+          inFlightHydration = null;
         }
       }
-      if (currentSequence === sequence) setInitializing(false);
     });
-    return () => { sequence++; unsubscribe(); };
+
+    return () => {
+      sequence++;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
