@@ -10,7 +10,7 @@ interface PublicAccountSetupProps {
 
 export default function PublicAccountSetup({ user, onComplete }: PublicAccountSetupProps) {
   const [name, setName] = useState(user.name === 'NEXORA Member' ? '' : user.name);
-  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState(user.dateOfBirth || '');
   const [username, setUsername] = useState(user.username.startsWith('member_') ? '' : user.username);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -21,7 +21,7 @@ export default function PublicAccountSetup({ user, onComplete }: PublicAccountSe
     const cleanName = name.trim();
     const cleanUsername = username.trim().toLowerCase();
     if (cleanName.length < 2 || cleanName.length > 80) {
-      setError('Your display name must be between 2 and 80 characters.');
+      setError('Your preferred name must be between 2 and 80 characters.');
       return;
     }
     const usernameStatus = checkUsernameStatus(cleanUsername, user.id);
@@ -68,9 +68,9 @@ export default function PublicAccountSetup({ user, onComplete }: PublicAccountSe
         <div className="mb-6 text-center">
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.25em] text-violet-300">Welcome to NEXORA</p>
           <h1 className="text-2xl font-black text-white">Make it yours.</h1>
-          <p className="mt-2 text-sm text-slate-300">Choose your name and unique username to enter the world’s living social network.</p>
+          <p className="mt-2 text-sm text-slate-300">Choose your preferred name, date of birth and unique username. No email or password needed.</p>
         </div>
-        <label className="mb-2 block text-xs font-semibold text-slate-200">Display name</label>
+        <label className="mb-2 block text-xs font-semibold text-slate-200">Preferred name</label>
         <input value={name} onChange={event => setName(event.target.value)} maxLength={80} autoComplete="name" required placeholder="What should people call you?" className="mb-4 w-full rounded-xl border border-white/10 bg-[#101B2E] px-4 py-3 text-sm text-white outline-none focus:border-violet-500" />
         <label className="mb-2 block text-xs font-semibold text-slate-200">Date of birth</label>
         <input type="date" value={dateOfBirth} onChange={event => setDateOfBirth(event.target.value)} max={new Date().toISOString().slice(0, 10)} required className="mb-1 w-full rounded-xl border border-white/10 bg-[#101B2E] px-4 py-3 text-sm text-white outline-none focus:border-violet-500" />
