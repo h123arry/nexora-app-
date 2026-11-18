@@ -70,7 +70,6 @@ const ProfileView = lazy(() => import('./components/ProfileView'));
 const NotificationsView = lazy(() => import('./components/NotificationsView'));
 const WorldPulseView = lazy(() => import('./components/WorldPulseView'));
 const MatrixView = lazy(() => import('./components/MatrixView'));
-const AuthView = lazy(() => import('./components/AuthView'));
 import SlideDownMenu from './components/SlideDownMenu';
 import NexoraPremiumLogo from './components/NexoraPremiumLogo';
 import NexoraBranding from './components/NexoraBranding';
@@ -191,25 +190,36 @@ export default function App() {
 
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
 
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showPublicAccountSetup, setShowPublicAccountSetup] = useState(false);
   const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
-  const [authPromptReason, setAuthPromptReason] = useState<string>('Join Nexora to like, comment, follow creators, and personalize your experience.');
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || authInitializing || isLoggedIn) return;
-    const betaCode = new URLSearchParams(window.location.search).get('beta');
-    if (!betaCode) return;
-    setAuthPromptReason('You have a private invitation to join the NEXORA Founding Beta.');
-    setShowAuthModal(true);
-  }, [authInitializing, isLoggedIn]);
-
-  const requireAuth = (action: () => void, reason = 'Join Nexora to like, comment, follow creators, and personalize your experience.') => {
+  // Participation never opens email/password authentication. Firebase creates an
+  // anonymous session in the background; only incomplete profiles see the short
+  // preferred-name, date-of-birth and username setup when they first participate.
+  const requestProfileSetup = () => {
+    if (isLoggedIn && requiresPublicAccountSetup) {
+      setShowPublicAccountSetup(true);
+      return;
+    }
     if (!isLoggedIn) {
-      setAuthPromptReason(reason);
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: authInitializing
+          ? 'Your private NEXORA session is getting ready. Please try again in a moment.'
+          : 'NEXORA could not prepare your session. Please refresh and try again.',
+      }));
+    }
+  };
+
+  const requireAuth = (action: () => void, _reason?: string) => {
+    if (!isLoggedIn) {
+      if (authInitializing) setPendingAuthAction(() => action);
+      else requestProfileSetup();
+      return false;
+    }
+    if (requiresPublicAccountSetup) {
       setPendingAuthAction(() => action);
-      setShowAuthModal(true);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '🔒 Sign in or create an account to perform this action.' }));
+      setShowPublicAccountSetup(true);
       return false;
     }
     action();
@@ -303,14 +313,16 @@ export default function App() {
   }, [authInitializing, isLoggedIn, firebaseUser?.uid, firebaseProfile]);
 
   useEffect(() => {
-    if (isLoggedIn && pendingAuthAction) {
-      const action = pendingAuthAction;
-      setPendingAuthAction(null);
-      action();
-      if (firebaseUser?.uid) localStorage.setItem('nexora_onboarding_completed_' + firebaseUser.uid, 'true');
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Authenticated successfully! Action completed.' }));
+    if (!isLoggedIn || !pendingAuthAction) return;
+    if (requiresPublicAccountSetup) {
+      setShowPublicAccountSetup(true);
+      return;
     }
-  }, [isLoggedIn, pendingAuthAction]);
+    const action = pendingAuthAction;
+    setPendingAuthAction(null);
+    action();
+    window.dispatchEvent(new CustomEvent('toast', { detail: 'You’re ready to participate on NEXORA.' }));
+  }, [isLoggedIn, pendingAuthAction, requiresPublicAccountSetup]);
 
   const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -887,7 +899,7 @@ export default function App() {
     // 3. Modals & Overlays
     if (isLogoutConfirming) { setIsLogoutConfirming(false); return true; }
     if (verificationModalDetail) { setVerificationModalDetail(null); return true; }
-    if (showAuthModal) { setShowAuthModal(false); setPendingAuthAction(null); return true; }
+    if (showPublicAccountSetup) { setShowPublicAccountSetup(false); setPendingAuthAction(null); return true; }
     if (isAiCommandCenterOpen) { setIsAiCommandCenterOpen(false); return true; }
     if (isCreatePostModalOpen) { setIsCreatePostModalOpen(false); return true; }
     if (isCreateMenuOpen) { setIsCreateMenuOpen(false); return true; }
@@ -2123,7 +2135,7 @@ export default function App() {
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               isLoggedIn={isLoggedIn}
-              onOpenAuth={() => setShowAuthModal(true)}
+              onOpenAuth={requestProfileSetup}
               locale={resolveLocale(currentUser.preferredLanguage)}
             />
           </div>
@@ -2165,7 +2177,7 @@ export default function App() {
                 unreadMessagesCount={unreadMessagesCount}
                 onOpenMessages={() => { setActiveTab('inbox'); setViewedUser(null); }}
                 onOpenVohAi={() => { setMatrixSubTabRedirect('ai'); setActiveTab('matrix'); setViewedUser(null); }}
-                onRequireAuth={() => { setAuthPromptReason('Sign in to view and share stories.'); setShowAuthModal(true); }}
+                onRequireAuth={requestProfileSetup}
                 onLoadMorePosts={loadMoreFeedPosts}
                 hasMorePosts={hasMoreFeedPosts}
                 onRefreshFeed={refreshFeedPosts}
@@ -2178,9 +2190,9 @@ export default function App() {
               <div className={activeTab === 'profile' ? "w-full min-h-[620px]" : `${getCardClass(theme)} rounded-3xl p-5 md:p-6 min-h-[620px]`}>
                 {!isLoggedIn && ['matrix', 'inbox', 'activity', 'admin', 'creator', 'saved', 'wallet', 'settings', 'worldweave'].includes(activeTab) ? (
                   <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 p-8 text-center text-white">
-                    <h2 className="text-lg font-bold">Sign in required</h2>
-                    <p className="max-w-md text-sm text-zinc-400">This area contains account-specific information and is available only to a verified Firebase account.</p>
-                    <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold" onClick={() => { setAuthPromptReason('Sign in to access your private Nexora workspace.'); setShowAuthModal(true); }}>Sign in or create account</button>
+                    <h2 className="text-lg font-bold">Your NEXORA session is getting ready</h2>
+                    <p className="max-w-md text-sm text-zinc-400">Private workspaces become available after your anonymous Firebase session is ready and your quick profile setup is complete.</p>
+                    <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold" onClick={requestProfileSetup}>Continue</button>
                   </div>
                 ) : (
                 <Suspense fallback={<div className="flex min-h-[420px] items-center justify-center"><NexoraLoader size="lg" center /></div>}>
@@ -3247,38 +3259,14 @@ export default function App() {
         onViewProfile={(u) => handleViewProfile(u.username)}
       /></Suspense>}
 
-      {showAuthModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="relative w-full max-w-xl bg-slate-950 border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
-            <button
-              onClick={() => {
-                setShowAuthModal(false);
-                setPendingAuthAction(null);
-              }}
-              className="absolute top-4 right-4 z-50 p-2 bg-white/10 hover:bg-white/25 rounded-full text-white transition-colors cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <div className="p-2">
-              <Suspense fallback={<div className="p-8 text-center text-sm text-zinc-400">Loading secure sign-in…</div>}><AuthView
-                promptReason={authPromptReason}
-                onLoginSuccess={(loggedUser) => {
-                  setCurrentUser(getRichUser(loggedUser));
-                  setShowAuthModal(false);
-                }}
-              /></Suspense>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {requiresPublicAccountSetup && firebaseProfile && (
+      {showPublicAccountSetup && requiresPublicAccountSetup && firebaseProfile && (
         <PublicAccountSetup
           user={firebaseProfile}
           onComplete={(updatedUser) => {
             setCurrentUser(getRichUser(updatedUser));
+            setShowPublicAccountSetup(false);
             void retryProfileLoad().catch(() => {
-              window.dispatchEvent(new CustomEvent('toast', { detail: 'Your profile was saved. Refresh NEXORA if your changes do not appear.' }));
+              window.dispatchEvent(new CustomEvent('toast', { detail: 'Your profile was saved, but NEXORA could not refresh it yet. Please retry.' }));
             });
           }}
         />
@@ -3290,9 +3278,9 @@ export default function App() {
             <div className="mt-0.5 rounded-xl bg-violet-500/15 p-2 text-violet-300"><ShieldCheck className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-white">Secure your NEXORA account</p>
-              <p className="mt-1 text-xs leading-relaxed text-violet-100/75">Your account is ready to use. Add and verify an email address and phone number to protect your posts and recover this same account if you change devices.</p>
+              <p className="mt-1 text-xs leading-relaxed text-violet-100/75">Your account is ready to use. Add an email, password and phone number when you’re ready to protect it and recover this same account on another device.</p>
               <div className="mt-3 flex items-center gap-2">
-                <button type="button" onClick={() => setActiveTab('settings')} className="rounded-xl bg-violet-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-violet-500">Add email + phone</button>
+                <button type="button" onClick={() => setActiveTab('settings')} className="rounded-xl bg-violet-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-violet-500">Secure account</button>
                 <button type="button" onClick={() => {
                   const key = `nexora_beta_security_reminder_${firebaseUser.uid}`;
                   const stored = localStorage.getItem(key);
