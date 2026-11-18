@@ -19,9 +19,10 @@ import { AuthService } from '../services/firebase/authService';
 import { ProfileService } from '../services/firebase/profileService';
 import { EmailService } from '../services/firebase/emailService';
 import { SecurityNotificationService } from '../services/firebase/securityNotificationService';
+import { isPhoneAuthAvailable } from '../utils/authMethodAvailability';
 
 const runtimeEnv = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env || {}) as Record<string, string | undefined>;
-const PHONE_AUTH_ENABLED = (runtimeEnv.VITE_NEXORA_ENV === 'staging' || runtimeEnv.VITE_NEXORA_ENV === 'production') && runtimeEnv.VITE_NEXORA_PHONE_AUTH_ENABLED === 'true';
+const PHONE_AUTH_ENABLED = isPhoneAuthAvailable(runtimeEnv);
 
 interface AuthViewProps {
   onLoginSuccess: (loggedUser: User) => void;
