@@ -64,7 +64,7 @@ jobs:
 
       - name: Install and build trusted Firebase Functions
         run: |
-          npm ci --prefix functions --no-audit --no-fund
+          npm ci --include=dev --prefix functions --no-audit --no-fund
           npm run functions:build
 
       - name: Prepare explicit production Functions runtime configuration
