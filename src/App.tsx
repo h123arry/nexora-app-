@@ -194,9 +194,16 @@ export default function App() {
   const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
 
-  // Participation never opens email/password authentication. Firebase creates an
-  // anonymous session in the background; only incomplete profiles see the short
-  // preferred-name, date-of-birth and username setup when they first participate.
+  // First-time visitors see account creation as soon as the anonymous
+  // Firebase identity and its private profile are ready (well within 10 seconds).
+  useEffect(() => {
+    if (requiresPublicAccountSetup) {
+      const timer = window.setTimeout(() => setShowPublicAccountSetup(true), 700);
+      return () => window.clearTimeout(timer);
+    }
+    setShowPublicAccountSetup(false);
+  }, [requiresPublicAccountSetup, firebaseUser?.uid]);
+
   const requestProfileSetup = () => {
     if (isLoggedIn && requiresPublicAccountSetup) {
       setShowPublicAccountSetup(true);
