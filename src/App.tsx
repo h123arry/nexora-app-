@@ -154,8 +154,8 @@ export default function App() {
           hasPhone,
         });
         if (!state.joinedAt) localStorage.setItem(key, JSON.stringify({ ...state, joinedAt }));
-        // First reminder after the first full day, then once every day until
-        // both a verified email and a phone number are linked to this UID.
+        // Offer account protection on Wednesdays after the first full day until
+        // the user links both an email and a phone number to this UID.
         if (active) setSecurityReminderStep(reminder.show ? 1 : 0);
       } catch {
         if (active) setSecurityReminderStep(0);
