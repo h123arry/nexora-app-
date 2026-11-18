@@ -141,3 +141,205 @@ body { background: var(--nx-canvas); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; }
 }
+
+/* Social-first composition: continuous surfaces, not a wall of cards. */
+.nx-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0 !important;
+  margin-inline: 0 !important;
+  padding-bottom: 1rem;
+}
+.nx-feed-list > * { margin-inline: 0 !important; }
+.nx-post-card {
+  width: 100%;
+  margin: 0 !important;
+  padding: 1.15rem 0 1.25rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(150,144,170,.19) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none;
+}
+.nx-post-card:hover {
+  border-color: rgba(150,144,170,.28) !important;
+  box-shadow: none !important;
+}
+.nx-post-card:last-child { border-bottom: 0 !important; }
+.nx-post-card > .px-4,
+.nx-post-card > .px-4.sm\\:px-6 {
+  padding-inline: clamp(14px, 3.5vw, 24px);
+}
+.nx-post-card > [class*="rounded-"][class*="overflow-hidden"] {
+  border-radius: 0 !important;
+}
+.nx-post-card img,
+.nx-post-card video { max-width: 100%; }
+.nx-feed-stage .nx-post-card + .nx-post-card { margin-top: 0 !important; }
+
+/* Profile identity: circular avatar and typographic, inline social metrics. */
+.nx-profile-main { max-width: 100% !important; }
+.nx-profile-identity { gap: .5rem !important; }
+.nx-profile-identity img { border-radius: 9999px; }
+.nx-profile-stats {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 !important;
+  margin-top: .65rem !important;
+  padding: .65rem 0;
+  border-top: 1px solid rgba(150,144,170,.16);
+  border-bottom: 1px solid rgba(150,144,170,.16);
+  text-align: center;
+}
+.nx-profile-stats > div {
+  min-width: 0;
+  padding: .25rem .35rem !important;
+  gap: .12rem !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nx-profile-stats > div:nth-child(3n + 2) {
+  border-left: 1px solid rgba(150,144,170,.14) !important;
+  border-right: 1px solid rgba(150,144,170,.14) !important;
+}
+.nx-profile-stats > div > span:first-child {
+  font-size: clamp(.88rem, 2.7vw, 1.08rem) !important;
+  font-weight: 750 !important;
+  letter-spacing: -.025em;
+}
+.nx-profile-stats > div > span:last-child {
+  color: var(--nx-muted) !important;
+  font-size: .66rem !important;
+  font-weight: 500 !important;
+}
+
+/* Profile content becomes a full-width timeline-like media stream. */
+.nx-profile-content {
+  padding-top: 0 !important;
+  background: var(--nx-canvas) !important;
+}
+.nx-profile-content > div:has(> .nx-profile-media-grid) {
+  max-width: none !important;
+  padding-inline: 0 !important;
+}
+.nx-profile-media-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0 !important;
+  width: 100% !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
+.nx-profile-media-grid > button {
+  width: 100% !important;
+  min-height: 260px;
+  aspect-ratio: 4 / 5 !important;
+  max-height: 76dvh;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(150,144,170,.19) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nx-profile-media-grid > button img,
+.nx-profile-media-grid > button video {
+  object-fit: cover;
+}
+.nx-profile-tabbar {
+  background: rgba(7,6,17,.94) !important;
+  backdrop-filter: blur(18px);
+}
+.nx-profile-tabbar > div {
+  display: flex !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  max-width: none !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nx-profile-tabbar > div::-webkit-scrollbar { display: none; }
+.nx-profile-tabbar button {
+  min-width: 76px;
+  flex: 1 0 auto;
+  min-height: 46px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  position: relative;
+}
+.nx-profile-tabbar button[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 22%;
+  right: 22%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--nx-gradient);
+}
+.nx-profile-tabbar button[aria-pressed="true"] { color: #fff !important; }
+
+/* Mobile dock: floating icons and the member's actual profile photo. */
+.nx-mobile-dock {
+  min-height: 62px;
+  gap: .25rem;
+  padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) !important;
+  background: rgba(7,6,17,.96) !important;
+  border-top: 1px solid rgba(150,144,170,.17) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 -8px 28px rgba(0,0,0,.28) !important;
+}
+.nx-dock-item {
+  min-width: 52px;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #9690AA;
+  transition: color 160ms ease, opacity 160ms ease;
+}
+.nx-dock-item[data-active="true"] {
+  color: #F8F7FF !important;
+  background: transparent !important;
+}
+.nx-dock-item[data-active="true"] svg { color: #A78BFA !important; }
+.nx-create-dock {
+  width: 46px !important;
+  height: 46px !important;
+  top: -9px !important;
+  border-radius: 16px !important;
+  background: var(--nx-gradient) !important;
+  border: 1px solid rgba(190,170,255,.24) !important;
+  box-shadow: 0 7px 20px rgba(117,71,255,.24) !important;
+}
+#mobile-nav-profile img {
+  width: 23px;
+  height: 23px;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 1.5px solid transparent;
+}
+#mobile-nav-profile[data-active="true"] img {
+  border-color: #A78BFA;
+  box-shadow: 0 0 0 2px rgba(117,71,255,.18);
+}
+
+@media (min-width: 640px) {
+  .nx-profile-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .nx-profile-stats > div:nth-child(3n + 2) { border-left: 0 !important; border-right: 0 !important; }
+  .nx-profile-stats > div + div { border-left: 1px solid rgba(150,144,170,.14) !important; }
+  .nx-profile-media-grid > button { aspect-ratio: 16 / 9 !important; }
+}
+@media (max-width: 639px) {
+  .nx-profile-main { padding-inline: 14px !important; }
+  .nx-profile-media-grid > button { min-height: 0; }
+  .nx-profile-content > div:has(> .nx-profile-media-grid) { padding-inline: 0 !important; }
+}
