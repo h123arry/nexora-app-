@@ -32,6 +32,9 @@ import { functions } from './config';
 import { canUpgradeAnonymousBetaSession, hasLinkedProvider, isRecentAuthentication } from './accountLinkingPolicy';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
 
+const USERNAME_LOGIN_DOMAIN = 'accounts.nexora.app';
+const usernameLoginEmail = (username: string) => `${username.trim().toLowerCase()}@${USERNAME_LOGIN_DOMAIN}`;
+
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_TIME_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -226,6 +229,47 @@ export class AuthService {
     } catch (error) {
       throw this.publicAuthError(error);
     }
+  }
+
+  /** Create a permanent username/password credential on the current anonymous UID. */
+  static async completeUsernameRegistration(input: {
+    username: string; password: string; preferredName: string; dateOfBirth: string;
+  }): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+    this.requireConfigured();
+    const username = input.username.trim().toLowerCase();
+    if (input.password.length < 8) throw new Error('Choose a password with at least 8 characters.');
+    const email = usernameLoginEmail(username);
+    let current = auth.currentUser;
+    try {
+      if (current?.isAnonymous) {
+        const linked = await linkWithCredential(current, EmailAuthProvider.credential(email, input.password));
+        current = linked.user;
+      } else if (!current) {
+        current = (await createUserWithEmailAndPassword(auth, email, input.password)).user;
+      } else if (!current.providerData.some(provider => provider.providerId === EmailAuthProvider.PROVIDER_ID)) {
+        const linked = await linkWithCredential(current, EmailAuthProvider.credential(email, input.password));
+        current = linked.user;
+      } else {
+        throw new Error('This account already has a password sign-in. Sign out before creating another account.');
+      }
+      await current.getIdToken(true);
+      await ProfileService.reserveUsername(current.uid, username);
+      let profile = await ProfileService.getOrCreateProfile(current);
+      await ProfileService.updateProfile(current.uid, {
+        name: input.preferredName.trim(), username, dateOfBirth: input.dateOfBirth,
+      });
+      profile = { ...profile, name: input.preferredName.trim(), username, dateOfBirth: input.dateOfBirth };
+      return { firebaseUser: current, user: profile };
+    } catch (error) {
+      throw this.publicAuthError(error);
+    }
+  }
+
+  /** Username login uses a deterministic internal Firebase email; users only enter their public handle. */
+  static async loginWithUsername(username: string, password: string, rememberDevice = true) {
+    const clean = username.trim().replace(/^@/, '').toLowerCase();
+    if (!/^[a-z0-9._]{3,20}$/.test(clean)) throw new Error('Enter a valid NEXORA username.');
+    return this.loginWithEmail(usernameLoginEmail(clean), password, rememberDevice);
   }
 
   /**
