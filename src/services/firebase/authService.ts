@@ -172,13 +172,9 @@ export class AuthService {
         localStorage.setItem(key, JSON.stringify({ attempts: newAttempts, lockoutUntil }));
       }
       
-      SecurityNotificationService.notifySecurityEvent(
-        'anonymous',
-        clean.includes('@') ? clean : '',
-        clean,
-        'SUSPICIOUS_SIGNIN',
-        { browser: navigator.userAgent }
-      );
+      // This is a device-local UX throttle only. Never send security emails or
+      // audit events to a client-supplied identifier after failed credentials.
+      // Firebase Authentication's server-side abuse controls remain authoritative.
 
       return { isLocked: true, remainingSeconds: 300, attemptsCount: newAttempts };
     }
@@ -565,6 +561,14 @@ export class AuthService {
     return auth.currentUser;
   }
 
+  private static async requireRecentAccountAuthentication(user: FirebaseUser): Promise<void> {
+    const token = await user.getIdTokenResult(true);
+    const authTime = Number(token.claims.auth_time);
+    if (!isRecentAuthentication(authTime, Date.now() / 1000)) {
+      throw new Error('Sign in again immediately before changing your account sign-in methods.');
+    }
+  }
+
   static getLinkedProviders(): string[] {
     return (auth.currentUser?.providerData || [])
       .map(provider => provider.providerId)
@@ -577,8 +581,12 @@ export class AuthService {
     const currentUser = auth.currentUser;
     const cleanEmail = email.trim().toLowerCase();
     if (!currentUser) throw new Error('Sign in before adding an email address.');
+    if (hasLinkedProvider(currentUser.providerData.map(provider => provider.providerId), EmailAuthProvider.PROVIDER_ID)) {
+      throw new Error('An email and password sign-in method is already connected to this account.');
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) throw new Error('Enter a valid email address.');
     if (password.length < 8) throw new Error('Choose a password with at least 8 characters.');
+    await this.requireRecentAccountAuthentication(currentUser);
     try {
       const result = await linkWithCredential(currentUser, EmailAuthProvider.credential(cleanEmail, password));
       await sendEmailVerification(result.user);
@@ -597,6 +605,10 @@ export class AuthService {
     this.requireConfigured();
     const currentUser = auth.currentUser;
     if (!currentUser) throw new Error('Sign in before adding a phone number.');
+    if (hasLinkedProvider(currentUser.providerData.map(provider => provider.providerId), 'phone')) {
+      throw new Error('A phone sign-in method is already connected to this account.');
+    }
+    await this.requireRecentAccountAuthentication(currentUser);
     try {
       return await linkWithPhoneNumber(currentUser, phoneNumber, verifier);
     } catch (error) {
@@ -606,6 +618,9 @@ export class AuthService {
 
   static async confirmPhoneLink(confirmation: ConfirmationResult, code: string): Promise<void> {
     this.requireConfigured();
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Sign in before confirming a phone number.');
+    await this.requireRecentAccountAuthentication(currentUser);
     try {
       const result = await confirmation.confirm(code.trim());
       await result.user.getIdToken(true);
