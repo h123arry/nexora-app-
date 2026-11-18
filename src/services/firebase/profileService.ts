@@ -5,6 +5,7 @@ import { User as FirebaseUser } from 'firebase/auth';
 import { checkUsernameStatus, normalizeUsername } from '../../utils/username';
 import { createPublicProfileProjection } from './publicProfileProjection';
 import { persistProfileWithBestEffortProjection } from './profileProvisioningPolicy';
+import { getAnonymousMemberUsername } from './anonymousOnboardingPolicy';
 
 export class ProfileService {
   private static profileLoads = new Map<string, Promise<User>>();
@@ -157,8 +158,16 @@ export class ProfileService {
   private static async loadOrCreateProfile(firebaseUser: FirebaseUser, additionalData?: Partial<User>): Promise<User> {
     let profile = await this.getProfile(firebaseUser.uid);
     if (!profile) {
+      // Approved anonymous beta members receive a complete, durable profile
+      // immediately. Reserve the deterministic handle first so overlapping
+      // auth-state hydration and invite-claim flows converge on the same UID.
+      const anonymousUsername = getAnonymousMemberUsername(firebaseUser.uid);
+      if (firebaseUser.isAnonymous) {
+        await this.reserveUsername(firebaseUser.uid, anonymousUsername);
+      }
       profile = await this.createProfile(firebaseUser.uid, {
-        name: firebaseUser.displayName || 'Nexora User',
+        name: firebaseUser.isAnonymous ? 'NEXORA Member' : (firebaseUser.displayName || 'Nexora User'),
+        username: firebaseUser.isAnonymous ? anonymousUsername : undefined,
         avatar: firebaseUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
         isVerified: firebaseUser.emailVerified,
         ...additionalData

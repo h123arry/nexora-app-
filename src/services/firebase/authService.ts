@@ -29,7 +29,7 @@ import { EmailService } from './emailService';
 import { SecurityNotificationService } from './securityNotificationService';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from './config';
-import { hasLinkedProvider, isRecentAuthentication } from './accountLinkingPolicy';
+import { canUpgradeAnonymousBetaSession, hasLinkedProvider, isRecentAuthentication } from './accountLinkingPolicy';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -215,16 +215,9 @@ export class AuthService {
       await claim({ code: cleanCode });
       await currentUser.getIdToken(true);
 
-      let userProfile = await ProfileService.getProfile(currentUser.uid);
-      if (!userProfile) {
-        const username = `member_${currentUser.uid.slice(0, 10).toLowerCase()}`;
-        await ProfileService.reserveUsername(currentUser.uid, username);
-        userProfile = await ProfileService.createProfile(currentUser.uid, {
-          name: 'NEXORA Member',
-          username,
-          avatar: currentUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-        }, '');
-      }
+      // Share the same UID-keyed provisioning path used by auth-state hydration.
+      // This avoids racing two profile creates when Firebase emits a token change.
+      const userProfile = await ProfileService.getOrCreateProfile(currentUser);
       // Notify the auth-state listener after the beta profile exists so the app
       // hydrates this same UID as a full NEXORA member.
       await currentUser.getIdToken(true);
@@ -565,6 +558,16 @@ export class AuthService {
 
   private static async requireRecentAccountAuthentication(user: FirebaseUser): Promise<void> {
     const token = await user.getIdTokenResult(true);
+    const approvedAnonymousUpgrade = canUpgradeAnonymousBetaSession(
+      user.isAnonymous,
+      token.claims.betaMember === true,
+      auth.currentUser?.uid === user.uid,
+    );
+    // An anonymous member has no existing credential with which to reauthenticate.
+    // A refreshed token plus the server-issued beta claim and same active UID are
+    // therefore the safe upgrade path; established accounts still require recent auth.
+    if (approvedAnonymousUpgrade) return;
+
     const authTime = Number(token.claims.auth_time);
     if (!isRecentAuthentication(authTime, Date.now() / 1000)) {
       throw new Error('Sign in again immediately before changing your account sign-in methods.');

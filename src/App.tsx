@@ -42,6 +42,7 @@ import {
   removeFollow
 } from './services/dataService';
 import { ProfileService } from './services/firebase/profileService';
+import { shouldShowAnonymousAccountReminder } from './services/firebase/anonymousOnboardingPolicy';
 import { db } from './lib/firebase';
 import { functions } from './lib/firebase';
 import { mergeRealtimePosts } from './services/posts/postCollection';
@@ -142,12 +143,18 @@ export default function App() {
         }
         const key = `nexora_beta_security_reminder_${firebaseUser.uid}`;
         const stored = localStorage.getItem(key);
-        const state = stored ? JSON.parse(stored) as { joinedAt?: number; dismissedStep?: number } : {};
+        const state = stored ? JSON.parse(stored) as { joinedAt?: number; lastDismissedDate?: string } : {};
         const joinedAt = state.joinedAt || (firebaseUser.metadata.creationTime ? Date.parse(firebaseUser.metadata.creationTime) : Date.now());
-        const daysSinceJoin = Math.floor((Date.now() - joinedAt) / 86400000);
-        const step = daysSinceJoin >= 30 ? 3 : daysSinceJoin >= 7 ? 2 : daysSinceJoin >= 3 ? 1 : 0;
-        if (!state.joinedAt) localStorage.setItem(key, JSON.stringify({ joinedAt, dismissedStep: state.dismissedStep || 0 }));
-        if (active) setSecurityReminderStep(step > (state.dismissedStep || 0) ? step : 0);
+        const reminder = shouldShowAnonymousAccountReminder({
+          joinedAt,
+          lastDismissedDate: state.lastDismissedDate,
+          hasVerifiedEmail,
+          hasPhone,
+        });
+        if (!state.joinedAt) localStorage.setItem(key, JSON.stringify({ ...state, joinedAt }));
+        // First reminder after the first full day, then once every day until
+        // both a verified email and a phone number are linked to this UID.
+        if (active) setSecurityReminderStep(reminder.show ? 1 : 0);
       } catch {
         if (active) setSecurityReminderStep(0);
       }
@@ -3268,14 +3275,16 @@ export default function App() {
             <div className="mt-0.5 rounded-xl bg-violet-500/15 p-2 text-violet-300"><ShieldCheck className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-white">Secure your NEXORA account</p>
-              <p className="mt-1 text-xs leading-relaxed text-violet-100/75">Add a verified email and phone number so you can recover your account if you lose access to this device.</p>
+              <p className="mt-1 text-xs leading-relaxed text-violet-100/75">Your account is ready to use. Add and verify an email address and phone number to protect your posts and recover this same account if you change devices.</p>
               <div className="mt-3 flex items-center gap-2">
-                <button type="button" onClick={() => setActiveTab('settings')} className="rounded-xl bg-violet-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-violet-500">Secure account</button>
+                <button type="button" onClick={() => setActiveTab('settings')} className="rounded-xl bg-violet-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-violet-500">Add email + phone</button>
                 <button type="button" onClick={() => {
                   const key = `nexora_beta_security_reminder_${firebaseUser.uid}`;
                   const stored = localStorage.getItem(key);
                   const state = stored ? JSON.parse(stored) : {};
-                  localStorage.setItem(key, JSON.stringify({ ...state, dismissedStep: securityReminderStep }));
+                  const now = new Date();
+                  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                  localStorage.setItem(key, JSON.stringify({ ...state, lastDismissedDate: today }));
                   setSecurityReminderStep(0);
                 }} className="rounded-xl border border-white/10 px-3 py-2 text-[11px] font-semibold text-zinc-300 hover:bg-white/5">Remind me later</button>
               </div>

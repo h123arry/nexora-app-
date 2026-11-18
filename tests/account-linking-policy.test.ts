@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { GoogleAuthProvider } from 'firebase/auth';
-import { hasLinkedProvider, isRecentAuthentication } from '../src/services/firebase/accountLinkingPolicy.ts';
+import { canUpgradeAnonymousBetaSession, hasLinkedProvider, isRecentAuthentication } from '../src/services/firebase/accountLinkingPolicy.ts';
 
 const GOOGLE_PROVIDER_ID = GoogleAuthProvider.PROVIDER_ID;
 
@@ -23,4 +23,11 @@ test('provider linking recognizes existing email, phone, and Google credentials'
   assert.equal(hasLinkedProvider(['phone'], 'phone'), true);
   assert.equal(hasLinkedProvider(['password'], 'phone'), false);
   assert.equal(hasLinkedProvider(['phone'], GOOGLE_PROVIDER_ID), false);
+});
+
+test('approved anonymous beta members can upgrade credentials on their existing active UID', () => {
+  assert.equal(canUpgradeAnonymousBetaSession(true, true, true), true);
+  assert.equal(canUpgradeAnonymousBetaSession(true, false, true), false);
+  assert.equal(canUpgradeAnonymousBetaSession(true, true, false), false);
+  assert.equal(canUpgradeAnonymousBetaSession(false, true, true), false);
 });
