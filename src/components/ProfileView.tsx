@@ -45,7 +45,7 @@ interface MediaGridProps {
 const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) => {
   if (gridPosts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center text-center py-20 px-6 w-full col-span-3">
+      <div className="flex flex-col items-center justify-center text-center py-20 px-6 w-full col-span-full">
         <div className="w-20 h-20 bg-linear-to-br from-violet-600/20 to-pink-500/20 rounded-full flex items-center justify-center mb-6 border border-white/5">
           <Camera className="w-8 h-8 text-violet-400" />
         </div>

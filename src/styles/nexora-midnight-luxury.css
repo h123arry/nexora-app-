@@ -1,0 +1,502 @@
+/* NEXORA — Midnight Luxury
+ * Central brand layer. Imported after the legacy stylesheet so the identity
+ * is consistent without rewriting feature-specific components.
+ */
+:root {
+  color-scheme: dark;
+  --nx-canvas: #070611;
+  --nx-canvas-deep: #05040D;
+  --nx-surface: #100D20;
+  --nx-surface-2: #17112B;
+  --nx-surface-3: #21183A;
+  --nx-edge: #241D38;
+  --nx-edge-strong: #3A2D59;
+  --nx-violet: #7547FF;
+  --nx-violet-bright: #8A3FFC;
+  --nx-violet-deep: #5428C8;
+  --nx-muted: #9690AA;
+  --nx-text: #F8F7FF;
+  --nx-success: #53D39A;
+  --nx-warning: #F1BD72;
+  --nx-danger: #F07E9F;
+  --nx-gradient: linear-gradient(115deg, #7547FF 0%, #8A3FFC 100%);
+  --nx-brand-gradient: linear-gradient(110deg, #D84BCB 0%, #8A3FFC 35%, #426BFF 70%, #36C8E8 100%);
+  --nx-gradient-soft: linear-gradient(110deg, rgba(117,71,255,.16), rgba(138,63,252,.09));
+  --nx-shadow: 0 22px 60px rgba(2,0,16,.52);
+  --nx-shadow-soft: 0 12px 32px rgba(2,0,16,.34);
+  --nx-radius-card: 1rem;
+  --nx-radius-control: .75rem;
+  --color-primary: #7547FF;
+  --color-primary-foreground: #FFFFFF;
+}
+
+html, body, #root {
+  background: var(--nx-canvas);
+  color: var(--nx-text);
+}
+body { background: var(--nx-canvas); }
+::selection { color: #fff; background: rgba(117,71,255,.42); }
+:focus-visible { outline: 2px solid #8A3FFC; outline-offset: 3px; }
+
+.nx-app-shell, .nx-app-shell-root, .nx-app-shell, .nx-feed-stage {
+  background-color: var(--nx-canvas);
+  color: var(--nx-text);
+}
+.nx-surface, .nx-soft-card {
+  background: var(--nx-surface);
+  border-color: var(--nx-edge);
+  box-shadow: var(--nx-shadow-soft);
+}
+.nx-glass, .nx-glass-strong {
+  background: rgba(16,13,32,.92);
+  border-color: var(--nx-edge);
+}
+.nx-glass-strong { background: rgba(7,6,17,.97); }
+
+.nx-field {
+  background: var(--nx-surface);
+  border-color: var(--nx-edge);
+  color: var(--nx-text);
+}
+.nx-field::placeholder { color: var(--nx-muted); }
+.nx-field:hover { background: var(--nx-surface-2); border-color: rgba(117,71,255,.48); }
+.nx-field:focus {
+  background: var(--nx-surface-2);
+  border-color: var(--nx-violet);
+  box-shadow: 0 0 0 3px rgba(117,71,255,.18);
+}
+
+.nx-btn-primary {
+  background: var(--nx-gradient);
+  border-color: rgba(190,170,255,.18);
+  box-shadow: 0 9px 26px rgba(117,71,255,.22);
+}
+.nx-btn-primary:hover { box-shadow: 0 12px 30px rgba(117,71,255,.32); }
+.nx-btn-ghost, .nx-icon-button {
+  background: var(--nx-surface);
+  border-color: var(--nx-edge);
+}
+.nx-btn-ghost:hover, .nx-icon-button:hover {
+  background: var(--nx-surface-2);
+  border-color: rgba(117,71,255,.48);
+}
+
+.nx-story-ring { background: var(--nx-brand-gradient); }
+.nx-sidebar-shell {
+  background: #0B0918;
+  border-color: var(--nx-edge) !important;
+}
+.nx-sidebar-nav-item:hover {
+  background: rgba(117,71,255,.09);
+  border-color: rgba(117,71,255,.2);
+}
+.nx-sidebar-nav-item[data-active="true"] {
+  background: linear-gradient(90deg, rgba(117,71,255,.2), rgba(138,63,252,.07));
+  border-color: rgba(138,63,252,.3);
+  box-shadow: inset 3px 0 0 var(--nx-violet);
+}
+.nx-nav-icon { background: rgba(117,71,255,.12) !important; }
+.nx-sidebar-nav-item[data-active="true"] .nx-nav-icon {
+  background: rgba(117,71,255,.24) !important;
+}
+.nx-create-action {
+  border-color: rgba(117,71,255,.3) !important;
+  background: rgba(117,71,255,.12) !important;
+}
+.nx-create-action:hover {
+  border-color: rgba(117,71,255,.55) !important;
+  background: rgba(117,71,255,.2) !important;
+}
+
+/* Consistent secondary workspaces */
+.nx-inbox-shell, .nx-inbox-chat, .nx-profile-shell {
+  background-color: var(--nx-canvas);
+  border-color: var(--nx-edge);
+}
+.nx-inbox-sidebar, .nx-inbox-sidebar > .nx-page-header,
+.nx-inbox-chat > div:first-child, .nx-inbox-chat > div:last-child,
+.nx-profile-topbar, .nx-profile-tabbar {
+  border-color: var(--nx-edge);
+}
+.nx-inbox-sidebar .nx-segmented button[aria-selected="true"],
+.nx-profile-tabbar button[aria-pressed="true"] {
+  background: linear-gradient(110deg, rgba(117,71,255,.24), rgba(138,63,252,.12));
+}
+.nx-inbox-sidebar .nx-field:focus,
+.nx-inbox-chat input[aria-label="Message"]:focus,
+.nx-profile-shell input:focus,
+.nx-profile-shell textarea:focus,
+.nx-profile-shell select:focus {
+  border-color: rgba(117,71,255,.62);
+  box-shadow: 0 0 0 3px rgba(117,71,255,.14);
+}
+.nx-inbox-chat button[aria-label="Send message"] {
+  background: var(--nx-gradient);
+  box-shadow: 0 5px 18px rgba(117,71,255,.2);
+}
+
+/* Keep logo artwork untouched; use the brand spectrum only for brand marks. */
+.nx-brand-mark { filter: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
+
+/* Social-first composition: continuous surfaces, not a wall of cards. */
+.nx-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0 !important;
+  margin-inline: 0 !important;
+  padding-bottom: 1rem;
+}
+.nx-feed-list > * { margin-inline: 0 !important; }
+.nx-post-card {
+  width: 100%;
+  margin: 0 !important;
+  padding: 1.15rem 0 1.25rem !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(150,144,170,.19) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none;
+}
+.nx-post-card:hover {
+  border-color: rgba(150,144,170,.28) !important;
+  box-shadow: none !important;
+}
+.nx-post-card:last-child { border-bottom: 0 !important; }
+.nx-post-card > .px-4 {
+  padding-inline: clamp(14px, 3.5vw, 24px);
+}
+.nx-post-card > [class*="rounded-"][class*="overflow-hidden"] {
+  border-radius: 0 !important;
+}
+.nx-post-card img,
+.nx-post-card video { max-width: 100%; }
+.nx-feed-stage .nx-post-card + .nx-post-card { margin-top: 0 !important; }
+
+/* Profile identity: circular avatar and typographic, inline social metrics. */
+.nx-profile-main { max-width: 100% !important; }
+.nx-profile-identity { gap: .5rem !important; }
+.nx-profile-identity img { border-radius: 9999px; }
+.nx-profile-stats {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 !important;
+  margin-top: .65rem !important;
+  padding: .65rem 0;
+  border-top: 1px solid rgba(150,144,170,.16);
+  border-bottom: 1px solid rgba(150,144,170,.16);
+  text-align: center;
+}
+.nx-profile-stats > div {
+  min-width: 0;
+  padding: .25rem .35rem !important;
+  gap: .12rem !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nx-profile-stats > div:nth-child(3n + 2) {
+  border-left: 1px solid rgba(150,144,170,.14) !important;
+  border-right: 1px solid rgba(150,144,170,.14) !important;
+}
+.nx-profile-stats > div > span:first-child {
+  font-size: clamp(.88rem, 2.7vw, 1.08rem) !important;
+  font-weight: 750 !important;
+  letter-spacing: -.025em;
+}
+.nx-profile-stats > div > span:last-child {
+  color: var(--nx-muted) !important;
+  font-size: .66rem !important;
+  font-weight: 500 !important;
+}
+
+/* Profile content becomes a full-width timeline-like media stream. */
+.nx-profile-content {
+  padding-top: 0 !important;
+  background: var(--nx-canvas) !important;
+}
+.nx-profile-content > div:has(> .nx-profile-media-grid) {
+  max-width: none !important;
+  padding-inline: 0 !important;
+}
+.nx-profile-media-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 0 !important;
+  width: 100% !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
+.nx-profile-media-grid > button {
+  width: 100% !important;
+  min-height: 260px;
+  aspect-ratio: 4 / 5 !important;
+  max-height: 76dvh;
+  border-radius: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(150,144,170,.19) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nx-profile-media-grid > button img,
+.nx-profile-media-grid > button video {
+  object-fit: cover;
+}
+.nx-profile-tabbar {
+  background: rgba(7,6,17,.94) !important;
+  backdrop-filter: blur(18px);
+}
+.nx-profile-tabbar > div {
+  display: flex !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  max-width: none !important;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.nx-profile-tabbar > div::-webkit-scrollbar { display: none; }
+.nx-profile-tabbar button {
+  min-width: 76px;
+  flex: 1 0 auto;
+  min-height: 46px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  position: relative;
+}
+.nx-profile-tabbar button[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 22%;
+  right: 22%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--nx-gradient);
+}
+.nx-profile-tabbar button[aria-pressed="true"] { color: #fff !important; }
+
+/* Mobile dock: floating icons and the member's actual profile photo. */
+.nx-mobile-dock {
+  min-height: 62px;
+  gap: .25rem;
+  padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) !important;
+  background: rgba(7,6,17,.96) !important;
+  border-top: 1px solid rgba(150,144,170,.17) !important;
+  border-radius: 0 !important;
+  box-shadow: 0 -8px 28px rgba(0,0,0,.28) !important;
+}
+.nx-dock-item {
+  min-width: 52px;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #9690AA;
+  transition: color 160ms ease, opacity 160ms ease;
+}
+.nx-dock-item[data-active="true"] {
+  color: #F8F7FF !important;
+  background: transparent !important;
+}
+.nx-dock-item[data-active="true"] svg { color: #A78BFA !important; }
+.nx-create-dock {
+  width: 46px !important;
+  height: 46px !important;
+  top: -9px !important;
+  border-radius: 16px !important;
+  background: var(--nx-gradient) !important;
+  border: 1px solid rgba(190,170,255,.24) !important;
+  box-shadow: 0 7px 20px rgba(117,71,255,.24) !important;
+}
+#mobile-nav-profile img {
+  width: 23px;
+  height: 23px;
+  border-radius: 9999px;
+  object-fit: cover;
+  border: 1.5px solid transparent;
+}
+#mobile-nav-profile[data-active="true"] img {
+  border-color: #A78BFA;
+  box-shadow: 0 0 0 2px rgba(117,71,255,.18);
+}
+
+@media (min-width: 640px) {
+  .nx-profile-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .nx-profile-stats > div:nth-child(3n + 2) { border-left: 0 !important; border-right: 0 !important; }
+  .nx-profile-stats > div + div { border-left: 1px solid rgba(150,144,170,.14) !important; }
+  .nx-profile-media-grid > button { aspect-ratio: 16 / 9 !important; }
+}
+@media (max-width: 639px) {
+  .nx-profile-main { padding-inline: 14px !important; }
+  .nx-profile-media-grid > button { min-height: 0; }
+  .nx-profile-content > div:has(> .nx-profile-media-grid) { padding-inline: 0 !important; }
+}
+
+
+/* Final social UX pass: keep the content stream continuous and controls consistent. */
+.nx-feed-stage {
+  min-width: 0;
+  background: var(--nx-canvas);
+}
+.nx-feed-stage > div[ref],
+.nx-feed-stage > div {
+  min-width: 0;
+}
+.nx-post-card {
+  overflow-wrap: anywhere;
+  isolation: isolate;
+}
+.nx-post-card > div:first-child {
+  min-width: 0;
+}
+.nx-post-card > div:first-child button img {
+  border-radius: 9999px;
+}
+.nx-post-card [class*="aspect-"],
+.nx-post-card [data-media-container] {
+  max-width: 100%;
+}
+.nx-post-card video,
+.nx-post-card img {
+  display: block;
+}
+.nx-post-card button:focus-visible,
+.nx-profile-shell button:focus-visible,
+#explore-view-master-panel button:focus-visible,
+#explore-view-master-panel input:focus-visible {
+  outline: 2px solid var(--nx-violet-bright);
+  outline-offset: 3px;
+}
+.nx-post-card button[aria-label*="Spark"],
+.nx-post-card button[aria-label*="Comment"],
+.nx-post-card button[aria-label*="Share"],
+.nx-post-card button[aria-label*="Save"] {
+  min-width: 40px;
+  min-height: 40px;
+}
+.nx-profile-shell {
+  color: var(--nx-text);
+}
+.nx-profile-topbar {
+  background: rgba(7,6,17,.94) !important;
+  backdrop-filter: blur(18px);
+}
+.nx-profile-identity {
+  align-items: center;
+}
+.nx-profile-identity img {
+  width: clamp(76px, 19vw, 112px);
+  height: clamp(76px, 19vw, 112px);
+  object-fit: cover;
+  border: 2px solid rgba(138,63,252,.45);
+  box-shadow: 0 0 0 4px rgba(117,71,255,.09);
+}
+.nx-profile-stats > div {
+  cursor: default;
+}
+.nx-profile-stats > div:focus-within {
+  outline: 2px solid rgba(138,63,252,.65);
+  outline-offset: 2px;
+}
+.nx-profile-media-grid > button {
+  position: relative;
+  overflow: hidden;
+  transition: opacity 160ms ease, background-color 160ms ease;
+}
+.nx-profile-media-grid > button:hover {
+  opacity: .94;
+  transform: none !important;
+}
+.nx-profile-media-grid > button:focus-visible {
+  outline-offset: -4px;
+}
+#explore-view-master-panel {
+  color: var(--nx-text);
+  min-width: 0;
+}
+#explore-view-master-panel .nx-page-header {
+  background: rgba(7,6,17,.96);
+  border-color: var(--nx-edge);
+  backdrop-filter: blur(18px);
+}
+#explore-view-master-panel .nx-explore-filter {
+  min-height: 38px;
+  border-radius: 999px;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+#explore-view-master-panel .nx-explore-filter[aria-pressed="true"] {
+  color: #fff;
+  background: rgba(117,71,255,.2);
+  border-color: rgba(138,63,252,.58);
+  box-shadow: inset 0 0 0 1px rgba(190,170,255,.08);
+}
+#explore-view-master-panel .nx-field {
+  min-height: 46px;
+  border-radius: 14px;
+}
+.nx-mobile-dock button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.nx-mobile-dock button:focus-visible {
+  outline-offset: -2px;
+}
+.nx-create-dock {
+  flex: 0 0 auto;
+}
+@media (max-width: 639px) {
+  .nx-feed-stage {
+    overflow-x: clip;
+  }
+  .nx-post-card {
+    padding-block: .9rem 1rem !important;
+  }
+  .nx-post-card > div:first-child {
+    gap: .65rem;
+  }
+  .nx-post-card > div:first-child img {
+    width: 38px;
+    height: 38px;
+  }
+  .nx-profile-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .nx-profile-media-grid > button {
+    aspect-ratio: 4 / 5 !important;
+    max-height: none;
+  }
+  #explore-view-master-panel {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  #explore-view-master-panel > .nx-page-header {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+@media (min-width: 640px) {
+  .nx-profile-media-grid > button {
+    aspect-ratio: 16 / 10 !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-post-card *,
+  .nx-profile-shell *,
+  #explore-view-master-panel * {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
