@@ -134,7 +134,7 @@ export default function App() {
       }
       try {
         const token = await firebaseUser.getIdTokenResult();
-        if (!active || token.claims.betaMember !== true) return;
+        if (!active) return;
         const hasVerifiedEmail = firebaseUser.emailVerified;
         const hasPhone = !!firebaseUser.phoneNumber;
         if (hasVerifiedEmail && hasPhone) {
