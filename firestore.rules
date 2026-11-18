@@ -168,7 +168,7 @@ service cloud.firestore {
         'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
         'followers', 'following', 'sparks', 'hasStory',
         'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
-        'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
+        'interestDNA', 'skills', 'dateOfBirth', 'statusText', 'statusEmoji', 'pinnedMusicSong',
         'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts'
       ];
     }
@@ -353,7 +353,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
           'followers', 'following', 'sparks', 'hasStory', 'coverImage', 'profileFrameId', 'profileBadgeId',
-          'joinedDate', 'email', 'phone', 'role', 'isBanned', 'isSuspended',
+          'joinedDate', 'email', 'phone', 'dateOfBirth', 'role', 'isBanned', 'isSuspended',
           'isSeedProfile', 'preferredLanguage', 'savedCollections', 'contributions',
           'reputationPoints', 'reputationBreakdown', 'interestDNA', 'skills',
           'nexBalance', 'totalEarnedNex', 'pendingNex', 'thisWeekEarnedNex',
