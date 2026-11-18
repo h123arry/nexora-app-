@@ -5,6 +5,7 @@ import { test, after } from 'node:test';
 
 const { auth } = await import('../src/lib/firebase.ts');
 const { AuthService } = await import('../src/services/firebase/authService.ts');
+const { isPhoneAuthAvailable } = await import('../src/utils/authMethodAvailability.ts');
 const {
   browserLocalPersistence,
   browserSessionPersistence,
@@ -21,6 +22,16 @@ async function cleanUp() {
   }
   await signOut(auth).catch(() => undefined);
 }
+
+
+test('phone sign-in is available only when explicitly enabled for staging or production', () => {
+  assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'production', VITE_NEXORA_PHONE_AUTH_ENABLED: 'true' }), true);
+  assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'staging', VITE_NEXORA_PHONE_AUTH_ENABLED: 'true' }), true);
+  assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'production', VITE_NEXORA_PHONE_AUTH_ENABLED: 'false' }), false);
+  assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'local', VITE_NEXORA_PHONE_AUTH_ENABLED: 'true' }), false);
+  assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'emulator', VITE_NEXORA_PHONE_AUTH_ENABLED: 'true' }), false);
+  assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'production' }), false);
+});
 
 test('maps Firebase configuration and credential failures without exposing provider details', () => {
   assert.match(AuthService.mapFirebaseError({ code: 'auth/operation-not-allowed' }), /sign-in method is not enabled/);
