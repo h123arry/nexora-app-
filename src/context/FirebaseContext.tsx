@@ -92,7 +92,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       try {
-        const token = await fbUser.getIdTokenResult();
+        await fbUser.getIdTokenResult();
         const isApprovedBetaMember = true;
         const identityKey = getAuthSessionIdentityKey(fbUser, isApprovedBetaMember);
         if (!identityKey) throw new Error('Authenticated session is missing its identity key.');
@@ -269,7 +269,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setInitializing(true);
     setError(null);
     try {
-      const token = await currentUser.getIdTokenResult(true);
+      await currentUser.getIdTokenResult(true);
       const profile = await ProfileService.getOrCreateProfile(currentUser);
       if (!profile) throw new Error('NEXORA could not find or create your private account profile.');
 
