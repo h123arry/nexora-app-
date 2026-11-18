@@ -672,6 +672,11 @@ export default function ProfileView({
         e.preventDefault();
         return;
       }
+      if (showAddAccountModal) {
+        setShowAddAccountModal(false);
+        e.preventDefault();
+        return;
+      }
       if (showReputationModal) {
         setShowReputationModal(false);
         e.preventDefault();
@@ -1679,22 +1684,29 @@ export default function ProfileView({
 
                     {isOwnProfile && isLoggedIn && <IdentityVerificationPanel userId={currentUser.id} initialDisplayName={currentUser.name || ''} />}
 
-                    {/* Section 1: Identity & Switcher Vault */}
-                    <div className="space-y-1.5">
-                      <p className="text-[9px] font-mono uppercase text-zinc-500 tracking-widest pl-2">Account Identity Vault</p>
-                      <div className="p-3 rounded-2xl bg-[#0d0a20] border border-white/10 space-y-3">
-                        <div className="space-y-2">
-                          <div className="rounded-xl border border-violet-400/15 bg-violet-500/5 p-3">
-                            <div className="flex items-center gap-2">
-                              <UserCheck className="h-4 w-4 text-violet-300" />
-                              <div className="min-w-0">
-                                <p className="text-xs font-bold text-white">Profile Calibration</p>
-                                <p className="text-[10px] text-zinc-400">Edit your display name, username and profile details.</p>
+                    {/* Section 2: Grouped Directories */}
+                    <div className="space-y-4">
+                      
+                      {/* Account Category */}
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-mono uppercase text-zinc-500 tracking-widest pl-2">Account Administration</p>
+                        <div className="rounded-2xl bg-black/40 border border-white/5 overflow-hidden divide-y divide-white/5">
+                          <button 
+                            onClick={() => setSettingsActiveSubPanel('account')}
+                            className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold transition-all text-zinc-300 hover:text-white"
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <Edit3 className="w-4 h-4 text-violet-400" />
+                              <div className="text-left">
+                                <p className="leading-tight text-xs font-bold">Profile Calibration</p>
+                                <p className="text-[9px] text-zinc-500 font-normal">Edit display name, usernames, bio attributes</p>
                               </div>
-                            </div>
-                          </div>
+                            </span>
+                            <ChevronRight className="w-4 h-4 text-zinc-600" />
+                          </button>
                         </div>
                       </div>
+
                       {/* Security & Privacy */}
                       <div className="space-y-1">
                         <p className="text-[9px] font-mono uppercase text-zinc-500 tracking-widest pl-2">Safety & Shielding</p>
