@@ -133,7 +133,7 @@ export default function App() {
         return;
       }
       try {
-        const token = await firebaseUser.getIdTokenResult();
+        await firebaseUser.getIdTokenResult();
         if (!active) return;
         const hasVerifiedEmail = firebaseUser.emailVerified;
         const hasPhone = !!firebaseUser.phoneNumber;
