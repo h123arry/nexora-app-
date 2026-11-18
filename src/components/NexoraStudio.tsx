@@ -23,7 +23,7 @@ type StudioClip = StudioVideoLayer & { name: string; blob: Blob; duration: numbe
 type StudioSubtitleSegment = { id: string; text: string; start: number; end: number };
 type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; textLayers: StudioTextLayer[]; selectedTextLayerId: string | null; imageLayers: StudioImageLayer[]; selectedImageLayerId: string | null; subtitleSegments: StudioSubtitleSegment[]; selectedSubtitleSegmentId: string | null; aspectRatio: 'portrait' | 'square' | 'landscape'; visualFilter: StudioVisualFilter; transition: 'cut' | 'fade' | 'cross-dissolve'; soundtrackVolume: number; soundtrackFadeIn: number; soundtrackFadeOut: number; duckMusicUnderVoiceover: boolean; musicDuckingLevel: number; voiceoverVolume: number; voiceoverFadeIn: number; voiceoverFadeOut: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
 type StudioSnapshot = Omit<StudioProject, 'updatedAt'> & { selectedId: string | null };
-type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string, onProgress?: (progress: number) => void, signal?: AbortSignal, remixPolicy?: OriginRemixPolicy) => Promise<void> };
+type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string, onProgress?: (progress: number) => void, signal?: AbortSignal, remixPolicy?: OriginRemixPolicy) => Promise<void>; initialMedia?: File[] };
 
 const DB_NAME = 'nexora-studio-projects';
 const STORE_NAME = 'projects';
@@ -97,7 +97,7 @@ function makeId(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `clip-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export default function NexoraStudio({ currentUser, onClose, onPublish }: Props) {
+export default function NexoraStudio({ currentUser, onClose, onPublish, initialMedia = [] }: Props) {
   const [clips, setClips] = useState<StudioClip[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [soundtrack, setSoundtrack] = useState<Blob | null>(null);
@@ -565,6 +565,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     setSelectedId(previous => previous || additions[0].id);
     setMessage(`${additions.length} clip${additions.length === 1 ? '' : 's'} added to your timeline.`);
   };
+
+  useEffect(() => {
+    if (!ready || initialMedia.length === 0) return;
+    void addVideoFiles(initialMedia);
+  }, [ready, initialMedia]);
 
   const startVoiceover = async () => {
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {

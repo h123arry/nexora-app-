@@ -4,6 +4,10 @@
 <dict>
   <key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
+  <key>NSCameraUsageDescription</key>
+  <string>NEXORA uses your camera so you can take photos and record videos to share.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>NEXORA uses your microphone so you can record videos and voice notes.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>

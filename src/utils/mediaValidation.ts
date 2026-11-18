@@ -4,7 +4,7 @@ export const MEDIA_LIMITS = {
   imageBytes: 12 * 1024 * 1024,
   videoBytes: 250 * 1024 * 1024,
   audioBytes: 50 * 1024 * 1024,
-  maxVideoDurationSeconds: 180,
+  maxVideoDurationSeconds: 1200,
   maxImageWidth: 12000,
   maxImageHeight: 12000,
 } as const;

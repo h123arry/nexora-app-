@@ -140,6 +140,7 @@ interface MediaCreationEngineProps {
   initialMode?: 'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null;
   initialTab?: 'feed' | 'story' | 'drafts';
   initialCaption?: string;
+  onOpenStudio?: (files: File[]) => void;
 }
 
 interface SelectedImage {
@@ -213,13 +214,14 @@ const FILTER_PRESETS = [
   ...NEXORA_LENS_CATALOG.map(lens => ({ name: lens.name, style: lens.filter })),
 ];
 
-const WIZARD_STEPS = [
-  { id: 1, label: 'Choose' },
-  { id: 2, label: 'Add' },
-  { id: 3, label: 'Review' },
-  { id: 4, label: 'Caption' },
-  { id: 5, label: 'Preview' },
-  { id: 6, label: 'Share' }
+const RECORDING_DURATIONS = [
+  { seconds: 15, label: '15 sec' },
+  { seconds: 20, label: '20 sec' },
+  { seconds: 30, label: '30 sec' },
+  { seconds: 60, label: '1 min' },
+  { seconds: 180, label: '3 min' },
+  { seconds: 600, label: '10 min' },
+  { seconds: 1200, label: '20 min' },
 ];
 
 export default function MediaCreationEngine({
@@ -232,7 +234,8 @@ export default function MediaCreationEngine({
   onToggleOffline,
   initialMode = null,
   initialTab = undefined,
-  initialCaption = ''
+  initialCaption = '',
+  onOpenStudio
 }: MediaCreationEngineProps) {
   const autosaveKey = `nexora_creation_autosave_v1_${currentUser.id || 'visitor'}`;
   const draftsKey = `nexora_post_drafts_v1_${currentUser.id || 'visitor'}`;
@@ -244,7 +247,7 @@ export default function MediaCreationEngine({
     return initialAutosave?.activeMode || initialMode;
   });
   const [currentStep, setCurrentStep] = useState<number>(() => {
-    return initialAutosave?.currentStep || 1;
+    return initialMode ? 2 : (initialAutosave?.currentStep || 1);
   });
 
   // Form Fields
@@ -318,6 +321,7 @@ export default function MediaCreationEngine({
   const [openLensAfterPermission, setOpenLensAfterPermission] = useState(false);
   const [countdownTimer, setCountdownTimer] = useState<number | null>(null);
   const [loopTimerSecs, setLoopTimerSecs] = useState(0);
+  const [recordingLimitSecs, setRecordingLimitSecs] = useState(30);
 
   // Voice Recording
   const [voiceFileUrl, setVoiceFileUrl] = useState<string | null>(() => initialAutosave?.voiceUrl || null);
@@ -336,9 +340,10 @@ export default function MediaCreationEngine({
 
   // UI state
   const [permissionTarget, setPermissionTarget] = useState<'camera' | 'gallery' | 'mic' | null>(null);
-  const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>(() => {
-    return (localStorage.getItem('nexora_media_permissions_granted') as any) || 'prompt';
-  });
+  // Browser/OS permissions are authoritative. Never restore a locally cached
+  // "granted" value because users can revoke camera or microphone access later.
+  const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
+  const pendingPermissionActionRef = useRef<(() => void) | null>(null);
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [draftsList, setDraftsList] = useState<DraftItem[]>(() => readLocalDrafts(draftsKey));
@@ -389,10 +394,6 @@ export default function MediaCreationEngine({
     if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
     clearTrackedObjectUrls();
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('nexora_media_permissions_granted', permissionState);
-  }, [permissionState]);
 
   useEffect(() => {
     if (composerStateOwnerId !== currentUser.id) return;
@@ -655,9 +656,9 @@ export default function MediaCreationEngine({
     if (isRecording && !isRecordingPaused) {
       loopTimerRef.current = setInterval(() => {
         setLoopTimerSecs(prev => {
-          if (prev >= 30) {
+          if (prev + 1 >= recordingLimitSecs) {
             handleStopReelRecord();
-            return 30;
+            return recordingLimitSecs;
           }
           return prev + 1;
         });
@@ -666,7 +667,7 @@ export default function MediaCreationEngine({
       if (loopTimerRef.current) clearInterval(loopTimerRef.current);
     }
     return () => clearInterval(loopTimerRef.current);
-  }, [isRecording, isRecordingPaused]);
+  }, [isRecording, isRecordingPaused, recordingLimitSecs]);
 
   // Resolve @mentions against the public profile directory; never suggest private user records.
   useEffect(() => {
@@ -699,10 +700,72 @@ export default function MediaCreationEngine({
   }, [location]);
 
   const requestPermission = (target: 'camera' | 'gallery' | 'mic', callback: () => void) => {
+    // The browser's file picker owns gallery access; websites must not pretend
+    // that a separate gallery permission has been granted.
+    if (target === 'gallery') {
+      callback();
+      return;
+    }
     if (permissionState === 'granted') {
       callback();
-    } else {
-      setPermissionTarget(target);
+      return;
+    }
+    pendingPermissionActionRef.current = callback;
+    setPermissionTarget(target);
+  };
+
+  const handlePermissionContinue = async () => {
+    const target = permissionTarget;
+    if (!target || target === 'gallery') {
+      setPermissionTarget(null);
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setPermissionState('denied');
+      setPermissionTarget(null);
+      pendingPermissionActionRef.current = null;
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera and microphone access require a supported browser on a secure connection. You can still choose media from your device.' }));
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(
+        target === 'mic'
+          ? { audio: true }
+          : { video: { facingMode: { ideal: cameraFacing } }, audio: activeMode === 'reel' }
+      );
+      stream.getTracks().forEach(track => track.stop());
+      setPermissionState('granted');
+      setPermissionTarget(null);
+      if (openLensAfterPermission) {
+        setIsLensStudioOpen(true);
+        setOpenLensAfterPermission(false);
+      }
+      const pendingAction = pendingPermissionActionRef.current;
+      pendingPermissionActionRef.current = null;
+      if (pendingAction) {
+        // Wait for the preview effect to attach its stream before recording.
+        if (target === 'camera' && activeMode === 'reel') {
+          let attempts = 0;
+          const waitForPreview = () => {
+            const live = videoStreamRef.current?.getVideoTracks().some(track => track.readyState === 'live');
+            if (live) pendingAction();
+            else if (++attempts < 40) window.setTimeout(waitForPreview, 100);
+            else window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera permission was granted, but the preview is still starting. Please tap Record again in a moment.' }));
+          };
+          window.setTimeout(waitForPreview, 100);
+        } else {
+          pendingAction();
+        }
+      }
+    } catch (error) {
+      setPermissionState('denied');
+      pendingPermissionActionRef.current = null;
+      const message = error instanceof Error && error.name === 'NotAllowedError'
+        ? `Allow ${target === 'mic' ? 'microphone' : 'camera'} access in your browser or device settings, then try again.`
+        : error instanceof Error && error.name === 'NotFoundError'
+          ? `No ${target === 'mic' ? 'microphone' : 'camera'} was found on this device.`
+          : 'NEXORA could not access this device. Check your browser permissions and try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     }
   };
 
@@ -730,6 +793,13 @@ export default function MediaCreationEngine({
       }));
     });
     e.target.value = '';
+  };
+
+  const openVideoInStudio = () => {
+    if (!videoRawBlob || !onOpenStudio) return;
+    const type = videoRawBlob.type || 'video/webm';
+    const extension = type.includes('mp4') ? 'mp4' : type.includes('quicktime') ? 'mov' : 'webm';
+    onOpenStudio([new File([videoRawBlob], `nexora-clip-${Date.now()}.${extension}`, { type })]);
   };
 
   const captureCameraSnapshot = () => {
@@ -1362,12 +1432,6 @@ export default function MediaCreationEngine({
   // Dynamic Styles
   const getModalBg = () => 'bg-[#090714]/98 border-[#44376F]/70 text-white';
 
-  const getStepButtonColor = (step: number) => {
-    if (step === currentStep) return 'bg-violet-600 text-white shadow-lg shadow-violet-600/20';
-    if (step < currentStep) return 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400';
-    return 'bg-[#120E2B]/65 border border-[#292244] text-[#8E88A7]';
-  };
-
   const canAdvanceFromCurrentStep = () => {
     if (currentStep === 1 && !activeMode) return false;
     if (currentStep === 2) {
@@ -1467,18 +1531,18 @@ export default function MediaCreationEngine({
                 <Camera className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Allow camera and microphone access</h3>
-                <p className="text-xs text-[#A39BBF] leading-relaxed mt-1">Allow access when you want to take a photo, record a video or make a voice note.</p>
+                <h3 className="text-sm font-bold text-white">Allow {permissionTarget === 'mic' ? 'microphone' : 'camera'} access</h3>
+                <p className="text-xs text-[#A39BBF] leading-relaxed mt-1">Your browser or device will ask for permission. NEXORA only uses {permissionTarget === 'mic' ? 'the microphone' : 'the camera'} when you choose to record or capture media.</p>
               </div>
               <div className="flex gap-2">
                 <button 
-                  onClick={() => { setPermissionState('denied'); setPermissionTarget(null); }}
+                  onClick={() => { setPermissionState('denied'); setPermissionTarget(null); pendingPermissionActionRef.current = null; }}
                   className="flex-1 py-2 rounded-xl bg-[#120E2B] hover:bg-[#19143A] text-[#8E88A7] text-xs font-mono font-bold cursor-pointer transition-all"
                 >
                   Deny
                 </button>
                 <button 
-                  onClick={() => { setPermissionState('granted'); setPermissionTarget(null); if (openLensAfterPermission) { setIsLensStudioOpen(true); setOpenLensAfterPermission(false); } }}
+                  onClick={() => { void handlePermissionContinue(); }}
                   className="flex-1 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-bold cursor-pointer transition-all"
                 >
                   Continue
@@ -1573,22 +1637,12 @@ export default function MediaCreationEngine({
           </button>
         </div>
 
-        {/* Dynamic 6-Step Indicator Track */}
+        {/* A quiet progress line keeps the focus on creating, not on navigating a dashboard. */}
         {activeTab !== 'drafts' && (
-          <div className="flex items-center justify-between px-1.5 py-2.5 bg-[#080710]/40 border border-[#292244] rounded-2xl mb-4 shrink-0">
-            {WIZARD_STEPS.map((st) => (
-              <button 
-                key={st.id}
-                onClick={() => {
-                  if (st.id <= currentStep) setCurrentStep(st.id);
-                  else if (st.id === currentStep + 1) nextStep();
-                }}
-                disabled={st.id > currentStep + 1 || (st.id === currentStep + 1 && !activeMode)}
-                className={`px-3 py-1 text-[10px] font-sans font-black uppercase rounded-lg transition-all ${getStepButtonColor(st.id)}`}
-              >
-                {st.id < currentStep ? '✓' : st.id}. {st.label}
-              </button>
-            ))}
+          <div className="mb-4 shrink-0 px-1" aria-label={`Creation step ${currentStep} of 6`}>
+            <div className="h-1 overflow-hidden rounded-full bg-[#292244]">
+              <div className="h-full rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] transition-all duration-300" style={{ width: `${(currentStep / 6) * 100}%` }} />
+            </div>
           </div>
         )}
 
@@ -1639,21 +1693,21 @@ export default function MediaCreationEngine({
                 /* STEP 1: CHOOSE CONTENT TYPE */
                 <div className="space-y-4 animate-fadeIn">
                   <div>
-                    <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block mb-1">CREATE SOMETHING</span>
-                    <h3 className="text-sm font-black text-white uppercase">What would you like to share?</h3>
+                    <span className="text-xs font-semibold text-violet-300 block mb-1">Create</span>
+                    <h3 className="text-base font-bold text-white">What would you like to share?</h3>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {[
-                      { id: 'text', icon: FileText, label: 'Text post', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a thought, story or update.' },
-                      { id: 'photo', icon: Camera, label: 'Photo', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a photo from your device or camera.' },
-                      { id: 'carousel', icon: FileImage, label: 'Photo collection', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share several photos together.' },
-                      { id: 'video', icon: Video, label: 'Video post', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a full video with your own caption.' },
-                      { id: 'reel', icon: Sparkle, label: 'Quick clip', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Capture a quick moment in your own style.' },
-                      { id: 'voice', icon: Mic, label: 'Voice note', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Record a message in your own voice.' },
-                      { id: 'poll', icon: BarChart2, label: 'Poll', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Ask a question and let people vote.' },
-                      { id: 'pulse', icon: MapPin, label: 'Local update', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share what is happening near you.' },
-                      { id: 'community', icon: Users, label: 'Circle post', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share something with your circle.' }
+                      { id: 'text', icon: FileText, label: 'Write something', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a thought or update.' },
+                      { id: 'photo', icon: Camera, label: 'Take a photo', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Use your camera or choose a photo.' },
+                      { id: 'carousel', icon: FileImage, label: 'Choose photos', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Pick several photos from your gallery.' },
+                      { id: 'video', icon: Video, label: 'Choose a video', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Add a video from your gallery.' },
+                      { id: 'reel', icon: Sparkle, label: 'Record a video', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Open the camera and record a moment.' },
+                      { id: 'voice', icon: Mic, label: 'Record a voice note', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Record something in your own voice.' },
+                      { id: 'poll', icon: BarChart2, label: 'Ask a question', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Let people vote on your question.' },
+                      { id: 'pulse', icon: MapPin, label: 'Local update', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share what is happening nearby.' },
+                      { id: 'community', icon: Users, label: 'Share with a Circle', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share something with your Circle.' }
                     ].map((item) => (
                       <button
                         key={item.id}
@@ -1674,7 +1728,7 @@ export default function MediaCreationEngine({
                 /* STEP 2: MEDIA IMPORT & RECORDING */
                 <div className="space-y-4 animate-fadeIn">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-semibold text-[#B69BFF]">Step 2 of 6 · Add your content</span>
+                    <span className="text-xs font-semibold text-[#B69BFF]">{activeMode === 'photo' ? 'Choose a photo or take one' : activeMode === 'reel' ? 'Record a video or choose one' : activeMode === 'video' ? 'Choose a video' : 'Add your content'}</span>
                     <button 
                       onClick={() => setCurrentStep(1)} 
                       className="text-xs text-violet-400 hover:underline flex items-center gap-1 font-bold"
@@ -1693,7 +1747,7 @@ export default function MediaCreationEngine({
                           <p className="text-[10px] text-[#8E88A7] font-sans">Choose a photo from your device.</p>
                         </div>
                         <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all">
-                          Choose from device
+                          Choose from gallery
                           <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                         </label>
                       </div>
@@ -1701,11 +1755,17 @@ export default function MediaCreationEngine({
                       {/* Snap device simulation */}
                       <div className="border border-[#292244] rounded-2xl p-4 text-center space-y-4 bg-[#120E2B]/70 flex flex-col justify-between">
                         <div className="space-y-1">
-                          <span className="text-[9px] font-mono text-violet-400 uppercase tracking-wider block">Take a photo</span>
+                          <span className="text-sm font-semibold text-white block">Take a photo</span>
                           <p className="text-[10px] text-[#8E88A7]">Use your camera to take a photo.</p>
                         </div>
                         <video ref={photoPreviewRef} autoPlay muted playsInline className="w-full aspect-video rounded-xl object-cover bg-[#120E2B]" aria-label="Live camera preview" />
-                        <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="w-full rounded-xl bg-[#120E2B] py-2.5 text-xs font-mono font-bold text-white transition-all hover:bg-[#19143A] disabled:cursor-not-allowed disabled:opacity-50">Quick photo</button>
+                        {permissionState !== 'granted' && (
+                          <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
+                        )}
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="flex-1 rounded-xl border border-[#292244] bg-[#120E2B] py-2.5 text-xs font-semibold text-white disabled:opacity-40">Switch camera</button>
+                          <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="flex-1 rounded-xl bg-[#120E2B] py-2.5 text-xs font-semibold text-white transition-all hover:bg-[#19143A] disabled:cursor-not-allowed disabled:opacity-50">Take photo</button>
+                        </div>
                         <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="w-full rounded-xl bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] py-2.5 text-xs font-mono font-bold text-white shadow-lg transition-all hover:brightness-110"><Sparkles className="mr-1 inline h-3.5 w-3.5" /> Open Filters & Lenses</button>
                         <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                           {selectedImages.map((img, i) => (
@@ -1790,16 +1850,17 @@ export default function MediaCreationEngine({
                       <Video className="w-8 h-8 text-[#8E88A7] mx-auto animate-pulse" />
                       <div className="space-y-1">
                         <p className="text-xs text-[#D1CBE3] font-bold">Choose a video</p>
-                        <p className="text-[10px] text-[#8E88A7]">Choose a video from your device (up to 50 MB).</p>
+                        <p className="text-[10px] text-[#8E88A7]">Choose a video from your gallery. Videos can be up to 20 minutes and 250 MB.</p>
                       </div>
                       <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
-                        Choose video
+                        Choose from gallery
                         <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
                       </label>
                       {(videoFileUrl || recordedVideoUrl) && (
                         <div className="max-w-sm mx-auto p-3 bg-[#120E2B] border border-[#292244] rounded-xl space-y-3 text-left">
                           <p className="text-[10px] text-emerald-300 font-semibold">✓ Video ready · {Math.round(videoDuration)} seconds</p>
                           <video ref={trimVideoRef} src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" onLoadedMetadata={event => { const duration = Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : videoDuration; setVideoDuration(duration); setVideoTrimEnd(previous => Math.min(previous, duration)); }} className="w-full rounded-lg bg-black" />
+                           {videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-lg border border-violet-400/40 bg-violet-500/10 px-3 py-2.5 text-xs font-semibold text-violet-100 hover:bg-violet-500/20">Edit this video in NEXORA Studio</button>}
                           <div className="space-y-2">
                             <div className="flex justify-between text-[10px] text-[#A39BBF]"><label htmlFor="video-trim-start">Start · {videoTrimStart.toFixed(1)}s</label><span>End · {videoTrimEnd.toFixed(1)}s</span></div>
                             <input id="video-trim-start" aria-label="Video trim start" type="range" min="0" max={Math.max(0, videoDuration - 1)} step="0.1" value={Math.min(videoTrimStart, Math.max(0, videoDuration - 1))} onChange={event => { const value = Number(event.target.value); setVideoTrimStart(value); if (value >= videoTrimEnd) setVideoTrimEnd(Math.min(videoDuration, value + 1)); }} className="w-full accent-violet-500" />
@@ -1840,14 +1901,21 @@ export default function MediaCreationEngine({
                             }}
                           />
                           <div className="flex flex-col items-center gap-2 pt-1">
-                            {isRecording ? <button onClick={handleStopReelRecord} className="h-12 rounded-full bg-rose-600 px-6 text-xs font-bold text-white shadow-lg">Stop recording</button> : <button onClick={startReelRecording} disabled={!isLensStreamReady || isSavingRecordedVideo || countdownTimer !== null} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Start filtered recording</button>}
-                            {isRecording && <span className="rounded-full bg-black/60 px-3 py-1 text-[10px] text-white">Recording: {loopTimerSecs}s</span>}
+                            <label className="flex items-center gap-2 rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[10px] font-semibold text-white">
+                              Video length
+                              <select aria-label="Filtered video recording length" value={recordingLimitSecs} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onChange={event => setRecordingLimitSecs(Number(event.target.value))} className="bg-transparent text-white outline-none">
+                                {RECORDING_DURATIONS.map(duration => <option key={duration.seconds} value={duration.seconds} className="bg-[#120E2B]">{duration.label}</option>)}
+                              </select>
+                            </label>
+                            {isRecording ? <button onClick={handleStopReelRecord} className="h-12 rounded-full bg-rose-600 px-6 text-xs font-bold text-white shadow-lg">Stop recording</button> : <button onClick={startReelRecording} disabled={!isLensStreamReady || isSavingRecordedVideo || countdownTimer !== null} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Record with filter</button>}
+                            {isRecording && <span className="rounded-full bg-black/60 px-3 py-1 text-[10px] text-white">Recording: {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')}</span>}
                           </div>
                         </div>
                       ) : (
                         <div className="relative mx-auto flex aspect-[4/5] w-full max-w-[320px] flex-col justify-between overflow-hidden rounded-2xl border border-[#44376F] bg-black p-3.5 shadow-md">
                           <div className="z-10 flex items-center justify-between text-[8px] font-mono text-[#A39BBF]">
-                            <span className="rounded border border-white/5 bg-black/70 px-2 py-0.5">YOUR CAMERA</span>
+                            <span className="rounded border border-white/5 bg-black/70 px-2 py-0.5">Camera</span>
+                            <button type="button" onClick={() => { setActiveMode('video'); setIsLensStudioOpen(false); }} className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[9px] font-semibold text-white">Choose from gallery</button>
                             <div className="flex items-center gap-2">
                               <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="rounded-full border border-[#A78BFA]/40 bg-[#7138FF]/25 px-3 py-1.5 text-[9px] font-bold text-white"><Sparkles className="mr-1 inline h-3 w-3" /> Filters & Lenses</button>
                               <button disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button>
@@ -1857,8 +1925,16 @@ export default function MediaCreationEngine({
                             {countdownTimer !== null ? <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span> : recordedVideoUrl ? <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" /> : <video ref={videoPreviewRef} autoPlay muted playsInline className="h-full w-full bg-[#120E2B] object-cover" />}
                           </div>
                           <div className="z-10 flex flex-col items-center gap-2">
-                            {isRecording ? <button onClick={handleStopReelRecord} className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-rose-600 text-[10px] font-bold text-white">Stop</button> : <button onClick={startReelRecording} className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-black bg-gradient-to-tr from-[#8A3FFC] to-[#1600A3] text-[10px] font-black text-white shadow-md">Record</button>}
-                            {isRecording && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-mono text-white">Recording: {loopTimerSecs}s</span>}
+                            <label className="flex items-center gap-2 rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[10px] font-semibold text-white">
+                              Video length
+                              <select aria-label="Video recording length" value={recordingLimitSecs} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onChange={event => setRecordingLimitSecs(Number(event.target.value))} className="bg-transparent text-white outline-none">
+                                {RECORDING_DURATIONS.map(duration => <option key={duration.seconds} value={duration.seconds} className="bg-[#120E2B]">{duration.label}</option>)}
+                              </select>
+                            </label>
+                            {isRecording ? <button onClick={handleStopReelRecord} className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-rose-600 text-[10px] font-bold text-white">Stop</button> : <button onClick={startReelRecording} className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-black bg-gradient-to-tr from-[#8A3FFC] to-[#1600A3] text-[10px] font-black text-white shadow-md">{recordedVideoUrl ? 'Again' : 'Record'}</button>}
+                            {isRecording && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-mono text-white">Recording: {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')} / {Math.floor(recordingLimitSecs / 60)}:{String(recordingLimitSecs % 60).padStart(2, '0')}</span>}
+                            {!isRecording && recordedVideoUrl && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] text-white">Video ready · record again or continue</span>}
+                             {!isRecording && videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="rounded-full border border-violet-300/40 bg-violet-500/15 px-4 py-2 text-[10px] font-semibold text-violet-100">Edit in NEXORA Studio</button>}
                           </div>
                         </div>
                       )}
@@ -2367,11 +2443,11 @@ export default function MediaCreationEngine({
 
                       <div className="space-y-1">
                         <span className="text-[10px] font-mono text-[#8E88A7] uppercase block tracking-wider">
-                          {postingStatus === 'publishing' && '📤 Sharing your post...'}
-                          {postingStatus === 'completed' && '✨ Your post is live!'}
+                          {postingStatus === 'publishing' && 'Sharing your post...'}
+                          {postingStatus === 'completed' && 'Your post is ready!'}
                         </span>
                         <p className="text-xs text-[#D1CBE3] font-sans">
-                          {postingStatus === 'completed' ? 'Your post has been shared.' : postingStatus === 'failed' ? (errorMessage || 'Publishing failed. Your content is safe to retry.') : 'Getting your post ready...'}
+                          {postingStatus === 'completed' ? 'Your post has been shared.' : postingStatus === 'failed' ? (errorMessage || 'Something went wrong. Your content is safe to try again.') : 'Getting your post ready...'}
                         </p>
                       </div>
 
@@ -2449,7 +2525,7 @@ export default function MediaCreationEngine({
                   disabled={!caption.trim() && selectedImages.length === 0 && !videoFileUrl && !recordedVideoUrl && !voiceFileUrl && !pollQuestion.trim()}
                   className="px-6 py-2.5 bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all animate-pulse"
                 >
-                  {activeTab === 'story' ? 'Share story' : 'Share post'}
+                  {activeTab === 'story' ? 'Share story' : 'Share'}
                 </button>
               )}
             </div>
