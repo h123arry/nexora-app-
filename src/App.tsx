@@ -2667,7 +2667,7 @@ export default function App() {
           className="nx-dock-item cursor-pointer"
           id="mobile-nav-profile"
         >
-          <UserIcon className="w-5 h-5" aria-hidden="true" />
+          <img src={currentUser.avatar} alt="" aria-hidden="true" loading="lazy" decoding="async" />
           <span className="text-[10px] font-mono tracking-wide uppercase">Profile</span>
         </button>
       </nav>
