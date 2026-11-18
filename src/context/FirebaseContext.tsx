@@ -74,8 +74,10 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             ? await ProfileService.getProfile(fbUser.uid)
             : await ProfileService.getOrCreateProfile(fbUser);
           if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setUser(profile);
-        } catch {
-          if (currentSequence === sequence) setError('Unable to load your account profile. Please retry or sign out.');
+        } catch (error) {
+          const code = (error as { code?: string } | null)?.code || 'unknown';
+          console.error('[NEXORA] Auth-state profile hydration failed', { code, uid: fbUser.uid });
+          if (currentSequence === sequence) setError(`Unable to load your account profile (${code}). Please retry or contact NEXORA support with this code.`);
         }
       }
       if (currentSequence === sequence) setInitializing(false);
