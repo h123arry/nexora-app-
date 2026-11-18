@@ -342,3 +342,161 @@ body { background: var(--nx-canvas); }
   .nx-profile-media-grid > button { min-height: 0; }
   .nx-profile-content > div:has(> .nx-profile-media-grid) { padding-inline: 0 !important; }
 }
+
+
+/* Final social UX pass: keep the content stream continuous and controls consistent. */
+.nx-feed-stage {
+  min-width: 0;
+  background: var(--nx-canvas);
+}
+.nx-feed-stage > div[ref],
+.nx-feed-stage > div {
+  min-width: 0;
+}
+.nx-post-card {
+  overflow-wrap: anywhere;
+  isolation: isolate;
+}
+.nx-post-card > div:first-child {
+  min-width: 0;
+}
+.nx-post-card > div:first-child button img {
+  border-radius: 9999px;
+}
+.nx-post-card [class*="aspect-"],
+.nx-post-card [data-media-container] {
+  max-width: 100%;
+}
+.nx-post-card video,
+.nx-post-card img {
+  display: block;
+}
+.nx-post-card button:focus-visible,
+.nx-profile-shell button:focus-visible,
+#explore-view-master-panel button:focus-visible,
+#explore-view-master-panel input:focus-visible {
+  outline: 2px solid var(--nx-violet-bright);
+  outline-offset: 3px;
+}
+.nx-post-card button[aria-label*="Spark"],
+.nx-post-card button[aria-label*="Comment"],
+.nx-post-card button[aria-label*="Share"],
+.nx-post-card button[aria-label*="Save"] {
+  min-width: 40px;
+  min-height: 40px;
+}
+.nx-profile-shell {
+  color: var(--nx-text);
+}
+.nx-profile-topbar {
+  background: rgba(7,6,17,.94) !important;
+  backdrop-filter: blur(18px);
+}
+.nx-profile-identity {
+  align-items: center;
+}
+.nx-profile-identity img {
+  width: clamp(76px, 19vw, 112px);
+  height: clamp(76px, 19vw, 112px);
+  object-fit: cover;
+  border: 2px solid rgba(138,63,252,.45);
+  box-shadow: 0 0 0 4px rgba(117,71,255,.09);
+}
+.nx-profile-stats > div {
+  cursor: default;
+}
+.nx-profile-stats > div:focus-within {
+  outline: 2px solid rgba(138,63,252,.65);
+  outline-offset: 2px;
+}
+.nx-profile-media-grid > button {
+  position: relative;
+  overflow: hidden;
+  transition: opacity 160ms ease, background-color 160ms ease;
+}
+.nx-profile-media-grid > button:hover {
+  opacity: .94;
+  transform: none !important;
+}
+.nx-profile-media-grid > button:focus-visible {
+  outline-offset: -4px;
+}
+#explore-view-master-panel {
+  color: var(--nx-text);
+  min-width: 0;
+}
+#explore-view-master-panel .nx-page-header {
+  background: rgba(7,6,17,.96);
+  border-color: var(--nx-edge);
+  backdrop-filter: blur(18px);
+}
+#explore-view-master-panel .nx-explore-filter {
+  min-height: 38px;
+  border-radius: 999px;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+#explore-view-master-panel .nx-explore-filter[aria-pressed="true"] {
+  color: #fff;
+  background: rgba(117,71,255,.2);
+  border-color: rgba(138,63,252,.58);
+  box-shadow: inset 0 0 0 1px rgba(190,170,255,.08);
+}
+#explore-view-master-panel .nx-field {
+  min-height: 46px;
+  border-radius: 14px;
+}
+.nx-mobile-dock button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.nx-mobile-dock button:focus-visible {
+  outline-offset: -2px;
+}
+.nx-create-dock {
+  flex: 0 0 auto;
+}
+@media (max-width: 639px) {
+  .nx-feed-stage {
+    overflow-x: clip;
+  }
+  .nx-post-card {
+    padding-block: .9rem 1rem !important;
+  }
+  .nx-post-card > div:first-child {
+    gap: .65rem;
+  }
+  .nx-post-card > div:first-child img {
+    width: 38px;
+    height: 38px;
+  }
+  .nx-profile-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .nx-profile-media-grid > button {
+    aspect-ratio: 4 / 5 !important;
+    max-height: none;
+  }
+  #explore-view-master-panel {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  #explore-view-master-panel > .nx-page-header {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+@media (min-width: 640px) {
+  .nx-profile-media-grid > button {
+    aspect-ratio: 16 / 10 !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-post-card *,
+  .nx-profile-shell *,
+  #explore-view-master-panel * {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
