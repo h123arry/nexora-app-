@@ -140,6 +140,7 @@ interface MediaCreationEngineProps {
   initialMode?: 'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null;
   initialTab?: 'feed' | 'story' | 'drafts';
   initialCaption?: string;
+  onOpenStudio?: (files: File[]) => void;
 }
 
 interface SelectedImage {
@@ -233,7 +234,8 @@ export default function MediaCreationEngine({
   onToggleOffline,
   initialMode = null,
   initialTab = undefined,
-  initialCaption = ''
+  initialCaption = '',
+  onOpenStudio
 }: MediaCreationEngineProps) {
   const autosaveKey = `nexora_creation_autosave_v1_${currentUser.id || 'visitor'}`;
   const draftsKey = `nexora_post_drafts_v1_${currentUser.id || 'visitor'}`;
@@ -791,6 +793,13 @@ export default function MediaCreationEngine({
       }));
     });
     e.target.value = '';
+  };
+
+  const openVideoInStudio = () => {
+    if (!videoRawBlob || !onOpenStudio) return;
+    const type = videoRawBlob.type || 'video/webm';
+    const extension = type.includes('mp4') ? 'mp4' : type.includes('quicktime') ? 'mov' : 'webm';
+    onOpenStudio([new File([videoRawBlob], `nexora-clip-${Date.now()}.${extension}`, { type })]);
   };
 
   const captureCameraSnapshot = () => {
@@ -1851,6 +1860,7 @@ export default function MediaCreationEngine({
                         <div className="max-w-sm mx-auto p-3 bg-[#120E2B] border border-[#292244] rounded-xl space-y-3 text-left">
                           <p className="text-[10px] text-emerald-300 font-semibold">✓ Video ready · {Math.round(videoDuration)} seconds</p>
                           <video ref={trimVideoRef} src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" onLoadedMetadata={event => { const duration = Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : videoDuration; setVideoDuration(duration); setVideoTrimEnd(previous => Math.min(previous, duration)); }} className="w-full rounded-lg bg-black" />
+                           {videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-lg border border-violet-400/40 bg-violet-500/10 px-3 py-2.5 text-xs font-semibold text-violet-100 hover:bg-violet-500/20">Edit this video in NEXORA Studio</button>}
                           <div className="space-y-2">
                             <div className="flex justify-between text-[10px] text-[#A39BBF]"><label htmlFor="video-trim-start">Start · {videoTrimStart.toFixed(1)}s</label><span>End · {videoTrimEnd.toFixed(1)}s</span></div>
                             <input id="video-trim-start" aria-label="Video trim start" type="range" min="0" max={Math.max(0, videoDuration - 1)} step="0.1" value={Math.min(videoTrimStart, Math.max(0, videoDuration - 1))} onChange={event => { const value = Number(event.target.value); setVideoTrimStart(value); if (value >= videoTrimEnd) setVideoTrimEnd(Math.min(videoDuration, value + 1)); }} className="w-full accent-violet-500" />
@@ -1924,6 +1934,7 @@ export default function MediaCreationEngine({
                             {isRecording ? <button onClick={handleStopReelRecord} className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-rose-600 text-[10px] font-bold text-white">Stop</button> : <button onClick={startReelRecording} className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-black bg-gradient-to-tr from-[#8A3FFC] to-[#1600A3] text-[10px] font-black text-white shadow-md">{recordedVideoUrl ? 'Again' : 'Record'}</button>}
                             {isRecording && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-mono text-white">Recording: {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')} / {Math.floor(recordingLimitSecs / 60)}:{String(recordingLimitSecs % 60).padStart(2, '0')}</span>}
                             {!isRecording && recordedVideoUrl && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] text-white">Video ready · record again or continue</span>}
+                             {!isRecording && videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="rounded-full border border-violet-300/40 bg-violet-500/15 px-4 py-2 text-[10px] font-semibold text-violet-100">Edit in NEXORA Studio</button>}
                           </div>
                         </div>
                       )}
