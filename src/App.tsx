@@ -3262,6 +3262,10 @@ export default function App() {
       {showPublicAccountSetup && requiresPublicAccountSetup && firebaseProfile && (
         <PublicAccountSetup
           user={firebaseProfile}
+          onCancel={() => {
+            setShowPublicAccountSetup(false);
+            setPendingAuthAction(null);
+          }}
           onComplete={(updatedUser) => {
             setCurrentUser(getRichUser(updatedUser));
             setShowPublicAccountSetup(false);
