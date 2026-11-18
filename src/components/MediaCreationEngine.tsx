@@ -1660,7 +1660,7 @@ export default function MediaCreationEngine({
                 /* STEP 2: MEDIA IMPORT & RECORDING */
                 <div className="space-y-4 animate-fadeIn">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-semibold text-[#B69BFF]">Step 2 of 6 · Add your content</span>
+                    <span className="text-xs font-semibold text-[#B69BFF]">{activeMode === 'photo' ? 'Choose a photo or take one' : activeMode === 'reel' ? 'Record a video or choose one' : activeMode === 'video' ? 'Choose a video' : 'Add your content'}</span>
                     <button 
                       onClick={() => setCurrentStep(1)} 
                       className="text-xs text-violet-400 hover:underline flex items-center gap-1 font-bold"
@@ -1691,6 +1691,9 @@ export default function MediaCreationEngine({
                           <p className="text-[10px] text-[#8E88A7]">Use your camera to take a photo.</p>
                         </div>
                         <video ref={photoPreviewRef} autoPlay muted playsInline className="w-full aspect-video rounded-xl object-cover bg-[#120E2B]" aria-label="Live camera preview" />
+                        {permissionState !== 'granted' && (
+                          <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
+                        )}
                         <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="w-full rounded-xl bg-[#120E2B] py-2.5 text-xs font-mono font-bold text-white transition-all hover:bg-[#19143A] disabled:cursor-not-allowed disabled:opacity-50">Take photo</button>
                         <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="w-full rounded-xl bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] py-2.5 text-xs font-mono font-bold text-white shadow-lg transition-all hover:brightness-110"><Sparkles className="mr-1 inline h-3.5 w-3.5" /> Open Filters & Lenses</button>
                         <div className="flex flex-wrap gap-1.5 justify-center mt-2">
@@ -1840,6 +1843,7 @@ export default function MediaCreationEngine({
                         <div className="relative mx-auto flex aspect-[4/5] w-full max-w-[320px] flex-col justify-between overflow-hidden rounded-2xl border border-[#44376F] bg-black p-3.5 shadow-md">
                           <div className="z-10 flex items-center justify-between text-[8px] font-mono text-[#A39BBF]">
                             <span className="rounded border border-white/5 bg-black/70 px-2 py-0.5">Camera</span>
+                            <button type="button" onClick={() => { setActiveMode('video'); setIsLensStudioOpen(false); }} className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[9px] font-semibold text-white">Choose from gallery</button>
                             <div className="flex items-center gap-2">
                               <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="rounded-full border border-[#A78BFA]/40 bg-[#7138FF]/25 px-3 py-1.5 text-[9px] font-bold text-white"><Sparkles className="mr-1 inline h-3 w-3" /> Filters & Lenses</button>
                               <button disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button>
