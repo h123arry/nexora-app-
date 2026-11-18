@@ -6,6 +6,7 @@ import { test, after } from 'node:test';
 const { auth } = await import('../src/lib/firebase.ts');
 const { AuthService } = await import('../src/services/firebase/authService.ts');
 const { isPhoneAuthAvailable } = await import('../src/utils/authMethodAvailability.ts');
+const { getAuthSessionIdentityKey, shouldHydrateAuthSession } = await import('../src/services/firebase/authSessionPolicy.ts');
 const {
   browserLocalPersistence,
   browserSessionPersistence,
@@ -23,6 +24,19 @@ async function cleanUp() {
   await signOut(auth).catch(() => undefined);
 }
 
+
+
+test('session hydration identity ignores token refreshes but detects account and beta-claim changes', () => {
+  const user = { uid: 'member-1', isAnonymous: false };
+  const first = getAuthSessionIdentityKey(user, false);
+  assert.equal(getAuthSessionIdentityKey(user, false), first);
+  assert.equal(shouldHydrateAuthSession(first, first), false);
+  assert.equal(shouldHydrateAuthSession(first, getAuthSessionIdentityKey(user, true)), true);
+  assert.equal(shouldHydrateAuthSession(first, getAuthSessionIdentityKey({ uid: 'member-2', isAnonymous: false }, false)), true);
+  assert.equal(shouldHydrateAuthSession(first, getAuthSessionIdentityKey({ uid: 'member-1', isAnonymous: true }, false)), true);
+  assert.equal(shouldHydrateAuthSession(null, first), true);
+  assert.equal(shouldHydrateAuthSession(first, null), false);
+});
 
 test('phone sign-in is available only when explicitly enabled for staging or production', () => {
   assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'production', VITE_NEXORA_PHONE_AUTH_ENABLED: 'true' }), true);
