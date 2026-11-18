@@ -2255,6 +2255,12 @@ export default function App() {
                       currentUser={getRichUser(currentUser)}
                       posts={resolvedPosts}
                       onAddPost={handleAddPost}
+                      onOpenCreate={(initialMode = null, initialCaption = '') => {
+                        setCreationInitialMode(initialMode);
+                        setCreationInitialTab('feed');
+                        setCreationInitialCaption(initialCaption);
+                        setIsCreatePostModalOpen(true);
+                      }}
                       creators={Object.values(globalUsersMap) as User[]}
                       initialSubTab={matrixSubTabRedirect}
                     />
