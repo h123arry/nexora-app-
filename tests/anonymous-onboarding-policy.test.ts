@@ -14,12 +14,12 @@ test('account reminder waits until the first full day after joining', () => {
     joinedAt,
     hasVerifiedEmail: false,
     hasPhone: false,
-    now: new Date(2026, 10, 17, 23, 59, 0),
+    now: new Date(2026, 10, 18, 8, 59, 0),
   });
   assert.equal(result.show, false);
 });
 
-test('account reminder appears after one day and can be dismissed for that day only', () => {
+test('account reminder appears on Wednesday after the first full day and can be dismissed for that Wednesday', () => {
   const now = new Date(2026, 10, 18, 9, 0, 0);
   const first = shouldShowAnonymousAccountReminder({ joinedAt, hasVerifiedEmail: false, hasPhone: false, now });
   assert.equal(first.show, true);
@@ -32,11 +32,19 @@ test('account reminder appears after one day and can be dismissed for that day o
     hasPhone: false,
     now: new Date(2026, 10, 19, 9, 0, 0),
   });
-  assert.equal(nextDay.show, true);
+  assert.equal(nextDay.show, false);
+  const nextWednesday = shouldShowAnonymousAccountReminder({
+    joinedAt,
+    lastDismissedDate: first.today,
+    hasVerifiedEmail: false,
+    hasPhone: false,
+    now: new Date(2026, 10, 25, 9, 0, 0),
+  });
+  assert.equal(nextWednesday.show, true);
 });
 
 test('reminder continues until both email and phone credentials are linked', () => {
-  const now = new Date(2026, 10, 20, 9, 0, 0);
+  const now = new Date(2026, 10, 25, 9, 0, 0);
   assert.equal(shouldShowAnonymousAccountReminder({
     joinedAt,
     hasVerifiedEmail: true,
@@ -56,7 +64,7 @@ test('reminder stops when both email and phone credentials are present', () => {
     joinedAt,
     hasVerifiedEmail: true,
     hasPhone: true,
-    now: new Date(2026, 10, 20, 9, 0, 0),
+    now: new Date(2026, 10, 25, 9, 0, 0),
   });
   assert.equal(result.show, false);
 });
