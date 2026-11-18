@@ -167,8 +167,7 @@ body { background: var(--nx-canvas); }
   box-shadow: none !important;
 }
 .nx-post-card:last-child { border-bottom: 0 !important; }
-.nx-post-card > .px-4,
-.nx-post-card > .px-4.sm\\:px-6 {
+.nx-post-card > .px-4 {
   padding-inline: clamp(14px, 3.5vw, 24px);
 }
 .nx-post-card > [class*="rounded-"][class*="overflow-hidden"] {
