@@ -338,9 +338,10 @@ export default function MediaCreationEngine({
 
   // UI state
   const [permissionTarget, setPermissionTarget] = useState<'camera' | 'gallery' | 'mic' | null>(null);
-  const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>(() => {
-    return (localStorage.getItem('nexora_media_permissions_granted') as any) || 'prompt';
-  });
+  // Browser/OS permissions are authoritative. Never restore a locally cached
+  // "granted" value because users can revoke camera or microphone access later.
+  const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
+  const pendingPermissionActionRef = useRef<(() => void) | null>(null);
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [draftsList, setDraftsList] = useState<DraftItem[]>(() => readLocalDrafts(draftsKey));
@@ -391,10 +392,6 @@ export default function MediaCreationEngine({
     if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
     clearTrackedObjectUrls();
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('nexora_media_permissions_granted', permissionState);
-  }, [permissionState]);
 
   useEffect(() => {
     if (composerStateOwnerId !== currentUser.id) return;
@@ -701,10 +698,70 @@ export default function MediaCreationEngine({
   }, [location]);
 
   const requestPermission = (target: 'camera' | 'gallery' | 'mic', callback: () => void) => {
+    // The browser's file picker owns gallery access; websites must not pretend
+    // that a separate gallery permission has been granted.
+    if (target === 'gallery') {
+      callback();
+      return;
+    }
     if (permissionState === 'granted') {
       callback();
-    } else {
-      setPermissionTarget(target);
+      return;
+    }
+    pendingPermissionActionRef.current = callback;
+    setPermissionTarget(target);
+  };
+
+  const handlePermissionContinue = async () => {
+    const target = permissionTarget;
+    if (!target || target === 'gallery') {
+      setPermissionTarget(null);
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setPermissionState('denied');
+      setPermissionTarget(null);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera and microphone access require a supported browser on a secure connection. You can still choose media from your device.' }));
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(
+        target === 'mic'
+          ? { audio: true }
+          : { video: { facingMode: { ideal: cameraFacing } }, audio: activeMode === 'reel' }
+      );
+      stream.getTracks().forEach(track => track.stop());
+      setPermissionState('granted');
+      setPermissionTarget(null);
+      if (openLensAfterPermission) {
+        setIsLensStudioOpen(true);
+        setOpenLensAfterPermission(false);
+      }
+      const pendingAction = pendingPermissionActionRef.current;
+      pendingPermissionActionRef.current = null;
+      if (pendingAction) {
+        // Wait for the preview effect to attach its stream before recording.
+        if (target === 'camera' && activeMode === 'reel') {
+          let attempts = 0;
+          const waitForPreview = () => {
+            const live = videoStreamRef.current?.getVideoTracks().some(track => track.readyState === 'live');
+            if (live) pendingAction();
+            else if (++attempts < 40) window.setTimeout(waitForPreview, 100);
+            else window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera permission was granted, but the preview is still starting. Please tap Record again in a moment.' }));
+          };
+          window.setTimeout(waitForPreview, 100);
+        } else {
+          pendingAction();
+        }
+      }
+    } catch (error) {
+      setPermissionState('denied');
+      const message = error instanceof Error && error.name === 'NotAllowedError'
+        ? `Allow ${target === 'mic' ? 'microphone' : 'camera'} access in your browser or device settings, then try again.`
+        : error instanceof Error && error.name === 'NotFoundError'
+          ? `No ${target === 'mic' ? 'microphone' : 'camera'} was found on this device.`
+          : 'NEXORA could not access this device. Check your browser permissions and try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     }
   };
 
@@ -1463,8 +1520,8 @@ export default function MediaCreationEngine({
                 <Camera className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Allow camera and microphone access</h3>
-                <p className="text-xs text-[#A39BBF] leading-relaxed mt-1">Allow access when you want to take a photo, record a video or make a voice note.</p>
+                <h3 className="text-sm font-bold text-white">Allow {permissionTarget === 'mic' ? 'microphone' : 'camera'} access</h3>
+                <p className="text-xs text-[#A39BBF] leading-relaxed mt-1">Your browser or device will ask for permission. NEXORA only uses {permissionTarget === 'mic' ? 'the microphone' : 'the camera'} when you choose to record or capture media.</p>
               </div>
               <div className="flex gap-2">
                 <button 
@@ -1474,7 +1531,7 @@ export default function MediaCreationEngine({
                   Deny
                 </button>
                 <button 
-                  onClick={() => { setPermissionState('granted'); setPermissionTarget(null); if (openLensAfterPermission) { setIsLensStudioOpen(true); setOpenLensAfterPermission(false); } }}
+                  onClick={() => { void handlePermissionContinue(); }}
                   className="flex-1 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-bold cursor-pointer transition-all"
                 >
                   Continue
