@@ -194,15 +194,8 @@ export default function App() {
   const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
 
-  // First-time visitors see account creation as soon as the anonymous
-  // Firebase identity and its private profile are ready (well within 10 seconds).
-  useEffect(() => {
-    if (requiresPublicAccountSetup) {
-      const timer = window.setTimeout(() => setShowPublicAccountSetup(true), 700);
-      return () => window.clearTimeout(timer);
-    }
-    setShowPublicAccountSetup(false);
-  }, [requiresPublicAccountSetup, firebaseUser?.uid]);
+  // Public browsing is the first experience. Ask for account details only when
+  // the visitor attempts an action that requires a complete public profile.
 
   const requestProfileSetup = () => {
     if (isLoggedIn && requiresPublicAccountSetup) {
@@ -353,14 +346,9 @@ export default function App() {
   }, [isLoggedIn, pendingAuthAction, requiresPublicAccountSetup]);
 
   const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !localStorage.getItem('nexora_onboarding_completed_guest');
-  });
-
-  useEffect(() => {
-    const onboardingKey = 'nexora_onboarding_completed_' + (isLoggedIn ? currentUser.id : 'guest');
-    setShowOnboarding(!localStorage.getItem(onboardingKey));
-  }, [isLoggedIn, currentUser.id]);
+  // Do not place a blocking onboarding modal over the public feed on first open.
+  // Visitors can explore immediately; participation prompts provide contextual setup.
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const completeOnboarding = () => {
     const onboardingKey = 'nexora_onboarding_completed_' + (isLoggedIn ? currentUser.id : 'guest');
