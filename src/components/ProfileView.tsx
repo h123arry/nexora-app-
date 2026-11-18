@@ -852,6 +852,40 @@ export default function ProfileView({
     }
   };
 
+  const handleAvatarGallerySelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/') || file.size > 12 * 1024 * 1024) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose an image smaller than 12 MB.' }));
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        URL.revokeObjectURL(objectUrl);
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'This photo could not be prepared. Please try another one.' }));
+        return;
+      }
+      const size = Math.min(image.naturalWidth, image.naturalHeight);
+      const left = (image.naturalWidth - size) / 2;
+      const top = (image.naturalHeight - size) / 2;
+      context.drawImage(image, left, top, size, size, 0, 0, 512, 512);
+      setEditAvatar(canvas.toDataURL('image/jpeg', 0.88));
+      URL.revokeObjectURL(objectUrl);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'This photo could not be opened. Please choose another one.' }));
+    };
+    image.src = objectUrl;
+  };
+
   // Validate and submit profile updates (Locks rules)
   const handleSaveProfile = async () => {
     if (isSavingProfile || showSavedFeedback) return;
@@ -1953,10 +1987,10 @@ export default function ProfileView({
                               <img src={editAvatar} className="w-12 h-12 rounded-xl object-cover border border-white/10" alt="" />
                               <div className="flex-1 space-y-1">
                                 <button onClick={startWebcam} className="w-full py-1.5 bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 text-pink-300 font-mono text-[9px] uppercase font-bold rounded-lg">Take Photo</button>
-                                <button onClick={() => {
-                                  const pr = prompt('Enter Avatar URL:');
-                                  if (pr) setEditAvatar(pr);
-                                }} className="w-full py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono text-[9px] uppercase font-bold rounded-lg">Insert Image URL</button>
+                                <label className="block w-full py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-sans text-[10px] font-semibold rounded-lg text-center cursor-pointer">
+                                  Choose from gallery
+                                  <input type="file" accept="image/*" className="hidden" onChange={handleAvatarGallerySelection} />
+                                </label>
                               </div>
                             </div>
                           )}
