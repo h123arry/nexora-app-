@@ -49,6 +49,18 @@ describe('Firebase Storage authorization regression tests', () => {
     await assertSucceeds(getBytes(ref(freshStorage, objectPath)));
   });
 
+  it('allows owner-scoped anonymous sessions without opening another user media', async () => {
+    const anonymousStorage = env.authenticatedContext('anonymous-creator', {
+      firebase: { sign_in_provider: 'anonymous' }
+    }).storage();
+    const path = 'users/anonymous-creator/media/anonymous-media';
+    await assertSucceeds(uploadBytes(ref(anonymousStorage, path), audio(), {
+      contentType: 'audio/webm',
+      customMetadata: { ownerId: 'anonymous-creator', mediaId: 'anonymous-media' }
+    }));
+    await assertFails(getBytes(ref(ctx('other-user').storage(), path)));
+  });
+
   it('binds uploaded user media metadata to the exact object path ID', async () => {
     const storage = ctx('alice').storage();
     await assertSucceeds(uploadBytes(ref(storage, 'users/alice/media/media-1'), audio(), {
