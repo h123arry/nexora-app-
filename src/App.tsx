@@ -213,8 +213,18 @@ export default function App() {
 
   const requireAuth = (action: () => void, _reason?: string) => {
     if (!isLoggedIn) {
-      if (authInitializing) setPendingAuthAction(() => action);
-      else requestProfileSetup();
+      setPendingAuthAction(() => action);
+      if (!authInitializing) {
+        void retryProfileLoad().catch((error) => {
+          setPendingAuthAction(null);
+          const code = (error as { code?: string } | null)?.code;
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: code
+              ? `NEXORA session could not start (${code}). Check your connection and try again.`
+              : 'NEXORA could not start your private session. Please try again.',
+          }));
+        });
+      }
       return false;
     }
     if (requiresPublicAccountSetup) {
