@@ -136,6 +136,7 @@ export class AuthService {
     }
   }
 
+  /** Device-local UX throttle only; Firebase Auth server protections are authoritative. */
   static getRateLimitStatus(identifier: string): RateLimitStatus {
     const key = `nexora_lockout_${identifier.toLowerCase().trim()}`;
     const storage = typeof localStorage === 'undefined' ? null : localStorage;
@@ -160,6 +161,7 @@ export class AuthService {
     }
   }
 
+  /** Records a local retry delay without treating client storage as an account security boundary. */
   static recordFailedAttempt(identifier: string): RateLimitStatus {
     const clean = identifier.toLowerCase().trim();
     const key = `nexora_lockout_${clean}`;
@@ -553,7 +555,7 @@ export class AuthService {
     try {
       await signOut(auth);
     } catch (err: any) {
-      throw new Error(this.mapFirebaseError(err));
+      throw this.publicAuthError(err);
     }
   }
 
@@ -657,12 +659,7 @@ export class AuthService {
       return this.getLinkedProviders();
     }
 
-    const token = await currentUser.getIdTokenResult(true);
-    const authTime = Number(token.claims.auth_time);
-    const now = Date.now() / 1000;
-    if (!isRecentAuthentication(authTime, now)) {
-      throw new Error('Sign in again immediately before connecting a Google account.');
-    }
+    await this.requireRecentAccountAuthentication(currentUser);
 
     try {
       const provider = new GoogleAuthProvider();
