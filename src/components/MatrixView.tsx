@@ -12,6 +12,7 @@ interface MatrixViewProps {
   currentUser: User;
   posts: Post[];
   onAddPost: (content: string, imageUrl?: string, tagsString?: string) => void;
+  onOpenCreate?: (initialMode?: 'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null, initialCaption?: string) => void;
   creators?: User[];
   initialSubTab?: MatrixSubTab;
 }
@@ -22,6 +23,7 @@ export default function MatrixView({
   currentUser,
   posts,
   onAddPost,
+  onOpenCreate,
   creators = [],
   initialSubTab
 }: MatrixViewProps) {
@@ -34,7 +36,6 @@ export default function MatrixView({
   }, [initialSubTab]);
   const [customPostContent, setCustomPostContent] = useState('');
   const [customPostTags, setCustomPostTags] = useState('');
-  const [customPostImage, setCustomPostImage] = useState('');
   const [deploySuccess, setDeploySuccess] = useState(false);
 
   // Predefined community tags for quick tap selection
@@ -44,10 +45,10 @@ export default function MatrixView({
     e.preventDefault();
     if (!customPostContent.trim()) return;
 
-    onAddPost(customPostContent, customPostImage || undefined, customPostTags);
+    if (onOpenCreate) onOpenCreate('text', customPostContent);
+    else onAddPost(customPostContent, undefined, customPostTags);
     setCustomPostContent('');
     setCustomPostTags('');
-    setCustomPostImage('');
     setDeploySuccess(true);
     setTimeout(() => setDeploySuccess(false), 3000);
   };
@@ -191,18 +192,12 @@ export default function MatrixView({
                           ))}
                         </div>
                       </div>
-
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-mono tracking-wider text-current/60 uppercase font-bold">Add Image URL (optional)</label>
-                        <input
-                          type="url"
-                          value={customPostImage}
-                          onChange={(e) => setCustomPostImage(e.target.value)}
-                          placeholder="https://images.unsplash.com/your-photo"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-current/5 border border-current/10 outline-hidden text-current text-xs font-sans placeholder-current/40 focus:border-white/10 transition-colors"
-                        />
-                        <p className="text-[9px] text-current/40 font-mono mt-1">Paste any direct link to a picture or graphic you want to show.</p>
-                      </div>
+                      {onOpenCreate && (
+                        <button type="button" onClick={() => onOpenCreate(null, customPostContent)} className="flex w-full items-center gap-2 rounded-xl border border-current/10 bg-current/5 px-3.5 py-3 text-left text-xs text-current/75 hover:border-violet-400/50">
+                          <PlusCircle className="h-4 w-4 text-violet-300" />
+                          Add photos, videos, audio or files
+                        </button>
+                      )}
                     </div>
 
                     <div className="pt-2 border-t border-current/5 flex items-center justify-end">
