@@ -852,6 +852,11 @@ export default function App() {
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [isNexoraStudioOpen, setIsNexoraStudioOpen] = useState(false);
   const [studioInitialMedia, setStudioInitialMedia] = useState<File[]>([]);
+
+  useEffect(() => {
+    // Media handed into Studio must never survive an account switch.
+    setStudioInitialMedia([]);
+  }, [currentUser.id]);
   const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [creationInitialMode, setCreationInitialMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null>(null);
   const [creationInitialTab, setCreationInitialTab] = useState<'feed' | 'story' | 'drafts' | undefined>(undefined);
