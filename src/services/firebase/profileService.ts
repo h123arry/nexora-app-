@@ -1,11 +1,13 @@
-import { doc, deleteField, getDoc, setDoc, updateDoc, serverTimestamp, query, collection, where, getDocs, writeBatch, runTransaction, limit } from 'firebase/firestore';
+import { doc, deleteField, getDoc, setDoc, updateDoc, serverTimestamp, query, collection, where, getDocs, runTransaction, limit } from 'firebase/firestore';
 import { auth, db } from './config';
 import { User } from '../../types';
 import { User as FirebaseUser } from 'firebase/auth';
 import { checkUsernameStatus, normalizeUsername } from '../../utils/username';
 import { createPublicProfileProjection } from './publicProfileProjection';
+import { persistProfileWithBestEffortProjection } from './profileProvisioningPolicy';
 
 export class ProfileService {
+  private static profileLoads = new Map<string, Promise<User>>();
   /** Public projection deliberately excludes email, phone, role, moderation flags, balances and preferences. */
   private static toPublicProfile(user: User, includeLocation = false): Partial<User> {
     return createPublicProfileProjection(user, { includeLocation });
@@ -74,13 +76,23 @@ export class ProfileService {
     };
 
     if (db) {
-      const batch = writeBatch(db);
       const { isVerified: _contactVerification, ...persistedUser } = newUser;
-      batch.set(doc(db, 'users', uid), {
-        ...persistedUser, email: cleanEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
-      }, { merge: true });
-      batch.set(doc(db, 'publicProfiles', uid), { ...this.toPublicProfile(newUser), location: deleteField() }, { merge: true });
-      await batch.commit();
+      await persistProfileWithBestEffortProjection(
+        () => setDoc(doc(db, 'users', uid), {
+          ...persistedUser,
+          email: cleanEmail,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true }),
+        () => setDoc(doc(db, 'publicProfiles', uid), {
+          ...this.toPublicProfile(newUser),
+          location: deleteField(),
+        }, { merge: true }),
+        (error) => {
+          const code = (error as { code?: string } | null)?.code || 'unknown';
+          console.warn('[NEXORA] Public profile projection deferred after private profile creation', { code });
+        },
+      );
     }
     return newUser;
   }
@@ -128,6 +140,21 @@ export class ProfileService {
   }
 
   static async getOrCreateProfile(firebaseUser: FirebaseUser, additionalData?: Partial<User>): Promise<User> {
+    const existingLoad = this.profileLoads.get(firebaseUser.uid);
+    if (existingLoad) return existingLoad;
+
+    const load = this.loadOrCreateProfile(firebaseUser, additionalData);
+    this.profileLoads.set(firebaseUser.uid, load);
+    try {
+      return await load;
+    } finally {
+      if (this.profileLoads.get(firebaseUser.uid) === load) {
+        this.profileLoads.delete(firebaseUser.uid);
+      }
+    }
+  }
+
+  private static async loadOrCreateProfile(firebaseUser: FirebaseUser, additionalData?: Partial<User>): Promise<User> {
     let profile = await this.getProfile(firebaseUser.uid);
     if (!profile) {
       profile = await this.createProfile(firebaseUser.uid, {
@@ -137,9 +164,8 @@ export class ProfileService {
         ...additionalData
       }, firebaseUser.email || '');
     } else if (db) {
-      // A private account profile is sufficient to establish an authenticated NEXORA
-      // session. Public-directory projection refresh is a secondary migration and must
-      // never lock an existing member out when older public-profile data/rules differ.
+      // Refresh the public projection separately. A projection failure must never
+      // invalidate an otherwise readable private account profile.
       try {
         const settingsSnapshot = await getDoc(doc(db, 'users', firebaseUser.uid, 'settings', 'preferences'));
         const includeLocation = settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone';

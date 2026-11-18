@@ -362,14 +362,11 @@ export class AuthService {
     if (isNativeRuntime()) {
       throw new Error('Google sign-in is not enabled in this native build yet. Use an available sign-in method until native OAuth is configured.');
     }
-    let authenticatedUser: FirebaseUser | null = null;
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       const credential = await signInWithPopup(auth, provider);
       const fbUser = credential.user;
-      authenticatedUser = fbUser;
-
       let userProfile = await ProfileService.getProfile(fbUser.uid);
       let isNewUser = false;
 
@@ -392,8 +389,8 @@ export class AuthService {
 
       return { firebaseUser: fbUser, user: userProfile, isNewUser };
     } catch (err: any) {
-      if (authenticatedUser) await signOut(auth).catch(() => undefined);
-      // Preserve Firebase's stable error code for the UI and diagnostics.
+      // Keep a successfully authenticated session if profile provisioning fails;
+      // the app can retry private-profile synchronization without losing the UID.
       throw this.publicAuthError(err);
     }
   }
@@ -428,11 +425,9 @@ export class AuthService {
 
   static async verifyPhoneCode(confirmationResult: ConfirmationResult, code: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
     this.requireConfigured();
-    let authenticatedUser: FirebaseUser | null = null;
     try {
       const credential = await confirmationResult.confirm(code);
       const fbUser = credential.user;
-      authenticatedUser = fbUser;
 
       let userProfile = await ProfileService.getProfile(fbUser.uid);
       if (!userProfile) {
@@ -452,7 +447,6 @@ export class AuthService {
 
       return { firebaseUser: fbUser, user: userProfile };
     } catch (err: any) {
-      if (authenticatedUser) await signOut(auth).catch(() => undefined);
       throw this.publicAuthError(err);
     }
   }

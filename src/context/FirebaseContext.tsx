@@ -22,6 +22,7 @@ interface FirebaseContextType {
   sendVerificationEmail: () => Promise<void>;
   refreshVerificationStatus: () => Promise<boolean>;
   sendPasswordReset: (email: string) => Promise<void>;
+  retryProfileLoad: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -40,6 +41,7 @@ const FirebaseContext = createContext<FirebaseContextType>({
   sendVerificationEmail: async () => {},
   refreshVerificationStatus: async () => false,
   sendPasswordReset: async () => {},
+  retryProfileLoad: async () => {},
   logout: async () => {},
 });
 
@@ -257,6 +259,42 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  const retryProfileLoad = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Sign in again before retrying profile setup.');
+
+    setLoading(true);
+    setInitializing(true);
+    setError(null);
+    try {
+      const token = await currentUser.getIdTokenResult(true);
+      const isApprovedBetaMember = token.claims.betaMember === true;
+      if (currentUser.isAnonymous && !isApprovedBetaMember) {
+        throw new Error('This anonymous session has not been approved for NEXORA beta access.');
+      }
+
+      const profile = currentUser.isAnonymous
+        ? await ProfileService.getProfile(currentUser.uid)
+        : await ProfileService.getOrCreateProfile(currentUser);
+      if (!profile) throw new Error('NEXORA could not find or create your private account profile.');
+
+      if (auth.currentUser?.uid === currentUser.uid) {
+        setFirebaseUser(currentUser);
+        setUser(profile);
+        setError(null);
+      }
+    } catch (err) {
+      const source = err as { code?: string; message?: string } | null;
+      const code = source?.code || 'profile-setup-failed';
+      const message = source?.message || 'NEXORA could not synchronize your account profile.';
+      if (auth.currentUser?.uid === currentUser.uid) setError(`${message} (${code})`);
+      throw err;
+    } finally {
+      if (auth.currentUser?.uid === currentUser.uid) setInitializing(false);
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     setLoading(true);
     try {
@@ -288,6 +326,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         sendVerificationEmail,
         refreshVerificationStatus,
         sendPasswordReset,
+        retryProfileLoad,
         logout,
       }}
     >

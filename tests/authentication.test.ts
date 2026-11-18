@@ -7,6 +7,7 @@ const { auth } = await import('../src/lib/firebase.ts');
 const { AuthService } = await import('../src/services/firebase/authService.ts');
 const { isPhoneAuthAvailable } = await import('../src/utils/authMethodAvailability.ts');
 const { getAuthSessionIdentityKey, shouldHydrateAuthSession } = await import('../src/services/firebase/authSessionPolicy.ts');
+const { persistProfileWithBestEffortProjection } = await import('../src/services/firebase/profileProvisioningPolicy.ts');
 const {
   browserLocalPersistence,
   browserSessionPersistence,
@@ -25,6 +26,33 @@ async function cleanUp() {
 }
 
 
+
+
+test('private profile persistence succeeds even when public projection synchronization is deferred', async () => {
+  const completed = [];
+  let projectionError;
+  await persistProfileWithBestEffortProjection(
+    async () => { completed.push('private'); },
+    async () => { completed.push('public'); throw Object.assign(new Error('denied'), { code: 'permission-denied' }); },
+    (error) => { projectionError = error; },
+  );
+  assert.deepEqual(completed, ['private', 'public']);
+  assert.equal(projectionError.code, 'permission-denied');
+});
+
+test('private profile persistence failure is never swallowed by projection fallback', async () => {
+  const privateError = Object.assign(new Error('private denied'), { code: 'permission-denied' });
+  let projectionAttempted = false;
+  await assert.rejects(
+    () => persistProfileWithBestEffortProjection(
+      async () => { throw privateError; },
+      async () => { projectionAttempted = true; },
+      () => {},
+    ),
+    (error) => error === privateError,
+  );
+  assert.equal(projectionAttempted, false);
+});
 
 test('session hydration identity ignores token refreshes but detects account and beta-claim changes', () => {
   const user = { uid: 'member-1', isAnonymous: false };
