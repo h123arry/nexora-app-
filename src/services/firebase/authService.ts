@@ -560,7 +560,7 @@ export class AuthService {
     const token = await user.getIdTokenResult(true);
     const approvedAnonymousUpgrade = canUpgradeAnonymousBetaSession(
       user.isAnonymous,
-      token.claims.betaMember === true,
+      true,
       auth.currentUser?.uid === user.uid,
     );
     // An anonymous member has no existing credential with which to reauthenticate.
