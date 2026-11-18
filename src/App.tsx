@@ -2057,10 +2057,11 @@ export default function App() {
       .slice(0, 5);
   }, [posts]);
 
-  // Do not render account data until the provider has resolved the current Firebase identity.
+  // Public browsing must not wait for Firebase's silent anonymous bootstrap.
+  // Only hide a stale signed-in profile while the identity is being switched.
   const staleAccountVisible = currentUser.id !== 'guest_visitor_id' && currentUser.id !== firebaseUser?.uid;
-  if (authInitializing || staleAccountVisible) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#07060b]"><NexoraLoader center label="Restoring secure session…" /></div>;
+  if (staleAccountVisible) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#07060b]"><NexoraLoader center label="Restoring your NEXORA profile…" /></div>;
   }
   if (firebaseUser && !firebaseUser.isAnonymous && !firebaseProfile) {
     return <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#07060b] p-6 text-center text-white">
