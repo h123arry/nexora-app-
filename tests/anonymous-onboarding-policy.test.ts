@@ -35,6 +35,22 @@ test('account reminder appears after one day and can be dismissed for that day o
   assert.equal(nextDay.show, true);
 });
 
+test('reminder continues until both email and phone credentials are linked', () => {
+  const now = new Date(2026, 10, 20, 9, 0, 0);
+  assert.equal(shouldShowAnonymousAccountReminder({
+    joinedAt,
+    hasVerifiedEmail: true,
+    hasPhone: false,
+    now,
+  }).show, true);
+  assert.equal(shouldShowAnonymousAccountReminder({
+    joinedAt,
+    hasVerifiedEmail: false,
+    hasPhone: true,
+    now,
+  }).show, true);
+});
+
 test('reminder stops when both email and phone credentials are present', () => {
   const result = shouldShowAnonymousAccountReminder({
     joinedAt,
