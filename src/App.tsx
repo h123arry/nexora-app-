@@ -226,6 +226,17 @@ export default function App() {
     return true;
   };
 
+  const handleRequestLogout = () => {
+    if (firebaseUser?.isAnonymous) {
+      setActiveTab('settings');
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: 'Secure this account first by linking an email and password or a phone number. This keeps your profile and posts recoverable on another device.',
+      }));
+      return;
+    }
+    setIsLogoutConfirming(true);
+  };
+
   useEffect(() => {
     const referralCode = new URLSearchParams(window.location.search).get('ref');
     if (!referralCode) return;
@@ -1580,7 +1591,7 @@ export default function App() {
     postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[] }
   ): string => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
-      requireAuth(() => handleAddPost(content, imageUrl, tagsString, images, videoUrl, voiceTranscript, voiceAudioUrl, audience, isVoice, voiceDuration, interactivePoll, opportunityType, pulseRegion, imageFilter, imageFilters, scheduledTime, isBroadcastPost, communityName, postDetails), 'Sign in to publish content.');
+      requireAuth(() => handleAddPost(content, imageUrl, tagsString, images, videoUrl, voiceTranscript, voiceAudioUrl, audience, isVoice, voiceDuration, interactivePoll, opportunityType, pulseRegion, imageFilter, imageFilters, scheduledTime, isBroadcastPost, communityName, postDetails), 'Complete your NEXORA profile to publish content.');
       return '';
     }
     // Parse tags safely
@@ -1683,7 +1694,7 @@ export default function App() {
 
   const handleRepostPost = async (postId: string, quoteText?: string): Promise<boolean> => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
-      requireAuth(() => { void handleRepostPost(postId, quoteText); }, 'Sign in to repost posts.');
+      requireAuth(() => { void handleRepostPost(postId, quoteText); }, 'Complete your NEXORA profile to repost posts.');
       return false;
     }
     try {
@@ -1706,7 +1717,7 @@ export default function App() {
 
   const handleSharePost = (postId: string) => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
-      requireAuth(() => handleSharePost(postId), 'Sign in to share posts.');
+      requireAuth(() => handleSharePost(postId), 'Complete your NEXORA profile to share posts.');
       return;
     }
     setPosts(prevPosts =>
@@ -1803,7 +1814,7 @@ export default function App() {
   const handleStartChat = (userId: string) => {
     if (!userId) return;
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
-      requireAuth(() => handleStartChat(userId), 'Sign in to start a conversation.');
+      requireAuth(() => handleStartChat(userId), 'Complete your NEXORA profile to start a conversation.');
       return;
     }
     // Find partner detail
@@ -1875,7 +1886,7 @@ export default function App() {
   // 8. Studio profile settings update
   const handleUpdateProfile = (updatedData: Partial<User>) => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
-      requireAuth(() => handleUpdateProfile(updatedData), 'Sign in to edit your profile.');
+      requireAuth(() => handleUpdateProfile(updatedData), 'Complete your NEXORA profile to edit your profile.');
       return;
     }
     setCurrentUser(prev => {
@@ -2131,7 +2142,7 @@ export default function App() {
                   setIsCreateMenuOpen(true);
                 });
               }}
-              onLogout={() => setIsLogoutConfirming(true)}
+              onLogout={handleRequestLogout}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               isLoggedIn={isLoggedIn}
@@ -2631,7 +2642,7 @@ export default function App() {
               setCreationInitialMode(null);
               setCreationInitialTab(undefined);
               setIsCreateMenuOpen(true);
-            }, 'Sign in to create and publish posts.');
+            }, 'Complete your NEXORA profile to create and publish posts.');
           }}
           className="nx-create-dock relative -top-3.5 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] cursor-pointer border border-[#B69BFF]/50 shadow-[0_4px_20px_rgba(113,56,255,0.42)] shrink-0"
           id="nav-create-post-center"
@@ -3106,7 +3117,7 @@ export default function App() {
                   setCreationInitialTab('feed');
                   setCreationInitialCaption("I'm new to NEXORA. What should I explore first?");
                   setIsCreatePostModalOpen(true);
-                }, 'Sign in to publish your first NEXORA post.');
+                }, 'Complete your NEXORA profile to publish your first post.');
               }}
             />
           </Suspense>
