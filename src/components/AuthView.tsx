@@ -21,7 +21,7 @@ import { EmailService } from '../services/firebase/emailService';
 import { SecurityNotificationService } from '../services/firebase/securityNotificationService';
 
 const runtimeEnv = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env || {}) as Record<string, string | undefined>;
-const PHONE_AUTH_ENABLED = runtimeEnv.VITE_NEXORA_ENV === 'staging' && runtimeEnv.VITE_NEXORA_PHONE_AUTH_ENABLED === 'true';
+const PHONE_AUTH_ENABLED = (runtimeEnv.VITE_NEXORA_ENV === 'staging' || runtimeEnv.VITE_NEXORA_ENV === 'production') && runtimeEnv.VITE_NEXORA_PHONE_AUTH_ENABLED === 'true';
 
 interface AuthViewProps {
   onLoginSuccess: (loggedUser: User) => void;
@@ -975,6 +975,9 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                 <button
                   type="button"
                   onClick={handleGoogleSignInClick}
+                  disabled={isPending}
+                  aria-label="Continue with Google"
+                  aria-busy={isPending}
                   className="py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
@@ -1039,6 +1042,9 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                   <button
                     type="button"
                     onClick={handleGoogleSignInClick}
+                    disabled={isPending}
+                    aria-label="Continue with Google"
+                    aria-busy={isPending}
                     className="w-full py-3.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-xs font-bold text-white flex items-center justify-center gap-3 transition-all cursor-pointer"
                   >
                     <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
