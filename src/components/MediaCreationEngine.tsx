@@ -223,15 +223,6 @@ const RECORDING_DURATIONS = [
   { seconds: 1200, label: '20 min' },
 ];
 
-const WIZARD_STEPS = [
-  { id: 1, label: 'Choose' },
-  { id: 2, label: 'Add' },
-  { id: 3, label: 'Review' },
-  { id: 4, label: 'Caption' },
-  { id: 5, label: 'Preview' },
-  { id: 6, label: 'Share' }
-];
-
 export default function MediaCreationEngine({
   currentUser,
   onClose,
@@ -254,7 +245,7 @@ export default function MediaCreationEngine({
     return initialAutosave?.activeMode || initialMode;
   });
   const [currentStep, setCurrentStep] = useState<number>(() => {
-    return initialAutosave?.currentStep || 1;
+    return initialMode ? 2 : (initialAutosave?.currentStep || 1);
   });
 
   // Form Fields
@@ -1372,12 +1363,6 @@ export default function MediaCreationEngine({
 
   // Dynamic Styles
   const getModalBg = () => 'bg-[#090714]/98 border-[#44376F]/70 text-white';
-
-  const getStepButtonColor = (step: number) => {
-    if (step === currentStep) return 'bg-violet-600 text-white shadow-lg shadow-violet-600/20';
-    if (step < currentStep) return 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400';
-    return 'bg-[#120E2B]/65 border border-[#292244] text-[#8E88A7]';
-  };
 
   const canAdvanceFromCurrentStep = () => {
     if (currentStep === 1 && !activeMode) return false;
