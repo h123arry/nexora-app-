@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { onIdTokenChanged, User as FirebaseUser, ConfirmationResult } from 'firebase/auth';
@@ -81,12 +81,14 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const token = await fbUser.getIdTokenResult();
         const isApprovedBetaMember = token.claims.betaMember === true;
         const identityKey = getAuthSessionIdentityKey(fbUser, isApprovedBetaMember);
+        if (!identityKey) throw new Error('Authenticated session is missing its identity key.');
 
         if (!shouldHydrateAuthSession(hydratedIdentity, identityKey)) {
           if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setInitializing(false);
           return;
         }
 
+        setInitializing(true);
         if (fbUser.isAnonymous && !isApprovedBetaMember) {
           if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) {
             hydratedIdentity = identityKey;
