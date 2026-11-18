@@ -82,7 +82,8 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           void signInAnonymously(auth).catch((bootstrapError) => {
             const code = (bootstrapError as { code?: string } | null)?.code || 'anonymous-auth-unavailable';
             if (auth.currentUser) return;
-            setError(`Unable to start your NEXORA session (${code}). Please refresh and try again.`);
+            setError(`Unable to start your NEXORA session (${code}). Tap to retry.`);
+            anonymousBootstrapStarted = false;
             setInitializing(false);
           });
           return;
@@ -262,13 +263,17 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const retryProfileLoad = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) throw new Error('Sign in again before retrying profile setup.');
-
     setLoading(true);
     setInitializing(true);
     setError(null);
+    let currentUser = auth.currentUser;
     try {
+      // A failed first anonymous bootstrap must be recoverable without forcing
+      // visitors through email/password authentication or a page refresh.
+      if (!currentUser) {
+        const credential = await signInAnonymously(auth);
+        currentUser = credential.user;
+      }
       await currentUser.getIdTokenResult(true);
       const profile = await ProfileService.getOrCreateProfile(currentUser);
       if (!profile) throw new Error('NEXORA could not find or create your private account profile.');
@@ -282,10 +287,10 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const source = err as { code?: string; message?: string } | null;
       const code = source?.code || 'profile-setup-failed';
       const message = source?.message || 'NEXORA could not synchronize your account profile.';
-      if (auth.currentUser?.uid === currentUser.uid) setError(`${message} (${code})`);
+      setError(`${message} (${code})`);
       throw err;
     } finally {
-      if (auth.currentUser?.uid === currentUser.uid) setInitializing(false);
+      setInitializing(false);
       setLoading(false);
     }
   };
