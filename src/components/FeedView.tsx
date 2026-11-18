@@ -176,6 +176,7 @@ interface FeedViewProps {
   onBookmarkPost: (postId: string) => void;
   onAddComment: (postId: string, content: string) => void;
   onAddPost: (content: string, imageUrl?: string, tagsString?: string) => string;
+  onOpenCreate?: (initialMode?: 'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null, initialCaption?: string) => void;
   selectedTag: string | null;
   setSelectedTag: (tag: string | null) => void;
   searchQuery: string;
@@ -498,7 +499,6 @@ export default function FeedView({
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerText, setComposerText] = useState('');
   const [composerCategory, setComposerCategory] = useState<'general' | 'pulse' | 'community' | 'opportunity'>('general');
-  const [composerImgUrl, setComposerImgUrl] = useState('');
   const [composerOpportunityType, setComposerOpportunityType] = useState<'Job' | 'Collaboration' | 'Startup' | 'Mentorship'>('Collaboration');
   const [composerReward, setComposerReward] = useState('');
   const [composerCommunityName, setComposerCommunityName] = useState('');
@@ -1106,11 +1106,10 @@ export default function FeedView({
 
     const tags = composerText.match(/#\w+/g)?.map(t => t.replace('#', '')) || ["NEXORA"];
 
-    onAddPost(composerText, composerImgUrl || undefined, tags.join(','));
+    onAddPost(composerText, undefined, tags.join(','));
 
     // Reset Composer
     setComposerText('');
-    setComposerImgUrl('');
     setComposerCommunityName('');
     setComposerLocation('');
     setComposerReward('');
@@ -1946,7 +1945,7 @@ export default function FeedView({
               referrerPolicy="no-referrer"
             />
             <button
-              onClick={() => setComposerOpen(true)}
+              onClick={() => onOpenCreate ? onOpenCreate(null, composerText) : setComposerOpen(true)}
               className="flex-1 text-left py-3 px-5 rounded-2xl nx-field text-slate-400 hover:text-slate-200 text-sm font-sans transition-all cursor-pointer flex items-center justify-between group"
             >
               <span>What&apos;s on your mind, {(currentUser.name || 'there').split(' ')[0]}?</span>
@@ -1958,7 +1957,7 @@ export default function FeedView({
               <button
                 onClick={() => {
                   setComposerCategory('general');
-                  setComposerOpen(true);
+                  if (onOpenCreate) onOpenCreate('text', composerText); else setComposerOpen(true);
                 }}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-white/5 text-zinc-200 transition-colors text-[11px] font-semibold cursor-pointer"
               >
@@ -2500,18 +2499,11 @@ export default function FeedView({
                   className="nx-composer-field w-full bg-[#120E2B] border border-[#302653] focus:border-violet-300/60 text-sm text-white rounded-xl p-3 focus:outline-hidden placeholder:text-[#8E86AA] resize-none font-sans"
                 />
               </div>
-
-              {/* Image URL attachment input */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-mono text-violet-400 block uppercase">Attachment Image/Asset URL</label>
-                <input 
-                  type="text"
-                  placeholder="https://images.unsplash.com/... (optional)"
-                  value={composerImgUrl}
-                  onChange={(e) => setComposerImgUrl(e.target.value)}
-                  className="w-full bg-slate-950/50 border border-white/5 focus:border-white/10 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden"
-                />
-              </div>
+              {onOpenCreate && (
+                <button type="button" onClick={() => onOpenCreate('photo', composerText)} className="flex w-full items-center gap-2 rounded-xl border border-[#302653] bg-[#120E2B] px-3 py-2.5 text-left text-xs text-violet-200 hover:border-violet-400/50">
+                  <Plus className="h-4 w-4" /> Add photos, videos, audio or files
+                </button>
+              )}
 
               {/* Conditional parameters based on category */}
               {composerCategory === 'pulse' && (
@@ -2580,7 +2572,7 @@ export default function FeedView({
                   onClick={handleComposeSubmit}
                   className="px-5 py-2 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 rounded-xl text-white text-xs font-mono font-black uppercase tracking-wider cursor-pointer"
                 >
-                  Publish Post ⚡
+                  Share
                 </button>
               </div>
             </motion.div>
