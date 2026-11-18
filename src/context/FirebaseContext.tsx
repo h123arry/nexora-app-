@@ -106,9 +106,9 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (inFlightHydration?.key === identityKey) {
           profilePromise = inFlightHydration.promise;
         } else {
-          profilePromise = fbUser.isAnonymous
-            ? ProfileService.getProfile(fbUser.uid)
-            : ProfileService.getOrCreateProfile(fbUser);
+          // Approved anonymous beta accounts are first-class NEXORA members:
+          // self-heal a missing private profile instead of leaving them blocked.
+          profilePromise = ProfileService.getOrCreateProfile(fbUser);
           inFlightHydration = { key: identityKey, promise: profilePromise };
         }
 
@@ -273,9 +273,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         throw new Error('This anonymous session has not been approved for NEXORA beta access.');
       }
 
-      const profile = currentUser.isAnonymous
-        ? await ProfileService.getProfile(currentUser.uid)
-        : await ProfileService.getOrCreateProfile(currentUser);
+      const profile = await ProfileService.getOrCreateProfile(currentUser);
       if (!profile) throw new Error('NEXORA could not find or create your private account profile.');
 
       if (auth.currentUser?.uid === currentUser.uid) {
