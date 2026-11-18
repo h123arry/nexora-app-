@@ -313,11 +313,6 @@ export default function App() {
   }, [isLoggedIn, pendingAuthAction]);
 
   const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
-  const [publicSetupName, setPublicSetupName] = useState('');
-  const [publicSetupUsername, setPublicSetupUsername] = useState('');
-  const [publicSetupDob, setPublicSetupDob] = useState('');
-  const [publicSetupBusy, setPublicSetupBusy] = useState(false);
-  const [publicSetupError, setPublicSetupError] = useState('');
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('nexora_onboarding_completed_guest');
   });
@@ -3078,51 +3073,6 @@ export default function App() {
 
       {/* 🚀 FIRST-TIME USER ONBOARDING TOUR */}
       <AnimatePresence>
-        {firebaseUser?.isAnonymous && isLoggedIn && currentUser.name === 'NEXORA Member' && (
-        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-[#050914]/95 p-4 backdrop-blur-xl">
-          <form
-            onSubmit={async (event) => {
-              event.preventDefault();
-              setPublicSetupError('');
-              const name = publicSetupName.trim();
-              const username = publicSetupUsername.trim().toLowerCase().replace(/^@/, '');
-              if (name.length < 2 || name.length > 60) { setPublicSetupError('Enter a display name between 2 and 60 characters.'); return; }
-              if (!/^[a-z0-9._]{3,20}$/.test(username)) { setPublicSetupError('Username must be 3–20 characters using letters, numbers, dots or underscores.'); return; }
-              if (!publicSetupDob) { setPublicSetupError('Please enter your date of birth.'); return; }
-              const age = new Date().getFullYear() - new Date(publicSetupDob).getFullYear() - (new Date() < new Date(new Date(publicSetupDob).setFullYear(new Date().getFullYear())) ? 1 : 0);
-              if (age < 13 || age > 120) { setPublicSetupError('You must be at least 13 years old to use NEXORA.'); return; }
-              setPublicSetupBusy(true);
-              try {
-                await ProfileService.updateProfile(currentUser.id, { name, username, dateOfBirth: publicSetupDob });
-                setCurrentUser(previous => ({ ...previous, name, username, dateOfBirth: publicSetupDob }));
-              } catch (error) {
-                setPublicSetupError(error instanceof Error ? error.message : 'We could not save your profile. Please try again.');
-              } finally { setPublicSetupBusy(false); }
-            }}
-            className="w-full max-w-md space-y-5 rounded-3xl border border-violet-400/20 bg-[#0b1020] p-6 shadow-2xl"
-          >
-            <div className="text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.25em] text-violet-300">Welcome to NEXORA</p>
-              <h2 className="mt-3 text-2xl font-bold text-white">Let’s set up your profile</h2>
-              <p className="mt-2 text-sm text-slate-400">Choose how people will know you across the network.</p>
-            </div>
-            <label className="block text-sm text-slate-300">Display name
-              <input required minLength={2} maxLength={60} value={publicSetupName} onChange={e => setPublicSetupName(e.target.value)} placeholder="Your name" className="mt-2 w-full rounded-xl border border-white/10 bg-[#101b2e] px-4 py-3 text-white outline-none focus:border-violet-500" />
-            </label>
-            <label className="block text-sm text-slate-300">Username
-              <input required minLength={3} maxLength={20} value={publicSetupUsername} onChange={e => setPublicSetupUsername(e.target.value.toLowerCase().replace(/^@/, ''))} placeholder="yourusername" className="mt-2 w-full rounded-xl border border-white/10 bg-[#101b2e] px-4 py-3 text-white outline-none focus:border-violet-500" />
-              <span className="mt-1 block text-xs text-slate-500">3–20 letters, numbers, dots or underscores</span>
-            </label>
-            <label className="block text-sm text-slate-300">Date of birth
-              <input required type="date" max={new Date().toISOString().slice(0,10)} value={publicSetupDob} onChange={e => setPublicSetupDob(e.target.value)} className="mt-2 w-full rounded-xl border border-white/10 bg-[#101b2e] px-4 py-3 text-white outline-none focus:border-violet-500" />
-              <span className="mt-1 block text-xs text-slate-500">Private. It will not appear on your public profile.</span>
-            </label>
-            {publicSetupError && <p role="alert" className="text-sm text-rose-300">{publicSetupError}</p>}
-            <button disabled={publicSetupBusy} className="w-full rounded-xl bg-violet-600 px-4 py-3 font-bold text-white transition hover:bg-violet-500 disabled:opacity-50">{publicSetupBusy ? 'Saving your profile…' : 'Enter NEXORA'}</button>
-          </form>
-        </div>
-      )}
-
       {showOnboarding && (
           <Suspense fallback={null}>
             <OnboardingTour
