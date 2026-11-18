@@ -528,14 +528,11 @@ export default function ProfileView({
     verificationUpdates: true
   });
 
-  // Local storage account switcher
-  const [savedAccounts, setSavedAccounts] = useState<any[]>(() => {
-    const saved = localStorage.getItem('nexora_saved_accounts');
-    return saved ? JSON.parse(saved) : [
-      { id: 'user-0', username: 'voh', name: 'VOICE OF HARRISON', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' }
-    ];
-  });
-  const [showAddAccountModal, setShowAddAccountModal] = useState(false);
+  // Remove legacy device-wide account labels from older builds. Account identity
+  // is always derived from the currently authenticated Firebase user.
+  useEffect(() => {
+    try { localStorage.removeItem('nexora_saved_accounts'); } catch { /* Storage may be unavailable. */ }
+  }, []);
 
   // Reputation breakdown view
   const [showReputationModal, setShowReputationModal] = useState(false);
@@ -675,11 +672,6 @@ export default function ProfileView({
         e.preventDefault();
         return;
       }
-      if (showAddAccountModal) {
-        setShowAddAccountModal(false);
-        e.preventDefault();
-        return;
-      }
       if (showReputationModal) {
         setShowReputationModal(false);
         e.preventDefault();
@@ -703,7 +695,6 @@ export default function ProfileView({
     isProfileMenuOpen,
     showAllContentDropdown,
     isStorageCenterOpen,
-    showAddAccountModal,
     showReputationModal,
     activePanel
   ]);
@@ -960,23 +951,6 @@ export default function ProfileView({
     setEditCover(currentUser.coverImage);
     setActivePanel('profile');
     window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Re-calibration cancelled. No changes saved.' }));
-  };
-
-  // A saved profile label is not an authenticated Firebase session.
-  // Never simulate account switching by changing a local user ID or reloading.
-  const handleSwitchAccount = (acc: any) => {
-    if (acc.id === currentUser.id || acc.username === currentUser.username) return;
-    window.dispatchEvent(new CustomEvent('toast', {
-      detail: 'For security, sign out and authenticate with that account. Saved profile labels cannot switch Firebase sessions.'
-    }));
-  };
-
-  const removeSavedAccount = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const updated = savedAccounts.filter(acc => acc.id !== id);
-    setSavedAccounts(updated);
-    localStorage.setItem('nexora_saved_accounts', JSON.stringify(updated));
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Removed account from device storage.' }));
   };
 
   // Pinned items filtering
@@ -1718,62 +1692,7 @@ export default function ProfileView({
                                 className={`flex items-center gap-2 p-1.5 rounded-xl border transition-all ${
                                   isActive
                                     ? 'bg-violet-600/10 border-white/10'
-                                    : 'bg-black/30 border-transparent hover:border-white/10'
-                                }`}
-                              >
-                                <button
-                                  type="button"
-                                  disabled={isActive}
-                                  onClick={() => handleSwitchAccount(acc)}
-                                  aria-label={`Switch to ${acc.name} (@${acc.username})`}
-                                  aria-current={isActive ? 'true' : undefined}
-                                  className="flex-1 min-w-0 min-h-11 flex items-center gap-2 text-left rounded-lg px-1 focus-visible:outline-2 focus-visible:outline-violet-300 disabled:cursor-default"
-                                >
-                                  <img src={acc.avatar} alt="" className="w-7 h-7 rounded-lg object-cover shrink-0" />
-                                  <span className="min-w-0 flex-1 leading-none">
-                                    <span className="block text-xs font-bold text-white truncate">{acc.name}</span>
-                                    <span className="block text-[9px] font-mono text-zinc-500 mt-1">@{acc.username}</span>
-                                  </span>
-                                  {isActive && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
-                                </button>
-                                {savedAccounts.length > 1 && !isActive && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => removeSavedAccount(acc.id, e)}
-                                    className="min-h-10 min-w-10 inline-flex items-center justify-center rounded-lg p-1 text-zinc-500 hover:text-red-400 focus-visible:outline-2 focus-visible:outline-violet-300"
-                                    title="Remove saved account"
-                                    aria-label={`Remove ${acc.name} from saved accounts`}
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <button
-                          onClick={() => setShowAddAccountModal(true)}
-                          className="w-full py-2 bg-white/5 hover:bg-white/10 text-violet-300 rounded-xl text-[9px] font-mono font-black uppercase tracking-wider transition-all"
-                        >
-                          + Add Another Account
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Section 2: Grouped Directories */}
-                    <div className="space-y-4">
-                      
-                      {/* Account Category */}
-                      <div className="space-y-1">
-                        <p className="text-[9px] font-mono uppercase text-zinc-500 tracking-widest pl-2">Account Administration</p>
-                        <div className="rounded-2xl bg-black/40 border border-white/5 overflow-hidden divide-y divide-white/5">
-                          <button 
-                            onClick={() => setSettingsActiveSubPanel('account')}
-                            className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold transition-all text-zinc-300 hover:text-white"
-                          >
-                            <span className="flex items-center gap-2.5">
-                              <Edit3 className="w-4 h-4 text-violet-400" />
-                              <div className="text-left">
+                                    : 'bg-black/30 border-transparent hover:borderclassName="text-left">
                                 <p className="leading-tight text-xs font-bold">Profile Calibration</p>
                                 <p className="text-[9px] text-zinc-500 font-normal">Edit display name, usernames, bio attributes</p>
                               </div>
@@ -3690,46 +3609,6 @@ export default function ProfileView({
               >
                 <X className="w-5 h-5" />
               </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* 13. ADD SWITCH ACCOUNT VAULT MODAL */}
-      <AnimatePresence>
-        {showAddAccountModal && (
-          <div className="fixed inset-0 z-200 bg-black/85 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowAddAccountModal(false)}>
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0c0926] border border-white/10 rounded-2xl p-6 max-w-sm w-full text-left space-y-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                <span className="text-xs font-mono text-violet-300 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-                  <UserPlus className="w-4 h-4 text-violet-400" /> REGISTER VAULT CREDENTIALS
-                </span>
-                <button 
-                  onClick={() => setShowAddAccountModal(false)}
-                  className="p-1 px-2 rounded-lg bg-white/5 text-zinc-400 hover:text-white text-xs font-mono"
-                >
-                  Close ×
-                </button>
-              </div>
-
-              <div className="space-y-3 text-sm text-zinc-300">
-                <p>Saved profile labels do not contain login credentials and cannot switch your Firebase session.</p>
-                <p>To use another account, sign out and authenticate with that account through Nexora's secure sign-in screen.</p>
-                <button
-                  type="button"
-                  disabled={!onLogout}
-                  onClick={() => onLogout?.()}
-                  className="nx-btn-primary min-h-11 w-full px-4 disabled:opacity-50"
-                >
-                  Sign out to use another account
-                </button>
-              </div>
             </motion.div>
           </div>
         )}
