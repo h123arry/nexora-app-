@@ -194,14 +194,10 @@ export default function App() {
   const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
 
-  // First-time visitors see account creation as soon as the anonymous
-  // Firebase identity and its private profile are ready (well within 10 seconds).
+  // First-time visitors are taken directly to the four-field account screen
+  // as soon as Firebase has prepared their private anonymous session.
   useEffect(() => {
-    if (requiresPublicAccountSetup) {
-      const timer = window.setTimeout(() => setShowPublicAccountSetup(true), 700);
-      return () => window.clearTimeout(timer);
-    }
-    setShowPublicAccountSetup(false);
+    setShowPublicAccountSetup(requiresPublicAccountSetup);
   }, [requiresPublicAccountSetup, firebaseUser?.uid]);
 
   const requestProfileSetup = () => {
@@ -3291,10 +3287,6 @@ export default function App() {
       {showPublicAccountSetup && requiresPublicAccountSetup && firebaseProfile && (
         <PublicAccountSetup
           user={firebaseProfile}
-          onCancel={() => {
-            setShowPublicAccountSetup(false);
-            setPendingAuthAction(null);
-          }}
           onComplete={(updatedUser) => {
             setCurrentUser(getRichUser(updatedUser));
             setShowPublicAccountSetup(false);
