@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowRight, ArrowLeft, Smartphone, Lock, Mail, User as UserIcon, X, 
@@ -80,6 +80,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
   // Navigation & Auth Flow Modes
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('beta') ? 'signup' : 'login');
   const [betaInviteCode] = useState(() => typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('beta') || '' : '');
+  const betaJoinStartedRef = useRef(false);
   
   // Method selection in signup: 'choose' | 'email' | 'phone'
   const [signupMethod, setSignupMethod] = useState<'choose' | 'email' | 'phone'>('choose');
@@ -188,7 +189,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
   };
 
   // Claim a one of the 300 private beta places and create a device-bound Firebase session.
-  const handleBetaJoin = async () => {
+  const handleBetaJoin = useCallback(async () => {
     if (!betaInviteCode) {
       setErrorMsg('This invitation link is missing its beta access code.');
       return;
@@ -205,7 +206,15 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       setIsPending(false);
       setErrorMsg(error?.message || 'NEXORA could not claim this beta invitation. Please try again.');
     }
-  };
+  }, [betaInviteCode, onLoginSuccess]);
+
+  // A valid private invitation starts anonymous registration immediately.
+  // The button remains available as a retry if the first network attempt fails.
+  useEffect(() => {
+    if (!betaInviteCode || betaJoinStartedRef.current) return;
+    betaJoinStartedRef.current = true;
+    void handleBetaJoin();
+  }, [betaInviteCode, handleBetaJoin]);
 
   // Google Sign In Handler
   const handleGoogleSignInClick = async () => {
