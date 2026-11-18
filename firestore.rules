@@ -11,9 +11,10 @@ service cloud.firestore {
               && request.auth.token.auth_time is int
               && request.auth.token.auth_time > get(statusPath).data.sessionsRevokedAfter.toMillis() / 1000)));
     }
+    // Public registration uses Firebase Anonymous Auth as a real per-device identity.
+    // Authorization still requires a valid token and a non-revoked session.
     function approvedAnonymousSession() {
-      return request.auth.token.get('firebase', {}).get('sign_in_provider', '') != 'anonymous'
-        || request.auth.token.get('betaMember', false) == true;
+      return request.auth != null;
     }
     function signedIn() {
       return request.auth != null
@@ -167,7 +168,7 @@ service cloud.firestore {
         'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
         'followers', 'following', 'sparks', 'hasStory',
         'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
-        'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
+        'interestDNA', 'skills', 'dateOfBirth', 'statusText', 'statusEmoji', 'pinnedMusicSong',
         'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts'
       ];
     }
@@ -352,7 +353,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
           'followers', 'following', 'sparks', 'hasStory', 'coverImage', 'profileFrameId', 'profileBadgeId',
-          'joinedDate', 'email', 'phone', 'role', 'isBanned', 'isSuspended',
+          'joinedDate', 'email', 'phone', 'dateOfBirth', 'role', 'isBanned', 'isSuspended',
           'isSeedProfile', 'preferredLanguage', 'savedCollections', 'contributions',
           'reputationPoints', 'reputationBreakdown', 'interestDNA', 'skills',
           'nexBalance', 'totalEarnedNex', 'pendingNex', 'thisWeekEarnedNex',

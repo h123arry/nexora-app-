@@ -10,13 +10,13 @@ export function hasLinkedProvider(providerIds: readonly string[], providerId: st
   return providerIds.includes(providerId);
 }
 
-/** Anonymous beta members cannot reauthenticate with a password/provider they do not have yet.
- * Permit linking only while the same approved anonymous UID is the active Firebase session.
+/** Anonymous users cannot reauthenticate with a credential they have not linked yet.
+ * Permit linking only while the same anonymous UID is the active Firebase session.
  */
 export function canUpgradeAnonymousBetaSession(
   isAnonymous: boolean,
-  betaMember: boolean,
+  publicAnonymousSession: boolean,
   activeSessionMatches: boolean,
 ): boolean {
-  return isAnonymous && betaMember && activeSessionMatches;
+  return isAnonymous && publicAnonymousSession && activeSessionMatches;
 }

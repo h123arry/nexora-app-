@@ -672,11 +672,6 @@ export default function ProfileView({
         e.preventDefault();
         return;
       }
-      if (showAddAccountModal) {
-        setShowAddAccountModal(false);
-        e.preventDefault();
-        return;
-      }
       if (showReputationModal) {
         setShowReputationModal(false);
         e.preventDefault();

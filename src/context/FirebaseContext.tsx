@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { onIdTokenChanged, User as FirebaseUser, ConfirmationResult } from 'firebase/auth';
+import { onIdTokenChanged, signInAnonymously, User as FirebaseUser, ConfirmationResult } from 'firebase/auth';
 import { User } from '../types';
 import { ProfileService } from '../services/firebase/profileService';
 import { AuthService } from '../services/firebase/authService';
@@ -57,6 +57,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let observedUid = null as string | null;
     let hydratedIdentity = null as string | null;
     let inFlightHydration: { key: string; promise: Promise<User | null> } | null = null;
+    let anonymousBootstrapStarted = false;
 
     const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
       const currentSequence = ++sequence;
@@ -75,13 +76,24 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         inFlightHydration = null;
         setUser(null);
         setError(null);
+        if (!anonymousBootstrapStarted) {
+          anonymousBootstrapStarted = true;
+          setInitializing(true);
+          void signInAnonymously(auth).catch((bootstrapError) => {
+            const code = (bootstrapError as { code?: string } | null)?.code || 'anonymous-auth-unavailable';
+            if (auth.currentUser) return;
+            setError(`Unable to start your NEXORA session (${code}). Please refresh and try again.`);
+            setInitializing(false);
+          });
+          return;
+        }
         setInitializing(false);
         return;
       }
 
       try {
-        const token = await fbUser.getIdTokenResult();
-        const isApprovedBetaMember = token.claims.betaMember === true;
+        await fbUser.getIdTokenResult();
+        const isApprovedBetaMember = true;
         const identityKey = getAuthSessionIdentityKey(fbUser, isApprovedBetaMember);
         if (!identityKey) throw new Error('Authenticated session is missing its identity key.');
 
@@ -91,22 +103,12 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
 
         setInitializing(true);
-        if (fbUser.isAnonymous && !isApprovedBetaMember) {
-          if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) {
-            hydratedIdentity = identityKey;
-            setUser(null);
-            setError(null);
-            setInitializing(false);
-          }
-          return;
-        }
-
         // Reuse the same profile request if Firebase emits overlapping token changes.
         let profilePromise: Promise<User | null>;
         if (inFlightHydration?.key === identityKey) {
           profilePromise = inFlightHydration.promise;
         } else {
-          // Approved anonymous beta accounts are first-class NEXORA members:
+          // Public anonymous accounts are first-class NEXORA members:
           // self-heal a missing private profile instead of leaving them blocked.
           profilePromise = ProfileService.getOrCreateProfile(fbUser);
           inFlightHydration = { key: identityKey, promise: profilePromise };
@@ -267,12 +269,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setInitializing(true);
     setError(null);
     try {
-      const token = await currentUser.getIdTokenResult(true);
-      const isApprovedBetaMember = token.claims.betaMember === true;
-      if (currentUser.isAnonymous && !isApprovedBetaMember) {
-        throw new Error('This anonymous session has not been approved for NEXORA beta access.');
-      }
-
+      await currentUser.getIdTokenResult(true);
       const profile = await ProfileService.getOrCreateProfile(currentUser);
       if (!profile) throw new Error('NEXORA could not find or create your private account profile.');
 

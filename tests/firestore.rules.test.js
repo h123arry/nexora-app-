@@ -86,24 +86,20 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(doc(freshDb, 'users', 'alice')));
   });
 
-  it('allows only approved anonymous beta sessions to read their own private profile', async () => {
+  it('allows public anonymous sessions to read only their own private profile', async () => {
     await seed(async adminDb => {
       await setDoc(doc(adminDb, 'users', 'guest-member'), profile('guest-member'));
       await setDoc(doc(adminDb, 'users', 'alice'), profile('alice'));
     });
 
-    const unapprovedGuest = env.authenticatedContext('guest-member', {
+    const publicGuest = env.authenticatedContext('guest-member', {
       firebase: { sign_in_provider: 'anonymous' }
     }).firestore();
-    const approvedGuest = env.authenticatedContext('guest-member', {
-      firebase: { sign_in_provider: 'anonymous' },
-      betaMember: true
-    }).firestore();
 
-    await assertFails(getDoc(doc(unapprovedGuest, 'users', 'guest-member')));
-    await assertSucceeds(getDoc(doc(approvedGuest, 'users', 'guest-member')));
-    await assertFails(getDoc(doc(approvedGuest, 'users', 'alice')));
-    await assertFails(getDocs(collection(approvedGuest, 'users')));
+    await assertSucceeds(getDoc(doc(publicGuest, 'users', 'guest-member')));
+    await assertFails(getDoc(doc(publicGuest, 'users', 'alice')));
+    await assertFails(getDocs(collection(publicGuest, 'users')));
+    await assertFails(getDoc(doc(guestDb(), 'users', 'guest-member')));
   });
 
   it('protects private WorldWeaves and requires invited membership before contributing', async () => {
