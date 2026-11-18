@@ -209,6 +209,7 @@ export default function FeedView({
   onBookmarkPost,
   onAddComment,
   onAddPost,
+  onOpenCreate,
   selectedTag,
   setSelectedTag,
   searchQuery,
