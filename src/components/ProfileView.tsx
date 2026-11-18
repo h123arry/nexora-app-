@@ -1693,6 +1693,8 @@ export default function ProfileView({
                               </div>
                             </div>
                           </div>
+                        </div>
+                      </div>
                       {/* Security & Privacy */}
                       <div className="space-y-1">
                         <p className="text-[9px] font-mono uppercase text-zinc-500 tracking-widest pl-2">Safety & Shielding</p>
