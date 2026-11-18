@@ -136,6 +136,7 @@ export class AuthService {
     }
   }
 
+  /** Device-local UX throttle only; Firebase Auth server protections are authoritative. */
   static getRateLimitStatus(identifier: string): RateLimitStatus {
     const key = `nexora_lockout_${identifier.toLowerCase().trim()}`;
     const storage = typeof localStorage === 'undefined' ? null : localStorage;
@@ -160,6 +161,7 @@ export class AuthService {
     }
   }
 
+  /** Records a local retry delay without treating client storage as an account security boundary. */
   static recordFailedAttempt(identifier: string): RateLimitStatus {
     const clean = identifier.toLowerCase().trim();
     const key = `nexora_lockout_${clean}`;
@@ -172,13 +174,9 @@ export class AuthService {
         localStorage.setItem(key, JSON.stringify({ attempts: newAttempts, lockoutUntil }));
       }
       
-      SecurityNotificationService.notifySecurityEvent(
-        'anonymous',
-        clean.includes('@') ? clean : '',
-        clean,
-        'SUSPICIOUS_SIGNIN',
-        { browser: navigator.userAgent }
-      );
+      // This is a device-local UX throttle only. Never send security emails or
+      // audit events to a client-supplied identifier after failed credentials.
+      // Firebase Authentication's server-side abuse controls remain authoritative.
 
       return { isLocked: true, remainingSeconds: 300, attemptsCount: newAttempts };
     }
@@ -557,12 +555,20 @@ export class AuthService {
     try {
       await signOut(auth);
     } catch (err: any) {
-      throw new Error(this.mapFirebaseError(err));
+      throw this.publicAuthError(err);
     }
   }
 
   static getCurrentUser(): FirebaseUser | null {
     return auth.currentUser;
+  }
+
+  private static async requireRecentAccountAuthentication(user: FirebaseUser): Promise<void> {
+    const token = await user.getIdTokenResult(true);
+    const authTime = Number(token.claims.auth_time);
+    if (!isRecentAuthentication(authTime, Date.now() / 1000)) {
+      throw new Error('Sign in again immediately before changing your account sign-in methods.');
+    }
   }
 
   static getLinkedProviders(): string[] {
@@ -577,8 +583,12 @@ export class AuthService {
     const currentUser = auth.currentUser;
     const cleanEmail = email.trim().toLowerCase();
     if (!currentUser) throw new Error('Sign in before adding an email address.');
+    if (hasLinkedProvider(currentUser.providerData.map(provider => provider.providerId), EmailAuthProvider.PROVIDER_ID)) {
+      throw new Error('An email and password sign-in method is already connected to this account.');
+    }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) throw new Error('Enter a valid email address.');
     if (password.length < 8) throw new Error('Choose a password with at least 8 characters.');
+    await this.requireRecentAccountAuthentication(currentUser);
     try {
       const result = await linkWithCredential(currentUser, EmailAuthProvider.credential(cleanEmail, password));
       await sendEmailVerification(result.user);
@@ -597,6 +607,10 @@ export class AuthService {
     this.requireConfigured();
     const currentUser = auth.currentUser;
     if (!currentUser) throw new Error('Sign in before adding a phone number.');
+    if (hasLinkedProvider(currentUser.providerData.map(provider => provider.providerId), 'phone')) {
+      throw new Error('A phone sign-in method is already connected to this account.');
+    }
+    await this.requireRecentAccountAuthentication(currentUser);
     try {
       return await linkWithPhoneNumber(currentUser, phoneNumber, verifier);
     } catch (error) {
@@ -606,6 +620,9 @@ export class AuthService {
 
   static async confirmPhoneLink(confirmation: ConfirmationResult, code: string): Promise<void> {
     this.requireConfigured();
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Sign in before confirming a phone number.');
+    await this.requireRecentAccountAuthentication(currentUser);
     try {
       const result = await confirmation.confirm(code.trim());
       await result.user.getIdToken(true);
@@ -642,12 +659,7 @@ export class AuthService {
       return this.getLinkedProviders();
     }
 
-    const token = await currentUser.getIdTokenResult(true);
-    const authTime = Number(token.claims.auth_time);
-    const now = Date.now() / 1000;
-    if (!isRecentAuthentication(authTime, now)) {
-      throw new Error('Sign in again immediately before connecting a Google account.');
-    }
+    await this.requireRecentAccountAuthentication(currentUser);
 
     try {
       const provider = new GoogleAuthProvider();

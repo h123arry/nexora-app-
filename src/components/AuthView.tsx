@@ -256,7 +256,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     // Rate Limiting Check
     const rateLimit = AuthService.getRateLimitStatus(query);
     if (rateLimit.isLocked) {
-      setErrorMsg(`🔒 Account temporarily rate-limited due to multiple failed attempts. Please retry in ${rateLimit.remainingSeconds} seconds.`);
+      setErrorMsg(`🔒 Sign-in is temporarily paused on this device after several failed attempts. Please retry in ${rateLimit.remainingSeconds} seconds.`);
       return;
     }
 
@@ -277,7 +277,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       setIsPending(false);
       const lock = AuthService.getRateLimitStatus(query);
       if (lock.isLocked) {
-        setErrorMsg('Security limit reached. Please wait five minutes before trying again.');
+        setErrorMsg('This device has temporarily paused sign-in. Please wait five minutes before trying again.');
       } else if (error?.code === 'auth/invalid-credential' || error?.code === 'auth/user-not-found' || error?.code === 'auth/wrong-password') {
         setErrorMsg(`The email or password you entered is incorrect. (${MAX_FAILED_ATTEMPTS - lock.attemptsCount} attempts remaining)`);
       } else {

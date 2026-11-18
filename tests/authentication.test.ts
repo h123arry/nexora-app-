@@ -139,6 +139,15 @@ test('account deletion reauthentication rejects an incorrect current password be
   );
 });
 
+
+test('refuses to link a second email/password provider to the same Firebase account', async () => {
+  await AuthService.loginWithEmail(email, password);
+  await assert.rejects(
+    () => AuthService.linkEmailAccount(email, password),
+    /email and password sign-in method is already connected/i,
+  );
+});
+
 test('password changes require the current Firebase credential and persist through a new sign-in', async () => {
   const updatedPassword = 'Nexora-Updated-Test-Password-43!';
   await AuthService.loginWithEmail(email, password);
