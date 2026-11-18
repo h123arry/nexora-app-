@@ -851,6 +851,7 @@ export default function App() {
   // Dialog overlays
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [isNexoraStudioOpen, setIsNexoraStudioOpen] = useState(false);
+  const [studioInitialMedia, setStudioInitialMedia] = useState<File[]>([]);
   const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [creationInitialMode, setCreationInitialMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null>(null);
   const [creationInitialTab, setCreationInitialTab] = useState<'feed' | 'story' | 'drafts' | undefined>(undefined);
@@ -2450,7 +2451,8 @@ export default function App() {
             <NexoraStudio
               key={currentUser.id}
               currentUser={currentUser}
-              onClose={() => setIsNexoraStudioOpen(false)}
+              initialMedia={studioInitialMedia}
+              onClose={() => { setIsNexoraStudioOpen(false); setStudioInitialMedia([]); }}
               onPublish={async (video, caption, onProgress, signal, remixPolicy: OriginRemixPolicy = 'closed') => {
                 const file = new File([video], `nexora-studio-${Date.now()}.webm`, { type: video.type || 'video/webm' });
                 const uploaded = await uploadMediaFile({
@@ -2466,6 +2468,7 @@ export default function App() {
                 const postId = handleAddPost(caption || 'Created with NEXORA Studio', undefined, undefined, undefined, uploaded.downloadUrl, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, { mediaAssetId: uploaded.mediaId });
                 if (!postId) throw new Error('The video uploaded, but the post could not be created. Your Studio draft is still saved.');
                 setIsNexoraStudioOpen(false);
+                setStudioInitialMedia([]);
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Your Studio video is now on NEXORA.' }));
               }}
             />
@@ -2486,6 +2489,11 @@ export default function App() {
             initialMode={creationInitialMode}
             initialTab={creationInitialTab}
             initialCaption={creationInitialCaption}
+            onOpenStudio={files => {
+              setStudioInitialMedia(files);
+              setIsCreatePostModalOpen(false);
+              setIsNexoraStudioOpen(true);
+            }}
             onToggleOffline={() => {
               setIsOffline(prev => {
                 const next = !prev;
