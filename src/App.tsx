@@ -2174,6 +2174,12 @@ export default function App() {
                 onBookmarkPost={handleBookmarkPost}
                 onAddComment={handleAddComment}
                 onAddPost={handleAddPost}
+                onOpenCreate={(initialMode = null, initialCaption = '') => {
+                  setCreationInitialMode(initialMode);
+                  setCreationInitialTab('feed');
+                  setCreationInitialCaption(initialCaption);
+                  setIsCreatePostModalOpen(true);
+                }}
                 selectedTag={selectedTag}
                 setSelectedTag={setSelectedTag}
                 searchQuery={searchQuery}
