@@ -393,7 +393,8 @@ export class AuthService {
       return { firebaseUser: fbUser, user: userProfile, isNewUser };
     } catch (err: any) {
       if (authenticatedUser) await signOut(auth).catch(() => undefined);
-      throw new Error(this.mapFirebaseError(err));
+      // Preserve Firebase's stable error code for the UI and diagnostics.
+      throw this.publicAuthError(err);
     }
   }
 
