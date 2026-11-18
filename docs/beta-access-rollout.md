@@ -1,39 +1,29 @@
-# NEXORA Founding 300 Beta Access Rollout
+# NEXORA Public Access and Anonymous Account Rollout
 
-## What this release adds
+## Public entry
 
-- A reusable founder-issued invitation URL.
-- Server-enforced allocation of at most 300 founding_300 places across self-service beta claims and existing administrator-created founding accounts.
-- Firebase Anonymous Authentication for invited members, with the Firebase UID and app data retained when credentials are linked later.
-- Firestore and Storage rules that reject unclaimed anonymous sessions.
-- Email/password and SMS phone credential linking under Settings → Connected Accounts.
-- In-app account-security reminders after 3, 7 and 30 days while either contact method remains unsecured.
+- The Render URL is open to anyone. No private invitation, approval workflow, or 300-member cap is required for ordinary registration.
+- The browser creates a Firebase Anonymous Authentication identity in the background. Each browser profile/device receives its own UID unless the user later links a credential.
+- Firestore and Storage continue to require a valid Firebase identity, non-revoked session, and owner-scoped access. Default-deny rules, moderation restrictions, private account isolation, and chat membership checks remain in force.
+- Existing beta invitation links may remain available for legacy cohorts, but they are not a prerequisite for public access.
 
-## Required production setup
+## Profile setup and account recovery
 
-1. In Firebase Authentication for nexora-prod-voiceharrison, enable the Anonymous provider.
-2. Confirm the Render production domain nexora-o3od.onrender.com is listed under Firebase Authentication authorized domains.
-3. Confirm the email/password provider and email verification template/action domain are configured.
-4. Enable the Phone provider and configure its SMS/recaptcha settings before expecting phone linking to work. Phone linking remains subject to Firebase's SMS quotas and abuse checks.
-5. Confirm the existing production founder/admin custom claims are present for the account that will generate the link.
+- New members choose a display name, date of birth, and unique username before completing profile setup.
+- Date of birth is private and must never be copied into the public profile projection.
+- Users can add and verify email and phone credentials later by linking them to the current anonymous UID. Existing posts, follows, messages, profile data, and activity stay attached to that UID.
+- Until a recovery credential is linked, clearing browser data or losing the device can make an anonymous account unrecoverable. Separate browsers/devices ordinarily create separate identities.
+- Daily in-app reminders encourage users to secure the same account. They must not block normal app use.
 
-## Deployment sequence
+## Production deployment
 
-1. Merge this reviewed PR only after frontend type-check, Functions build, Firestore rules tests, Storage rules tests and auth regression tests pass.
-2. Run GitHub Actions → Deploy NEXORA Production Founding and Beta Access Functions with confirm_production_deploy=true in the protected nexora-production environment. This deploys the two beta callables, the existing founding-member callable, and Firestore/Storage rules to the pinned production project.
-3. Render has auto-deploy disabled for this service. Manually deploy the merged main commit to the existing NEXORA Render service and wait for live.
-4. Sign in as a founder/admin, open Settings → Beta feedback, generate the invitation link once, and share that same URL.
-5. Test with one fresh browser profile before distributing widely. Verify an invited user can create a profile, upload media, and later link email and phone without changing UID.
+1. Enable Firebase Anonymous Authentication for the production Firebase project.
+2. Deploy the reviewed Firestore and Storage rules together with the matching frontend release.
+3. Deploy Functions only when the reviewed release changes server-side callable behavior.
+4. Manually deploy the merged main commit to the existing Render service (automatic deploy is disabled).
+5. Verify a fresh browser can enter, create a profile, post, follow, upload owner-scoped media, and later link a recovery credential without changing UID.
+6. Verify founder/admin custom claims and existing founder profile remain unchanged.
 
-## Member behavior and limitations
+## Safety and abuse controls
 
-- Each successful claim consumes one place. The backend transaction prevents claim 301.
-- The cap counts Firebase UIDs, not verified human beings. Without requiring a phone/email at entry, one person can create multiple browser/device sessions; Firebase App Check and monitoring should be used to reduce abuse.
-- Anonymous sessions persist on the same browser/device under Firebase Auth persistence. Clearing browser data, using private browsing, or losing the device can make an unlinked account unrecoverable.
-- Email and phone credentials are linked to the existing UID. If a credential already belongs to another Firebase account, NEXORA refuses an automatic merge.
-- The reminder schedule is in-app and device-local. It is not an email or SMS campaign.
-- Current Storage rules allow owner-scoped image uploads up to 12 MB and video uploads up to 250 MB; media processing and publication still follow the existing NEXORA pipeline.
-
-## Emergency pause
-
-To stop new claims without deleting existing members, set the relevant betaInvites document's active field to false in the production Firestore console. Existing beta members retain their accounts and content. Do not delete betaClaims or reset the shared foundingMemberCohorts/founding_300 counter.
+Anonymous access is public access, not unauthenticated database access. Do not remove UID ownership checks, session revocation, account status restrictions, server-side moderation, rate limits, or default-deny rules. Monitor abuse and be prepared to tighten registration controls without deleting existing accounts.
