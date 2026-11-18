@@ -24,6 +24,7 @@ export function shouldShowAnonymousAccountReminder(input: AnonymousAccountRemind
     daysSinceJoin,
     show: (!input.hasVerifiedEmail || !input.hasPhone)
       && daysSinceJoin >= 1
+      && now.getDay() === 3
       && input.lastDismissedDate !== today,
   };
 }
