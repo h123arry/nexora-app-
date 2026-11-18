@@ -14,3 +14,10 @@ test('provider linking does not duplicate an already-linked identity provider', 
   assert.equal(hasLinkedProvider(['password', 'google.com'], 'google.com'), true);
   assert.equal(hasLinkedProvider(['password'], 'google.com'), false);
 });
+
+test('provider linking recognizes existing email, phone, and Google credentials', () => {
+  assert.equal(hasLinkedProvider(['password', 'google.com'], 'password'), true);
+  assert.equal(hasLinkedProvider(['phone'], 'phone'), true);
+  assert.equal(hasLinkedProvider(['password'], 'phone'), false);
+  assert.equal(hasLinkedProvider(['phone'], 'google.com'), false);
+});
