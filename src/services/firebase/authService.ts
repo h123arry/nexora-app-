@@ -29,7 +29,7 @@ import { EmailService } from './emailService';
 import { SecurityNotificationService } from './securityNotificationService';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from './config';
-import { hasLinkedProvider, isRecentAuthentication } from './accountLinkingPolicy';
+import { canUpgradeAnonymousBetaSession, hasLinkedProvider, isRecentAuthentication } from './accountLinkingPolicy';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
 
 const MAX_FAILED_ATTEMPTS = 5;
@@ -558,6 +558,16 @@ export class AuthService {
 
   private static async requireRecentAccountAuthentication(user: FirebaseUser): Promise<void> {
     const token = await user.getIdTokenResult(true);
+    const approvedAnonymousUpgrade = canUpgradeAnonymousBetaSession(
+      user.isAnonymous,
+      token.claims.betaMember === true,
+      auth.currentUser?.uid === user.uid,
+    );
+    // An anonymous member has no existing credential with which to reauthenticate.
+    // A refreshed token plus the server-issued beta claim and same active UID are
+    // therefore the safe upgrade path; established accounts still require recent auth.
+    if (approvedAnonymousUpgrade) return;
+
     const authTime = Number(token.claims.auth_time);
     if (!isRecentAuthentication(authTime, Date.now() / 1000)) {
       throw new Error('Sign in again immediately before changing your account sign-in methods.');
