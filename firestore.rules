@@ -169,7 +169,7 @@ service cloud.firestore {
         'followers', 'following', 'sparks', 'hasStory',
         'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
         'interestDNA', 'skills', 'dateOfBirth', 'statusText', 'statusEmoji', 'pinnedMusicSong',
-        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts'
+        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'dateOfBirth'
       ];
     }
     function editableProfileKeys() {
