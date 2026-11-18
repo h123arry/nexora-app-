@@ -95,6 +95,7 @@ const GiftVerseView = lazy(() => import('./components/GiftVerseView'));
 const WorldWeaveView = lazy(() => import('./components/WorldWeaveView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
 import NexoraLoader from './components/NexoraLoader';
+import PublicAccountSetup from './components/PublicAccountSetup';
 import OfflineBanner from './components/OfflineBanner';
 import PwaUpdatePrompt from './components/PwaUpdatePrompt';
 
@@ -123,6 +124,8 @@ export default function App() {
     };
   }, []);
   const isLoggedIn = !!firebaseUser && firebaseProfile?.id === firebaseUser.uid;
+  const requiresPublicAccountSetup = isLoggedIn && firebaseUser?.isAnonymous === true && !!firebaseProfile
+    && (!firebaseProfile.dateOfBirth || firebaseProfile.name === 'NEXORA Member' || firebaseProfile.username.startsWith('member_'));
   const initialCacheUserId = isLoggedIn && firebaseUser ? firebaseUser.uid : '';
   const [securityReminderStep, setSecurityReminderStep] = useState(0);
   useEffect(() => {
@@ -3267,6 +3270,18 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {requiresPublicAccountSetup && firebaseProfile && (
+        <PublicAccountSetup
+          user={firebaseProfile}
+          onComplete={(updatedUser) => {
+            setCurrentUser(getRichUser(updatedUser));
+            void retryProfileLoad().catch(() => {
+              window.dispatchEvent(new CustomEvent('toast', { detail: 'Your profile was saved. Refresh NEXORA if your changes do not appear.' }));
+            });
+          }}
+        />
       )}
 
       {securityReminderStep > 0 && firebaseUser && (
