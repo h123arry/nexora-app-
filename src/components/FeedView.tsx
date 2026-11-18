@@ -1980,7 +1980,7 @@ export default function FeedView({
               </button>
             </div>
             <button
-              onClick={() => setComposerOpen(true)}
+              onClick={() => onOpenCreate ? onOpenCreate(null, '') : setComposerOpen(true)}
               className="nx-btn-primary !min-h-9 px-4 text-[11px]"
             >
               Create
@@ -2077,7 +2077,7 @@ export default function FeedView({
                 >Clear search & filters</button>
               )}
               {localPosts.length === 0 && <button
-                onClick={() => setComposerOpen(true)}
+                onClick={() => onOpenCreate ? onOpenCreate(null, '') : setComposerOpen(true)}
                 className="px-5 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all hover:shadow-lg hover:shadow-violet-500/20 active:scale-95"
               >
                 + Create your first post
