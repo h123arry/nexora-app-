@@ -1,0 +1,143 @@
+/* NEXORA — Midnight Luxury
+ * Central brand layer. Imported after the legacy stylesheet so the identity
+ * is consistent without rewriting feature-specific components.
+ */
+:root {
+  color-scheme: dark;
+  --nx-canvas: #070611;
+  --nx-canvas-deep: #05040D;
+  --nx-surface: #100D20;
+  --nx-surface-2: #17112B;
+  --nx-surface-3: #21183A;
+  --nx-edge: #241D38;
+  --nx-edge-strong: #3A2D59;
+  --nx-violet: #7547FF;
+  --nx-violet-bright: #8A3FFC;
+  --nx-violet-deep: #5428C8;
+  --nx-muted: #9690AA;
+  --nx-text: #F8F7FF;
+  --nx-success: #53D39A;
+  --nx-warning: #F1BD72;
+  --nx-danger: #F07E9F;
+  --nx-gradient: linear-gradient(115deg, #7547FF 0%, #8A3FFC 100%);
+  --nx-brand-gradient: linear-gradient(110deg, #D84BCB 0%, #8A3FFC 35%, #426BFF 70%, #36C8E8 100%);
+  --nx-gradient-soft: linear-gradient(110deg, rgba(117,71,255,.16), rgba(138,63,252,.09));
+  --nx-shadow: 0 22px 60px rgba(2,0,16,.52);
+  --nx-shadow-soft: 0 12px 32px rgba(2,0,16,.34);
+  --nx-radius-card: 1rem;
+  --nx-radius-control: .75rem;
+  --color-primary: #7547FF;
+  --color-primary-foreground: #FFFFFF;
+}
+
+html, body, #root {
+  background: var(--nx-canvas);
+  color: var(--nx-text);
+}
+body { background: var(--nx-canvas); }
+::selection { color: #fff; background: rgba(117,71,255,.42); }
+:focus-visible { outline: 2px solid #8A3FFC; outline-offset: 3px; }
+
+.nx-app-shell, .nx-app-shell-root, .nx-app-shell, .nx-feed-stage {
+  background-color: var(--nx-canvas);
+  color: var(--nx-text);
+}
+.nx-surface, .nx-soft-card {
+  background: var(--nx-surface);
+  border-color: var(--nx-edge);
+  box-shadow: var(--nx-shadow-soft);
+}
+.nx-glass, .nx-glass-strong {
+  background: rgba(16,13,32,.92);
+  border-color: var(--nx-edge);
+}
+.nx-glass-strong { background: rgba(7,6,17,.97); }
+
+.nx-field {
+  background: var(--nx-surface);
+  border-color: var(--nx-edge);
+  color: var(--nx-text);
+}
+.nx-field::placeholder { color: var(--nx-muted); }
+.nx-field:hover { background: var(--nx-surface-2); border-color: rgba(117,71,255,.48); }
+.nx-field:focus {
+  background: var(--nx-surface-2);
+  border-color: var(--nx-violet);
+  box-shadow: 0 0 0 3px rgba(117,71,255,.18);
+}
+
+.nx-btn-primary {
+  background: var(--nx-gradient);
+  border-color: rgba(190,170,255,.18);
+  box-shadow: 0 9px 26px rgba(117,71,255,.22);
+}
+.nx-btn-primary:hover { box-shadow: 0 12px 30px rgba(117,71,255,.32); }
+.nx-btn-ghost, .nx-icon-button {
+  background: var(--nx-surface);
+  border-color: var(--nx-edge);
+}
+.nx-btn-ghost:hover, .nx-icon-button:hover {
+  background: var(--nx-surface-2);
+  border-color: rgba(117,71,255,.48);
+}
+
+.nx-story-ring { background: var(--nx-brand-gradient); }
+.nx-sidebar-shell {
+  background: #0B0918;
+  border-color: var(--nx-edge) !important;
+}
+.nx-sidebar-nav-item:hover {
+  background: rgba(117,71,255,.09);
+  border-color: rgba(117,71,255,.2);
+}
+.nx-sidebar-nav-item[data-active="true"] {
+  background: linear-gradient(90deg, rgba(117,71,255,.2), rgba(138,63,252,.07));
+  border-color: rgba(138,63,252,.3);
+  box-shadow: inset 3px 0 0 var(--nx-violet);
+}
+.nx-nav-icon { background: rgba(117,71,255,.12) !important; }
+.nx-sidebar-nav-item[data-active="true"] .nx-nav-icon {
+  background: rgba(117,71,255,.24) !important;
+}
+.nx-create-action {
+  border-color: rgba(117,71,255,.3) !important;
+  background: rgba(117,71,255,.12) !important;
+}
+.nx-create-action:hover {
+  border-color: rgba(117,71,255,.55) !important;
+  background: rgba(117,71,255,.2) !important;
+}
+
+/* Consistent secondary workspaces */
+.nx-inbox-shell, .nx-inbox-chat, .nx-profile-shell {
+  background-color: var(--nx-canvas);
+  border-color: var(--nx-edge);
+}
+.nx-inbox-sidebar, .nx-inbox-sidebar > .nx-page-header,
+.nx-inbox-chat > div:first-child, .nx-inbox-chat > div:last-child,
+.nx-profile-topbar, .nx-profile-tabbar {
+  border-color: var(--nx-edge);
+}
+.nx-inbox-sidebar .nx-segmented button[aria-selected="true"],
+.nx-profile-tabbar button[aria-pressed="true"] {
+  background: linear-gradient(110deg, rgba(117,71,255,.24), rgba(138,63,252,.12));
+}
+.nx-inbox-sidebar .nx-field:focus,
+.nx-inbox-chat input[aria-label="Message"]:focus,
+.nx-profile-shell input:focus,
+.nx-profile-shell textarea:focus,
+.nx-profile-shell select:focus {
+  border-color: rgba(117,71,255,.62);
+  box-shadow: 0 0 0 3px rgba(117,71,255,.14);
+}
+.nx-inbox-chat button[aria-label="Send message"] {
+  background: var(--nx-gradient);
+  box-shadow: 0 5px 18px rgba(117,71,255,.2);
+}
+
+/* Keep logo artwork untouched; use the brand spectrum only for brand marks. */
+.nx-brand-mark { filter: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+}
