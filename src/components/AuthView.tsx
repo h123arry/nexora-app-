@@ -251,8 +251,8 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       setErrorMsg('Please enter your email address. Phone sign-in uses verification code.');
       return;
     }
-    if (!/^\S+@\S+\.\S+$/.test(identifierInput.trim())) {
-      setErrorMsg('Email + password login requires a valid email address. Use phone verification for phone sign-in.');
+    if (detectedType === 'email' && !/^\S+@\S+\.\S+$/.test(identifierInput.trim())) {
+      setErrorMsg('Enter a valid email address, or use your NEXORA username.');
       return;
     }
     if (!passwordInput) {
@@ -273,7 +273,9 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     setStatusMessage('Verifying credentials via Firebase Authentication...');
 
     try {
-      const { user } = await AuthService.loginWithEmail(query, passwordInput, rememberMe);
+      const { user } = detectedType === 'username'
+        ? await AuthService.loginWithUsername(query, passwordInput, rememberMe)
+        : await AuthService.loginWithEmail(query, passwordInput, rememberMe);
       AuthService.clearFailedAttempts(query);
       if (rememberMe) {
         localStorage.setItem('nexora_remembered_identifier', query);
