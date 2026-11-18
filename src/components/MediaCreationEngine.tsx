@@ -1694,7 +1694,10 @@ export default function MediaCreationEngine({
                         {permissionState !== 'granted' && (
                           <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
                         )}
-                        <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="w-full rounded-xl bg-[#120E2B] py-2.5 text-xs font-mono font-bold text-white transition-all hover:bg-[#19143A] disabled:cursor-not-allowed disabled:opacity-50">Take photo</button>
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="flex-1 rounded-xl border border-[#292244] bg-[#120E2B] py-2.5 text-xs font-semibold text-white disabled:opacity-40">Switch camera</button>
+                          <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="flex-1 rounded-xl bg-[#120E2B] py-2.5 text-xs font-semibold text-white transition-all hover:bg-[#19143A] disabled:cursor-not-allowed disabled:opacity-50">Take photo</button>
+                        </div>
                         <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="w-full rounded-xl bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] py-2.5 text-xs font-mono font-bold text-white shadow-lg transition-all hover:brightness-110"><Sparkles className="mr-1 inline h-3.5 w-3.5" /> Open Filters & Lenses</button>
                         <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                           {selectedImages.map((img, i) => (
