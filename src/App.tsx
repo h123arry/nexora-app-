@@ -2078,7 +2078,7 @@ export default function App() {
               <p className="text-sm font-bold text-white">You’ve been invited to NEXORA</p>
               <p className="mt-0.5 text-xs text-violet-100/70">{referralInvitePreview ? `Invited by ${referralInvitePreview.inviterName}${referralInvitePreview.inviterUsername ? ` (@${referralInvitePreview.inviterUsername})` : ''}. Join them on the world’s living social network.` : 'Join your friend on the world’s living social network.'}</p>
             </div>
-            <button onClick={() => { setAuthPromptReason('Create your NEXORA account to accept this personal invitation.'); setShowAuthModal(true); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2 text-xs font-bold text-white hover:bg-violet-500">Join</button>
+            <button onClick={requestProfileSetup} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2 text-xs font-bold text-white hover:bg-violet-500">Join</button>
           </div>
         </div>
       )}
