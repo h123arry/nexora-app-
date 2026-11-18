@@ -721,6 +721,7 @@ export default function MediaCreationEngine({
     if (!navigator.mediaDevices?.getUserMedia) {
       setPermissionState('denied');
       setPermissionTarget(null);
+      pendingPermissionActionRef.current = null;
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera and microphone access require a supported browser on a secure connection. You can still choose media from your device.' }));
       return;
     }
@@ -756,6 +757,7 @@ export default function MediaCreationEngine({
       }
     } catch (error) {
       setPermissionState('denied');
+      pendingPermissionActionRef.current = null;
       const message = error instanceof Error && error.name === 'NotAllowedError'
         ? `Allow ${target === 'mic' ? 'microphone' : 'camera'} access in your browser or device settings, then try again.`
         : error instanceof Error && error.name === 'NotFoundError'
@@ -1525,7 +1527,7 @@ export default function MediaCreationEngine({
               </div>
               <div className="flex gap-2">
                 <button 
-                  onClick={() => { setPermissionState('denied'); setPermissionTarget(null); }}
+                  onClick={() => { setPermissionState('denied'); setPermissionTarget(null); pendingPermissionActionRef.current = null; }}
                   className="flex-1 py-2 rounded-xl bg-[#120E2B] hover:bg-[#19143A] text-[#8E88A7] text-xs font-mono font-bold cursor-pointer transition-all"
                 >
                   Deny
