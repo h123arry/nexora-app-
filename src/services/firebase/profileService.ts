@@ -5,6 +5,7 @@ import { User as FirebaseUser } from 'firebase/auth';
 import { checkUsernameStatus, normalizeUsername } from '../../utils/username';
 import { createPublicProfileProjection } from './publicProfileProjection';
 import { persistProfileWithBestEffortProjection } from './profileProvisioningPolicy';
+import { getAnonymousMemberUsername } from './anonymousOnboardingPolicy';
 
 export class ProfileService {
   private static profileLoads = new Map<string, Promise<User>>();
@@ -160,7 +161,7 @@ export class ProfileService {
       // Approved anonymous beta members receive a complete, durable profile
       // immediately. Reserve the deterministic handle first so overlapping
       // auth-state hydration and invite-claim flows converge on the same UID.
-      const anonymousUsername = `member_${firebaseUser.uid.slice(0, 10).toLowerCase()}`;
+      const anonymousUsername = getAnonymousMemberUsername(firebaseUser.uid);
       if (firebaseUser.isAnonymous) {
         await this.reserveUsername(firebaseUser.uid, anonymousUsername);
       }
