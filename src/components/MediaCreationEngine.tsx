@@ -2595,7 +2595,7 @@ export default function MediaCreationEngine({
 
                     </div>
                   ) : (
-                    /* Dynamic Publish Loading indicators */
+                    /* Publishing progress */
                     <div className="py-12 flex flex-col items-center justify-center text-center space-y-5">
                       {postingStatus === 'completed' ? (
                         <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center animate-bounce">
@@ -2617,14 +2617,14 @@ export default function MediaCreationEngine({
                           <div
                             className="h-2 w-full overflow-hidden rounded-full bg-[#19143A]"
                             role="progressbar"
-                            aria-label="Actual media upload progress"
+                            aria-label="Upload progress"
                             aria-valuemin={0}
                             aria-valuemax={100}
                             aria-valuenow={uploadProgress}
                           >
                             <div className="h-full rounded-full bg-violet-500 transition-[width] duration-200" style={{ width: `${uploadProgress}%` }} />
                           </div>
-                          <p className="text-[10px] text-[#8E88A7]">Progress is based on the file transfer. Large videos and slower connections can take longer.</p>
+                          <p className="text-[10px] text-[#8E88A7]">This shows how much of your file has uploaded. Large videos and slow connections may take longer.</p>
                         </div>
                       )}
 
@@ -2678,7 +2678,7 @@ export default function MediaCreationEngine({
 
         </div>
 
-        {/* Wizard Footer controls */}
+        {/* Publishing controls */}
         {activeTab !== 'drafts' && postingStatus === 'idle' && (
           <div className="border-t border-[#292244]/60 pt-4 flex justify-between items-center shrink-0">
             <div>
