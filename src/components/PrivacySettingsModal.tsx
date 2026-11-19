@@ -320,7 +320,7 @@ export default function PrivacySettingsModal({
   // Reciprocity Rule Determiner
   const getReciprocityText = (settingName: string, value: VisibilityAudience) => {
     if (value === 'nobody') {
-      return `🔒 Because you hide your ${settingName}, you also won't see it on other people's profiles.`;
+      return `🔒 Because you hide your ${settingName}, you also will not see it on other people's profiles.`;
     }
     if (value === 'custom') {
       return `👥 Custom list is on. Only ${customPeople.length} approved people can query your ${settingName}.`;
@@ -479,7 +479,7 @@ export default function PrivacySettingsModal({
             <div className="bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-indigo-500/20 px-6 py-2 border-b border-emerald-500/20 flex items-center justify-between text-xs text-emerald-400 font-mono">
               <span className="flex items-center gap-2">
                 <Hidden className="w-4 h-4 animate-pulse text-emerald-400" />
-                <span>💎 HIDE MODE IS ON — Your account won't appear in search or suggestions.</span>
+                <span>💎 HIDE MODE IS ON — Your account will not appear in search or suggestions.</span>
               </span>
               <button 
                 onClick={() => setDiscoverability(prev => ({ ...prev, hiddenAccountMode: false }))}
@@ -580,7 +580,7 @@ export default function PrivacySettingsModal({
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <Eye className="w-4 h-4 text-violet-400" /> Presence & Social Activity Status
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Choose who can see when you're online and active in chats.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1">Choose who can see when you are online and active in chats.</p>
                   </div>
 
                   {/* Presence Grid */}
@@ -593,7 +593,7 @@ export default function PrivacySettingsModal({
                       { key: 'currentlyActive', label: 'Active Status List', desc: 'Appear in the currently active friends strip.' },
                       { key: 'recentlyActive', label: 'Recently active', desc: 'Show when you were last active.' },
                       { key: 'readMessages', label: 'Reading Messages State', desc: 'Allows users to see if you are actively browsing.' },
-                      { key: 'voiceActivity', label: 'Live audio status', desc: 'Shows whether you're in a live audio room.' }
+                      { key: 'voiceActivity', label: 'Live audio status', desc: 'Shows whether you are in a live audio room.' }
                     ].map(item => {
                       const val = presence[item.key as keyof typeof presence] as VisibilityAudience;
                       return (
@@ -938,7 +938,7 @@ export default function PrivacySettingsModal({
                   <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-3">
                     <div>
                       <span className="text-xs font-bold text-zinc-200 block">Unknown Caller Filtering</span>
-                      <p className="text-[10px] text-zinc-500 leading-normal mt-1">Choose what happens when someone you don't follow tries to message you.</p>
+                      <p className="text-[10px] text-zinc-500 leading-normal mt-1">Choose what happens when someone you do not follow tries to message you.</p>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -1192,7 +1192,7 @@ export default function PrivacySettingsModal({
                     <div>
                       <span className="text-xs font-black text-amber-400 block font-mono uppercase">Restricted accounts</span>
                       <p className="text-[10px] text-zinc-500 mt-1 leading-normal">
-                        Restricted accounts can still send you message requests, but they won't see when you are typing, when you have read their messages or whether you are online.
+                        Restricted accounts can still send you message requests, but they will not see when you are typing, when you have read their messages or whether you are online.
                       </p>
                     </div>
 
