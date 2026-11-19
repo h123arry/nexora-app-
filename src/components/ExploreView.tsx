@@ -736,7 +736,7 @@ export default function ExploreView({
                   onClick={() => onViewProfile?.(user.id)}
                   className="w-[150px] shrink-0 p-4 nx-surface hover:border-white/10 rounded-2xl flex flex-col items-center text-center gap-2.5 cursor-pointer transition-all group shadow-sm"
                 >
-                  {hasCustomAvatar(user.avatar) ? <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-all" /> : <span aria-hidden="true" className="grid h-12 w-12 place-items-center rounded-xl bg-violet-950/70 text-sm font-bold text-violet-100 ring-2 ring-violet-500/30">{avatarInitial(user.name || user.username)}</span>}
+                  {getRenderableAvatarUrl(user.avatar) ? <img src={getRenderableAvatarUrl(user.avatar) || undefined} alt={user.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-all" /> : <span aria-hidden="true" className="grid h-12 w-12 place-items-center rounded-xl bg-violet-950/70 text-sm font-bold text-violet-100 ring-2 ring-violet-500/30">{avatarInitial(user.name || user.username)}</span>}
                   <div className="w-full overflow-hidden">
                     <div className="flex items-center justify-center gap-1">
                       <h4 className="text-xs font-bold text-white truncate">{user.name}</h4>
