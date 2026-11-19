@@ -107,22 +107,6 @@ import PwaUpdatePrompt from './components/PwaUpdatePrompt';
 
 export default function App() {
   const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, retryProfileLoad, logout, loginWithUsername } = useFirebase();
-  // Keep the signed-in account's public identity live across devices and profile edits.
-  useEffect(() => {
-    if (!isLoggedIn || !firebaseUser?.uid) return;
-    return onSnapshot(doc(db, 'publicProfiles', firebaseUser.uid), snapshot => {
-      if (!snapshot.exists()) return;
-      const latest = { ...snapshot.data(), id: firebaseUser.uid } as User;
-      setGlobalUsersMap(previous => ({ ...previous, [firebaseUser.uid]: latest }));
-      setCurrentUser(previous => previous.id === firebaseUser.uid
-        ? getRichUser({ ...previous, ...latest })
-        : previous);
-    }, () => {
-      // The current cached profile remains visible if the live profile read is temporarily unavailable.
-    });
-  }, [firebaseUser?.uid, isLoggedIn]);
-
-
   useEffect(() => {
     const connection = (navigator as Navigator & {
       connection?: EventTarget & { saveData?: boolean };
@@ -211,6 +195,21 @@ export default function App() {
 
   // Only profiles received from Firebase or the authenticated session are shown as people.
   const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>({});
+
+  // Keep the signed-in account's public identity live across devices and profile edits.
+  useEffect(() => {
+    if (!isLoggedIn || !firebaseUser?.uid) return;
+    return onSnapshot(doc(db, 'publicProfiles', firebaseUser.uid), snapshot => {
+      if (!snapshot.exists()) return;
+      const latest = { ...snapshot.data(), id: firebaseUser.uid } as User;
+      setGlobalUsersMap(previous => ({ ...previous, [firebaseUser.uid]: latest }));
+      setCurrentUser(previous => previous.id === firebaseUser.uid
+        ? getRichUser({ ...previous, ...latest })
+        : previous);
+    }, () => {
+      // The current cached profile remains visible if the live profile read is temporarily unavailable.
+    });
+  }, [firebaseUser?.uid, isLoggedIn]);
 
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
 
