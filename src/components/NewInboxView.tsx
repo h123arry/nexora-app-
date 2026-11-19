@@ -1,3 +1,4 @@
+import { createSecureId } from '../utils/secureId';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -370,7 +371,7 @@ export default function NewInboxView({
     typingStateRef.current = null;
     void updateTypingState(activeChatId, currentUser.id, null);
 
-    const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+    const messageId = createSecureId('msg');
     const nowIso = new Date().toISOString();
 
     const newMsg: ExtendedMessage = {
@@ -462,7 +463,7 @@ export default function NewInboxView({
       return;
     }
 
-    const newChatId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    const newChatId = createSecureId('chat');
     const newChat: Chat = {
       id: newChatId,
       partnerId: user.id,

@@ -11,7 +11,6 @@ interface RightSidebarProps {
   trendingTags: { tag: string; count: number }[];
   selectedTag: string | null;
   setSelectedTag: (tag: string | null) => void;
-  systemSpeed: string;
   onViewProfile?: (userId: string) => void;
   onOpenExplore?: () => void;
   currentUserUsername?: string;

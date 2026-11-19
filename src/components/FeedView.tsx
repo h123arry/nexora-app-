@@ -1,3 +1,4 @@
+import { createSecureId } from '../utils/secureId';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Zap, Repeat, MessageCircle, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreHorizontal, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Bell, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity, Menu } from 'lucide-react';
@@ -1094,7 +1095,7 @@ export default function FeedView({
     };
 
     window.dispatchEvent(new CustomEvent('nexora-add-reply', {
-      detail: { postId, commentId, replyContent: content, replyId: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `reply-${Date.now()}-${Math.random().toString(36).slice(2)}` }
+      detail: { postId, commentId, replyContent: content, replyId: createSecureId('reply') }
     }));
 
     setReplyInputs(prev => ({ ...prev, [commentId]: '' }));

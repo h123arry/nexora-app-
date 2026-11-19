@@ -1,3 +1,4 @@
+import { createSecureId } from '../../utils/secureId';
 import { 
   collection, 
   doc, 
@@ -33,7 +34,7 @@ export class MemoryService {
 
     try {
       const eventsRef = collection(db, 'users', user.uid, 'memoryEvents');
-      const eventId = `evt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const eventId = createSecureId('evt');
       await setDoc(doc(eventsRef, eventId), {
         userId: user.uid,
         type,

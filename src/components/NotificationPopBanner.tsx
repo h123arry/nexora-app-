@@ -1,3 +1,4 @@
+import { createSecureId } from '../utils/secureId';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { getMotionPreset } from '../utils/motionPresets';
@@ -77,7 +78,7 @@ export default function NotificationPopBanner({
       if (!notification || showPop === false) return;
 
       const newPop: QueuedPop = {
-        id: notification.id || `pop-${Date.now()}-${Math.random()}`,
+        id: notification.id || createSecureId('pop'),
         notification,
         durationMs: 5500,
         addedAt: Date.now()
