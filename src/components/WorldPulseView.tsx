@@ -280,9 +280,9 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               { label: 'Public posts', value: communitySignals.postCount },
-              { label: 'Contributors', value: communitySignals.creatorCount },
+              { label: 'Creators', value: communitySignals.creatorCount },
               { label: 'Topics', value: communitySignals.topicCount },
-              { label: 'Interactions', value: communitySignals.interactionCount },
+              { label: 'Likes, comments and shares', value: communitySignals.interactionCount },
             ].map(metric => (
               <div key={metric.label} className="rounded-xl border border-white/5 bg-white/[0.025] px-3 py-3">
                 <div className="text-lg font-bold tabular-nums text-white">{metric.value.toLocaleString()}</div>
