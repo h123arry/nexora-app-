@@ -1421,10 +1421,10 @@ export default function ProfileView({
                 { label: 'Reputation', value: getSecondaryMetric('reputation') },
                 { label: 'Contributions', value: getSecondaryMetric('contributions') },
               ].map(stat => (
-                <div key={stat.label} className="flex flex-col gap-0.5 rounded-lg sm:rounded-xl border border-white/[0.06] bg-white/[0.025] px-1 py-1.5 sm:py-2">
+                <button key={stat.label} type="button" onClick={() => { if (stat.label === 'Followers' || stat.label === 'Following') { setRelationsTab(stat.label === 'Followers' ? 'followers' : 'following'); setActivePanel('social-graph'); } else if (stat.label === 'Posts') setProfileTab('media'); else if (stat.label === 'Sparks') setProfileTab('sparks'); }} className="flex flex-col gap-0.5 rounded-lg sm:rounded-xl border border-white/[0.06] bg-white/[0.025] px-1 py-1.5 text-center transition-colors hover:border-violet-400/30 hover:bg-violet-500/[0.07] sm:py-2">
                   <span className="text-sm sm:text-base font-black text-white leading-tight">{stat.value}</span>
                   <span className="text-[10px] sm:text-xs font-medium text-zinc-300 leading-tight">{stat.label}</span>
-                </div>
+                </button>
               ))}
             </div>
 
@@ -1520,7 +1520,8 @@ export default function ProfileView({
                 )}
               </section>
             )}
-            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} /> : filteredTabPosts.length === 0 ? (
+            {profileTab === 'media' && <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-2 px-3 pb-1"><span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Content</span><div className="flex flex-wrap gap-1.5">{([{id:'all',label:'All'},{id:'photos',label:'Photos'},{id:'videos',label:'Videos'},{id:'posts',label:'Text'},{id:'pinned',label:'Pinned'}] as const).map(filter => <button key={filter.id} type="button" onClick={() => setAllContentFilter(filter.id)} aria-pressed={allContentFilter === filter.id} className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold transition-colors ${allContentFilter === filter.id ? 'border-violet-400/40 bg-violet-500/15 text-violet-100' : 'border-white/10 bg-white/[0.025] text-zinc-400 hover:text-white'}`}>{filter.label}</button>)}</div></div>}
+            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} /> : filteredTabPosts.filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'videos' ? !!post.videoUrl : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).length === 0 ? (
               <div className="p-8 py-16 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 max-w-md mx-auto my-6">
                 <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                   {profileTab === 'media' && <Camera className="w-6 h-6" />}
@@ -1545,7 +1546,7 @@ export default function ProfileView({
             ) : (
               <div className="w-full max-w-4xl mx-auto px-2">
                 <MediaGrid 
-                  gridPosts={filteredTabPosts.sort((a, b) => (pinnedPostIdsList.includes(b.id) ? 1 : -1) - (pinnedPostIdsList.includes(a.id) ? 1 : 0))} 
+                  gridPosts={[...filteredTabPosts].filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'videos' ? !!post.videoUrl : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
                   pinnedPostIds={pinnedPostIdsList} 
                   onSelectPost={(post) => setSelectedGridPost(post)} 
                 />
