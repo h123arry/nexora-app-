@@ -131,7 +131,7 @@ interface MediaCreationEngineProps {
     scheduledTime?: string,
     isBroadcastPost?: boolean,
     communityName?: string,
-    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[] }
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[]; publicationId?: string; signal?: AbortSignal }
   ) => string;
   onPublishPost?: (...args: Parameters<MediaCreationEngineProps['onAddPost']>) => Promise<string>;
   onPublishStory?: (caption: string, file?: File, onProgress?: (progress: number) => void, signal?: AbortSignal) => Promise<string>;
@@ -374,6 +374,7 @@ export default function MediaCreationEngine({
   const loopTimerRef = useRef<any>(null);
   const createdObjectUrlsRef = useRef<Set<string>>(new Set());
   const uploadAbortControllerRef = useRef<AbortController | null>(null);
+  const publishAttemptIdRef = useRef<string | null>(null);
 
   const trackObjectUrl = (url: string) => {
     createdObjectUrlsRef.current.add(url);
@@ -1228,6 +1229,7 @@ export default function MediaCreationEngine({
     setBlur(0);
     setCommentsAllowed(true);
     setOriginRemixPolicyState('closed');
+    publishAttemptIdRef.current = null;
     setActiveMode(null);
     setCurrentStep(1);
   };
@@ -1246,6 +1248,9 @@ export default function MediaCreationEngine({
       setErrorMessage('Add a caption, media file, voice memo, or poll question before publishing.');
       setPostingStatus('failed');
       return;
+    }
+    if (activeTab !== 'story' && !publishAttemptIdRef.current) {
+      publishAttemptIdRef.current = crypto.randomUUID();
     }
     const uploadController = new AbortController();
     uploadAbortControllerRef.current = uploadController;
@@ -1480,6 +1485,8 @@ export default function MediaCreationEngine({
           commentsAllowed,
           mediaAssetId: uploadedOriginAssetIds[0],
           mediaAssetIds: uploadedOriginAssetIds,
+          publicationId: publishAttemptIdRef.current || undefined,
+          signal: uploadController.signal,
         }
       ] as Parameters<MediaCreationEngineProps['onAddPost']>;
       const createdPostId = onPublishPost
@@ -1487,6 +1494,7 @@ export default function MediaCreationEngine({
         : onAddPost(...publishArgs);
       if (!createdPostId) throw new Error('NEXORA could not confirm your post. Please sign in and try again.');
 
+      publishAttemptIdRef.current = null;
       setUploadProgress(100);
       setPostingStatus('completed');
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Your post is live on NEXORA.' }));
