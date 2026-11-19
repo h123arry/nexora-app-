@@ -213,7 +213,7 @@ interface ProfileViewProps {
   isLoggedIn?: boolean;
   posts: Post[];
   userSparks?: string[];
-  onUpdateProfile: (updatedData: Partial<User>) => void;
+  onUpdateProfile: (updatedData: Partial<User>) => void | Promise<void>;
   onLikePost: (postId: string) => void;
   onAddComment?: (postId: string, text: string) => void;
   onAddPost?: (content: string, imageUrl?: string, tagsString?: string, images?: string[], videoUrl?: string) => string;
@@ -976,7 +976,7 @@ export default function ProfileView({
       setShowSavedFeedback(true);
 
       const isOnline = navigator.onLine;
-      const successMsg = isOnline ? '✓ Profile updated successfully' : '⚠️ Profile updated locally and queued for offline sync.';
+      const successMsg = '✓ Profile updated successfully';
       window.dispatchEvent(new CustomEvent('toast', { detail: successMsg }));
 
       // Wait 1.5s for the success message feedback, then transition back smoothly
