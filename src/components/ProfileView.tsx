@@ -1211,7 +1211,7 @@ export default function ProfileView({
       <div className="nx-profile-main w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
         
           {/* Profile Completion Prompts */}
-          {isOwnProfile && (
+          {false && isOwnProfile && (
             <div className="nx-profile-completion mb-4 p-4 bg-violet-950/40 border border-white/10 rounded-2xl space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-violet-300 uppercase tracking-wider">✨ Profile Setup & Completion</span>
@@ -1289,7 +1289,7 @@ export default function ProfileView({
                     type="button"
                     onClick={() => setProfilePicExpanded(true)}
                     aria-label="View profile photo"
-                    className="w-16 h-16 sm:w-22 sm:h-22 rounded-full bg-black overflow-visible relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-md focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4"
+                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-black overflow-visible relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-md focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4"
                   >
                     <img
                       src={currentUser.avatar}
