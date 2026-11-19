@@ -1,4 +1,4 @@
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { assertCallableSessionActive } from './callableSession.js';
@@ -61,7 +61,7 @@ export const transferOwnedNexGift = onCall({ maxInstances: 20 }, async request =
       }
 
       if (!senderProfile.exists || !recipientProfile.exists) throw new HttpsError('not-found', 'The sender or recipient account could not be found.');
-      const restricted = (snapshot: FirebaseFirestore.DocumentSnapshot) => {
+      const restricted = (snapshot: DocumentSnapshot) => {
         const status = snapshot.data() || {};
         return status.suspended === true || status.giftingRestricted === true;
       };
