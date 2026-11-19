@@ -595,13 +595,14 @@ export default function ProfileView({
   const [editBio, setEditBio] = useState(currentUser.bio);
   const [editLocation, setEditLocation] = useState(currentUser.location || '');
   const [editWebsite, setEditWebsite] = useState(currentUser.website || '');
-  const [editPronouns, setEditPronouns] = useState('');
-  const [editCategory, setEditCategory] = useState('Digital Creator');
-  const [editCreatorType, setEditCreatorType] = useState('Premium creator');
+  const [editPronouns, setEditPronouns] = useState(currentUser.pronouns || '');
+  const [editCategory, setEditCategory] = useState(currentUser.profileCategory || 'Digital Creator');
+  const [editCreatorType, setEditCreatorType] = useState(currentUser.creatorType || 'Premium creator');
   const [editAvatar, setEditAvatar] = useState(currentUser.avatar);
   const [editCover, setEditCover] = useState(currentUser.coverImage);
-  const [editSocialTwitter, setEditSocialTwitter] = useState('');
-  const [editSocialInsta, setEditSocialInsta] = useState('');
+  const [editSocialTwitter, setEditSocialTwitter] = useState(currentUser.socialTwitter || '');
+  const [editSocialInsta, setEditSocialInsta] = useState(currentUser.socialInstagram || '');
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
 
   // Webcam capture states
   const [isWebcamActive, setIsWebcamActive] = useState(false);
@@ -946,6 +947,7 @@ export default function ProfileView({
 
     try {
       let persistedAvatar = editAvatar;
+      let persistedCover = editCover;
       // Cropped/captured photos are data URLs. Upload the binary to R2 instead
       // of writing a large base64 string into the Firestore profile document.
       if (editAvatar.startsWith('data:image/jpeg;base64,')) {
@@ -960,6 +962,11 @@ export default function ProfileView({
         });
         persistedAvatar = uploadedAvatar.downloadUrl;
       }
+      if (editCover.startsWith('data:image/')) {
+        const coverBlob = await fetch(editCover).then(response => { if (!response.ok) throw new Error('NEXORA could not prepare your cover photo.'); return response.blob(); });
+        const uploadedCover = await uploadMediaFile({ file: coverBlob, userId: currentUser.id, fileName: 'profile-cover.jpg' });
+        persistedCover = uploadedCover.downloadUrl;
+      }
 
       await Promise.resolve(onUpdateProfile({
         name: editName,
@@ -967,8 +974,13 @@ export default function ProfileView({
         bio: editBio,
         location: editLocation,
         website: editWebsite,
+        pronouns: editPronouns.trim(),
+        profileCategory: editCategory,
+        creatorType: editCreatorType,
+        socialTwitter: editSocialTwitter.trim(),
+        socialInstagram: editSocialInsta.trim(),
         avatar: persistedAvatar,
-        coverImage: editCover,
+        coverImage: persistedCover,
         lastDisplayNameChangeTime: editName !== currentUser.name ? new Date().toISOString() : currentUser.lastDisplayNameChangeTime,
         lastUsernameChangeTime: editUsername !== currentUser.username ? new Date().toISOString() : currentUser.lastUsernameChangeTime,
       }));
@@ -1323,7 +1335,8 @@ export default function ProfileView({
             ) : (
               <div className="h-full w-full rounded-2xl bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]" />
             )}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/35 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+            {isOwnProfile && <button type="button" onClick={() => setActivePanel('edit-profile')} className="absolute right-3 bottom-3 z-10 rounded-xl border border-white/15 bg-black/55 px-3 py-2 text-[10px] font-bold text-white backdrop-blur-md hover:bg-black/75"><Camera className="mr-1.5 inline h-3.5 w-3.5" /> Edit cover</button>}
             <div className="absolute left-4 -bottom-6">
               <div className="relative">
                 {currentUser.hasStory && <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 blur-[2px] opacity-80" />}
@@ -1393,6 +1406,10 @@ export default function ProfileView({
                 )}
               </div>
             </div>
+
+            {currentUser.website && (() => { const href = /^https?:\/\//i.test(currentUser.website) ? currentUser.website : 'https://' + currentUser.website; return <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1.5 text-xs text-violet-300 underline-offset-4 hover:text-violet-200 hover:underline"><LinkIcon className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{currentUser.website}</span></a>; })()}
+            {(currentUser.location || currentUser.pronouns) && <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-zinc-400">{currentUser.location && <span><MapPin className="mr-1 inline h-3 w-3" />{currentUser.location}</span>}{currentUser.pronouns && <span>{currentUser.pronouns}</span>}</div>}
+            {((currentUser.skills || []).length > 0 || Object.keys(currentUser.interestDNA || {}).length > 0) && <div className="flex flex-wrap gap-1.5 pt-1">{[...(currentUser.skills || []), ...Object.keys(currentUser.interestDNA || {}).sort((a,b) => (currentUser.interestDNA[b] || 0) - (currentUser.interestDNA[a] || 0))].filter((value,index,array) => value && array.indexOf(value) === index).slice(0,6).map(item => <span key={item} className="rounded-full border border-violet-400/15 bg-violet-500/10 px-2.5 py-1 text-[10px] font-medium text-violet-200">{item}</span>)}</div>}
 
             {/* Nexora 6 Statistics Grid */}
             <div className="nx-profile-stats grid grid-cols-3 sm:grid-cols-6 gap-y-1.5 gap-x-1 sm:gap-x-2 text-center mt-2 sm:mt-3">
@@ -3245,6 +3262,14 @@ export default function ProfileView({
                       </div>
                     </div>
 
+                  </div>
+
+                  {/* Optional profile cover photo */}
+                  <div className="space-y-3 rounded-3xl border border-white/10 bg-[#0b081c] p-5">
+                    <div className="flex items-center justify-between"><span className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-violet-300">Profile cover</span><span className="text-[9px] text-zinc-500">Optional · wide image</span></div>
+                    <div className="relative h-28 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]">{editCover ? <img src={editCover} alt="Cover preview" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-zinc-500">Your cover photo preview</div>}</div>
+                    <div className="flex flex-wrap gap-2"><button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => coverInputRef.current?.click()} className="rounded-xl bg-violet-600 px-4 py-2 text-[10px] font-bold uppercase text-white hover:bg-violet-500 disabled:opacity-50"><Camera className="mr-1.5 inline h-3.5 w-3.5" /> {editCover ? 'Change cover' : 'Add cover photo'}</button>{editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => setEditCover('')} className="rounded-xl border border-white/10 px-4 py-2 text-[10px] font-bold uppercase text-zinc-300 hover:bg-white/5 disabled:opacity-50">Remove cover</button>}</div>
+                    <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) { window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a JPG, PNG or WebP image under 8 MB.' })); return; } const reader = new FileReader(); reader.onload = () => { if (typeof reader.result === 'string') setEditCover(reader.result); }; reader.onerror = () => window.dispatchEvent(new CustomEvent('toast', { detail: 'The cover photo could not be read. Please try again.' })); reader.readAsDataURL(file); }} />
                   </div>
 
                   {/* Avatar photo editor trigger */}
