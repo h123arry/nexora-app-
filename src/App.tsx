@@ -1790,7 +1790,10 @@ export default function App() {
     communityName?: string,
     postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[]; publicationId?: string; signal?: AbortSignal }
   ): Promise<string> => {
-    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+    const publisher = firebaseProfile && firebaseUser && firebaseProfile.id === firebaseUser.uid
+      ? getRichUser(firebaseProfile)
+      : currentUser;
+    if (!isLoggedIn || !firebaseUser || publisher.id !== firebaseUser.uid) {
       throw new Error('Please finish signing in before sharing your post.');
     }
     if (isOffline || !navigator.onLine) {
@@ -1803,11 +1806,11 @@ export default function App() {
     const postId = `post-${postDetails?.publicationId || crypto.randomUUID()}`;
     const newPost: Post = {
       id: postId,
-      userId: currentUser.id,
-      username: currentUser.username,
-      name: currentUser.name,
-      avatar: currentUser.avatar,
-      isVerified: currentUser.isVerified || false,
+      userId: publisher.id,
+      username: publisher.username,
+      name: publisher.name,
+      avatar: publisher.avatar,
+      isVerified: publisher.isVerified || false,
       content,
       image: imageUrl,
       imageFilter,
@@ -1852,7 +1855,7 @@ export default function App() {
     else if (imageUrl || (images && images.length > 0)) postType = 'media_upload';
     else if (isVoice || voiceAudioUrl) postType = 'voice_publish';
     else if (opportunityType) postType = 'pulse_create';
-    createPostDb(currentUser.id, postId, postType);
+    createPostDb(publisher.id, postId, postType);
     return postId;
   };
 
@@ -1862,15 +1865,18 @@ export default function App() {
     onProgress?: (progress: number) => void,
     signal?: AbortSignal,
   ): Promise<string> => {
-    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+    const publisher = firebaseProfile && firebaseUser && firebaseProfile.id === firebaseUser.uid
+      ? getRichUser(firebaseProfile)
+      : currentUser;
+    if (!isLoggedIn || !firebaseUser || publisher.id !== firebaseUser.uid) {
       throw new Error('Please finish signing in before sharing your story.');
     }
     if (isOffline || !navigator.onLine) {
       throw new Error('You are offline. Reconnect before sharing your story.');
     }
     return file
-      ? createMediaStory(currentUser, file, caption, onProgress, signal)
-      : createTextStory(currentUser, caption);
+      ? createMediaStory(publisher, file, caption, onProgress, signal)
+      : createTextStory(publisher, caption);
   };
 
   const handleRemovePost = (postId: string) => {
@@ -2699,7 +2705,8 @@ export default function App() {
         {isCreatePostModalOpen && (
           <Suspense fallback={null}>
           <MediaCreationEngine
-            currentUser={currentUser}
+            currentUser={isLoggedIn && firebaseProfile && firebaseUser?.uid === firebaseProfile.id ? getRichUser(firebaseProfile) : currentUser}
+            authenticatedUserId={firebaseUser?.uid || ''}
             onClose={handleCloseCreateModal}
             onAddPost={handleAddPost}
             onPublishPost={handlePublishPost}
