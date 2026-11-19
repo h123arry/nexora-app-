@@ -9,7 +9,6 @@ import { getNotificationTimeSection } from '../utils/notificationTime';
 import {
   requestPushPermission,
   isPushPermissionGranted,
-  playNotificationSound,
 } from '../services/notificationService';
 
 interface NotificationsViewProps {
@@ -640,7 +639,7 @@ export default function NotificationsView({
                   </div>
                 </div>
 
-                <p className="text-[10px] leading-relaxed text-zinc-500">These switches only filter which activity appears in this inbox view. They do not change push, email, sound, vibration, or server delivery settings.</p>
+                <p className="text-[10px] leading-relaxed text-zinc-500">These switches only filter which activity appears in this inbox. Device alerts are delivered through push notifications when enabled.</p>
               </div>
             </div>
           </motion.div>
@@ -666,9 +665,17 @@ export default function NotificationsView({
               onClick={async () => {
                 const res = await requestPushPermission();
                 if (res === 'granted') {
-                  addToast("Browser notification permission granted. Device push delivery still requires a registered token.");
+                  try {
+                    const { PushNotificationService } = await import('../services/firebase/pushNotificationService');
+                    const token = await PushNotificationService.init();
+                    addToast(token
+                      ? "NEXORA push notifications are enabled on this device."
+                      : "Permission is granted, but push registration is not ready. Check the Firebase VAPID configuration.");
+                  } catch {
+                    addToast("Push registration could not be completed. Please try again.");
+                  }
                 } else {
-                  addToast("⚠️ Push permission was not granted by the browser.");
+                  addToast("Push permission was not granted by the browser.");
                 }
               }}
               className="px-2.5 py-1 rounded-xl bg-violet-600/20 hover:bg-violet-600/40 text-violet-300 border border-violet-500/30 text-[11px] font-mono flex items-center gap-1.5 transition-all cursor-pointer"
@@ -677,17 +684,7 @@ export default function NotificationsView({
               <span>{isPushPermissionGranted() ? 'Browser Permission Granted' : 'Request Browser Permission'}</span>
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                playNotificationSound('spark');
-                addToast("Notification sound test played on this device.");
-              }}
-              className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 transition-colors"
-              title="Test chime sound"
-            >
-              <Volume2 className="w-3.5 h-3.5 text-violet-300" />
-            </button>
+
           </div>
         </div>
 
