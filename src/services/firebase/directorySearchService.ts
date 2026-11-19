@@ -1,7 +1,7 @@
 import { httpsCallable } from 'firebase/functions';
 import { auth } from './config';
 import { functions } from '../../lib/firebase';
-import { getRenderableAvatarUrl } from '../../utils/avatarUrl';
+import { getSafeAvatar } from '../../data/database';
 
 export interface PublicDirectoryResult {
   people: Array<{ id: string; username: string; name: string; avatar: string; bio: string; isVerified: boolean }>;
@@ -19,11 +19,11 @@ export async function searchPublicDirectory(query: string, cursor?: string | nul
     ...data,
     people: data.people.map(person => ({
       ...person,
-      avatar: getRenderableAvatarUrl(person.avatar) || '',
+      avatar: getSafeAvatar(person.avatar, person.name || person.username),
     })),
     pages: data.pages.map(page => ({
       ...page,
-      avatar: getRenderableAvatarUrl(page.avatar) || '',
+      avatar: getSafeAvatar(page.avatar, page.name || page.username),
     })),
   };
 }
