@@ -123,7 +123,12 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
     }
 
     return await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Your edited photo could not be exported. Please try again.')), 'image/jpeg', 0.92);
+      const timeout = window.setTimeout(() => reject(new Error('Photo preparation took too long. Please try again with a smaller photo.')), 12000);
+      canvas.toBlob(blob => {
+        clearTimeout(timeout);
+        if (blob) resolve(blob);
+        else reject(new Error('Your edited photo could not be exported. Please try again.'));
+      }, 'image/jpeg', 0.92);
     });
   } finally {
     URL.revokeObjectURL(objectUrl);
@@ -160,7 +165,13 @@ async function optimizePhotoUpload(source: Blob): Promise<Blob> {
     const context = canvas.getContext('2d');
     if (!context) return source;
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const optimized = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/webp', 0.86));
+    const optimized = await new Promise<Blob | null>(resolve => {
+      const timeout = window.setTimeout(() => resolve(null), 10000);
+      canvas.toBlob(blob => {
+        clearTimeout(timeout);
+        resolve(blob);
+      }, 'image/webp', 0.86);
+    });
     return optimized && optimized.size > 0 && optimized.size < source.size ? optimized : source;
   } finally {
     URL.revokeObjectURL(objectUrl);
