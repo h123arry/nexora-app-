@@ -35,6 +35,29 @@ test('media uploads wait for Firebase auth hydration and retain UID ownership ch
   assert.match(storage, /user\.uid !== userId/);
 });
 
+test('photo and video publishing use the Firebase UID, not a potentially stale profile snapshot', async () => {
+  const [app, composer] = await Promise.all([
+    read('../src/App.tsx'),
+    read('../src/components/MediaCreationEngine.tsx'),
+  ]);
+  assert.match(app, /authenticatedUserId=\{firebaseUser\?\.uid \|\| ''\}/);
+  assert.match(app, /const publisher = firebaseProfile && firebaseUser && firebaseProfile\.id === firebaseUser\.uid/);
+  assert.match(app, /userId: publisher\.id/);
+  assert.match(composer, /const uploadOwnerId = authenticatedUserId \|\| currentUser\.id/);
+  assert.equal((composer.match(/userId: uploadOwnerId/g) || []).length, 4);
+  assert.doesNotMatch(composer, /userId: currentUser\.id/);
+});
+
+test('public profile onboarding creates a real username/password credential on the same Firebase UID', async () => {
+  const [setup, auth] = await Promise.all([
+    read('../src/components/PublicAccountSetup.tsx'),
+    read('../src/services/firebase/authService.ts'),
+  ]);
+  assert.match(setup, /AuthService\.completeUsernameRegistration/);
+  assert.match(auth, /linkWithCredential\(current, EmailAuthProvider\.credential\(email, input\.password\)\)/);
+  assert.match(auth, /ProfileService\.reserveUsername\(current\.uid, username\)/);
+});
+
 test('profile edits persist the private profile and update its public projection', async () => {
   const profile = await read('../src/services/firebase/profileService.ts');
   assert.match(profile, /await updateDoc\(docRef, \{ \.\.\.updates, updatedAt: serverTimestamp\(\) \}\)/);
