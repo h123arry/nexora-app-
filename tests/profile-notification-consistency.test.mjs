@@ -142,3 +142,11 @@ test('profile relationship lists use live Firestore edges and respect participan
   assert.doesNotMatch(profile, /localStorage\.getItem\('nexora_users_db'/);
   assert.match(profile, /Relationship lists are private for this account/);
 });
+
+test('loaded post authors and commenters receive live public profile subscriptions', async () => {
+  const app = await read('../src/App.tsx');
+  assert.match(app, /profileSubscriptionIds = useMemo/);
+  assert.match(app, /post\.comments \|\| \[\]/);
+  assert.match(app, /onSnapshot\(\s*doc\(db, 'publicProfiles', uid\)/);
+  assert.match(app, /setGlobalUsersMap\(previous => \(/);
+});
