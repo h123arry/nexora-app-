@@ -180,6 +180,8 @@ async function optimizePhotoUpload(source: Blob): Promise<Blob> {
 
 interface MediaCreationEngineProps {
   currentUser: User;
+  /** Firebase's authenticated UID is the source of truth for media ownership. */
+  authenticatedUserId?: string;
   onClose: () => void;
   onAddPost: (
     content: string, 
@@ -297,6 +299,7 @@ const RECORDING_DURATIONS = [
 
 export default function MediaCreationEngine({
   currentUser,
+  authenticatedUserId,
   onClose,
   onAddPost,
   onPublishPost,
@@ -310,6 +313,7 @@ export default function MediaCreationEngine({
   initialCaption = '',
   onOpenStudio
 }: MediaCreationEngineProps) {
+  const uploadOwnerId = authenticatedUserId || currentUser.id;
   const autosaveKey = `nexora_creation_autosave_v1_${currentUser.id || 'visitor'}`;
   const draftsKey = `nexora_post_drafts_v1_${currentUser.id || 'visitor'}`;
   const initialAutosave = readLocalAutosave(autosaveKey);
@@ -1445,7 +1449,7 @@ export default function MediaCreationEngine({
           const uploadExtension = publishBlob.type === 'image/webp' ? 'webp' : publishBlob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
           const uploaded = await uploadMediaFile({
             file: publishBlob,
-            userId: currentUser.id,
+            userId: uploadOwnerId,
             fileName: `photo-${index + 1}-${Date.now()}.${uploadExtension}`,
             signal: uploadController.signal,
             onProgress: progress => setUploadProgress(progress),
@@ -1470,7 +1474,7 @@ export default function MediaCreationEngine({
           if (isOffline) throw new Error('Connect to publish this video. Keep it as a draft and retry when online.');
           const uploaded = await uploadMediaFile({
             file: uploadVideoBlob,
-            userId: currentUser.id,
+            userId: uploadOwnerId,
             fileName: `video-${Date.now()}.${videoFileExtension(uploadVideoBlob.type) || 'video'}`,
             signal: uploadController.signal,
             onProgress: progress => setUploadProgress(progress),
@@ -1479,7 +1483,7 @@ export default function MediaCreationEngine({
           uploadedOriginAssetIds.push(uploaded.mediaId);
           if (mainImg?.startsWith('blob:') || mainImg?.startsWith('data:')) {
             const thumbnail = videoCoverBlob || await (await fetch(mainImg)).blob();
-            const uploadedThumbnail = await uploadMediaFile({ file: thumbnail, userId: currentUser.id, fileName: `video-thumbnail-${Date.now()}.jpg`, signal: uploadController.signal });
+            const uploadedThumbnail = await uploadMediaFile({ file: thumbnail, userId: uploadOwnerId, fileName: `video-thumbnail-${Date.now()}.jpg`, signal: uploadController.signal });
             mainImg = uploadedThumbnail.downloadUrl;
           }
         } catch (e) {
@@ -1500,7 +1504,7 @@ export default function MediaCreationEngine({
       if (uploadVoiceBlob && activeMode === 'voice') {
         const uploadedVoice = await uploadMediaFile({
           file: uploadVoiceBlob,
-          userId: currentUser.id,
+          userId: uploadOwnerId,
           fileName: `voice-${Date.now()}.webm`,
           signal: uploadController.signal,
           onProgress: progress => setUploadProgress(progress),
