@@ -23,6 +23,7 @@ messaging.onBackgroundMessage((payload) => {
     body: data.body || data.content || 'You have a new NEXORA update.',
     icon: '/nexora-mark.png',
     badge: '/icons/icon-48.png',
+    silent: true,
     tag: data.notificationId || `nexora-${data.type || 'update'}-${data.targetId || 'general'}`,
     data
   };
