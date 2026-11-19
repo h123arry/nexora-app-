@@ -28,6 +28,7 @@ const PHONE_AUTH_ENABLED = isPhoneAuthAvailable(runtimeEnv);
 interface AuthViewProps {
   onLoginSuccess: (loggedUser: User) => void;
   promptReason?: string;
+  initialMode?: 'login' | 'signup';
 }
 
 const COUNTRIES = [
@@ -68,9 +69,9 @@ const INTEREST_TOPICS = [
 
 const MAX_FAILED_ATTEMPTS = 5;
 
-export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps) {
+export default function AuthView({ onLoginSuccess, promptReason, initialMode }: AuthViewProps) {
   // Navigation & Auth Flow Modes
-  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>(() => typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('beta') ? 'signup' : 'login');
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>(() => initialMode || (typeof window !== 'undefined' && (new URLSearchParams(window.location.search).has('beta') || new URLSearchParams(window.location.search).has('signup')) ? 'signup' : 'login'));
   const [betaInviteCode] = useState(() => typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('beta') || '' : '');
   const betaJoinStartedRef = useRef(false);
   
