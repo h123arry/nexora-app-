@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface NotificationPopBannerProps {
   onNavigateToPost?: (postId: string, focusComment?: boolean) => void;
   onNavigateToProfile?: (userId: string) => void;
