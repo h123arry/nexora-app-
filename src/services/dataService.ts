@@ -421,13 +421,10 @@ export async function publishPostNow(post: any, signal?: AbortSignal): Promise<v
   }
   sanitizedPost.audience = 'public';
   const { setDoc } = await import('firebase/firestore');
+  if (signal?.aborted) throw new Error('The post save was stopped before confirmation. Try sharing again.');
   const write = setDoc(doc(db, 'posts', sanitizedPost.id), sanitizedPost);
   if (signal) {
     await new Promise<void>((resolve, reject) => {
-      if (signal.aborted) {
-        reject(new Error('The post save was stopped before confirmation. Try sharing again.'));
-        return;
-      }
       const onAbort = () => reject(new Error('NEXORA could not confirm the save in time. Retry safely; your post will not be duplicated.'));
       signal.addEventListener('abort', onAbort, { once: true });
       write.then(
