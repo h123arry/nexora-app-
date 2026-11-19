@@ -28,7 +28,10 @@ before(async () => {
 
 after(async () => {
   const notifications = await db.collection('users').doc('author').collection('notifications').get();
-  await Promise.all(notifications.docs.map(doc => doc.ref.delete()));
+  await Promise.all([
+    ...notifications.docs.map(doc => doc.ref.delete()),
+    db.recursiveDelete(db.collection('users').doc('mentioned').collection('notifications')),
+  ]);
   for (const postId of postIds) await db.doc(`posts/${postId}`).delete();
   await Promise.all(['author', 'commenter', 'mentioned'].map(id => db.doc(`publicProfiles/${id}`).delete()));
   await deleteApp(app);
