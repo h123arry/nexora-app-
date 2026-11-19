@@ -406,7 +406,7 @@ export async function savePostToDb(post: any) {
  * Unlike the background sync queue, this resolves only after Firestore confirms
  * the write, so the composer never reports success for a merely queued post.
  */
-export async function publishPostNow(post: any): Promise<void> {
+export async function publishPostNow(post: any, signal?: AbortSignal): Promise<void> {
   const signedInUser = auth.currentUser;
   if (!signedInUser || signedInUser.uid !== post?.userId) {
     throw new Error('Your account session changed. Sign in again before sharing.');
@@ -421,7 +421,29 @@ export async function publishPostNow(post: any): Promise<void> {
   }
   sanitizedPost.audience = 'public';
   const { setDoc } = await import('firebase/firestore');
-  await setDoc(doc(db, 'posts', sanitizedPost.id), sanitizedPost);
+  const write = setDoc(doc(db, 'posts', sanitizedPost.id), sanitizedPost);
+  if (signal) {
+    await new Promise<void>((resolve, reject) => {
+      if (signal.aborted) {
+        reject(new Error('The post save was stopped before confirmation. Try sharing again.'));
+        return;
+      }
+      const onAbort = () => reject(new Error('NEXORA could not confirm the save in time. Retry safely; your post will not be duplicated.'));
+      signal.addEventListener('abort', onAbort, { once: true });
+      write.then(
+        () => {
+          signal.removeEventListener('abort', onAbort);
+          resolve();
+        },
+        error => {
+          signal.removeEventListener('abort', onAbort);
+          reject(error);
+        },
+      );
+    });
+  } else {
+    await write;
+  }
   cacheManager.setPost(sanitizedPost.id, sanitizedPost);
 }
 
