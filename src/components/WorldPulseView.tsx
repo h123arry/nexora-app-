@@ -59,7 +59,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
       pulseCursorRef.current = page.nextCursor;
       setActivityHasMore(page.hasMore);
     }).catch(error => {
-      console.error('World Pulse public activity could not be loaded:', error);
+      console.error('Trending public activity could not be loaded:', error);
       if (!cancelled) setActivityError(true);
     }).finally(() => {
       if (!cancelled) setActivityLoading(false);
@@ -108,7 +108,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
       pulseCursorRef.current = page.nextCursor;
       setActivityHasMore(page.hasMore);
     } catch (error) {
-      console.error('World Pulse could not load more public posts:', error);
+      console.error('Trending could not load more public posts:', error);
       triggerToast('More activity could not be loaded. Please try again.');
     } finally {
       setActivityLoadingMore(false);
@@ -125,9 +125,9 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
       setActivityHasMore(page.hasMore);
       setActivityError(false);
     } catch (error) {
-      console.error('World Pulse refresh failed:', error);
+      console.error('Trending refresh failed:', error);
       setActivityError(true);
-      triggerToast('World Pulse could not refresh. Please try again.');
+      triggerToast('Trending posts couldn't refresh. Please try again.');
     } finally {
       setActivityRefreshing(false);
     }
@@ -181,7 +181,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
     }
   };
 
-  // World Pulse Alert toggler
+  // Trending Alert toggler
   const handleToggleAlert = async (topic: string) => {
     if (topicsLoading) return;
     const next = followedAlerts.includes(topic)
@@ -195,7 +195,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
       setFollowedAlerts(next);
       triggerToast(`${followedAlerts.includes(topic) ? 'Removed' : 'Saved'} ${topic} in your account topic preferences. Alerts are not delivered yet.`);
     } catch (error) {
-      console.error('World Pulse topic preference update failed:', error);
+      console.error('Trending topic preference update failed:', error);
       triggerToast('Your topic preferences could not be saved. Please try again.');
     }
   };
@@ -222,7 +222,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
       {/* HEADER SECTION */}
       <div className="border-b border-white/10 pb-4">
         <h2 className="text-xl font-black font-sans text-white flex items-center gap-2 tracking-tight">
-          <span className="text-xl">🌍</span> World Pulse
+          <span className="text-xl">🌍</span> Trending
         </h2>
         <p className="text-xs text-violet-300/60 mt-0.5">
           Recent public posts and topic activity from NEXORA, with no synthetic trends.
@@ -235,7 +235,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-violet-400/40" />
           <input 
             type="text"
-            placeholder="Search World Pulse topics..."
+            placeholder="Search trending posts..."
             value={pulseSearch}
             onChange={(e) => setPulseSearch(e.target.value)}
             className="nx-field min-h-12 w-full pl-12 pr-5 py-3 font-sans text-xs focus:border-cyan-500/50 focus:bg-[#070514]"
@@ -318,7 +318,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
               </button>
             ))}
           </div>
-          <p className="text-[9px] text-violet-200/35">Signals reflect the public posts currently loaded in World Pulse, not all activity across the internet or all NEXORA posts.</p>
+          <p className="text-[9px] text-violet-200/35">These topics come from public posts currently shown in Trending.</p>
         </section>
       )}
 
@@ -477,7 +477,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <span className="text-[10px] text-violet-300/50">{visiblePulsePosts.length} loaded</span>
-              <button type="button" onClick={() => void refreshPulseActivity()} disabled={activityRefreshing || activityLoadingMore || activityLoading} aria-label="Refresh World Pulse activity" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-violet-400/20 px-2.5 text-[10px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/10 disabled:cursor-not-allowed disabled:opacity-50">
+              <button type="button" onClick={() => void refreshPulseActivity()} disabled={activityRefreshing || activityLoadingMore || activityLoading} aria-label="Refresh Trending activity" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-violet-400/20 px-2.5 text-[10px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/10 disabled:cursor-not-allowed disabled:opacity-50">
                 <RefreshCw className={`h-3 w-3 ${activityRefreshing ? 'animate-spin' : ''}`} />
                 {activityRefreshing ? 'Refreshing' : 'Refresh'}
               </button>
