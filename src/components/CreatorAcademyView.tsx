@@ -54,24 +54,24 @@ const BASE_COURSES: Course[] = [
     { id: 'wellbeing', title: 'Create sustainably', minutes: 8, summary: 'Set boundaries, manage pressure and build a healthy publishing rhythm.' },
   ]},
   { id: 'video-production', title: 'Make better videos', level: 'Beginner', category: 'Production', description: 'Plan, capture and edit clear video stories with accessible sound, intentional framing and a repeatable production workflow.', lessons: [
-    { id: 'shot-planning', title: 'Plan a visual sequence', minutes: 9, summary: 'Plan a visual sequence through simple editing steps and checks.' },
-    { id: 'sound-lighting', title: 'Record clean sound and usable light', minutes: 11, summary: 'Record clean sound and usable light through simple editing steps and checks.' },
+    { id: 'shot-planning', title: 'Plan a visual sequence', minutes: 9, summary: 'Plan each shot and how it fits the finished video.' },
+    { id: 'sound-lighting', title: 'Record clean sound and usable light', minutes: 11, summary: 'Improve audio, lighting and recording quality.' },
     { id: 'editing-workflow', title: 'Edit for clarity and rhythm', minutes: 9, summary: 'Make your videos clear and enjoyable with a few simple editing steps.' },
   ]},
   { id: 'creator-finance', title: 'Creator money and business', level: 'Intermediate', category: 'Finance', description: 'Learn to manage your creator income, costs, records, savings and taxes.', lessons: [
-    { id: 'income-costs', title: 'Understand creator income and costs', minutes: 9, summary: 'Understand creator income and costs through simple editing steps and checks.' },
-    { id: 'cash-flow', title: 'Manage cash flow and reserves', minutes: 11, summary: 'Manage cash flow and reserves through simple editing steps and checks.' },
-    { id: 'records-tax', title: 'Keep useful financial records', minutes: 9, summary: 'Keep useful financial records through simple editing steps and checks.' },
+    { id: 'income-costs', title: 'Understand creator income and costs', minutes: 9, summary: 'Track income, expenses and what you keep.' },
+    { id: 'cash-flow', title: 'Manage cash flow and reserves', minutes: 11, summary: 'Plan spending and keep money aside for future costs.' },
+    { id: 'records-tax', title: 'Keep useful financial records', minutes: 9, summary: 'Keep clear records of payments, costs and tax.' },
   ]},
   { id: 'creative-rights', title: 'Creative Rights, Licensing and Contracts', level: 'All levels', category: 'Professional practice', description: 'Protect original work, obtain permissions and understand the practical terms behind collaborations and licensing.', lessons: [
-    { id: 'ownership-permissions', title: 'Understand ownership and permissions', minutes: 9, summary: 'Understand ownership and permissions through simple editing steps and checks.' },
-    { id: 'music-image-licensing', title: 'Use music, images and footage responsibly', minutes: 11, summary: 'Use music, images and footage responsibly through simple editing steps and checks.' },
-    { id: 'contracts-deliverables', title: 'Read contracts and define deliverables', minutes: 9, summary: 'Read contracts and define deliverables through simple editing steps and checks.' },
+    { id: 'ownership-permissions', title: 'Understand ownership and permissions', minutes: 9, summary: 'Know who owns your work and when you need permission.' },
+    { id: 'music-image-licensing', title: 'Use music, images and footage responsibly', minutes: 11, summary: 'Choose content you have permission to use.' },
+    { id: 'contracts-deliverables', title: 'Read contracts and define deliverables', minutes: 9, summary: 'Understand agreements, deadlines and what you must deliver.' },
   ]},
   { id: 'inclusive-creation', title: 'Accessible and Inclusive Content', level: 'All levels', category: 'Accessibility', description: 'Make content easier to understand and participate in through captions, descriptions, inclusive language and thoughtful design.', lessons: [
-    { id: 'captions-transcripts', title: 'Create accurate captions and transcripts', minutes: 9, summary: 'Create accurate captions and transcripts through simple editing steps and checks.' },
-    { id: 'visual-accessibility', title: 'Improve visual and audio accessibility', minutes: 11, summary: 'Improve visual and audio accessibility through simple editing steps and checks.' },
-    { id: 'inclusive-community', title: 'Build inclusive participation', minutes: 9, summary: 'Build inclusive participation through simple editing steps and checks.' },
+    { id: 'captions-transcripts', title: 'Create accurate captions and transcripts', minutes: 9, summary: 'Write captions and transcripts that match your content.' },
+    { id: 'visual-accessibility', title: 'Improve visual and audio accessibility', minutes: 11, summary: 'Make videos easier to follow with clear visuals and sound.' },
+    { id: 'inclusive-community', title: 'Build inclusive participation', minutes: 9, summary: 'Help more people feel welcome and take part.' },
   ]},
 ];
 
@@ -400,12 +400,12 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
               ))}
             </section>
           )}
-          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-violet-400/15 bg-violet-500/5 p-4"><Sparkles size={17} className="mt-0.5 shrink-0 text-violet-300"/><p className="text-xs leading-5 text-white/55">Your progress is saved to your NEXORA account. Tests are marked automatically, and you receive a certificate after you pass. Introductory lessons help you learn but do not give certificates.</p></div>
+          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-violet-400/15 bg-violet-500/5 p-4"><Sparkles size={17} className="mt-0.5 shrink-0 text-violet-300"/><p className="text-xs leading-5 text-white/55">Your progress saves automatically. Pass a course assessment to earn a certificate. Introductory lessons don’t include certificates.</p></div>
         </section>
       </div>
 
       <section className="space-y-4 rounded-3xl border border-white/10 bg-[#0b1020] p-5 md:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="flex items-center gap-2 text-violet-300"><GraduationCap size={17}/><span className="text-[10px] font-black uppercase tracking-[0.18em]">Mentorship programme</span></div><h3 className="mt-2 text-lg font-black text-white">Upcoming sessions with mentors</h3><p className="mt-1 text-xs text-white/45">Book a place in a scheduled session. Places are limited, so book early.</p></div><span className="text-[10px] text-white/40">{mentorshipSessions.length} listed</span></div>
+        <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="flex items-center gap-2 text-violet-300"><GraduationCap size={17}/><span className="text-[10px] font-black uppercase tracking-[0.18em]">Mentorship programme</span></div><h3 className="mt-2 text-lg font-black text-white">Upcoming sessions with mentors</h3><p className="mt-1 text-xs text-white/45"></p></div><span className="text-[10px] text-white/40">{mentorshipSessions.length} listed</span></div>
         {mentorshipNotice && <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3 text-xs text-emerald-200">{mentorshipNotice}</p>}
         {mentorshipError && <p role="alert" className="rounded-xl border border-amber-300/20 bg-amber-400/5 p-3 text-xs text-amber-100">{mentorshipError}</p>}
         {mentorshipLoading ? <p className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-white/40">Loading upcoming sessions…</p> : mentorshipSessions.length === 0 ? <p className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-white/40">There are no upcoming sessions with available seats right now.</p> : <div className="grid gap-3 md:grid-cols-2">{mentorshipSessions.map(session => <article key={session.sessionId} className="rounded-2xl border border-white/10 bg-black/20 p-4"><div className="flex items-start justify-between gap-3"><div><h4 className="text-sm font-bold text-white">{session.title}</h4><p className="mt-1 text-[10px] text-violet-200">{session.mentorName}{session.mentorUsername?' · @'+session.mentorUsername:''}</p></div><span className="rounded-lg bg-violet-500/10 px-2 py-1 text-[10px] text-violet-200">{session.seatsAvailable} seats</span></div><p className="mt-3 text-xs leading-5 text-white/55">{session.description}</p><p className="mt-3 text-[10px] text-white/40">{new Date(session.startsAt).toLocaleString([], {dateStyle:'medium',timeStyle:'short'})} · {session.durationMinutes} minutes</p><button type="button" disabled={bookingSessionId!==null || session.isBooked} onClick={()=>void bookMentorship(session.sessionId)} className="mt-4 min-h-10 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 text-xs font-bold text-violet-100 disabled:opacity-40">{bookingSessionId===session.sessionId?'Booking…':session.isBooked?'Already booked':'Book this session'}</button></article>)}</div>}
@@ -416,7 +416,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
 
       <section className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/8 bg-[#0b1020] p-4"><div className="flex items-center gap-2 text-violet-300"><Award size={17}/><span className="text-xs font-bold">Institutional learning record</span></div><p className="mt-2 text-xs leading-5 text-white/45">Your completed lessons are saved against your account. Eligible courses can connect this learning record to assessed credentials and mentorship.</p></div>
-        <div className="rounded-2xl border border-white/8 bg-[#0b1020] p-4"><div className="flex items-center gap-2 text-violet-300"><GraduationCap size={17}/><span className="text-xs font-bold">Built for long-term growth</span></div><p className="mt-2 text-xs leading-5 text-white/45">Our courses cover content creation, growing your audience, building a community, going live, understanding your results, business and creator safety.</p></div>
+        <div className="rounded-2xl border border-white/8 bg-[#0b1020] p-4"><div className="flex items-center gap-2 text-violet-300"><GraduationCap size={17}/><span className="text-xs font-bold">Built for long-term growth</span></div><p className="mt-2 text-xs leading-5 text-white/45">Courses cover content, audience growth, community, business and creator safety.</p></div>
       </section>
       {loading && <p className="text-center text-xs text-white/35">Saving your progress…</p>}
       {isInstructor && <CreatorAcademyInstitutionTools />}
