@@ -1634,7 +1634,7 @@ export default function App() {
     scheduledTime?: string,
     isBroadcastPost?: boolean,
     communityName?: string,
-    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[] }
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[]; publicationId?: string; signal?: AbortSignal }
   ): string => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       requireAuth(() => handleAddPost(content, imageUrl, tagsString, images, videoUrl, voiceTranscript, voiceAudioUrl, audience, isVoice, voiceDuration, interactivePoll, opportunityType, pulseRegion, imageFilter, imageFilters, scheduledTime, isBroadcastPost, communityName, postDetails), 'Complete your NEXORA profile to publish content.');
@@ -1645,7 +1645,7 @@ export default function App() {
       ? tagsString.split(',').map(t => t.trim().replace('#', '')).filter(t => t.length > 0)
       : [];
 
-    const postId = `post-${crypto.randomUUID()}`;
+    const postId = `post-${postDetails?.publicationId || crypto.randomUUID()}`;
     const newPost: Post = {
       id: postId,
       userId: currentUser.id,
@@ -1727,7 +1727,7 @@ export default function App() {
     scheduledTime?: string,
     isBroadcastPost?: boolean,
     communityName?: string,
-    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[] }
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[]; publicationId?: string; signal?: AbortSignal }
   ): Promise<string> => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       throw new Error('Please finish signing in before sharing your post.');
@@ -1784,7 +1784,7 @@ export default function App() {
 
     // Do not show the post in the feed or tell the creator it was shared until
     // Firestore confirms the durable write.
-    await publishPostNow(newPost);
+    await publishPostNow(newPost, postDetails?.signal);
     setPosts(previous => [newPost, ...previous]);
     let postType: 'post_create' | 'media_upload' | 'video_publish' | 'pulse_create' | 'voice_publish' = 'post_create';
     if (videoUrl) postType = 'video_publish';
