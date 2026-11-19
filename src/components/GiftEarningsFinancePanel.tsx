@@ -46,12 +46,12 @@ export default function GiftEarningsFinancePanel() {
     setBusyId(record.transactionId); setError(''); setNotice('');
     try {
       const result = await settleGiftCreatorEarning(record.transactionId);
-      const successMessage = result.replayed ? 'This gift was already settled. The ledger was not charged again.' : `Settled ${result.creatorShareNex?.toLocaleString() || '0'} NEX to the creator and ${result.platformShareNex?.toLocaleString() || '0'} NEX to the platform treasury.`;
+      const successMessage = result.replayed ? 'This gift was already paid out. It won't be counted twice.' : `Settled ${result.creatorShareNex?.toLocaleString() || '0'} NEX to the creator and ${result.platformShareNex?.toLocaleString() || '0'} NEX to the platform treasury.`;
       await refresh();
       setNotice(successMessage);
     } catch (cause) {
       const code = (cause as { code?: string })?.code || '';
-      setError(code.includes('permission-denied') ? 'Your finance permission is no longer active.' : 'Settlement was not confirmed. Check the ledger before retrying.');
+      setError(code.includes('permission-denied') ? 'Your finance permission is no longer active.' : 'The payment wasn't confirmed. Check the payment history before trying again.');
     } finally { setBusyId(''); }
   };
 
@@ -77,10 +77,10 @@ export default function GiftEarningsFinancePanel() {
         <div className="mt-3 rounded-lg border border-white/10 bg-white/[.03] p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-[10px] font-bold text-violet-200">{riskLabel(record.riskDisposition)}</span>
-            <span className="text-[10px] text-slate-500">{record.riskTier ? record.riskTier.toUpperCase() + ' risk' : 'No risk signal'}</span>
+            <span className="text-[10px] text-slate-500">{record.riskTier ? record.riskTier.toUpperCase() + ' risk' : 'No unusual activity'}</span>
           </div>
           {record.riskReasons.length > 0 && <p className="mt-1 text-[10px] leading-4 text-slate-400">{record.riskReasons.join(' · ')}</p>}
-          {record.riskDisposition === 'review_only' && <p className="mt-1 text-[10px] text-amber-200">Clear this signal in Gift Economy Operations before settling.</p>}
+          {record.riskDisposition === 'review_only' && <p className="mt-1 text-[10px] text-amber-200">Review this activity in Gift and Payout Management before paying out.</p>}
           {record.riskDisposition === 'escalated' && <p className="mt-1 text-[10px] text-rose-200">This gift cannot be settled while the risk decision is escalated.</p>}
         </div>
         <button type="button" disabled={!!busyId || !canSettle(record)} onClick={() => void settle(record)} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 text-xs font-bold text-white disabled:opacity-50">
@@ -88,6 +88,6 @@ export default function GiftEarningsFinancePanel() {
         </button>
       </article>)}</div>}
     {hasMore && <p className="text-[10px] text-slate-500">Showing the latest 100 pending records. Older queue items require a subsequent page.</p>}
-    <p className="text-[10px] leading-5 text-slate-500">Every approval is finance-claim protected and posts a balanced, idempotent NEX ledger settlement. This control does not initiate bank withdrawals.</p>
+    <p className="text-[10px] leading-5 text-slate-500">Only approved finance staff can confirm these payments. This does not send money to a bank account.</p>
   </section>;
 }
