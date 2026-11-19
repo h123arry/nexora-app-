@@ -29,14 +29,7 @@ interface AuthViewProps {
   promptReason?: string;
 }
 
-const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
-];
+const PRESET_AVATARS: string[] = [];
 
 const COUNTRIES = [
   { code: '+1', name: 'United States', flag: '🇺🇸' },
@@ -133,7 +126,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
   });
 
   // Step 2 Avatar
-  const [selectedAvatar, setSelectedAvatar] = useState(PRESET_AVATARS[0]);
+  const [selectedAvatar, setSelectedAvatar] = useState('');
   const [customAvatarUrl, setCustomAvatarUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -702,18 +695,27 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                 <div>
                   <h2 className="text-xl font-extrabold text-white tracking-tight">Add Profile Photo</h2>
                   <p className="text-xs text-zinc-400 mt-1">
-                    Choose a profile picture or select one of our default avatars.
+                    Add your own photo, or continue with the neutral NEXORA placeholder.
                   </p>
                 </div>
 
                 {/* Avatar Preview */}
                 <div className="flex flex-col items-center gap-3">
                   <div className="relative group">
-                    <img 
-                      src={selectedAvatar} 
-                      alt="Avatar preview" 
-                      className="w-24 h-24 rounded-full object-cover border-2 border-violet-500 shadow-[0_0_25px_rgba(139,92,246,0.4)]"
-                    />
+                    {selectedAvatar ? (
+                      <img
+                        src={selectedAvatar}
+                        alt="Avatar preview"
+                        className="w-24 h-24 rounded-full object-cover border-2 border-violet-500 shadow-[0_0_25px_rgba(139,92,246,0.4)]"
+                      />
+                    ) : (
+                      <div
+                        aria-label="Neutral NEXORA avatar placeholder"
+                        className="w-24 h-24 rounded-full border-2 border-violet-500/60 bg-gradient-to-br from-[#21134b] to-[#090714] flex items-center justify-center shadow-[0_0_25px_rgba(139,92,246,0.25)]"
+                      >
+                        <span className="text-3xl font-black text-violet-200">{(onboardingUser?.name || 'N').trim().charAt(0).toUpperCase()}</span>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
