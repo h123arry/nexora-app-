@@ -27,6 +27,12 @@ export interface SendGiftInput {
   idempotencyKey: string;
 }
 export interface SendGiftResult { giftId: string; replayed: boolean; status: 'delivered'; units?: number; currency?: 'NEX'; }
+export async function transferOwnedNexGift(input: SendGiftInput): Promise<SendGiftResult> {
+  const call = httpsCallable<SendGiftInput, SendGiftResult>(functions, 'transferOwnedNexGift');
+  return (await call({ ...input, quantity: input.quantity ?? 1 })).data;
+}
+
+/** Legacy NEX-paid delivery remains available only to existing callers during migration. */
 export async function sendNexGift(input: SendGiftInput): Promise<SendGiftResult> {
   const call = httpsCallable<SendGiftInput, SendGiftResult>(functions, 'sendNexGift');
   return (await call({ ...input, quantity: input.quantity ?? 1 })).data;
