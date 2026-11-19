@@ -394,7 +394,7 @@ export default function AdminDashboardView({
             NEXORA Core Control Dashboard
           </h2>
           <p className="text-xs text-purple-200/50 font-sans mt-0.5 max-w-xl">
-            You are logged in as <span className="font-bold text-rose-400 font-mono">@{currentUser.username}</span> (Founder). Moderating posts, accounts, reputation balances, and system health status.
+            You are logged in as <span className="font-bold text-rose-400 font-mono">@{currentUser.username}</span> (Founder). Reviewing posts, accounts, reputation points, and app status.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -559,7 +559,7 @@ export default function AdminDashboardView({
                   <tr className="bg-black/50 border-b border-white/5 text-[9.5px] font-mono uppercase text-zinc-400 tracking-wider">
                     <th className="p-4">User Identity</th>
                     <th className="p-4">Staff Verification / Role</th>
-                    <th className="p-4">Trust Reputation</th>
+                    <th className="p-4">Account reputation</th>
                     <th className="p-4">Restriction status</th>
                     <th className="p-4 text-right">System Directives</th>
                   </tr>
@@ -607,7 +607,7 @@ export default function AdminDashboardView({
                             onClick={() => handleResetReputation(user)}
                             disabled={!canManageUsers}
                             className="p-1 hover:bg-zinc-800 rounded text-amber-500 transition-all hover:scale-110 active:scale-95 cursor-pointer"
-                            title="Reset Reputation to 0"
+                            title="Reset reputation points to 0"
                           >
                             <RotateCcw className="w-3 h-3" />
                           </button>
@@ -647,7 +647,7 @@ export default function AdminDashboardView({
                   {filteredUsers.length === 0 && (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-zinc-500 font-mono text-[10.5px]">
-                        {userDirectoryUnavailable ? 'USER DIRECTORY UNAVAILABLE OR ACCESS DENIED.' : 'NO REGISTERED SYSTEM USERS MATCH THE SELECTION MATRIX query.'}
+                        {userDirectoryUnavailable ? 'Can't load the user list. You may not have permission.' : 'No accounts match your search.'}
                       </td>
                     </tr>
                   )}
@@ -789,7 +789,7 @@ export default function AdminDashboardView({
                   {(application.reviewSignals?.possibleNameCollision || (application.reviewSignals?.duplicateEvidenceLinkCount || 0) > 0 || application.reviewSignals?.evidenceScanMayBeIncomplete) && (
                     <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 text-[10px] leading-relaxed text-amber-100">
                       <strong>Possible identity overlap.</strong> {application.reviewSignals?.nameCollisionCount || 0} matching active name claim(s), {application.reviewSignals?.duplicateEvidenceLinkCount || 0} shared evidence link(s).
-                      {application.reviewSignals?.evidenceScanMayBeIncomplete ? ' The match scan reached its safety limit; inspect manually.' : ' This is an advisory signal, not proof or grounds for automatic rejection.'}
+                      {application.reviewSignals?.evidenceScanMayBeIncomplete ? ' The match scan reached its safety limit; inspect manually.' : ' This is a warning to review, not proof that the account should be rejected.'}
                     </div>
                   )}
                   <div className="space-y-1">
@@ -939,7 +939,7 @@ export default function AdminDashboardView({
             <div className="p-4 rounded-2xl bg-zinc-950/60 border border-cyan-500/10 flex items-center justify-between">
               <div className="space-y-1">
                 <span className="text-[10px] text-cyan-400 font-bold block">● DIAGNOSTIC SERVICES ACTIVE</span>
-                <p className="text-xs text-zinc-300 uppercase">Latency and memory telemetry: <span className="text-amber-300 font-bold">Not tracked</span></p>
+                <p className="text-xs text-zinc-300 uppercase">App speed and memory: <span className="text-amber-300 font-bold">Not tracked</span></p>
               </div>
               <Activity className="w-5 h-5 text-cyan-400 animate-pulse shrink-0" />
             </div>
