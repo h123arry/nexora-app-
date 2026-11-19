@@ -263,7 +263,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     setBusy(true); setError(''); setNotice('');
     try {
       const joined = await joinPublicWorldWeave(selected.id);
-      setSelected(joined); setNotice('You are now a contributor. Add your perspective to the shared timeline.');
+      setSelected(joined); setNotice('You're now a member. Add your moment to the story.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not join this shared story.'); }
     finally { setBusy(false); }
   };
@@ -315,19 +315,19 @@ export default function WorldWeaveView({ currentUser }: Props) {
       setContributors(current => current.filter(item => item.userId !== target.userId));
       setSelectedContributorId('');
       setNotice(target.name + ' was removed. Their published moments remain in the story.');
-    } catch (err) { setError(err instanceof Error ? err.message : 'Could not remove this contributor.'); }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not remove this member.'); }
     finally { setBusy(false); }
   };
 
   const handleTransferOwnership = async () => {
     if (!selected || selected.ownerId !== currentUser.id || !selectedContributorId) return;
     const target = members.find(item => item.userId === selectedContributorId);
-    if (!target || target.role !== 'contributor' || !window.confirm('Transfer ownership to ' + target.name + '? You will remain a contributor.')) return;
+    if (!target || target.role !== 'contributor' || !window.confirm('Transfer ownership to ' + target.name + '? You will remain a member.')) return;
     setBusy(true); setError(''); setNotice('');
     try {
       await transferWorldWeaveOwnership(selected.id, target.userId);
       setSelected(current => current ? { ...current, ownerId: target.userId, ownerName: target.name } : current);
-      setNotice('Ownership transferred to ' + target.name + '. You remain a contributor.');
+      setNotice('' + target.name + ' is now the owner. You remain a member.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not transfer ownership.'); }
     finally { setBusy(false); }
   };
@@ -576,7 +576,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
               <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-white">Contributor management</h3><span className="text-[10px] text-slate-500">{members.length} loaded</span></div>
               <p className="mb-3 text-xs leading-5 text-slate-400">Remove a contributor or transfer ownership. Previous moments are preserved.</p>
               <select value={selectedContributorId} onChange={event => setSelectedContributorId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white">
-                <option value="">Choose a contributor</option>
+                <option value="">Choose a member</option>
                 {members.filter(item => item.role === 'contributor').map(item => <option key={item.userId} value={item.userId}>{item.name}{item.username ? ' (@' + item.username + ')' : ''}</option>)}
               </select>
               <div className="mt-2 grid grid-cols-2 gap-2">
