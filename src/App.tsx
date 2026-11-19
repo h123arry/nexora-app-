@@ -2452,7 +2452,7 @@ export default function App() {
                     />
                   )}
 
-                  {activeTab === 'profile' && !isLoggedIn && !viewedUser ? (
+                  {activeTab === 'profile' && (!isLoggedIn || requiresPublicAccountSetup) && !viewedUser ? (
                     <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 p-8 text-center text-white">
                       <div className="flex h-16 w-16 items-center justify-center rounded-full border border-violet-400/25 bg-violet-500/10">
                         <UserIcon className="h-7 w-7 text-violet-300" />
