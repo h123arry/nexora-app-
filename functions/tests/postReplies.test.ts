@@ -17,6 +17,7 @@ before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Reply tests require the Firestore Emulator.');
   await db.doc(`publicProfiles/${actorId}`).set({ username: actorId, name: 'Reply Actor', avatar: '' });
   await db.doc(`publicProfiles/${authorId}`).set({ username: authorId, name: 'Reply Author', avatar: '' });
+  await db.doc('publicProfiles/reply-mentioned').set({ username: 'replymentioned', name: 'Reply Mentioned', avatar: '' });
   await db.doc(`posts/${postId}`).set({
     id: postId, userId: authorId, audience: 'public', likes: 0, commentsCount: 1,
     comments: [{ id: commentId, userId: authorId, content: 'Original comment', replies: [] }],
@@ -28,6 +29,8 @@ after(async () => {
     db.doc(`posts/${postId}`).delete(),
     db.doc(`publicProfiles/${actorId}`).delete(),
     db.doc(`publicProfiles/${authorId}`).delete(),
+    db.doc('publicProfiles/reply-mentioned').delete(),
+    db.recursiveDelete(db.collection('users').doc('reply-mentioned').collection('notifications')),
     db.recursiveDelete(db.collection('users').doc(authorId).collection('notifications')),
   ]);
   await deleteApp(app);
@@ -39,7 +42,20 @@ test('stores a reply on the correct comment and notifies its author', async () =
   assert.equal(result.reply.userId, actorId);
   const snapshot = await db.doc(`posts/${postId}`).get();
   assert.equal(snapshot.get('comments')[0].replies[0].content, 'A thoughtful reply');
-  assert.equal((await db.collection('users').doc(authorId).collection('notifications').get()).size, 1);
+  const inbox = await db.collection('users').doc(authorId).collection('notifications').get();
+  assert.equal(inbox.size, 1);
+  assert.equal(inbox.docs[0].get('userId'), actorId);
+  assert.equal(inbox.docs[0].get('actorName'), 'Reply Actor');
+});
+
+
+test('creates a mention notification for a profile tagged in a reply', async () => {
+  await addPublicPostCommentReply(db, actorId, postId, commentId, 'Thanks @replymentioned!', 'reply-mention-id');
+  const inbox = await db.collection('users').doc('reply-mentioned').collection('notifications').get();
+  assert.equal(inbox.size, 1);
+  assert.equal(inbox.docs[0].get('type'), 'mention');
+  assert.equal(inbox.docs[0].get('userId'), actorId);
+  assert.equal(inbox.docs[0].get('actorName'), 'Reply Actor');
 });
 
 test('reply retries with the same idempotency key do not duplicate the reply', async () => {
