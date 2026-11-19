@@ -17,8 +17,12 @@ test('guest exploration never impersonates a person or uses stock-person avatars
   assert.match(app, /getSafeAvatar\(u\.avatar, u\.name \|\| u\.username\)/);
   assert.match(app, /!isLoggedIn \|\| !firebaseUser \|\| currentUser\.id !== firebaseUser\.uid/);
   assert.match(app, /!pendingAuthAction \|\| !firebaseUser \|\| currentUser\.id !== firebaseUser\.uid/);
+  const feed = await read('../src/components/FeedView.tsx');
+  assert.doesNotMatch(feed, /guest_visitor_id|username === 'visitor'/);
+  assert.match(feed, /public_explore_session/);
   assert.match(app, /authenticatedUserId=\{firebaseUser\?\.uid \|\| ''\}/);
   assert.match(app, /navigateTo\('profile', null\)/);
+  assert.match(app, /\[A-Za-z0-9_-\]\{21,\}/);
 
 });
 
