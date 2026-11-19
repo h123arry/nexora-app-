@@ -125,7 +125,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
 
   // Step 2 Avatar
   const [selectedAvatar, setSelectedAvatar] = useState('');
-  const [customAvatarUrl, setCustomAvatarUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3 Interests
@@ -501,7 +500,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       reader.onload = (uploadEvent) => {
         if (uploadEvent.target?.result) {
           const resultStr = uploadEvent.target.result as string;
-          setCustomAvatarUrl(resultStr);
           setSelectedAvatar(resultStr);
         }
       };
