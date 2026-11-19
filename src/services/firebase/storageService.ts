@@ -39,6 +39,12 @@ function safeFileName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'upload';
 }
 
+// Media IDs can be Firestore document IDs (including uppercase characters).
+// Preserve their case so story.mediaId remains exactly equal to story.id.
+function safeMediaId(value: string): string {
+  return value.replace(/[^A-Za-z0-9_-]+/g, '-').slice(0, 128) || crypto.randomUUID();
+}
+
 export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploadResult> {
   const { file, userId, onProgress, signal } = options;
   if (!userId) return Promise.reject(new Error('A signed-in user is required to upload media.'));
@@ -77,7 +83,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
     })();
   }
 
-  const mediaId = safeFileName(options.mediaId || crypto.randomUUID());
+  const mediaId = safeMediaId(options.mediaId || crypto.randomUUID());
   const chatId = options.chatId ? safeFileName(options.chatId) : undefined;
   const name = safeFileName(options.fileName || (file instanceof File ? file.name : 'upload'));
   // Storage rules bind customMetadata.mediaId to this exact path segment.
