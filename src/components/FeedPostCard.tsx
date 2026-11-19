@@ -8,12 +8,14 @@ import {
   BarChart2, Sliders, X, Check, ShieldCheck
 } from 'lucide-react';
 import { Post, User } from '../types';
-import { getSafeAvatar } from '../data/database';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraImagePlayer from './NexoraImagePlayer';
 import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
 import OriginAttributionPreviewModal from './OriginAttributionPreviewModal';
+
+const hasCustomAvatar = (avatar?: string) => Boolean(avatar && !avatar.includes('photo-1535713875002-d1d0cf377fde'));
+const avatarInitial = (name?: string) => (name?.trim().charAt(0) || 'N').toUpperCase();
 
 interface FeedPostCardProps {
   post: Post;
@@ -201,13 +203,19 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               onViewProfile?.(post.userId || post.username);
             }}
           >
-            <img
-              src={getSafeAvatar(post.avatar, post.name || post.username)}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/40"
-            />
+            {hasCustomAvatar(post.avatar) ? (
+              <img
+                src={post.avatar}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/40"
+              />
+            ) : (
+              <span aria-hidden="true" className="w-10 h-10 rounded-full ring-2 ring-violet-500/40 bg-violet-950/70 text-violet-100 grid place-items-center text-sm font-bold">
+                {avatarInitial(post.name || post.username)}
+              </span>
+            )}
           </button>
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
