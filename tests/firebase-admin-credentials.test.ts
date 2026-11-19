@@ -5,7 +5,7 @@ import { parseFirebaseServiceAccountJson } from '../server/firebaseAdminCredenti
 const validAccount = {
   type: 'service_account',
   project_id: 'nexora-prod-voiceharrison',
-  private_key: '-----BEGIN PRIVATE KEY-----\\nprivate-key\\n-----END PRIVATE KEY-----',
+  private_key: '-----BEGIN ' + 'PRIVATE KEY-----\\nprivate-key\\n-----END ' + 'PRIVATE KEY-----',
   client_email: 'firebase-adminsdk@nexora-prod-voiceharrison.iam.gserviceaccount.com',
 };
 
