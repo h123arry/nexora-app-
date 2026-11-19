@@ -1653,7 +1653,7 @@ export default function MediaCreationEngine({
               </div>
               <div>
                 <h4 className="text-sm font-sans font-bold text-white">Leave this post?</h4>
-                <p className="text-xs text-[#A39BBF] mt-1">Save your work as a draft so you can come back to it later.</p>
+                <p className="text-xs text-[#A39BBF] mt-1">Save as a draft and come back to it anytime.</p>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2">
                 <button 
@@ -1764,7 +1764,7 @@ export default function MediaCreationEngine({
                   <span className="text-sm font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
                   <span className="text-[11px] font-semibold tracking-wide text-violet-300">CREATE</span>
                 </div>
-                <h1 className="text-sm font-semibold font-sans tracking-tight text-[#EEEAF8]">Share something with your people</h1>
+                <h1 className="text-sm font-semibold font-sans tracking-tight text-[#EEEAF8]">Create a post</h1>
               </div>
             </div>
           </div>
@@ -1819,7 +1819,7 @@ export default function MediaCreationEngine({
               {draftsList.length === 0 ? (
                 <div className="py-12 border border-[#292244] border-dashed rounded-2xl text-center space-y-2">
                   <FolderHeart className="w-8 h-8 text-[#756D91] mx-auto animate-pulse" />
-                  <p className="text-xs text-[#A39BBF] italic">No drafts yet. Save something you are working on and it will be waiting here.</p>
+                  <p className="text-xs text-[#A39BBF] italic">No drafts yet.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1857,7 +1857,7 @@ export default function MediaCreationEngine({
                 <div className="space-y-4 animate-fadeIn">
                   <div>
                     <span className="text-xs font-semibold text-violet-300 block mb-1">Create</span>
-                    <h3 className="text-base font-bold text-white">What do you want to share?</h3>
+                    <h3 className="text-base font-bold text-white">What's on your mind?</h3>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1947,7 +1947,7 @@ export default function MediaCreationEngine({
                       {isLensStudioOpen && (
                         <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3 sm:col-span-2">
                           <div className="flex items-center justify-between">
-                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Take a photo with your live lens applied.</p></div>
+                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Take a photo with your lens.</p></div>
                             <div className="flex gap-2">
                               <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
                               <button type="button" onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white">Close</button>
@@ -2023,7 +2023,7 @@ export default function MediaCreationEngine({
                         <div className="max-w-sm mx-auto p-3 bg-[#120E2B] border border-[#292244] rounded-xl space-y-3 text-left">
                           <p className="text-[10px] text-emerald-300 font-semibold">✓ Video ready · {Math.round(videoDuration)} seconds</p>
                           <video ref={trimVideoRef} src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" onLoadedMetadata={event => { const duration = Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : videoDuration; setVideoDuration(duration); setVideoTrimEnd(previous => Math.min(previous, duration)); }} className="w-full rounded-lg bg-black" />
-                           {videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-lg border border-violet-400/40 bg-violet-500/10 px-3 py-2.5 text-xs font-semibold text-violet-100 hover:bg-violet-500/20">Edit this video in NEXORA Studio</button>}
+                           {videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-lg border border-violet-400/40 bg-violet-500/10 px-3 py-2.5 text-xs font-semibold text-violet-100 hover:bg-violet-500/20">Edit video</button>}
                           <div className="space-y-2">
                             <div className="flex justify-between text-[10px] text-[#A39BBF]"><label htmlFor="video-trim-start">Start · {videoTrimStart.toFixed(1)}s</label><span>End · {videoTrimEnd.toFixed(1)}s</span></div>
                             <input id="video-trim-start" aria-label="Video trim start" type="range" min="0" max={Math.max(0, videoDuration - 1)} step="0.1" value={Math.min(videoTrimStart, Math.max(0, videoDuration - 1))} onChange={event => { const value = Number(event.target.value); setVideoTrimStart(value); if (value >= videoTrimEnd) setVideoTrimEnd(Math.min(videoDuration, value + 1)); }} className="w-full accent-violet-500" />
@@ -2096,7 +2096,7 @@ export default function MediaCreationEngine({
                             </label>
                             {isRecording ? <button onClick={handleStopReelRecord} className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-rose-600 text-[10px] font-bold text-white">Stop</button> : <button onClick={startReelRecording} className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-black bg-gradient-to-tr from-[#8A3FFC] to-[#1600A3] text-[10px] font-black text-white shadow-md">{recordedVideoUrl ? 'Again' : 'Record'}</button>}
                             {isRecording && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-mono text-white">Recording: {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')} / {Math.floor(recordingLimitSecs / 60)}:{String(recordingLimitSecs % 60).padStart(2, '0')}</span>}
-                            {!isRecording && recordedVideoUrl && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] text-white">Video ready · record again or continue</span>}
+                            {!isRecording && recordedVideoUrl && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] text-white">Video ready</span>}
                              {!isRecording && videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="rounded-full border border-violet-300/40 bg-violet-500/15 px-4 py-2 text-[10px] font-semibold text-violet-100">Edit in NEXORA Studio</button>}
                           </div>
                         </div>
@@ -2189,7 +2189,7 @@ export default function MediaCreationEngine({
                   <div>
                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[#B69BFF]">STEP 3 OF 6</span>
                     <h3 className="text-base font-bold text-white">Review your photo or video</h3>
-                    <p className="mt-1 text-xs leading-relaxed text-[#A39BBF]">Check your media before adding a caption and sharing it.</p>
+                    <p className="mt-1 text-xs leading-relaxed text-[#A39BBF]">Review your post before sharing.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Media render wrapper */}
@@ -2224,7 +2224,7 @@ export default function MediaCreationEngine({
                       ) : (
                         <div className="text-center p-6 space-y-2 text-[#8E88A7]">
                           <Sliders className="w-8 h-8 mx-auto" />
-                          <p className="text-xs">Your photo or video preview will appear here.</p>
+                          <p className="text-xs"></p>
                         </div>
                       )}
                     </div>
@@ -2333,7 +2333,7 @@ export default function MediaCreationEngine({
                     {selectedImages.length === 0 && (videoFileUrl || recordedVideoUrl) && (
                       <div className="flex flex-col justify-center rounded-2xl border border-[#7138FF]/25 bg-[#120E2B] p-5">
                         <span className="mb-2 text-xs font-semibold text-[#B69BFF]">Your video is ready</span>
-                        <p className="text-sm leading-relaxed text-[#EEEAF8]">Review your clip on the left. Add a caption and details next, then preview it before sharing.</p>
+                        <p className="text-sm leading-relaxed text-[#EEEAF8]">Add a caption, check your video, then share it.</p>
                       </div>
                     )}
                   </div>
@@ -2528,7 +2528,7 @@ export default function MediaCreationEngine({
                       {selectedImages.length > 0 && (
                         <div className="flex items-center gap-2 text-xs">
                           {isAltTextMissing ? (
-                            <span className="text-amber-400">Add a short photo description to help people using screen readers.</span>
+                            <span className="text-amber-400">Describe your photo (optional).</span>
                           ) : (
                             <span className="text-emerald-400">✓ Photo description added</span>
                           )}
@@ -2569,7 +2569,7 @@ export default function MediaCreationEngine({
                             <div className="border-t border-[#292244] pt-3 space-y-2">
                             <div>
                               <span className="block text-xs font-bold text-[#EEEAF8]">NEXORA Origin · Remix permission</span>
-                              <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Choose whether other creators may build on the media you upload in this post. You can change this later.</p>
+                              <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Let other people remix this post. You can change this later.</p>
                             </div>
                             <select
                               aria-label="NEXORA Origin remix permission"
@@ -2586,7 +2586,7 @@ export default function MediaCreationEngine({
                                 : 'NEXORA will record creator attribution when another account remixes this media. Permission applies only to newly uploaded media in this post.'}
                             </p>
                           </div>
-                            <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
+                            <p className="text-[10px] leading-relaxed text-[#8E88A7]"></p>
                           </>
                         ) : (
                           <p className="border-t border-[#292244] pt-3 text-[10px] leading-relaxed text-[#8E88A7]">Stories are public and disappear automatically after 24 hours.</p>
@@ -2624,7 +2624,7 @@ export default function MediaCreationEngine({
                           >
                             <div className="h-full rounded-full bg-violet-500 transition-[width] duration-200" style={{ width: `${uploadProgress}%` }} />
                           </div>
-                          <p className="text-[10px] text-[#8E88A7]">This shows how much of your file has uploaded. Large videos and slow connections may take longer.</p>
+                          <p className="text-[10px] text-[#8E88A7]">Upload progress. Large videos may take longer to upload.</p>
                         </div>
                       )}
 
