@@ -25,3 +25,8 @@ export function mergePendingActions(
   [...failedActions, ...pendingDuringFlush].forEach(item => mergedQueue.set(item.id, item));
   return [...mergedQueue.values()];
 }
+
+/** Retain failed work indefinitely; retry limits must never delete user data. */
+export function retainFailedAction(action: PendingAction): PendingAction {
+  return { ...action, retryCount: Math.min(Number.MAX_SAFE_INTEGER, action.retryCount + 1) };
+}
