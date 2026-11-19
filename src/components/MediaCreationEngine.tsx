@@ -2535,10 +2535,10 @@ export default function MediaCreationEngine({
                       <div className="space-y-1">
                         <span className="text-[10px] font-mono text-[#8E88A7] uppercase block tracking-wider">
                           {postingStatus === 'publishing' && publishStage}
-                          {postingStatus === 'completed' && 'Your post is ready!'}
+                          {postingStatus === 'completed' && (activeTab === 'story' ? 'Your story is live!' : 'Your post is ready!')}
                         </span>
                         <p className="text-xs text-[#D1CBE3] font-sans">
-                          {postingStatus === 'completed' ? 'Your post has been shared.' : postingStatus === 'failed' ? (errorMessage || 'Something went wrong. Your content is safe to try again.') : '{publishStage}'}
+                          {postingStatus === 'completed' ? (activeTab === 'story' ? 'Your story will be available for 24 hours.' : 'Your post has been shared.') : postingStatus === 'failed' ? (errorMessage || 'Something went wrong. Your content is safe to try again.') : publishStage}
                         </p>
                       </div>
 
