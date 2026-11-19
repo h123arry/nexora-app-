@@ -61,7 +61,7 @@ export default function MatrixView({
   ];
 
   return (
-    <div id="voh-matrix-centre" className="space-y-6 pb-28 sm:pb-12">
+    <div id="voh-ai-centre" className="space-y-6 pb-28 sm:pb-12">
       
       {/* Control Center Banner Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-5">
