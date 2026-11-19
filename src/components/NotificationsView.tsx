@@ -989,7 +989,7 @@ export default function NotificationsView({
                                   {notif.subActivities.map(user => (
                                     <div key={user.userId} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
                                       <div className="flex items-center gap-2">
-                                        <img src={getSafeAvatar(user.avatar, user.name || user.username)} alt="" className="w-7 h-7 rounded-lg object-cover" />
+                                        <img src={getSafeAvatar(user.avatar, user.username || 'N')} alt="" className="w-7 h-7 rounded-lg object-cover" />
                                         <div className="text-left leading-none">
                                           <span className="text-xs text-white font-bold block">@{user.username}</span>
                                           <span className="text-[8.5px] font-mono text-zinc-500 block mt-0.5">{user.timestamp}</span>
