@@ -438,13 +438,14 @@ app.get('/api/media/:mediaId', async (req, res) => {
     if (!assetSnapshot.exists || asset?.storageProvider !== 'r2' || asset?.status !== 'uploaded'
       || typeof asset.ownerId !== 'string' || typeof asset.storagePath !== 'string') return res.status(404).end();
     const ownerId = asset.ownerId;
-    const [story, byArray, bySingle, ownerProfile, ownerSettings, ownerStatus] = await Promise.all([
+    const [story, byArray, bySingle, ownerProfile, ownerSettings, ownerStatus, publicProfileSnapshot] = await Promise.all([
       serverDb.collection('stories').doc(mediaId).get(),
       serverDb.collection('posts').where('mediaAssetIds', 'array-contains', mediaId).limit(5).get(),
       serverDb.collection('posts').where('mediaAssetId', '==', mediaId).limit(5).get(),
       serverDb.collection('users').doc(ownerId).get(),
       serverDb.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
       serverDb.collection('accountStatus').doc(ownerId).get(),
+      serverDb.collection('publicProfiles').doc(ownerId).get(),
     ]);
     const storyData = story.data();
     const storyIsPublic = story.exists && storyData?.userId === ownerId && storyData?.mediaId === mediaId
@@ -458,7 +459,10 @@ app.get('/api/media/:mediaId', async (req, res) => {
     const privacy = (ownerSettings.data()?.privacy || {}) as Record<string, unknown>;
     const status = ownerStatus.data() || {};
     const profile = ownerProfile.data() || {};
-    if ((!storyIsPublic && !linkedPublicPost) || privacy.isPrivate === true || privacy.isPrivateAccount === true
+    const publicProfile = publicProfileSnapshot.data() || {};
+    const isPublicAvatar = asset.purpose === 'profile-avatar'
+      && publicProfile.avatar === r2MediaGatewayUrl(mediaId);
+    if ((!storyIsPublic && !linkedPublicPost && !isPublicAvatar) || privacy.isPrivate === true || privacy.isPrivateAccount === true
       || profile.isSeedProfile === true || profile.isBanned === true || profile.isSuspended === true
       || status.banned === true || status.suspended === true) return res.status(404).end();
     const url = createR2PresignedUrl(r2Config, 'GET', asset.storagePath, 60);
