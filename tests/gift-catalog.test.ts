@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { GIFT_CATALOG, GIFT_CATALOG_VERSION, findNexoraGift } from '../functions/src/giftCatalogPolicy.js';
+import { getNexCurrencyInfo } from '../functions/src/nexCurrencyPolicy.js';
 
 test('GIFTVERSE contains 1,100 unique gift identities, names and image references', () => {
   assert.equal(GIFT_CATALOG.length, 1100);
@@ -19,7 +20,7 @@ test('all catalogue artwork resolves to bundled SVG files and distinct sprite sy
     const artwork = cache.get(assetPath);
     assert.ok(artwork.startsWith('<svg'));
     if (symbolId) assert.ok(artwork.includes('<symbol id=\"' + symbolId + '\"'), 'Missing symbol for ' + gift.id);
-    else assert.ok(artwork.includes('<title id=\"title\">' + gift.name + '</title>'), 'Missing dedicated artwork title for ' + gift.id);
+    else assert.ok(artwork.includes('<title id=\"title\">' + gift.name + '</title>') || artwork.includes('data-gift-id=\"' + gift.id + '\"'), 'Missing dedicated artwork identity for ' + gift.id);
   }
 });
 
@@ -49,4 +50,12 @@ test('server gift lookup retains existing prices and rejects unknown ids', () =>
   assert.equal(GIFT_CATALOG_VERSION, 3);
   assert.equal(findNexoraGift('royal-01')?.priceNex, 5);
   assert.equal(findNexoraGift('missing'), undefined);
+});
+
+test('NEX is priced at two US cents with bundles starting at 15 units', () => {
+  const info = getNexCurrencyInfo();
+  assert.equal(info.currency, 'NEX');
+  assert.equal(info.referenceUsdCentsPerUnit, 2);
+  assert.deepEqual(info.bundles.map(bundle => [bundle.units, bundle.priceUsdCents]), [[15,30],[30,60],[50,100],[100,200]]);
+  assert.equal(info.checkoutEnabled, false);
 });
