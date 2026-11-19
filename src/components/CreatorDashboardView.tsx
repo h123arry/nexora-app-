@@ -332,7 +332,7 @@ export default function CreatorDashboardView({
       });
       setLocalPosts(prev => prev.map(p => p.id === postId ? { ...p, isArchived: archiveState } : p));
       window.dispatchEvent(new CustomEvent('toast', {
-        detail: archiveState ? 'Post moved to Studio archives.' : 'Post restored to your feed.',
+        detail: archiveState ? 'Post moved to Your archive.' : 'Post restored to your feed.',
       }));
     } catch (error) {
       console.error('Creator post archive update failed:', error);
@@ -686,8 +686,8 @@ export default function CreatorDashboardView({
         <div>
           <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-black text-white tracking-tight">Nexora Studio V1.2</h2>
-            <span className="text-[10px] border border-violet-400/20 bg-violet-500/10 text-violet-200 font-mono font-bold uppercase px-2 py-0.5 rounded-full">Creator workspace</span>
+            <h2 className="text-2xl font-black text-white tracking-tight">NEXORA Studio</h2>
+            <span className="text-[10px] border border-violet-400/20 bg-violet-500/10 text-violet-200 font-mono font-bold uppercase px-2 py-0.5 rounded-full">Creator tools</span>
           </div>
           <p className="text-sm text-violet-200/60 mt-1">Manage content publishing, deep metrics analysis, and platform growth.</p>
         </div>
@@ -951,7 +951,7 @@ export default function CreatorDashboardView({
               </div>
               {videoRetention?.points?.length ? (
                 <div className="rounded-2xl border border-violet-400/15 bg-[#0a071f]/70 p-5">
-                  <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Creator Growth Intelligence</h4>
+                  <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Creator growth tips</h4>
                   <p className="mt-1 text-[11px] text-zinc-400">Evidence-based observations from your server-timed playback data</p>
                   <div className="mt-4 grid gap-3 md:grid-cols-3">
                     {buildCreatorGrowthInsights(videoRetention.points).map(insight => (
@@ -1224,7 +1224,7 @@ export default function CreatorDashboardView({
               <div className="md:col-span-2 p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Reusable Studio Templates</h4>
+                    <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Saved video templates</h4>
                     <p className="text-xs text-zinc-500 mt-1">Save caption structures, hashtags and content formats for your next post.</p>
                   </div>
                   <span className="text-[10px] font-mono bg-violet-600/20 text-violet-300 border border-white/10 px-2 py-1 rounded-full">{studioTemplates.length}/40</span>
@@ -1464,7 +1464,7 @@ export default function CreatorDashboardView({
               </button>
 
               <div className="space-y-1">
-                <span className="text-[10px] text-violet-400 font-extrabold uppercase tracking-widest">Individual Node Analysis</span>
+                <span className="text-[10px] text-violet-400 font-extrabold uppercase tracking-widest">Post performance</span>
                 <h3 className="text-xl font-black text-white leading-tight">"{selectedPostForAnalytics.content || 'Untitled Post'}"</h3>
                 <p className="text-[10px] text-zinc-500 font-mono">ID: {selectedPostForAnalytics.id} • Posted on {new Date(selectedPostForAnalytics.timestamp).toLocaleString()}</p>
               </div>
@@ -1628,7 +1628,7 @@ export default function CreatorDashboardView({
                 <h3 className="text-lg font-black text-white tracking-tight">
                   {currentDraftId ? 'Edit Saved Draft' : 'Create New Release'}
                 </h3>
-                <span className="text-[9px] bg-violet-600/15 text-violet-300 px-2 py-0.5 rounded-full font-mono font-bold animate-pulse">Autosave Active</span>
+                <span className="text-[9px] bg-violet-600/15 text-violet-300 px-2 py-0.5 rounded-full font-mono font-bold animate-pulse">Saved automatically</span>
               </div>
 
               <div className="space-y-3.5 text-xs">
@@ -1709,7 +1709,7 @@ export default function CreatorDashboardView({
                   )}
                 </div>
 
-                <div className="rounded-xl border border-white/5 bg-white/3 p-3 text-[11px] text-zinc-400">Publishing sends this post through Nexora's authenticated post pipeline. Automatic scheduling is not enabled yet.</div>
+                <div className="rounded-xl border border-white/5 bg-white/3 p-3 text-[11px] text-zinc-400">Publishing sends this post through Nexora's post publishing process. Automatic scheduling is not enabled yet.</div>
 
                 <div className="flex gap-2 pt-4 justify-between border-t border-white/5">
                   <button 
