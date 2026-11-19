@@ -789,7 +789,7 @@ export default function CommunitiesHubView({
             { id: 'communities', label: '🏟️ Communities', desc: 'Social Spaces' },
             { id: 'pages', label: '🏢 Find Pages', desc: 'Creator & Brands' },
             { id: 'my-pages', label: '🔧 My Managed Pages', desc: 'Entity Setup' },
-            { id: 'analytics', label: '📊 Page Insights', desc: 'Performance Engine' }
+            { id: 'analytics', label: '📊 Page Insights', desc: 'Page performance' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1175,7 +1175,7 @@ export default function CommunitiesHubView({
                   <div className="text-center py-8 border border-dashed border-white/5 rounded-2xl">
                     <Info className="w-8 h-8 text-violet-400/30 mx-auto" />
                     <p className="text-xs text-violet-300/70 mt-2">No managed pages detected.</p>
-                    <p className="text-[10px] text-violet-300/40 mt-0.5">Initialize a brand new business entity or creator page using the action button above.</p>
+                    <p className="text-[10px] text-violet-300/40 mt-0.5">Create a new business page or creator page using the button above.</p>
                   </div>
                 )}
               </div>
@@ -1378,7 +1378,7 @@ export default function CommunitiesHubView({
                 {activePortalTab === 'media' && (
                   <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center space-y-2">
                     <h3 className="text-sm font-semibold text-white">Circle media library</h3>
-                    <p className="text-xs text-zinc-400">A secure, member-scoped upload and download pipeline is not connected to this library yet. No placeholder files or fake download actions are shown.</p>
+                    <p className="text-xs text-zinc-400">File uploads and downloads are not available here yet.</p>
                   </div>
                 )}
 
@@ -1444,7 +1444,7 @@ export default function CommunitiesHubView({
                 {activePortalTab === 'moderation' && (
                   <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-5 space-y-2">
                     <h3 className="text-sm font-bold text-amber-200">Circle moderation controls</h3>
-                    <p className="text-xs leading-relaxed text-zinc-300">Ban, mute, report-review and content-removal controls are not available in this Circle workspace yet. This panel will not claim that a restriction has been applied unless a trusted moderation operation confirms it.</p>
+                    <p className="text-xs leading-relaxed text-zinc-300">You can't ban, mute, review reports, or remove posts from this page yet. No changes will be made until these tools are ready.</p>
                   </div>
                 )}
 
@@ -1599,7 +1599,7 @@ export default function CommunitiesHubView({
               className="w-full max-w-lg bg-[#09071b] border border-white/10 rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-white"
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                <h3 className="text-sm font-black font-mono tracking-widest text-violet-400 uppercase">Initialize Community Space</h3>
+                <h3 className="text-sm font-black font-mono tracking-widest text-violet-400 uppercase">Create a community</h3>
                 <button onClick={() => setShowCreateCommunityModal(false)} className="p-1 text-current/60 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
 
@@ -1609,7 +1609,7 @@ export default function CommunitiesHubView({
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Quantum Physics Lab"
+                    placeholder="e.g. Science group"
                     value={newCommName}
                     onChange={(e) => setNewCommName(e.target.value)}
                     className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
@@ -1709,7 +1709,7 @@ export default function CommunitiesHubView({
               className="w-full max-w-lg bg-[#09071b] border border-white/10 rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-white"
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                <h3 className="text-sm font-black font-mono tracking-widest text-violet-400 uppercase">Initialize Managed Page</h3>
+                <h3 className="text-sm font-black font-mono tracking-widest text-violet-400 uppercase">Create a page</h3>
                 <button onClick={() => setShowCreatePageModal(false)} className="p-1 text-current/60 hover:text-white"><X className="w-4 h-4" /></button>
               </div>
 
@@ -1757,7 +1757,7 @@ export default function CommunitiesHubView({
                   <label className="text-[10px] font-mono text-violet-300 block uppercase">Description</label>
                   <textarea
                     required
-                    placeholder="Describe your brand, business, or organization to the Nexora ecosystem..."
+                    placeholder="Describe your brand, business, or organization..."
                     value={newPageDesc}
                     onChange={(e) => setNewPageDesc(e.target.value)}
                     rows={2.5}
