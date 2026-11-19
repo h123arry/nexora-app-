@@ -309,7 +309,7 @@ export default function NotificationsView({
           addToast('The linked post is not currently available in your feed.');
         }
       }, 500);
-    } else if (notif.type === 'follow' || notif.type === 'profile_view') {
+    } else if (notif.type === 'follow' || notif.type === 'profile_view' || notif.type === 'gift') {
       if (onViewProfile && notif.userId && notif.userId !== 'multiple') {
         onViewProfile(notif.userId);
       } else {
@@ -352,7 +352,7 @@ export default function NotificationsView({
       if (activeCategory === 'communities') return n.type === 'community';
       if (activeCategory === 'live') return n.type === 'pulse_alert' && n.content.includes('LIVE');
       if (activeCategory === 'verification') return n.type === 'reputation_milestone' && n.content.includes('Verification');
-      if (activeCategory === 'creator') return n.type === 'reputation_milestone' && n.content.includes('Milestone');
+      if (activeCategory === 'creator') return n.type === 'gift' || (n.type === 'reputation_milestone' && n.content.includes('Milestone'));
 
       return true;
     });
@@ -407,6 +407,8 @@ export default function NotificationsView({
         return <Zap className="w-4 h-4 text-amber-400 fill-amber-400/20" />;
       case 'comment':
         return <MessageSquare className="w-4 h-4 text-pink-400" />;
+      case 'gift':
+        return <Star className="w-4 h-4 text-violet-300" />;
       case 'follow':
         return <UserPlus className="w-4 h-4 text-emerald-400" />;
       case 'profile_view':
