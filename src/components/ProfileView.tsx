@@ -2835,6 +2835,9 @@ export default function ProfileView({
               {/* Relation list render */}
               <div className="space-y-2 text-left">
                 {(() => {
+                  if ((relationsTab === 'followers' || relationsTab === 'following') && (!isOwnProfile || auth.currentUser?.uid !== currentUser.id)) {
+                    return <div className="text-center py-12 text-zinc-500 text-xs">Relationship lists are private for this account.</div>;
+                  }
                   let list: any[] = [];
                   const allFollows = profileFollows;
                   const allRegisteredUsers = relationshipUsers;
