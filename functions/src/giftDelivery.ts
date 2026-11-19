@@ -43,6 +43,7 @@ export const sendNexGift = onCall({ maxInstances: 20 }, async (request) => {
   const escrowHistoryRef = escrowWalletRef.collection('transactions').doc(transactionId);
   const eventRef = db.collection('giftDeliveryEvents').doc(transactionId);
   const galleryRef = db.collection('users').doc(input.recipientId).collection('giftGallery').doc(transactionId);
+  const notificationRef = db.collection('users').doc(input.recipientId).collection('notifications').doc(`gift_${transactionId}`);
   const earningRef = db.collection('creatorEarnings').doc(transactionId);
 
   try {
@@ -160,6 +161,21 @@ export const sendNexGift = onCall({ maxInstances: 20 }, async (request) => {
         animation: gift.animation, quantity: input.quantity, senderId, senderName,
         creatorId: input.recipientId, contextType: input.contextType,
         contextId: input.contextId, transactionId, receivedAt: now,
+      });
+      tx.create(notificationRef, {
+        id: notificationRef.id,
+        type: 'gift',
+        userId: senderId,
+        username: String(senderProfile.data()?.username || 'nexora_member').replace(/^@+/, '').slice(0, 40),
+        actorName: String(senderProfile.data()?.name || senderName).slice(0, 100),
+        avatar: typeof senderProfile.data()?.avatar === 'string' ? String(senderProfile.data()?.avatar).slice(0, 1000) : '',
+        targetId: input.contextId,
+        content: `sent you ${input.quantity} × ${gift.name} (${units} NEX).`,
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        category: 'creator',
+        actionText: 'View profile',
+        actionType: 'view_profile',
       });
       if (input.contextType === 'live') {
         tx.create(eventRef, {
