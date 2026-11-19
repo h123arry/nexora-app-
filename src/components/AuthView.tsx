@@ -20,6 +20,7 @@ import { ProfileService } from '../services/firebase/profileService';
 import { EmailService } from '../services/firebase/emailService';
 import { SecurityNotificationService } from '../services/firebase/securityNotificationService';
 import { isPhoneAuthAvailable } from '../utils/authMethodAvailability';
+import { uploadMediaFile } from '../services/firebase/storageService';
 
 const runtimeEnv = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env || {}) as Record<string, string | undefined>;
 const PHONE_AUTH_ENABLED = isPhoneAuthAvailable(runtimeEnv);
@@ -540,9 +541,22 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     setIsPending(true);
     setErrorMsg('');
     try {
+      let persistedAvatar = finalUser.avatar;
+      if (persistedAvatar.startsWith('data:image/')) {
+        const avatarBlob = await fetch(persistedAvatar).then(response => {
+          if (!response.ok) throw new Error('NEXORA could not prepare your profile photo.');
+          return response.blob();
+        });
+        const uploadedAvatar = await uploadMediaFile({
+          file: avatarBlob,
+          userId: finalUser.id,
+          fileName: 'profile-avatar-onboarding',
+        });
+        persistedAvatar = uploadedAvatar.downloadUrl;
+      }
       await AuthService.updateUserProfile(finalUser.id, {
         username: finalUser.username,
-        avatar: finalUser.avatar,
+        avatar: persistedAvatar,
         interestDNA: finalUser.interestDNA
       });
     } catch (e: any) {
