@@ -2489,36 +2489,42 @@ export default function MediaCreationEngine({
                       <div className="space-y-2.5 bg-[#07070d]/50 p-3.5 border border-[#292244] rounded-2xl text-left">
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <span className="text-xs font-bold text-[#EEEAF8] block">Public post</span>
-                            <p className="mt-1 text-[11px] leading-relaxed text-[var(--nx-muted)]">Anyone on NEXORA can see this post.</p>
+                            <span className="text-xs font-bold text-[#EEEAF8] block">{activeTab === 'story' ? 'Your story' : 'Public post'}</span>
+                            <p className="mt-1 text-[11px] leading-relaxed text-[var(--nx-muted)]">{activeTab === 'story' ? 'Your story will be visible on NEXORA for 24 hours.' : 'Anyone on NEXORA can see this post.'}</p>
                           </div>
                           <span className="shrink-0 rounded-full border border-[#7138FF]/40 bg-[#7138FF]/15 px-2.5 py-1 text-[10px] font-semibold text-[#C7B5FF]">Everyone</span>
                         </div>
-                        <label className="flex items-center justify-between gap-3 border-t border-[#292244] pt-3 text-xs text-[#EEEAF8]">
-                          <span>Allow comments</span>
-                          <input type="checkbox" checked={commentsAllowed} onChange={(event) => setCommentsAllowed(event.target.checked)} className="h-4 w-4 accent-violet-500" />
-                        </label>
-                        <div className="border-t border-[#292244] pt-3 space-y-2">
-                          <div>
-                            <span className="block text-xs font-bold text-[#EEEAF8]">NEXORA Origin · Remix permission</span>
-                            <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Choose whether other creators may build on the media you upload in this post. You can change this later.</p>
+                        {activeTab !== 'story' && (
+                          <label className="flex items-center justify-between gap-3 border-t border-[#292244] pt-3 text-xs text-[#EEEAF8]">
+                            <span>Allow comments</span>
+                            <input type="checkbox" checked={commentsAllowed} onChange={(event) => setCommentsAllowed(event.target.checked)} className="h-4 w-4 accent-violet-500" />
+                          </label>
+                        )}
+                        {activeTab !== 'story' ? (
+                          <div className="border-t border-[#292244] pt-3 space-y-2">
+                            <div>
+                              <span className="block text-xs font-bold text-[#EEEAF8]">NEXORA Origin · Remix permission</span>
+                              <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Choose whether other creators may build on the media you upload in this post. You can change this later.</p>
+                            </div>
+                            <select
+                              aria-label="NEXORA Origin remix permission"
+                              value={originRemixPolicy}
+                              onChange={(event) => setOriginRemixPolicyState(event.target.value as OriginRemixPolicy)}
+                              className="w-full rounded-xl border border-[#34265E] bg-[#120E2B] px-3 py-2.5 text-xs font-semibold text-white outline-none focus:border-violet-400"
+                            >
+                              <option value="closed">Closed · Only me</option>
+                              <option value="allow_with_attribution">Allow remixing · Attribution required</option>
+                            </select>
+                            <p className="text-[10px] leading-relaxed text-[#A39BBF]">
+                              {originRemixPolicy === 'closed'
+                                ? 'Your uploaded media stays closed to cross-account remixes by default.'
+                                : 'NEXORA will record creator attribution when another account remixes this media. Permission applies only to newly uploaded media in this post.'}
+                            </p>
                           </div>
-                          <select
-                            aria-label="NEXORA Origin remix permission"
-                            value={originRemixPolicy}
-                            onChange={(event) => setOriginRemixPolicyState(event.target.value as OriginRemixPolicy)}
-                            className="w-full rounded-xl border border-[#34265E] bg-[#120E2B] px-3 py-2.5 text-xs font-semibold text-white outline-none focus:border-violet-400"
-                          >
-                            <option value="closed">Closed · Only me</option>
-                            <option value="allow_with_attribution">Allow remixing · Attribution required</option>
-                          </select>
-                          <p className="text-[10px] leading-relaxed text-[#A39BBF]">
-                            {originRemixPolicy === 'closed'
-                              ? 'Your uploaded media stays closed to cross-account remixes by default.'
-                              : 'NEXORA will record creator attribution when another account remixes this media. Permission applies only to newly uploaded media in this post.'}
-                          </p>
-                        </div>
-                        <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
+                          <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
+                        ) : (
+                          <p className="border-t border-[#292244] pt-3 text-[10px] leading-relaxed text-[#8E88A7]">Stories are public and disappear automatically after 24 hours.</p>
+                        )}
                       </div>
 
                     </div>
