@@ -152,7 +152,10 @@ export class PushNotificationService {
     };
 
     // Mobile browsers and installed Android PWAs should display through the service worker.
-    void navigator.serviceWorker?.ready.then(async registration => {
+    const serviceWorkerReady = 'serviceWorker' in navigator
+      ? navigator.serviceWorker.ready
+      : Promise.reject(new Error('Service workers are unavailable.'));
+    void serviceWorkerReady.then(async registration => {
       if (typeof registration.showNotification === 'function') {
         await registration.showNotification(payload.title, options);
         return;
