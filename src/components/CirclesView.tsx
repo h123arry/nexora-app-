@@ -6,7 +6,7 @@ import { recordRecommendationEvent } from '../utils/recommendations';
 import { CommunityService } from '../services/firebase/communityService';
 import CircleEventsPanel from './CircleEventsPanel';
 import CircleFeedPanel from './CircleFeedPanel';
-import CirclePage insightsPanel from './CirclePage insightsPanel';
+import CircleInsightsPanel from './CirclePage insightsPanel';
 import CircleMembersPanel from './CircleMembersPanel';
 import CircleAnnouncementsPanel from './CircleAnnouncementsPanel';
 import CircleGovernancePanel from './CircleGovernancePanel';
