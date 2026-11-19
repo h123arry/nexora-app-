@@ -350,12 +350,22 @@ export function getDefaultAvatar(name: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-// Automatically maps old Unsplash male portraits or missing avatars to the beautiful default monogram
+// Replace legacy stock-person presets and missing photos with a neutral generated monogram.
+const LEGACY_STOCK_PERSON_AVATARS = [
+  'photo-1535713875002-d1d0cf377fde',
+  'photo-1494790108377-be9c29b29330',
+  'photo-1570295999919-56ceb5ecca61',
+  'photo-1580489944761-15a19d654956',
+  'photo-1507003211169-0a1dd7228f2d',
+  'photo-1534528741775-53994a69daeb',
+];
+
 export function getSafeAvatar(avatar: string | undefined, name: string): string {
-  if (!avatar || avatar.includes('photo-1535713875002-d1d0cf377fde') || avatar.trim() === '') {
+  const normalizedAvatar = (avatar || '').trim();
+  if (!normalizedAvatar || LEGACY_STOCK_PERSON_AVATARS.some(photoId => normalizedAvatar.includes(photoId))) {
     return getDefaultAvatar(name);
   }
-  return avatar;
+  return normalizedAvatar;
 }
 
 // Return authentic user with true persistent reputation & contributions metrics
