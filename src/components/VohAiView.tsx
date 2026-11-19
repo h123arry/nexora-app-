@@ -227,7 +227,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const createNewSession = (initialPrompt?: string, title?: string) => {
     const newSession: ChatSession = {
       id: `session-${Date.now()}`,
-      title: title || (initialPrompt ? initialPrompt.slice(0, 24) + '...' : `New Dialogue ${sessions.length + 1}`),
+      title: title || (initialPrompt ? initialPrompt.slice(0, 24) + '...' : `New chat ${sessions.length + 1}`),
       messages: initialPrompt ? [
         { id: `msg-${Date.now()}-user`, sender: 'user', text: initialPrompt, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
       ] : [
@@ -254,7 +254,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const deleteSession = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSessions(prev => prev.filter(s => s.id !== id));
-    showToast("Session removed.");
+    showToast("Chat deleted.");
   };
 
   const togglePinSession = (id: string, e: React.MouseEvent) => {
@@ -265,7 +265,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const toggleArchiveSession = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSessions(prev => prev.map(s => s.id === id ? { ...s, isArchived: !s.isArchived } : s));
-    showToast("Session status updated.");
+    showToast("Chat updated.");
   };
 
   // Speech Recognition hook for continuous listening
@@ -393,7 +393,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       { id: userMsgId, sender: 'user', text: textToSend, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
     ];
 
-    setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: updatedMessages, title: s.title.startsWith('New Dialogue') ? textToSend.slice(0, 24) + '...' : s.title } : s));
+    setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: updatedMessages, title: s.title.startsWith('New chat') ? textToSend.slice(0, 24) + '...' : s.title } : s));
 
     const rememberRequest = textToSend.match(/^\s*(?:please\s+)?(?:remember(?:\s+that|\s+this)?|don't forget(?:\s+that)?|keep in mind(?:\s+that)?|save this(?: about me)?)\s*[:,-]?\s*(.+)$/i);
     if (rememberRequest?.[1]) {
