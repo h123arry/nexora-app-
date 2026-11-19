@@ -120,9 +120,18 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
       if (xhr.status >= 200 && xhr.status < 300) {
         onProgress?.(100);
         finish();
-      } else finish(new Error('R2 rejected the media upload. Check the bucket CORS configuration and retry.'));
+        return;
+      }
+      // R2 returns an XML error document for S3-compatible failures. Expose
+      // only a bounded error code, never the signed URL or response payload.
+      const errorCode = xhr.responseText.match(/<Code>([^<]{1,80})<\\/Code>/i)?.[1]
+        || xhr.responseText.match(/"code"\\s*:\\s*"([^"]{1,80})"/i)?.[1];
+      const reason = errorCode
+        ? `R2 upload failed (HTTP ${xhr.status}, ${errorCode}).`
+        : `R2 upload failed (HTTP ${xhr.status}).`;
+      finish(new Error(reason));
     };
-    xhr.onerror = () => finish(new Error('The media upload connection failed. Please retry.'));
+    xhr.onerror = () => finish(new Error('NEXORA could not connect to media storage. This may be a bucket CORS or network configuration issue. Please retry.'));
     xhr.onabort = () => finish(new DOMException('Upload cancelled.', 'AbortError'));
     signal?.addEventListener('abort', abort, { once: true });
     if (signal?.aborted) return abort();
