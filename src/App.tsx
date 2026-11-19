@@ -18,7 +18,6 @@ import {
 
 import { 
   getRichUser,
-  getSafeAvatar,
   followUserDb, 
   unfollowUserDb, 
   createPostDb, 
@@ -69,6 +68,7 @@ import { uploadMediaFile } from './services/firebase/storageService';
 import { createMediaStory, createTextStory } from './services/firebase/storyService';
 import { setOriginRemixPolicy, type OriginRemixPolicy } from './services/originRemixPolicyService';
 import { normalizeMediaAssetId } from './utils/mediaAssetReference';
+import { getRenderableAvatarUrl } from './utils/avatarUrl';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -591,12 +591,12 @@ export default function App() {
       
       return {
         ...post,
-        avatar: getSafeAvatar(post.avatar, post.name || post.username),
+        avatar: getRenderableAvatarUrl(post.avatar) || '',
         timestamp: permanentTime,
         createdAt: post.createdAt || permanentTime,
         comments: comments.map((comment: any) => ({
           ...comment,
-          avatar: getSafeAvatar(comment.avatar, comment.name || comment.username),
+          avatar: getRenderableAvatarUrl(comment.avatar) || '',
         })),
       };
     });
@@ -1710,7 +1710,7 @@ export default function App() {
       userId: currentUser.id,
       username: currentUser.username,
       name: currentUser.name,
-      avatar: currentUser.avatar,
+      avatar: getRenderableAvatarUrl(currentUser.avatar) || '',
       isVerified: currentUser.isVerified || false,
       content,
       image: imageUrl,
