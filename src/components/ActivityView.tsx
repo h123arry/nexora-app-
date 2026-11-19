@@ -46,8 +46,8 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
       console.warn('[ActivityView] Notifications snapshot error; details redacted.');
       setIsLoading(false);
       setLoadError(error?.code === 'permission-denied'
-        ? 'You can't view these notifications.'
-        : 'Notifications couldn't load. Check your connection and try again.');
+        ? 'You can’t view these notifications.'
+        : 'Notifications couldn’t load. Check your connection and try again.');
     });
 
     return () => unsubscribe();
@@ -188,8 +188,8 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
               <Bell className="w-10 h-10 text-zinc-700" />
             </div>
             <div className='space-y-1'>
-                <p className="text-white text-lg font-bold">{activeTab === 'All' ? 'You're all caught up.' : `No ${activeTab.toLowerCase()} activity yet.`}</p>
-                <p className="text-zinc-500 text-sm max-w-[250px]">{activeTab === 'All' ? "When people interact with you, you'll see everything here." : `New ${activeTab.toLowerCase()} notifications will appear here.`}</p>
+                <p className="text-white text-lg font-bold">{activeTab === 'All' ? 'You’re all caught up.' : `No ${activeTab.toLowerCase()} activity yet.`}</p>
+                <p className="text-zinc-500 text-sm max-w-[250px]">{activeTab === 'All' ? "When people interact with you, you’ll see everything here." : `New ${activeTab.toLowerCase()} notifications will appear here.`}</p>
             </div>
           </div>
         ) : (
