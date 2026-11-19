@@ -22,7 +22,7 @@ export default function SocialMissionsView({ currentUser }: Props) {
       const call = httpsCallable<Record<string, never>, { challenges: Challenge[] }>(functions, 'listSocialChallenges');
       const result = await call({});
       setItems(result.data.challenges || []);
-    } catch { setError('Challenges aren't available right now. Please try again.'); }
+    } catch { setError('Challenges are not available right now. Please try again.'); }
     finally { setLoading(false); }
   }, []);
   useEffect(() => { void refresh(); }, [refresh, currentUser.id]);
@@ -36,7 +36,7 @@ export default function SocialMissionsView({ currentUser }: Props) {
       setTitle(''); setDescription(''); setTopic('');
       await navigator.clipboard.writeText(result.data.postTag).catch(() => undefined);
       await refresh();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The challenge couldn't be created.'); }
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'The challenge could not be created.'); }
     finally { setBusy(''); }
   };
 
@@ -47,9 +47,9 @@ export default function SocialMissionsView({ currentUser }: Props) {
       const call = httpsCallable<{ challengeId: string }, { joined: boolean }>(functions, 'joinSocialChallenge');
       await call({ challengeId: id });
       await navigator.clipboard.writeText('#nxchallenge_' + id).catch(() => undefined);
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'You've joined. The hashtag has been copied for your next post.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'You have joined. The hashtag has been copied for your next post.' }));
       await refresh();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'You couldn't join this challenge.'); }
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'You could not join this challenge.'); }
     finally { setBusy(''); }
   };
 
