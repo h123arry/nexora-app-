@@ -12,8 +12,10 @@ const {
   browserLocalPersistence,
   browserSessionPersistence,
   deleteUser,
+  signInAnonymously,
   signOut,
 } = await import('firebase/auth');
+const { ProfileService } = await import('../src/services/firebase/profileService.ts');
 
 const email = `nexora-auth-${Date.now()}@example.test`;
 const password = 'Nexora-Test-Password-42!';
@@ -107,6 +109,29 @@ test('registers, restores, and signs in an email account through Firebase Auth',
   const loggedIn = await AuthService.loginWithEmail(email, password);
   assert.equal(loggedIn.firebaseUser.uid, registered.firebaseUser.uid);
   assert.equal(loggedIn.user.id, registered.firebaseUser.uid);
+});
+
+test('email signup upgrades an anonymous account without changing its Firebase UID or losing its profile', async () => {
+  await cleanUp();
+  const anonymous = await signInAnonymously(auth);
+  const originalUid = anonymous.user.uid;
+  await ProfileService.getOrCreateProfile(anonymous.user);
+
+  const upgradeEmail = `nexora-upgrade-${Date.now()}@example.test`;
+  const upgraded = await AuthService.registerWithEmail(
+    upgradeEmail,
+    password,
+    'Upgraded NEXORA Member',
+    'upgraded_member',
+  );
+
+  assert.equal(upgraded.firebaseUser.uid, originalUid);
+  assert.equal(upgraded.user.id, originalUid);
+  assert.equal(upgraded.user.name, 'Upgraded NEXORA Member');
+  const persisted = await ProfileService.getProfile(originalUid);
+  assert.equal(persisted?.email, upgradeEmail);
+  assert.equal(persisted?.name, 'Upgraded NEXORA Member');
+  await cleanUp();
 });
 
 test('rejects duplicate registration and invalid credentials without creating a second account', async () => {
