@@ -100,15 +100,15 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
               How your feed works
             </h1>
             <p className="text-xs text-zinc-400 max-w-2xl font-sans">
-              This view exposes saved interest preferences and a transparent ranking inspection of posts currently loaded by NEXORA. It does not simulate seed audiences, guarantee reach, or replace the production feed delivery service.
+              Change your interests and see why some posts appear in this preview. This does not change your main feed.
             </p>
           </div>
           
           <div className="flex items-center gap-2 shrink-0 bg-white/3 border border-white/5 p-3 rounded-2xl">
             <Activity className="w-6 h-6 text-emerald-400 animate-pulse" />
             <div>
-              <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Data Source</p>
-              <p className="text-xs font-mono font-black text-emerald-400 uppercase">Loaded posts & saved preferences</p>
+              <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">What this preview uses</p>
+              <p className="text-xs font-mono font-black text-emerald-400 uppercase">Posts and your saved interests</p>
             </div>
           </div>
         </div>
@@ -206,7 +206,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
               <div className="space-y-1">
                 <h4 className="text-xs font-mono font-black text-cyan-300 uppercase tracking-wider">How your feed works</h4>
                 <p className="text-xs text-zinc-400 leading-relaxed">
-                  Your feed learns from what you watch and save. Watching videos, saving posts and skipping posts help NEXORA understand what you enjoy. You can change your interests whenever you like. (<strong>+12 weight</strong>), bookmark articles (<strong>+15 weight</strong>), or skip posts (<strong>-15 weight</strong>), NIDA dynamically alters these vectors in real-time. This ensures high-interest matching without lock-in biases.
+                  Your feed learns from what you watch and save. Watching videos, saving posts and skipping posts help NEXORA understand what you enjoy. You can change your interests whenever you like.
                 </p>
               </div>
             </div>
@@ -245,7 +245,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
                     <div key={pillar.key} className="space-y-2 bg-[#120f32]/40 p-4 rounded-2xl border border-white/3">
                       <div className="flex justify-between items-center text-xs font-mono font-bold text-zinc-200">
                         <span>{pillar.label}</span>
-                        <span className="text-cyan-400">{val}% Weight</span>
+                        <span className="text-cyan-400">{val}% importance</span>
                       </div>
                       
                       <input
@@ -273,15 +273,15 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
             <div className="lg:col-span-7 space-y-4">
               <div className="bg-[#030113] border border-cyan-500/15 p-4 rounded-3xl flex justify-between items-center">
                 <span className="text-xs font-mono font-black text-cyan-300 uppercase tracking-widest">
-                  Currently Loaded Posts
+                  Posts in this preview
                 </span>
                 <span className="text-[9px] font-mono text-zinc-500 uppercase">
-                  Based on saved post records
+                  Based on posts already shared
                 </span>
               </div>
 
               <div className="space-y-3">
-                {rankedPosts.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-xs text-zinc-400">No real posts are currently loaded. Ranking will appear when posts are available.</div> : rankedPosts.map((post, idx) => (
+                {rankedPosts.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-xs text-zinc-400">There are no posts in this preview yet. Posts will appear here when they're available.</div> : rankedPosts.map((post, idx) => (
                   <div 
                     key={post.id}
                     className="bg-zinc-950/40 border border-white/5 hover:border-white/10 p-4 rounded-2xl flex items-start gap-4 transition-all"
@@ -301,7 +301,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
                         
                         <div className="text-right shrink-0">
                           <span className="text-xs font-mono font-black text-cyan-300 bg-[#120f32] border border-cyan-500/20 px-2 py-1 rounded-xl block">
-                            {post.totalScore} Pts
+                            {post.totalScore} score
                           </span>
                         </div>
                       </div>
