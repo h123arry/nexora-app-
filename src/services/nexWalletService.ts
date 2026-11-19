@@ -18,6 +18,7 @@ export interface NexWalletSnapshot {
   lifetimeCredited: number;
   lifetimeDebited: number;
   transactions: NexWalletTransaction[];
+  currencyInfo?: { currency: 'NEX'; referenceUsdCentsPerUnit: number; checkoutEnabled: boolean; bundles: Array<{ id: string; units: number; priceUsdCents: number }> };
 }
 
 export async function getNexWalletSnapshot(): Promise<NexWalletSnapshot> {

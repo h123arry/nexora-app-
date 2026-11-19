@@ -89,6 +89,15 @@ export default function WalletView({ currentUser }: WalletViewProps) {
         </article>
       </section>
 
+      {visibleSnapshot?.currencyInfo && (
+        <section className="rounded-2xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-5 text-left" aria-labelledby="nex-bundles-title">
+          <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-xs font-semibold uppercase tracking-[.14em] text-[var(--nx-muted)]">NEX reference value</p><h2 id="nex-bundles-title" className="mt-1 text-xl font-bold text-white">${(visibleSnapshot.currencyInfo.referenceUsdCentsPerUnit / 100).toFixed(2)} per NEX</h2><p className="mt-1 text-xs text-[var(--nx-muted)]">Reference value only. Local checkout prices may vary with payment fees and exchange rates.</p></div><span className="rounded-full border border-[var(--nx-edge)] px-3 py-1 text-xs text-[var(--nx-muted)]">NEX bundles</span></div>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {visibleSnapshot.currencyInfo.bundles.map(bundle => <article key={bundle.id} className="rounded-xl border border-[var(--nx-edge)] bg-[var(--nx-surface-2)] p-3"><p className="text-lg font-bold text-white">{bundle.units} NEX</p><p className="mt-1 text-sm text-[var(--nx-violet-bright)]">${(bundle.priceUsdCents / 100).toFixed(2)}</p><button type="button" disabled={!visibleSnapshot.currencyInfo?.checkoutEnabled} className="mt-3 w-full rounded-lg border border-[var(--nx-edge)] px-2 py-2 text-xs font-semibold text-[var(--nx-muted)] disabled:cursor-not-allowed disabled:opacity-60">Checkout unavailable</button></article>)}
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-[var(--nx-muted)]">NEX bundle checkout is not activated yet. No payment will be requested until the payment provider is configured and verified.</p>
+        </section>
+      )}
       {error && (
         <div role="alert" className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-left">
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" aria-hidden="true" />
@@ -136,7 +145,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
         ) : (
           <div className="mt-4 rounded-xl border border-[var(--nx-edge)] bg-[var(--nx-surface-2)] p-4">
             <div className="flex items-center gap-2 text-sm font-medium text-white"><ShieldCheck className="h-4 w-4 text-[var(--nx-violet-bright)]" aria-hidden="true" />Your wallet is ready</div>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--nx-muted)]">Your balance is currently zero. Buying coins and sending gifts will be available soon.</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--nx-muted)]">Your balance is currently zero. NEX top-ups are not available yet; once enabled, you can use your balance to collect or send gifts.</p>
           </div>
         )}
       </section>

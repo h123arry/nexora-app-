@@ -1,7 +1,7 @@
 export type GiftAnimation = 'sparkle' | 'reveal' | 'cinematic' | 'legendary';
-export type GiftAnimationCategory = 'dragon' | 'wildlife' | 'floral' | 'royal' | 'luxury' | 'celestial' | 'tech' | 'music' | 'love' | 'african' | 'mythic' | 'seasonal' | 'culinary' | 'world' | 'artifacts' | 'other';
+export type GiftAnimationCategory = 'dragon' | 'wildlife' | 'floral' | 'royal' | 'luxury' | 'celestial' | 'tech' | 'music' | 'love' | 'african' | 'mythic' | 'seasonal' | 'culinary' | 'world' | 'artifacts' | 'oceanic' | 'elemental' | 'architecture' | 'gemstone' | 'adventure' | 'couture' | 'spirit' | 'arena' | 'timepiece' | 'dreamscape' | 'other';
 export interface GiftAnimationProfile { category: GiftAnimationCategory; particleCount: number; durationMs: number; }
-const CATEGORIES = new Set<GiftAnimationCategory>(['dragon','wildlife','floral','royal','luxury','celestial','tech','music','love','african','mythic','seasonal','culinary','world','artifacts']);
+const CATEGORIES = new Set<GiftAnimationCategory>(['dragon','wildlife','floral','royal','luxury','celestial','tech','music','love','african','mythic','seasonal','culinary','world','artifacts','oceanic','elemental','architecture','gemstone','adventure','couture','spirit','arena','timepiece','dreamscape']);
 const DURATIONS: Record<GiftAnimation, number> = { sparkle: 3400, reveal: 4000, cinematic: 5000, legendary: 6400 };
 export function getGiftAnimationProfile(giftId: string, animation: GiftAnimation): GiftAnimationProfile {
   const prefix = giftId.split('-')[0] as GiftAnimationCategory;

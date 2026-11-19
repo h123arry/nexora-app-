@@ -2,6 +2,7 @@ import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firesto
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { assertCallableSessionActive } from './callableSession.js';
+import { getNexCurrencyInfo } from './nexCurrencyPolicy.js';
 import {
   applyNexBalanceEntries,
   buildNexTransferEntries,
@@ -94,6 +95,7 @@ export async function postNexLedgerTransfer(
 
     transaction.set(fromRef, {
       currency: 'NEX',
+      currencyInfo: getNexCurrencyInfo(),
       availableBalance: nextFromBalance,
       lifetimeCredited: fromLifetimeCredited,
       lifetimeDebited: fromLifetimeDebited + input.units,

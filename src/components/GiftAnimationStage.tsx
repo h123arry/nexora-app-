@@ -115,6 +115,27 @@ const STAGE_STYLES = `
 @keyframes gift-flight-trail{0%{left:-110%;opacity:0}25%{opacity:1}80%{opacity:.5}100%{left:110%;opacity:0}}
 @keyframes gift-ground-pulse{0%,100%{transform:scaleX(.75);opacity:.35}50%{transform:scaleX(1.15);opacity:.8}}
 @keyframes gift-flare{0%,100%{opacity:.25;transform:scale(.9) rotate(0)}50%{opacity:.9;transform:scale(1.08) rotate(18deg)}}
+
+.gift-stage--oceanic .gift-stage__art{animation-name:gift-oceanic-drift}
+.gift-stage--elemental .gift-stage__art{animation-name:gift-elemental-surge}
+.gift-stage--architecture .gift-stage__art{animation-name:gift-architecture-rise}
+.gift-stage--gemstone .gift-stage__art{animation-name:gift-gemstone-prism}
+.gift-stage--adventure .gift-stage__art{animation-name:gift-adventure-swoop}
+.gift-stage--couture .gift-stage__art{animation-name:gift-royal-descent}
+.gift-stage--spirit .gift-stage__art{animation-name:gift-spirit-float}
+.gift-stage--arena .gift-stage__art{animation-name:gift-arena-victory}
+.gift-stage--timepiece .gift-stage__art{animation-name:gift-timepiece-turn}
+.gift-stage--dreamscape .gift-stage__art{animation-name:gift-dream-float}
+@keyframes gift-oceanic-drift{0%{opacity:0;transform:translateY(24px) rotate(-8deg) scale(.78)}35%{opacity:1;transform:translateY(-10px) rotate(4deg) scale(1.08)}70%{transform:translateY(4px) rotate(-2deg) scale(1.02)}100%{opacity:1;transform:translateY(0) rotate(0) scale(1)}}
+@keyframes gift-elemental-surge{0%{opacity:0;transform:scale(.35) rotate(-28deg);filter:brightness(.7)}45%{opacity:1;transform:scale(1.16) rotate(9deg);filter:brightness(1.35)}75%{transform:scale(.98) rotate(-4deg);filter:brightness(1.08)}100%{opacity:1;transform:scale(1) rotate(0);filter:brightness(1)}}
+@keyframes gift-architecture-rise{0%{opacity:0;transform:translateY(76px) scale(.72)}58%{opacity:1;transform:translateY(-8px) scale(1.06)}82%{transform:translateY(3px) scale(.99)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes gift-gemstone-prism{0%{opacity:0;transform:rotateY(72deg) rotate(-22deg) scale(.55)}55%{opacity:1;transform:rotateY(-12deg) rotate(7deg) scale(1.12)}100%{opacity:1;transform:rotateY(0) rotate(0) scale(1)}}
+@keyframes gift-adventure-swoop{0%{opacity:0;transform:translate(-90px,38px) rotate(-22deg) scale(.62)}50%{opacity:1;transform:translate(12px,-10px) rotate(7deg) scale(1.1)}100%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}}
+@keyframes gift-spirit-float{0%{opacity:0;transform:translateY(32px) scale(.7);filter:blur(5px)}45%{opacity:1;transform:translateY(-12px) scale(1.08);filter:blur(0)}100%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}
+@keyframes gift-arena-victory{0%{opacity:0;transform:translateY(48px) rotate(-12deg) scale(.65)}48%{opacity:1;transform:translateY(-12px) rotate(8deg) scale(1.13)}72%{transform:translateY(3px) rotate(-3deg) scale(1)}100%{opacity:1;transform:translateY(0) rotate(0) scale(1)}}
+@keyframes gift-timepiece-turn{0%{opacity:0;transform:rotate(-110deg) scale(.7)}55%{opacity:1;transform:rotate(14deg) scale(1.08)}78%{transform:rotate(-5deg) scale(1)}100%{opacity:1;transform:rotate(0) scale(1)}}
+@keyframes gift-dream-float{0%{opacity:0;transform:translateY(38px) scale(.72);filter:blur(4px)}42%{opacity:1;transform:translateY(-10px) scale(1.08);filter:blur(0)}70%{transform:translateY(5px) scale(1.02)}100%{opacity:1;transform:translateY(0) scale(1)}}
+
 .gift-stage[data-reduced-motion="true"] *{animation:none!important;transition:none!important}
 .gift-stage[data-paused="true"] *{animation-play-state:paused!important;transition:none!important}
 @media(prefers-reduced-motion:reduce){.gift-stage *{animation:none!important;transition:none!important}}
