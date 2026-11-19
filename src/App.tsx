@@ -23,7 +23,6 @@ import {
   createPostDb, 
   addHelpfulCommentDb,
   isFollowingDb,
-  INITIAL_USER, 
   INITIAL_CHATS, 
   INITIAL_MESSAGES, 
   INITIAL_NOTIFICATIONS
