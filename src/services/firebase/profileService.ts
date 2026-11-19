@@ -39,6 +39,21 @@ export class ProfileService {
     }
   }
 
+  /** Resolve a public profile by its canonical username claim without exposing private user documents. */
+  static async getPublicProfileByUsername(username: string): Promise<User | null> {
+    if (!db) return null;
+    const clean = normalizeUsername(username);
+    if (!clean) return null;
+    try {
+      const claim = await getDoc(doc(db, 'usernames', clean));
+      const uid = claim.exists() ? claim.data().userId : null;
+      if (typeof uid !== 'string' || !uid) return null;
+      return this.getPublicProfile(uid);
+    } catch {
+      return null;
+    }
+  }
+
   /** Public identity is exposed only after a server-authorized review approves the claim. */
   static async getPublicIdentityVerification(uid: string): Promise<{ identityType: 'individual' | 'creator' | 'public_figure' | 'organization'; displayName: string } | null> {
     if (!db || !uid) return null;
