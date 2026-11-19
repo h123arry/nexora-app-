@@ -87,7 +87,7 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
       <div className="flex items-start gap-3">
         <div className="rounded-xl border border-violet-400/20 bg-violet-500/10 p-2 text-violet-300"><ShieldCheck className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-black text-white">Identity verification</h3>
+          <h3 className="text-sm font-black text-white">Verify your account</h3>
           <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">Apply for a public identity badge using official links and supporting context. Email or phone verification alone does not qualify.</p>
         </div>
       </div>
