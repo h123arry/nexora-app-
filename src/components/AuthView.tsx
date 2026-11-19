@@ -270,7 +270,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     }
 
     setIsPending(true);
-    setStatusMessage('Verifying credentials via Firebase Authentication...');
+    setStatusMessage('Checking your sign-in details…');
 
     try {
       const { user } = detectedType === 'username'
@@ -369,7 +369,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
         onLoginSuccess(nexoraUser);
 
       } else {
-        throw new Error('No active SMS confirmation session. Please request a new verification code.');
+        throw new Error('Your code has expired. Please request a new one.');
       }
     } catch (err: any) {
       setIsPending(false);
@@ -1464,7 +1464,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                 {policyTab === 'terms' ? (
                   <div className="space-y-3">
                     <h3 className="text-sm font-bold text-white">Nexora Terms of Service</h3>
-                    <p>Welcome to Nexora. By creating an account or using our application, you agree to these terms. Nexora provides a living social ecosystem for sharing, discovering, and connecting across global interests.</p>
+                    <p>Welcome to Nexora. By creating an account or using our application, you agree to these terms. NEXORA is a social network where people share posts, discover new things and connect with others around the world.</p>
                     <p className="font-bold text-white">1. Account Security</p>
                     <p>You are responsible for safeguarding your credentials and account access.</p>
                     <p className="font-bold text-white">2. Content Ownership</p>

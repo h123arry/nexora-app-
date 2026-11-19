@@ -311,7 +311,7 @@ export default function ShareSheet({
           try {
             await navigator.share({
               title: post?.name ? `${post.name}'s Post on Nexora` : 'Nexora Post',
-              text: post?.content || 'Check out this post on Nexora!',
+              text: post?.content || 'Check out this post on Nexora.',
               url: shareUrl,
             });
           } catch (err) {}
@@ -345,8 +345,8 @@ export default function ShareSheet({
               <Share2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="font-sans font-bold text-base text-white tracking-tight">Share Post</h3>
-              <p className="text-[11px] text-zinc-400 font-mono">Send directly or to external apps</p>
+              <h3 className="font-sans font-bold text-base text-white tracking-tight">Share post</h3>
+              <p className="text-[11px] text-zinc-400 font-mono">Send to a friend or share in another app</p>
             </div>
           </div>
           <button 
@@ -358,7 +358,7 @@ export default function ShareSheet({
         </div>
 
         <div className="mb-6">
-          <span className="text-[11px] font-mono tracking-wider text-violet-400 font-bold uppercase mb-3 px-1 block">Share with Friends</span>
+          <span className="text-[11px] font-mono tracking-wider text-violet-400 font-bold uppercase mb-3 px-1 block">Send to friends</span>
           {realChats.length > 0 ? (
             <div>
               <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
@@ -406,14 +406,14 @@ export default function ShareSheet({
             </div>
           ) : (
             <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
-              <p className="text-xs text-zinc-400 font-sans">No active direct chats yet. Connect with creators across Nexora to share instantly!</p>
+              <p className="text-xs text-zinc-400 font-sans">No chats yet. Start a conversation to share posts with friends.</p>
             </div>
           )}
         </div>
 
         {/* EXTERNAL SHARING APPS GRID */}
         <div className="mb-6">
-          <h4 className="text-[11px] font-mono tracking-wider text-violet-400 font-bold uppercase mb-3 px-1">Share To External App</h4>
+          <h4 className="text-[11px] font-mono tracking-wider text-violet-400 font-bold uppercase mb-3 px-1">Share to another app</h4>
           <div className="grid grid-cols-4 gap-4">
             {socialDestinations.map((chan) => (
               <button
@@ -441,7 +441,7 @@ export default function ShareSheet({
               className="flex flex-col items-center justify-center p-3.5 rounded-full bg-violet-500/10 hover:bg-violet-500/20 border border-violet-400/20 text-white text-xs transition-all active:scale-95 cursor-pointer shadow-md backdrop-blur-md disabled:opacity-50"
             >
               <Sparkles className="w-4 h-4 text-violet-300 mb-1" />
-              <span className="font-sans font-bold text-xs">{creatingShareCard ? 'Creating…' : 'Share Card'}</span>
+              <span className="font-sans font-bold text-xs">{creatingShareCard ? 'Getting your post ready…' : 'Share image'}</span>
             </button>
 
             {/* Repost */}

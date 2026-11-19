@@ -6,7 +6,7 @@ import {
   X, Shield, ShieldCheck, Eye, EyeOff, Check, AlertCircle, HardDrive, Sparkles, 
   Search, ChevronRight, ChevronDown, User, ShieldAlert, Monitor, Info, Trash2, 
   Key, HelpCircle, LogOut, ArrowRight, CheckCircle, RefreshCw, Radio, Settings, 
-  Lock, Unlock, Phone, Video, AlertTriangle, Moon, Ghost, Ban, List, ShieldBan, 
+  Lock, Unlock, Phone, Video, AlertTriangle, Moon, Ban, List, ShieldBan, 
   Maximize2, EyeIcon, UserCheck, Smartphone, MoreHorizontal, Download, Play, 
   CornerUpLeft, CheckSquare, Clock
 } from 'lucide-react';
@@ -320,12 +320,12 @@ export default function PrivacySettingsModal({
   // Reciprocity Rule Determiner
   const getReciprocityText = (settingName: string, value: VisibilityAudience) => {
     if (value === 'nobody') {
-      return `🔒 Reciprocity Rule Enabled: Since you hide your ${settingName}, you won't be able to view ${settingName} metadata from other Nexora ledger nodes.`;
+      return `🔒 Because you hide your ${settingName}, you also will not see it on other people's profiles.`;
     }
     if (value === 'custom') {
-      return `👥 Custom list protocol active. Only ${customPeople.length} approved people can query your ${settingName}.`;
+      return `👥 Custom list is on. Only ${customPeople.length} approved people can query your ${settingName}.`;
     }
-    return `✨ Transparent Mode: Other nodes can query your ${settingName} according to their visibility list.`;
+    return `✨ Your ${settingName} is visible to people allowed by your privacy settings.`;
   };
 
   const getVisibilityBadgeColor = (val: VisibilityAudience) => {
@@ -459,7 +459,7 @@ export default function PrivacySettingsModal({
       setCustomPeople(prev => [...prev, newCustomPersonName.trim()]);
       setNewCustomPersonName('');
       setIsAddingCustomPerson(false);
-      window.dispatchEvent(new CustomEvent('toast', { detail: `👤 Added ${newCustomPersonName} to Custom Audience List!` }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: `👤 Added ${newCustomPersonName} to your custom audience.` }));
     }
   };
 
@@ -478,8 +478,8 @@ export default function PrivacySettingsModal({
           {discoverability.hiddenAccountMode && (
             <div className="bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-indigo-500/20 px-6 py-2 border-b border-emerald-500/20 flex items-center justify-between text-xs text-emerald-400 font-mono">
               <span className="flex items-center gap-2">
-                <Ghost className="w-4 h-4 animate-pulse text-emerald-400" />
-                <span>💎 CONCEALMENT PROTOCOL ACTIVE (GHOST MODE) — Your node signature has vanished from all indexes.</span>
+                <EyeOff className="w-4 h-4 animate-pulse text-emerald-400" />
+                <span>💎 HIDE MODE IS ON — Your account will not appear in search or suggestions.</span>
               </span>
               <button 
                 onClick={() => setDiscoverability(prev => ({ ...prev, hiddenAccountMode: false }))}
@@ -498,7 +498,7 @@ export default function PrivacySettingsModal({
               </div>
               <div className="text-left">
                 <h3 className="text-sm font-black font-sans uppercase tracking-wider text-white">Nexora Privacy Center</h3>
-                <p className="text-[10px] font-mono text-zinc-400 leading-tight mt-0.5">Decentralized Trust Ledger & Security Dashboard</p>
+                <p className="text-[10px] font-mono text-zinc-400 leading-tight mt-0.5">Privacy and security</p>
               </div>
             </div>
 
@@ -534,12 +534,12 @@ export default function PrivacySettingsModal({
                 { id: 'presence', label: 'Presence & Activity', icon: Eye, count: Object.keys(presence).length },
                 { id: 'profile', label: 'Profile Visibility', icon: User, badge: 'Account saved' },
                 { id: 'messaging', label: 'Messaging Settings', icon: Radio, count: Object.keys(messaging).length },
-                { id: 'calls', label: 'Call Controls & Silence', icon: Phone, count: Object.keys(calls).length },
-                { id: 'groups', label: 'Group Ledger Rights', icon: Lock, count: Object.keys(groups).length },
-                { id: 'discover', label: 'Discoverability Grid', icon: Ghost, badge: discoverability.hiddenAccountMode ? 'Ghost' : '' },
+                { id: 'calls', label: 'Call settings', icon: Phone, count: Object.keys(calls).length },
+                { id: 'groups', label: 'Group permissions', icon: Lock, count: Object.keys(groups).length },
+                { id: 'discover', label: 'Who can find you', icon: EyeOff, badge: discoverability.hiddenAccountMode ? 'Hidden' : '' },
                 { id: 'blocked', label: 'Blocked & Restricted', icon: ShieldBan, count: blockedUsers.length + restrictedUsers.length },
                 { id: 'hidden_chats', label: 'Hidden PIN Chats', icon: Key, badge: 'Locked' },
-                { id: 'safety', label: 'Safety Registry Center', icon: ShieldAlert, badge: 'Alerts' }
+                { id: 'safety', label: 'Safety and sign-ins', icon: ShieldAlert, badge: 'Alerts' }
               ].map(cat => {
                 const Icon = cat.icon;
                 const isSelected = activeTab === cat.id;
@@ -562,7 +562,7 @@ export default function PrivacySettingsModal({
                     )}
                     {cat.badge && (
                       <span className={`text-[8px] font-mono font-black uppercase px-1.5 py-0.5 rounded ${
-                        cat.badge === 'Ghost' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 animate-pulse' : 'bg-violet-600/20 text-violet-300'
+                        cat.badge === 'Hidden' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 animate-pulse' : 'bg-violet-600/20 text-violet-300'
                       }`}>{cat.badge}</span>
                     )}
                   </button>
@@ -580,20 +580,20 @@ export default function PrivacySettingsModal({
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <Eye className="w-4 h-4 text-violet-400" /> Presence & Social Activity Status
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Configure your real-time socket visibility and activity telemetry across the decentralized chat network.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1">Choose who can see when you are online and active in chats.</p>
                   </div>
 
                   {/* Presence Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
-                      { key: 'lastSeen', label: 'Last Seen Timestamp', desc: 'When you were last active on the ledger.' },
-                      { key: 'onlineStatus', label: 'Real-time Online Indicator', desc: 'Real-time active status pulse indicator.' },
-                      { key: 'typingIndicator', label: 'Active Typing Telemetry', desc: 'Show other users when you are drafting a message.' },
-                      { key: 'recordingIndicator', label: 'Recording Voice Telemetry', desc: 'Show when you are recording audio bytes.' },
+                      { key: 'lastSeen', label: 'Last Seen Timestamp', desc: 'When you were last online.' },
+                      { key: 'onlineStatus', label: 'Show when you are online', desc: 'Show people when you are active.' },
+                      { key: 'typingIndicator', label: 'Typing indicator', desc: 'Let others know when you type.' },
+                      { key: 'recordingIndicator', label: 'Recording indicator', desc: 'Show when you record a voice message.' },
                       { key: 'currentlyActive', label: 'Active Status List', desc: 'Appear in the currently active friends strip.' },
-                      { key: 'recentlyActive', label: 'Recently Active Flag', desc: 'Allows the system to flag your node as recently online.' },
+                      { key: 'recentlyActive', label: 'Recently active', desc: 'Show when you were last active.' },
                       { key: 'readMessages', label: 'Reading Messages State', desc: 'Allows users to see if you are actively browsing.' },
-                      { key: 'voiceActivity', label: 'Voice Room State', desc: 'Shows your status within decentralized audio bridges.' }
+                      { key: 'voiceActivity', label: 'Live audio status', desc: 'Shows whether you are in a live audio room.' }
                     ].map(item => {
                       const val = presence[item.key as keyof typeof presence] as VisibilityAudience;
                       return (
@@ -655,7 +655,7 @@ export default function PrivacySettingsModal({
                         { key: 'coverPhoto', label: 'Profile Background / Banner' },
                         { key: 'displayName', label: 'Legal Display Name' },
                         { key: 'username', label: 'Username (@handle)' },
-                        { key: 'bio', label: 'Biography Profile Metadata' },
+                        { key: 'bio', label: 'Your bio' },
                         { key: 'pronouns', label: 'Pronouns Indicator' },
                         { key: 'website', label: 'External Connected Website' },
                         { key: 'verifiedBadge', label: 'Verified badge' },
@@ -753,7 +753,7 @@ export default function PrivacySettingsModal({
                               {canViewParameter('displayName', profile.displayName) ? (profilePreview?.name || 'Your name') : '••••••••'}
                             </span>
                             {canViewParameter('verifiedBadge', profile.verifiedBadge) && (
-                              <span className="w-3.5 h-3.5 bg-violet-600 text-[8px] font-black rounded-full flex items-center justify-center text-white" title="Verified Ledger Node">✓</span>
+                              <span className="w-3.5 h-3.5 bg-violet-600 text-[8px] font-black rounded-full flex items-center justify-center text-white" title="Verified account">✓</span>
                             )}
                           </div>
 
@@ -763,7 +763,7 @@ export default function PrivacySettingsModal({
 
                           <div className="text-[10px] bg-slate-950 p-2 border border-white/5 rounded-xl text-zinc-400">
                             <span className="text-[8px] font-mono uppercase text-zinc-600 block mb-0.5">Biography</span>
-                            {canViewParameter('bio', profile.bio) ? (profilePreview?.bio || 'No bio added yet.') : '🔒 Restricted by protocol'}
+                            {canViewParameter('bio', profile.bio) ? (profilePreview?.bio || 'No bio added yet.') : '🔒 Hidden by your privacy settings'}
                           </div>
 
                           {/* Grid with other attributes */}
@@ -801,7 +801,7 @@ export default function PrivacySettingsModal({
                 <div className="space-y-6 text-left">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Radio className="w-4 h-4 text-violet-400" /> Messaging Routing & Interaction Receipts
+                      <Radio className="w-4 h-4 text-violet-400" /> Messages and read receipts
                     </h4>
                     <p className="text-[11px] text-zinc-400 mt-1">Enforce messaging filters and select who has permission to write data chunks or generate notifications on your device.</p>
                   </div>
@@ -809,9 +809,9 @@ export default function PrivacySettingsModal({
                   {/* Messaging Options */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
-                      { key: 'messageYou', label: 'Who Can Message You', desc: 'Who can open direct ledger chats with you.' },
+                      { key: 'messageYou', label: 'Who Can Message You', desc: 'Who can send you a direct message.' },
                       { key: 'replyToStories', label: 'Reply to Stories & Moments', desc: 'Allows replies and emoji waves on published statuses.' },
-                      { key: 'mentionYou', label: 'Mention Handle (@handle)', desc: 'Who can mention your node handle in public spaces.' },
+                      { key: 'mentionYou', label: 'Who can mention you (@handle)', desc: 'Who can mention you in posts and comments.' },
                       { key: 'quoteMessages', label: 'Quote Messages', desc: 'Who is allowed to quote your messaging fragments.' },
                       { key: 'forwardMessages', label: 'Forward Your Messages', desc: 'Allows forwarding of your text segments to outer circles.' },
                       { key: 'inviteYou', label: 'Invite to Direct Circles', desc: 'Who can add you to collaborative audio boards.' }
@@ -891,15 +891,15 @@ export default function PrivacySettingsModal({
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <Phone className="w-4 h-4 text-violet-400" /> Decentralized Voice & Video Call Settings
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Configure filters on direct routing requests and shield your node from unsolicited peer-to-peer stream invitations.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1">Choose who can invite you to calls and live chats.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
                       { key: 'voiceCall', label: 'Who Can Voice Call', desc: 'Allows opening standard audio channels.' },
                       { key: 'videoCall', label: 'Who Can Video Call', desc: 'Enables establishing high-fidelity video feeds.' },
-                      { key: 'groupCallInvite', label: 'Group Call Invitations', desc: 'Who can automatically include your node signature on calls.' },
-                      { key: 'screenShare', label: 'Screen Share Authorization', desc: 'Who is authorized to request screen share streams.' }
+                      { key: 'groupCallInvite', label: 'Group Call Invitations', desc: 'Who can add you to group calls.' },
+                      { key: 'screenShare', label: 'Who can share their screen', desc: 'Choose who can ask to share their screen.' }
                     ].map(item => {
                       const val = calls[item.key as keyof typeof calls] as VisibilityAudience;
                       return (
@@ -938,7 +938,7 @@ export default function PrivacySettingsModal({
                   <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-3">
                     <div>
                       <span className="text-xs font-bold text-zinc-200 block">Unknown Caller Filtering</span>
-                      <p className="text-[10px] text-zinc-500 leading-normal mt-1">Select the action your device performs when a non-follower node sends a routing/connection request.</p>
+                      <p className="text-[10px] text-zinc-500 leading-normal mt-1">Choose what happens when someone you do not follow tries to message you.</p>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -971,16 +971,16 @@ export default function PrivacySettingsModal({
                 <div className="space-y-6 text-left">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-violet-400" /> Decentralized Group Ledgers & Creator Broadcasts
+                      <Lock className="w-4 h-4 text-violet-400" /> Groups and creator updates
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Administer authorization permissions for collective channels and dictate which broadcasts are broadcasted onto your active routing stream.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1">Choose who can add you to groups and send you updates.</p>
                   </div>
 
                   <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-4">
                     <span className="text-xs font-black text-violet-400 font-mono uppercase block">Group & Community Rules</span>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {[
-                        { key: 'addToGroups', label: 'Add to Collective Chats', desc: 'Who can directly index your node signature within group chats.' },
+                        { key: 'addToGroups', label: 'Add you to group chats', desc: 'Who can add you to group chats.' },
                         { key: 'addToCommunities', label: 'Add to Nexora Communities', desc: 'Who can directly join your user identity into large networks.' },
                         { key: 'mentionEveryone', label: 'Mention Everyone Rights', desc: 'Allow members to trigger @everyone alerts for you.' }
                       ].map(item => {
@@ -1012,7 +1012,7 @@ export default function PrivacySettingsModal({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {[
                         { key: 'receiveCreator', label: 'Receive Creator Broadcasts', desc: 'Receive high-fidelity updates from followed influencers.' },
-                        { key: 'receivePromotional', label: 'Receive Promotional Bulletins', desc: 'Allow verified channels to send advertising broadcasts.' }
+                        { key: 'receivePromotional', label: 'Receive promotions', desc: 'Allow approved pages to send you promotional messages.' }
                       ].map(item => {
                         const val = broadcasts[item.key as keyof typeof broadcasts] as VisibilityAudience;
                         return (
@@ -1043,22 +1043,22 @@ export default function PrivacySettingsModal({
                 <div className="space-y-6 text-left">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Ghost className="w-4 h-4 text-violet-400" /> Node Discoverability & Hidden Account Mode
+                      <EyeOff className="w-4 h-4 text-violet-400" /> Find your account
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Dictate how the search engines and discovery protocols of Nexora locate your account signature.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1">Choose whether people can find your account in search and suggestions.</p>
                   </div>
 
                   {/* MASTER GHOST MODE CARD */}
                   <div className="p-5 bg-gradient-to-r from-emerald-950/40 via-slate-950/90 to-teal-950/40 border border-emerald-500/25 rounded-3xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
-                      <Ghost className="w-24 h-24 text-emerald-400" />
+                      <EyeOff className="w-24 h-24 text-emerald-400" />
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="max-w-xl text-left">
-                        <span className="px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/30 text-[9px] font-mono uppercase tracking-wider text-emerald-400 rounded-md font-black">Concealment Mode</span>
+                        <span className="px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/30 text-[9px] font-mono uppercase tracking-wider text-emerald-400 rounded-md font-black">Hide my account</span>
                         <h5 className="text-sm font-bold text-white mt-1.5 flex items-center gap-2">
-                          Master Ghost Mode (Complete Disappearance)
+                          Hide your account from search
                         </h5>
                         <p className="text-[10.5px] text-zinc-400 mt-1 leading-relaxed">
                           When enabled, your profile entirely vanishes from search indices, suggestion reels, nearby logs, and follower counts. You become a total ghost node, while still maintaining full active chat capability with previously approved connections.
@@ -1073,22 +1073,22 @@ export default function PrivacySettingsModal({
                             : 'bg-[#080516] text-zinc-400 border-white/10 hover:border-emerald-500/30 hover:text-white'
                         }`}
                       >
-                        {discoverability.hiddenAccountMode ? '🔒 Ghost Active' : '🔓 Initiate Ghost'}
+                        {discoverability.hiddenAccountMode ? '🔒 Hidden Active' : '🔓 Initiate Hidden'}
                       </button>
                     </div>
                   </div>
 
                   {/* Search index items */}
                   <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-4">
-                    <span className="text-xs font-black text-violet-400 font-mono uppercase block">Active Discovery Indexes</span>
+                    <span className="text-xs font-black text-violet-400 font-mono uppercase block">Where your account can appear</span>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {[
-                        { key: 'searchResults', label: 'Include in Search Results', desc: 'Allows your node handle to render in the global index searches.' },
-                        { key: 'friendSuggestions', label: 'Suggest to Mutual Connections', desc: 'Suggests your handle to friends of your friends.' },
-                        { key: 'nearbyDiscovery', label: 'Nearby Beacon Discovery', desc: 'Radiates a local signal for mesh searching.' },
-                        { key: 'usernameLookup', label: 'Search by Direct Handle', desc: 'Permits exact handle querying in index lookups.' },
-                        { key: 'phoneNumberLookup', label: 'Query by Contact Registry', desc: 'Enables resolving your node via synchronized address books.' },
-                        { key: 'trendingUsers', label: 'Trending / Popular Account list', desc: 'Permits listing inside popular creators listings.' }
+                        { key: 'searchResults', label: 'Show me in search', desc: 'Let people find you in search.' },
+                        { key: 'friendSuggestions', label: 'Suggest me to friends', desc: 'People who follow your friends may see your account.' },
+                        { key: 'nearbyDiscovery', label: 'Nearby people', desc: 'Let people nearby find your account.' },
+                        { key: 'usernameLookup', label: 'Search by username', desc: 'Lets people find you by your username.' },
+                        { key: 'phoneNumberLookup', label: 'Find you by contacts', desc: 'Let people find you using their phone contacts.' },
+                        { key: 'trendingUsers', label: 'Popular accounts', desc: 'Let your account appear in popular creator lists.' }
                       ].map(item => {
                         const val = discoverability[item.key as keyof typeof discoverability];
                         const isDisabled = discoverability.hiddenAccountMode;
@@ -1183,16 +1183,16 @@ export default function PrivacySettingsModal({
                   ) : (
                     <div className="p-8 bg-slate-950/20 border border-dashed border-white/5 rounded-2xl text-center">
                       <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto opacity-30 mb-2" />
-                      <p className="text-xs text-zinc-400 font-bold">Ledger Clear: 0 connection restrictions active.</p>
+                      <p className="text-xs text-zinc-400 font-bold">No accounts are currently blocked or restricted.</p>
                     </div>
                   )}
 
                   {/* Soft Restriction Section */}
                   <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-4">
                     <div>
-                      <span className="text-xs font-black text-amber-400 block font-mono uppercase">Restricted Accounts (Soft Privacy Block)</span>
+                      <span className="text-xs font-black text-amber-400 block font-mono uppercase">Restricted accounts</span>
                       <p className="text-[10px] text-zinc-500 mt-1 leading-normal">
-                        Restricted accounts can write message requests to your device, but they receive no alerts of delivery, typing indicators, read ticks, or presence telemetry. Excellent for avoiding connection friction without hard blocks.
+                        Restricted accounts can still send you message requests, but they will not see when you are typing, when you have read their messages or whether you are online.
                       </p>
                     </div>
 
@@ -1215,7 +1215,7 @@ export default function PrivacySettingsModal({
                         </div>
                       )) : (
                         <p className="rounded-xl border border-dashed border-white/10 bg-black/20 p-3 text-[10px] leading-relaxed text-zinc-400">
-                          Restrict is not currently connected to account-level enforcement. Use Block User for the block controls saved to your account.
+                          Restrict is not available yet. Use Block to stop this account from contacting you.
                         </p>
                       )}
                     </div>
@@ -1228,23 +1228,23 @@ export default function PrivacySettingsModal({
                 <div className="space-y-6 text-left">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Key className="w-4 h-4 text-violet-400" /> Hidden Chats Security Configuration
+                      <Key className="w-4 h-4 text-violet-400" /> Hidden chat settings
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Conceal private direct chats behind custom authorization gates. Access is strictly blocked without valid input keys.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1">Lock private chats with a PIN so only you can open them.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     
                     {/* Security credentials form */}
                     <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-4">
-                      <span className="text-xs font-black text-violet-400 font-mono uppercase block">Authentication Gate Selection</span>
+                      <span className="text-xs font-black text-violet-400 font-mono uppercase block">Choose how to lock your chats</span>
                       
                       <div className="space-y-2">
                         {[
                           { id: 'PIN', label: 'Numeric PIN', desc: '4-digit secure code' },
-                          { id: 'Password', label: 'Alphanumeric Key', desc: 'Secure high-entropy word' },
-                          { id: 'Pattern', label: 'Swipe Pattern Grid', desc: 'Swipe matrix ledger' },
-                          { id: 'FaceUnlock', label: 'Biometric Face ID', desc: 'Local facial contour scan' }
+                          { id: 'Password', label: 'Password', desc: 'A strong password' },
+                          { id: 'Pattern', label: 'Swipe pattern', desc: 'Swipe pattern' },
+                          { id: 'FaceUnlock', label: 'Face unlock', desc: 'Uses your face on this phone' }
                         ].map(type => (
                           <button
                             key={type.id}
@@ -1268,14 +1268,14 @@ export default function PrivacySettingsModal({
                     {/* Hidden chat access settings */}
                     <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl flex flex-col justify-between">
                       <div className="space-y-2">
-                        <span className="text-xs font-black text-indigo-400 font-mono uppercase block">Active Gate Authorization Key</span>
+                        <span className="text-xs font-black text-indigo-400 font-mono uppercase block">Chat lock PIN</span>
                         <p className="text-[10px] text-zinc-500 leading-normal">
-                          Set the required code to authorize viewing hidden chat tabs in Nexora.
+                          Set the PIN you need to open your hidden chats.
                         </p>
                       </div>
 
                       <div className="my-4 bg-black/40 border border-white/5 rounded-xl p-3 text-center">
-                        <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Current Gate PIN</span>
+                        <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Current chat PIN</span>
                         <span className="text-lg font-mono font-black tracking-widest text-violet-300">••••</span>
                       </div>
 
@@ -1293,7 +1293,7 @@ export default function PrivacySettingsModal({
                             if (tempPIN.length === 4) {
                               setHiddenChats((prev: any) => ({ ...prev, pinCode: tempPIN }));
                               setTempPIN('');
-                              window.dispatchEvent(new CustomEvent('toast', { detail: "🔑 Hidden Chat lock PIN has been successfully re-routed!" }));
+                              window.dispatchEvent(new CustomEvent('toast', { detail: "🔑 Your chat lock PIN has been changed." }));
                             } else {
                               window.dispatchEvent(new CustomEvent('toast', { detail: "⚠️ PIN must be exactly 4 digits long." }));
                             }
@@ -1309,19 +1309,19 @@ export default function PrivacySettingsModal({
                 </div>
               )}
 
-              {/* Safety Registry Center Tab */}
+              {/* Safety and sign-ins Tab */}
               {activeTab === 'safety' && (
                 <div className="space-y-6 text-left">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <ShieldAlert className="w-4 h-4 text-violet-400" /> Decentralized Safety Center & Device Sessions
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Audit active sessions, investigate alerts, and review routing records on the decentralized ledger network.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1">Check recent sign-ins, security alerts and account activity.</p>
                   </div>
 
                   <div className="p-4 bg-slate-950/70 border border-violet-500/15 rounded-2xl flex items-start justify-between gap-4">
                     <div>
-                      <span className="text-xs font-black text-violet-300 font-mono uppercase block">Product analytics observations</span>
+                      <span className="text-xs font-black text-violet-300 font-mono uppercase block">How you use NEXORA</span>
                       <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">Allow minimized feed and feature observations to help Nexora measure quality. No message text, passwords, precise location, raw search text, or secret tokens are sent. Observations are optional and never block normal actions.</p>
                     </div>
                     <button type="button" role="switch" aria-checked={analyticsObservations} onClick={() => setAnalyticsObservations(value => !value)} className={`shrink-0 w-12 h-7 rounded-full p-1 transition-colors ${analyticsObservations ? 'bg-violet-600' : 'bg-zinc-800'}`}>
@@ -1351,7 +1351,7 @@ export default function PrivacySettingsModal({
 
                     {/* Suspicious Alerts */}
                     <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-3">
-                      <span className="text-xs font-black text-rose-400 font-mono uppercase block">Suspicious Activity Ledger</span>
+                      <span className="text-xs font-black text-rose-400 font-mono uppercase block">Unusual account activity</span>
                       <div className="space-y-2">
                         {suspiciousActivity.map(alert => (
                           <div key={alert.id} className="p-3 bg-rose-500/5 border border-rose-500/15 rounded-xl flex items-center gap-3">

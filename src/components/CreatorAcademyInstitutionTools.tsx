@@ -70,8 +70,8 @@ export default function CreatorAcademyInstitutionTools() {
   return <section className="mt-8 space-y-5 rounded-3xl border border-violet-400/20 bg-[#090d1b] p-5 md:p-6">
     <div>
       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-300">NEXORA INSTITUTE SERVICES</p>
-      <h3 className="mt-2 text-xl font-black text-white">Institution workspace</h3>
-      <p className="mt-1 text-xs leading-5 text-white/50">Course publishing, exams, credentials, the VOH AI Creator Tutor and mentor sessions use trusted server services. Instructor actions require an active Academy role.</p>
+      <h3 className="mt-2 text-xl font-black text-white">Academy tools</h3>
+      <p className="mt-1 text-xs leading-5 text-white/50">Courses, tests, certificates, the VOH AI Creator Tutor and mentor sessions are managed securely. Only approved teachers can manage courses.</p>
     </div>
 
     <div className="grid gap-4 lg:grid-cols-2">
@@ -99,7 +99,7 @@ export default function CreatorAcademyInstitutionTools() {
             void invoke('academySaveLesson', { courseId, lessonId, title: lessonTitle, body: lessonBody, transcript: lessonTranscript, order });
           }} className="mt-2 rounded-xl bg-violet-600/80 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Save lesson</button>
           <button disabled={busy || !courseId} onClick={() => void invoke('academySubmitCourseForReview', { courseId })} className="ml-2 rounded-xl border border-violet-400/30 px-4 py-2.5 text-xs font-bold text-violet-200 disabled:opacity-50">Submit for review</button>
-          <button disabled={busy || !courseId} onClick={() => void invoke('academyReviewCourse', { courseId, decision: 'approve', note: 'Approved through Academy editorial workspace.' })} className="ml-2 rounded-xl border border-emerald-400/30 px-4 py-2.5 text-xs font-bold text-emerald-200 disabled:opacity-50">Approve (editor)</button>
+          <button disabled={busy || !courseId} onClick={() => void invoke('academyReviewCourse', { courseId, decision: 'approve', note: 'Approved by the Academy team.' })} className="ml-2 rounded-xl border border-emerald-400/30 px-4 py-2.5 text-xs font-bold text-emerald-200 disabled:opacity-50">Approve (editor)</button>
         </div>
       </div>
 
@@ -140,7 +140,7 @@ export default function CreatorAcademyInstitutionTools() {
         <input type="datetime-local" value={startsAt} onChange={e => setStartsAt(e.target.value)} className="w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white"/>
         <button disabled={busy || !startsAt} onClick={() => void invoke('academyCreateMentorshipSession', { title: sessionTitle, description: sessionDescription, startsAt: new Date(startsAt).toISOString(), durationMinutes: 30, capacity: 20 })} className="rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Schedule mentor session</button>
         <div className="border-t border-white/10 pt-3">
-          <input value={sessionId} onChange={e => setSessionId(e.target.value)} placeholder="Session ID to book" className="w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white"/>
+          <input value={sessionId} onChange={e => setSessionId(e.target.value)} placeholder="Session code" className="w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white"/>
           <button disabled={busy || !sessionId} onClick={() => void invoke('academyBookMentorshipSession', { sessionId })} className="mt-2 rounded-xl border border-violet-400/30 px-4 py-2.5 text-xs font-bold text-violet-200 disabled:opacity-50">Book this session</button>
         </div>
       </div>

@@ -11,12 +11,12 @@ type Preview = {
 };
 
 const credentialLabel: Record<Preview['credentialState'], string> = {
-  verified: 'Trusted credential',
-  untrusted: 'Valid credential, signer not trusted',
-  invalid: 'Credential validation failed',
-  absent: 'No embedded credential found',
-  unsupported: 'Credential could not be inspected',
-  pending: 'Credential inspection pending',
+  verified: 'Trusted source',
+  untrusted: 'Valid source, but the creator could not be confirmed',
+  invalid: 'Source check failed',
+  absent: 'No source details found',
+  unsupported: 'Source details could not be checked',
+  pending: 'Source details are still being checked',
 };
 
 export default function OriginAttributionPreviewModal({ assetId, onClose }: { assetId: string; onClose: () => void }) {
@@ -32,7 +32,7 @@ export default function OriginAttributionPreviewModal({ assetId, onClose }: { as
         const result = await getPreview({ assetId });
         if (active) setPreview(result.data as Preview);
       } catch {
-        if (active) setError('Origin attribution is not available for this media yet.');
+        if (active) setError('Creator credit is not available for this post yet.');
       } finally {
         if (active) setLoading(false);
       }

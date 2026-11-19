@@ -139,14 +139,14 @@ export default function SettingsView({
   const revokeAllSessions = async () => {
     if (revokingSessions) return;
     const confirmed = typeof window !== 'undefined'
-      && window.confirm('Revoke sign-in sessions for every device? This device will also sign out, and other devices will need to sign in again when their current ID token expires.');
+      && window.confirm('Sign out of all devices? This device will also sign out, and you’ll need to sign in again everywhere.');
     if (!confirmed) return;
     setRevokingSessions(true);
     setSessionRevokeError('');
     try {
       await AuthService.revokeAllSessions();
     } catch (error) {
-      setSessionRevokeError(error instanceof Error ? error.message : 'Sessions could not be revoked. Please try again.');
+      setSessionRevokeError(error instanceof Error ? error.message : 'Couldn’t sign out of your other devices. Please try again.');
       setRevokingSessions(false);
     }
   };
@@ -239,8 +239,8 @@ export default function SettingsView({
     { id: 'privacy', label: 'Privacy', icon: Lock, desc: 'Public visibility & permissions' },
     { id: 'notifications', label: 'Notifications', icon: Bell, desc: 'Push alerts & email summaries' },
     { id: 'appearance', label: 'Appearance', icon: Palette, desc: 'Theme, contrast & font sizing' },
-    { id: 'security', label: 'Security', icon: ShieldCheck, desc: 'Two-factor & active sessions' },
-    { id: 'connected', label: 'Connected Accounts', icon: Link2, desc: 'OAuth & Workspace integrations' },
+    { id: 'security', label: 'Security', icon: ShieldCheck, desc: 'Sign-in checks and devices' },
+    { id: 'connected', label: 'Connected Accounts', icon: Link2, desc: 'Connected apps' },
     { id: 'about', label: 'About Nexora', icon: Info, desc: 'Platform version & legal info' },
     { id: 'beta', label: 'Beta feedback', icon: Bug, desc: 'Report issues with useful context' },
     { id: 'origin', label: 'NEXORA Origin', icon: Scale, desc: 'Attribution, corrections & disputes' }
@@ -395,9 +395,9 @@ export default function SettingsView({
               <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Theme & Atmosphere</h3>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { id: 'neon-cyber', label: 'Cyber Void', color: 'bg-violet-600' },
+                  { id: 'neon-cyber', label: 'Violet', color: 'bg-violet-600' },
                   { id: 'stealth-dark', label: 'Stealth Slate', color: 'bg-zinc-800' },
-                  { id: 'emerald-glass', label: 'Matrix Emerald', color: 'bg-emerald-600' },
+                  { id: 'emerald-glass', label: 'Emerald', color: 'bg-emerald-600' },
                   { id: 'platinum-light', label: 'Ivory Platinum', color: 'bg-slate-200' }
                 ].map(t => (
                   <button
@@ -481,9 +481,9 @@ export default function SettingsView({
                 <div><h4 className="text-xs font-bold text-white">Sound experience</h4><p className="mt-1 text-[10px] text-zinc-400">These controls apply on this device. Sounds only play after your browser allows audio playback.</p></div>
                 {[
                   { key: 'notifications' as const, label: 'Notification sounds', description: 'New messages, replies and social activity' },
-                  { key: 'interface' as const, label: 'Interface feedback', description: 'Soft confirmation and interaction cues' },
+                  { key: 'interface' as const, label: 'Button sounds', description: 'Sounds when you tap buttons' },
                   { key: 'gifts' as const, label: 'Gift delivery sounds', description: 'Gift arrival and creator celebration cues' },
-                  { key: 'live' as const, label: 'Live session sounds', description: 'Audience and room interaction cues' },
+                  { key: 'live' as const, label: 'Live sounds', description: 'Sounds during live videos' },
                 ].map(item => (
                   <div key={item.key} className="flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/5 p-3.5">
                     <div><span className="block text-xs font-bold text-white">{item.label}</span><span className="mt-1 block text-[10px] text-zinc-400">{item.description}</span></div>
@@ -505,7 +505,7 @@ export default function SettingsView({
                 <p className="text-xs font-bold text-white">Session control</p>
                 <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">Use this if a device is lost or you suspect someone else has access. Recent authentication is required.</p>
                 <button type="button" disabled={revokingSessions} onClick={() => void revokeAllSessions()} className="mt-3 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-2.5 text-[11px] font-semibold text-rose-200 disabled:opacity-50">
-                  {revokingSessions ? 'Revoking sessions…' : 'Revoke all sessions'}
+                  {revokingSessions ? 'Signing out…' : 'Sign out of all devices'}
                 </button>
                 {sessionRevokeError && <p role="alert" className="mt-2 text-[11px] text-rose-300">{sessionRevokeError}</p>}
               </div>

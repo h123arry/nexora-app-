@@ -24,7 +24,7 @@ export default function CreatorGiftGallery({ userId }: { userId: string }) {
     return () => { active = false; };
   }, [userId]);
   if (loading) return <div className="mx-auto grid max-w-4xl grid-cols-2 gap-3 px-3 sm:grid-cols-4"><div className="aspect-square animate-pulse rounded-2xl bg-white/5"/><div className="aspect-square animate-pulse rounded-2xl bg-white/5"/></div>;
-  if (!gifts.length) return <div className="mx-auto max-w-md py-16 text-center"><Gift className="mx-auto mb-3 h-9 w-9 text-violet-300"/><p className="font-bold text-zinc-200">No gifts in this gallery yet</p><p className="mt-1 text-xs text-zinc-500">Thoughtful gifts from the NEXORA community will be kept here.</p></div>;
+  if (!gifts.length) return <div className="mx-auto max-w-md py-16 text-center"><Gift className="mx-auto mb-3 h-9 w-9 text-violet-300"/><p className="font-bold text-zinc-200">No gifts yet</p><p className="mt-1 text-xs text-zinc-500">Gifts people send you will appear here.</p></div>;
   return <section className="mx-auto w-full max-w-4xl px-3 pb-8" aria-label="Creator gift gallery">
     <div className="mb-4 flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-300"/><h3 className="text-sm font-bold text-white">Gift gallery</h3><span className="text-xs text-zinc-500">{gifts.length} keepsakes</span></div>
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
