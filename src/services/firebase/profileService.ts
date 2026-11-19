@@ -1,4 +1,4 @@
-import { doc, deleteField, getDoc, setDoc, updateDoc, serverTimestamp, query, collection, where, getDocs, runTransaction, limit } from 'firebase/firestore';
+import { doc, deleteField, getDoc, setDoc, serverTimestamp, query, collection, where, getDocs, runTransaction, limit } from 'firebase/firestore';
 import { auth, db } from './config';
 import { User } from '../../types';
 import { User as FirebaseUser } from 'firebase/auth';
