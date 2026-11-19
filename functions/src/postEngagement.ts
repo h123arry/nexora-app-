@@ -1,5 +1,5 @@
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 export interface PostLikeResult {
   liked: boolean;
@@ -33,10 +33,24 @@ export async function setPostLike(
     const notificationRef = authorId && desiredLiked && authorId !== uid
       ? db.collection('users').doc(authorId).collection('notifications').doc(notificationId)
       : null;
-    const actorProfileRef = authorId && desiredLiked && authorId !== uid
+    const actorProfileRef = authorId && authorId !== uid
       ? db.collection('publicProfiles').doc(uid)
       : null;
-    const actorProfileSnapshot = actorProfileRef ? await transaction.get(actorProfileRef) : null;
+    const recipientPublicRef = authorId && authorId !== uid
+      ? db.collection('publicProfiles').doc(authorId)
+      : null;
+    const recipientPrivateRef = authorId && authorId !== uid
+      ? db.collection('users').doc(authorId)
+      : null;
+    const sparkEventId = createHash('sha256').update(uid + ':' + postId).digest('hex').slice(0, 48);
+    const sparkEventRef = authorId && authorId !== uid
+      ? db.collection('users').doc(authorId).collection('sparkEvents').doc(sparkEventId)
+      : null;
+    const [actorProfileSnapshot, recipientPublicSnapshot, recipientPrivateSnapshot] = await Promise.all([
+      actorProfileRef ? transaction.get(actorProfileRef) : Promise.resolve(null),
+      recipientPublicRef ? transaction.get(recipientPublicRef) : Promise.resolve(null),
+      recipientPrivateRef ? transaction.get(recipientPrivateRef) : Promise.resolve(null),
+    ]);
     const countValue = postSnapshot.get('likes');
     const count = Number.isSafeInteger(countValue) && countValue >= 0 ? countValue as number : 0;
     if (currentlyLiked === desiredLiked) return { liked: currentlyLiked, likes: count, changed: false };
@@ -52,6 +66,34 @@ export async function setPostLike(
     }
     const nextCount = Math.max(0, count + (desiredLiked ? 1 : -1));
     transaction.update(postRef, { likes: nextCount });
+
+    // Keep the creator's visible Sparks count and their Spark activity in the
+    // same transaction as the post reaction. A notification is only an alert;
+    // the profile activity is the durable record.
+    if (sparkEventRef && authorId && recipientPublicSnapshot?.exists) {
+      const received = Number(recipientPublicSnapshot.get('sparks'));
+      const currentReceived = Number.isSafeInteger(received) && received >= 0 ? received : 0;
+      const nextReceived = Math.max(0, currentReceived + (desiredLiked ? 1 : -1));
+      transaction.update(recipientPublicRef!, { sparks: nextReceived });
+      if (recipientPrivateSnapshot?.exists) {
+        transaction.update(recipientPrivateRef!, { sparks: nextReceived, updatedAt: FieldValue.serverTimestamp() });
+      }
+      if (desiredLiked) {
+        const actor = actorProfileSnapshot?.data() || {};
+        transaction.set(sparkEventRef, {
+          id: sparkEventId,
+          postId,
+          creatorId: authorId,
+          fromUserId: uid,
+          username: typeof actor.username === 'string' ? actor.username.slice(0, 80) : 'member',
+          name: typeof actor.name === 'string' ? actor.name.slice(0, 100) : 'NEXORA member',
+          avatar: typeof actor.avatar === 'string' ? actor.avatar.slice(0, 1000) : '',
+          createdAt: FieldValue.serverTimestamp(),
+        });
+      } else {
+        transaction.delete(sparkEventRef);
+      }
+    }
     if (notificationRef && authorId && actorProfileSnapshot) {
       const profile = actorProfileSnapshot.data() || {};
       transaction.create(notificationRef, {
