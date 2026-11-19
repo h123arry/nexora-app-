@@ -979,7 +979,7 @@ export default function ProfileView({
       let persistedCover = editCover;
       // Cropped/captured photos are data URLs. Upload the binary to R2 instead
       // of writing a large base64 string into the Firestore profile document.
-      if (editAvatar.startsWith('data:image/jpeg;base64,')) {
+      if (/^data:image\/(?:jpeg|png|webp|gif|avif);base64,/i.test(editAvatar)) {
         const avatarBlob = await fetch(editAvatar).then(response => {
           if (!response.ok) throw new Error('NEXORA could not prepare your profile photo.');
           return response.blob();
@@ -987,13 +987,22 @@ export default function ProfileView({
         const uploadedAvatar = await uploadMediaFile({
           file: avatarBlob,
           userId: currentUser.id,
-          fileName: 'profile-avatar.jpg',
+          fileName: 'profile-avatar',
+          metadata: { purpose: 'profile-avatar' },
         });
         persistedAvatar = uploadedAvatar.downloadUrl;
       }
-      if (editCover.startsWith('data:image/')) {
-        const coverBlob = await fetch(editCover).then(response => { if (!response.ok) throw new Error('NEXORA could not prepare your cover photo.'); return response.blob(); });
-        const uploadedCover = await uploadMediaFile({ file: coverBlob, userId: currentUser.id, fileName: 'profile-cover.jpg' });
+      if (/^data:image\/(?:jpeg|png|webp|gif|avif);base64,/i.test(editCover)) {
+        const coverBlob = await fetch(editCover).then(response => {
+          if (!response.ok) throw new Error('NEXORA could not prepare your cover photo.');
+          return response.blob();
+        });
+        const uploadedCover = await uploadMediaFile({
+          file: coverBlob,
+          userId: currentUser.id,
+          fileName: 'profile-cover',
+          metadata: { purpose: 'profile-cover' },
+        });
         persistedCover = uploadedCover.downloadUrl;
       }
 
@@ -1025,10 +1034,14 @@ export default function ProfileView({
         setShowSavedFeedback(false);
         setActivePanel('profile');
       }, 1500);
-    } catch {
-      console.error('Profile update failed; details redacted.');
+    } catch (error) {
+      // Preserve the form state and surface only the safe, actionable error.
+      console.error('Profile update failed.', error instanceof Error ? error.message : 'Unknown error');
       setIsSavingProfile(false);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Failed to save profile updates. Please check connection.' }));
+      const message = error instanceof Error && error.message.trim()
+        ? error.message
+        : 'NEXORA could not save your profile. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: `❌ ${message}` }));
     }
   };
 
