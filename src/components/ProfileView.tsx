@@ -1025,10 +1025,15 @@ export default function ProfileView({
         setShowSavedFeedback(false);
         setActivePanel('profile');
       }, 1500);
-    } catch {
-      console.error('Profile update failed; details redacted.');
+    } catch (error) {
+      // Keep the user's edits in the form and report the actionable upload error.
+      // The storage service deliberately omits signed URLs and credentials.
+      console.error('Profile update failed.', error instanceof Error ? error.message : 'Unknown error');
       setIsSavingProfile(false);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Failed to save profile updates. Please check connection.' }));
+      const message = error instanceof Error && error.message.trim()
+        ? error.message
+        : 'NEXORA could not save your profile. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: `❌ ${message}` }));
     }
   };
 
