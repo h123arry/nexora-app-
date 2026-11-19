@@ -8,6 +8,18 @@ on:
         required: true
         type: boolean
         default: false
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-production-founding-members.yml'
+      - 'firestore.rules'
+      - 'functions/src/index.ts'
+      - 'functions/src/giftCatalog.ts'
+      - 'functions/src/giftCatalogPolicy.ts'
+      - 'functions/src/giftPurchases.ts'
+      - 'functions/src/giftDelivery.ts'
+      - 'functions/src/giftInventoryTransfers.ts'
+      - 'functions/src/giftFriendPurchases.ts'
 
 permissions:
   contents: read
@@ -19,7 +31,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: inputs.confirm_production_deploy == true
+    if: github.event_name == 'push' || inputs.confirm_production_deploy == true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: nexora-production
