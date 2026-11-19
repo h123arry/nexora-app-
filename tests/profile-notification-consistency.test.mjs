@@ -132,3 +132,13 @@ test('normalizes feed posts into a unique id set before rendering', async () => 
   assert.match(app, /if \(post\?\.id && !uniquePosts\.has\(post\.id\)\) uniquePosts\.set\(post\.id, post\)/);
   assert.match(app, /return \[\.\.\.uniquePosts\.values\(\)\]/);
 });
+
+test('profile relationship lists use live Firestore edges and respect participant privacy', async () => {
+  const profile = await read('../src/components/ProfileView.tsx');
+  assert.match(profile, /subscribeToFollows\(currentUser\.id/);
+  assert.match(profile, /const allFollows = profileFollows/);
+  assert.match(profile, /const allRegisteredUsers = relationshipUsers/);
+  assert.doesNotMatch(profile, /localStorage\.getItem\('nexora_db_follows'/);
+  assert.doesNotMatch(profile, /localStorage\.getItem\('nexora_users_db'/);
+  assert.match(profile, /Relationship lists are private for this account/);
+});
