@@ -39,7 +39,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
       setSnapshotOwnerId(requestedOwnerId);
     } catch {
       if (sequence === requestSequence.current) {
-        setError('Couldn't load your wallet. Check your connection and try again.');
+        setError('Couldn’t load your wallet. Check your connection and try again.');
       }
     } finally {
       if (sequence === requestSequence.current) setLoading(false);
