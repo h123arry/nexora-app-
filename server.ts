@@ -368,8 +368,6 @@ r2MediaRouter.delete('/:mediaId', async (req, res) => {
   }
 });
 
-app.use('/api/media', r2MediaRouter);
-
 app.get('/api/media/:mediaId', async (req, res) => {
   if (!r2Config) return res.status(404).end();
   const mediaId = req.params.mediaId;
@@ -409,6 +407,8 @@ app.get('/api/media/:mediaId', async (req, res) => {
     return res.status(404).end();
   }
 });
+
+app.use('/api/media', r2MediaRouter);
 
 const privateChatMediaRouter = express.Router();
 privateChatMediaRouter.use(requireFirebaseUser);
