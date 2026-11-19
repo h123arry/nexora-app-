@@ -253,7 +253,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
         {/* Quick Clicking Tag Examples */}
         <div className="flex flex-wrap items-center gap-1.5 px-0.5">
           <span className="text-[10px] font-mono text-violet-400/60 uppercase mr-1">Explore topics:</span>
-          {pulseTopics.length === 0 ? <span className="text-[10px] text-violet-300/40">Topics appear as multiple creators discuss them.</span> : pulseTopics.slice(0, 6).map(({ tag }) => (
+          {pulseTopics.length === 0 ? <span className="text-[10px] text-violet-300/40">Topics people are talking about.</span> : pulseTopics.slice(0, 6).map(({ tag }) => (
             <button
               key={tag}
               onClick={() => {
@@ -272,10 +272,10 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
         <section className="rounded-2xl border border-violet-400/15 bg-[#090718] p-4 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-white"><Globe className="h-4 w-4 text-violet-300" /> Community Signals</div>
-              <p className="mt-1 text-[10px] text-violet-200/50">A live snapshot of the public posts currently loaded in this view.</p>
+              <div className="flex items-center gap-2 text-xs font-bold text-white"><Globe className="h-4 w-4 text-violet-300" /> What's happening</div>
+              <p className="mt-1 text-[10px] text-violet-200/50">Recent public posts on Nexora.</p>
             </div>
-            <span className="shrink-0 rounded-full border border-violet-400/20 px-2 py-1 text-[9px] font-semibold text-violet-200">Current data</span>
+            <span className="shrink-0 rounded-full border border-violet-400/20 px-2 py-1 text-[9px] font-semibold text-violet-200">Recent posts</span>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
@@ -302,7 +302,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
               <div className="flex items-center gap-2 text-xs font-bold text-white"><Globe className="h-4 w-4 text-violet-300" /> Interest Radar</div>
               <p className="mt-1 text-[10px] text-violet-200/50">Conversations gaining momentum in the latest 24 hours versus the previous 24 hours.</p>
             </div>
-            <span className="shrink-0 rounded-full border border-violet-400/20 px-2 py-1 text-[9px] font-semibold text-violet-200">Current data</span>
+            <span className="shrink-0 rounded-full border border-violet-400/20 px-2 py-1 text-[9px] font-semibold text-violet-200">Recent posts</span>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             {risingTopics.map(topic => (
@@ -318,7 +318,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
               </button>
             ))}
           </div>
-          <p className="text-[9px] text-violet-200/35">These topics come from public posts currently shown in Trending.</p>
+          <p className="text-[9px] text-violet-200/35">These topics come from posts in Trending.</p>
         </section>
       )}
 
@@ -364,7 +364,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
             </div>
             <div>
               <span className="text-xs font-mono uppercase tracking-widest font-black text-violet-300">VOH AI assistant</span>
-              <p className="text-[10px] text-violet-300/50">VOH can use recent public posts loaded in this view as context.</p>
+              <p className="text-[10px] text-violet-300/50">VOH can use recent public posts to help answer you.</p>
             </div>
           </div>
           <span className="text-[9px] font-mono bg-violet-500/10 text-violet-300 border border-white/10 px-2 py-0.5 rounded-md uppercase font-black tracking-tight">AI service</span>
@@ -463,8 +463,8 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
       {activeTab === 'map' && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="nx-surface rounded-3xl p-8 text-center">
           <Map className="mx-auto h-8 w-8 text-violet-300/50" />
-          <h3 className="mt-3 text-sm font-semibold text-white">Location activity is not available yet</h3>
-          <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-zinc-400">Live, privacy-respecting location aggregation is not connected. No sample pins or activity are shown.</p>
+          <h3 className="mt-3 text-sm font-semibold text-white">Nearby activity isn't available yet</h3>
+          <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-zinc-400">Nearby activity isn't available yet.</p>
         </motion.div>
       )}
 
@@ -473,7 +473,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-white">{activeTab === 'trending' ? 'Recent public activity' : `${activeTab[0].toUpperCase()}${activeTab.slice(1)} posts`}</h3>
-              <p className="mt-1 text-[10px] text-violet-300/50">Loaded from public NEXORA posts. Engagement figures reflect stored post data.</p>
+              <p className="mt-1 text-[10px] text-violet-300/50">Based on public posts on Nexora.</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <span className="text-[10px] text-violet-300/50">{visiblePulsePosts.length} loaded</span>
@@ -484,18 +484,18 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
             </div>
           </div>
           {activityLoading ? (
-            <div className="nx-surface rounded-2xl p-6 text-center text-xs text-violet-200/60">Loading recent public activity...</div>
+            <div className="nx-surface rounded-2xl p-6 text-center text-xs text-violet-200/60">Loading recent posts…</div>
           ) : activityError ? (
             <div className="nx-surface rounded-2xl p-6 text-center space-y-2">
-              <p className="text-sm font-semibold text-white">Activity could not be loaded</p>
+              <p className="text-sm font-semibold text-white">Couldn't load activity</p>
               <p className="text-xs text-violet-200/60">Check your connection and try again. No placeholder activity is shown.</p>
               <button type="button" onClick={() => { setActivityError(false); setActivityLoading(true); void getGlobalPostsPage(null, 30).then(page => { setPulsePosts(page.posts); pulseCursorRef.current = page.nextCursor; setActivityHasMore(page.hasMore); }).catch(() => setActivityError(true)).finally(() => setActivityLoading(false)); }} className="min-h-10 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white hover:bg-violet-500">Try again</button>
             </div>
           ) : visiblePulsePosts.length === 0 ? (
             <div className="nx-surface rounded-2xl p-7 text-center">
               <Globe className="mx-auto h-7 w-7 text-violet-400/50" />
-              <p className="mt-3 text-sm font-semibold text-white">{pulsePosts.length ? 'No matching public posts' : 'No public posts yet'}</p>
-              <p className="mt-1 text-xs text-violet-200/50">{pulseSearch ? 'Try another search or clear the filter.' : 'New public posts will appear here as creators publish.'}</p>
+              <p className="mt-3 text-sm font-semibold text-white">{pulsePosts.length ? 'No posts found' : 'No posts yet'}</p>
+              <p className="mt-1 text-xs text-violet-200/50">{pulseSearch ? 'Try another search or clear the filter.' : 'New posts will show up here.'}</p>
               {(pulseSearch || activeTab !== 'trending') && <button type="button" onClick={() => { setPulseSearch(''); setActiveTab('trending'); }} className="mt-3 min-h-10 rounded-xl border border-violet-400/20 px-4 text-xs font-semibold text-violet-200">Clear filters</button>}
             </div>
           ) : (
