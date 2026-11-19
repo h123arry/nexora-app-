@@ -128,7 +128,7 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
 export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploadResult> {
   if (options.chatId || options.metadata?.purpose === 'worldweave') return uploadMediaFileWithFirebase(options);
   return uploadMediaFileViaR2(options).catch(error => {
-    if (error instanceof R2NotConfiguredError) return uploadMediaFileWithFirebase(options);
+    if (error instanceof R2NotConfiguredError && import.meta.env.DEV) return uploadMediaFileWithFirebase(options);
     throw error;
   });
 }
