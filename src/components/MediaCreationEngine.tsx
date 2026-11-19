@@ -585,7 +585,7 @@ export default function MediaCreationEngine({
         const existing = new Set(previous.map(item => item.id));
         return [...previous, ...cloudDrafts.filter(item => !existing.has(item.id))].slice(0, 50);
       });
-    }).catch(error => console.warn('[Composer] Cloud drafts could not be restored.', error));
+    }).catch(error => console.warn('[Composer] Saved drafts couldn't be loaded.', error));
     return () => { active = false; };
   }, [currentUser.id]);
 
@@ -608,7 +608,7 @@ export default function MediaCreationEngine({
             if (videoPreviewRef.current) {
               videoPreviewRef.current.srcObject = stream;
               void videoPreviewRef.current.play().catch(() => {
-                window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview could not start. Check browser camera permissions and try again.' }));
+                window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview couldn't start. Allow camera access in your phone settings and try again.' }));
               });
             }
           })
@@ -702,7 +702,7 @@ export default function MediaCreationEngine({
         if (video.srcObject === stream) video.srcObject = null;
         if (!cancelled) {
           window.dispatchEvent(new CustomEvent('toast', {
-            detail: error instanceof Error ? error.message : 'Camera preview could not start. Check browser camera permissions and try again.',
+            detail: error instanceof Error ? error.message : 'Camera preview couldn't start. Allow camera access in your phone settings and try again.',
           }));
         }
       }
@@ -825,7 +825,7 @@ export default function MediaCreationEngine({
             const live = videoStreamRef.current?.getVideoTracks().some(track => track.readyState === 'live');
             if (live) pendingAction();
             else if (++attempts < 40) window.setTimeout(waitForPreview, 100);
-            else window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera permission was granted, but the preview is still starting. Please tap Record again in a moment.' }));
+            else window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera access is on, but the preview is still starting. Tap Record again in a moment.' }));
           };
           window.setTimeout(waitForPreview, 100);
         } else {
@@ -852,7 +852,7 @@ export default function MediaCreationEngine({
         try {
           await validateMediaFile(file, 'image');
         } catch (error) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'Image validation failed.'}` }));
+          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This photo couldn't be checked.'}` }));
           return;
         }
         const reader = new FileReader();
@@ -918,7 +918,7 @@ export default function MediaCreationEngine({
           setVideoTrimEnd(Math.min(15, Math.max(1, Math.round(metadata.duration || 15))));
           setVideoDuration(metadata.duration || 15);
         } catch (error) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'Video validation failed.'}` }));
+          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This video couldn't be checked.'}` }));
         }
       })();
     });
@@ -930,12 +930,12 @@ export default function MediaCreationEngine({
     if (!video || videoTrimEnd <= videoTrimStart) { setErrorMessage('Choose a valid video section before trimming.'); return; }
     const capture = video as HTMLVideoElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream };
     if (typeof MediaRecorder === 'undefined' || (!capture.captureStream && !capture.mozCaptureStream)) {
-      setErrorMessage('Video trimming is not supported by this browser. Your original video is unchanged.'); return;
+      setErrorMessage('You can't trim videos in this browser. Your original video hasn't changed.'); return;
     }
     setIsTrimmingVideo(true); setErrorMessage('');
     let stream: MediaStream | null = null; let recorder: MediaRecorder | null = null;
     try {
-      if (video.readyState < 1) await new Promise<void>((resolve, reject) => { video.onloadedmetadata = () => resolve(); video.onerror = () => reject(new Error('The video could not be opened.')); });
+      if (video.readyState < 1) await new Promise<void>((resolve, reject) => { video.onloadedmetadata = () => resolve(); video.onerror = () => reject(new Error('This video couldn't be opened.')); });
       stream = capture.captureStream ? capture.captureStream() : capture.mozCaptureStream!();
       const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
       recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
@@ -1111,7 +1111,7 @@ export default function MediaCreationEngine({
                     const result = await VoiceEngine.uploadVoice(audioBase64, blob.type || 'audio/webm');
                     setVoiceTranscript(result.transcription);
                   } catch (error) {
-                    window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'VOH could not transcribe this recording.' }));
+                    window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'VOH couldn't turn this recording into text.' }));
                   } finally {
                     setLoadingTranscript(false);
                   }
