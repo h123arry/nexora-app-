@@ -646,6 +646,32 @@ export default function App() {
     return realPosts;
   });
 
+  // Keep every author and commenter currently referenced by the loaded feed
+  // subscribed to their public identity, not only the first directory page.
+  const profileSubscriptionIds = useMemo(() => [...new Set(
+    posts.flatMap(post => [post.userId, ...(post.comments || []).map(comment => comment.userId)])
+      .filter((uid): uid is string => typeof uid === 'string' && !!uid && uid !== firebaseUser?.uid)
+  )].slice(0, 100), [posts, firebaseUser?.uid]);
+
+  useEffect(() => {
+    if (!isLoggedIn || profileSubscriptionIds.length === 0) return;
+    const unsubscribers = profileSubscriptionIds.map(uid => onSnapshot(
+      doc(db, 'publicProfiles', uid),
+      snapshot => {
+        if (!snapshot.exists()) return;
+        const profile = { ...snapshot.data(), id: uid } as User;
+        setGlobalUsersMap(previous => ({
+          ...previous,
+          [uid]: { ...profile, avatar: getSafeAvatar(profile.avatar, profile.name || profile.username) },
+        }));
+      },
+      () => {
+        // Keep the last known public identity when a profile read is temporarily unavailable.
+      },
+    ));
+    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+  }, [profileSubscriptionIds, isLoggedIn]);
+
   // Public directory queries are deliberately bounded. Hydrate authors missing
   // from that window directly by UID so public posts never fall back to stale
   // author labels just because a profile is outside the first directory page.
