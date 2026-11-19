@@ -12,7 +12,7 @@ interface NidaViewProps {
 export default function NidaView({ currentUser, posts }: NidaViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<'interest-dna' | 'pillars' | 'playbook'>('interest-dna');
   
-  // Personal Interest DNA State
+  // Personal Your interests State
   const [interestDNA, setInterestDNA] = useState<Record<string, number>>(() => {
     const profile = getRecommendationProfile();
     return {
@@ -37,7 +37,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
     freshness: 15,
   });
 
-  // Save Interest DNA helper
+  // Save Your interests helper
   const handleUpdateInterest = (interest: string, value: number) => {
     const updated = { ...interestDNA, [interest]: value };
     setInterestDNA(updated);
@@ -116,7 +116,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
         {/* SUB NAVIGATION TABS */}
         <div className="flex flex-wrap gap-2 pt-4 border-t border-white/5 relative z-10">
           {[
-                        { id: 'interest-dna', label: 'Evolving Interest DNA', icon: Sliders },
+                        { id: 'interest-dna', label: 'Evolving Your interests', icon: Sliders },
             { id: 'pillars', label: 'Feed Ranking', icon: Cpu },
             { id: 'playbook', label: 'Roadmap', icon: Shield },
           ].map(tab => {
@@ -156,7 +156,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div className="space-y-1">
                   <h2 className="text-sm font-mono font-black text-pink-400 uppercase tracking-widest flex items-center gap-2">
-                    <Sliders className="w-4 h-4" /> Personalized Interest DNA Matrix
+                    <Sliders className="w-4 h-4" /> Your interests
                   </h2>
                   <p className="text-xs text-zinc-400">
                     Your interest DNA is an evolving profile tracked as you watch or interact. You can manually align your current matching tags below.
@@ -204,7 +204,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
             <div className="bg-cyan-950/20 border border-cyan-500/20 p-5 rounded-3xl flex items-start gap-4">
               <Info className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <h4 className="text-xs font-mono font-black text-cyan-300 uppercase tracking-wider">How NIDA Interest DNA works</h4>
+                <h4 className="text-xs font-mono font-black text-cyan-300 uppercase tracking-wider">How NIDA Your interests works</h4>
                 <p className="text-xs text-zinc-400 leading-relaxed">
                   Every recommendation query matches posts tagged with corresponding categories. As you complete video watch loops (<strong>+12 weight</strong>), bookmark articles (<strong>+15 weight</strong>), or skip/swipe instantly (<strong>-15 weight</strong>), NIDA dynamically alters these vectors in real-time. This ensures high-affinity matching without lock-in biases.
                 </p>
@@ -235,8 +235,8 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
 
               <div className="space-y-5">
                 {[
-                  { key: 'interest', label: '1. User Interest DNA Matching', desc: 'Prioritizes content matched perfectly with the user\'s interest profile vectors.', color: 'accent-violet-500' },
-                  { key: 'quality', label: '2. Engagement Quality Score', desc: 'Prioritizes completion rates, comments, saves, and genuine shares over simple fake claps.', color: 'accent-pink-500' },
+                  { key: 'interest', label: '1. User Your interests Matching', desc: 'Prioritizes content matched perfectly with the user\'s interest profile vectors.', color: 'accent-violet-500' },
+                  { key: 'quality', label: '2. Post engagement', desc: 'Prioritizes completion rates, comments, saves, and genuine shares over simple fake claps.', color: 'accent-pink-500' },
                   { key: 'verification', label: '3. Creator Verification', desc: 'Uses the actual verification flag on each post author. Verification is not a full trust or safety score.', color: 'accent-cyan-500' },
                   { key: 'freshness', label: '4. Content Freshness & Trends', desc: 'Boosts newly uploaded posts and viral rapid acceleration trends.', color: 'accent-yellow-500' },
                 ].map(pillar => {
@@ -349,17 +349,17 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 { stage: 1, title: 'Stage 1 — Initial Test Audience', tag: 'A/B Seed Sandbox', color: 'border-white/10 text-violet-400', desc: 'When you press submit, NIDA does not show it to millions instantly. Instead, it serves it strictly to 50–200 meticulously chosen users interested in that specific topic DNA to analyze baseline interaction parameters.' },
-                { stage: 2, title: 'Stage 2 — Engagement Quality', tag: 'Micro-Signals Matrix', color: 'border-pink-500/20 text-pink-400', desc: 'NIDA ignores trivial double-tap bot likes. It calculates a genuine Quality Score based on: Watch completion rate, replays, shares, saves, deep threaded comments, profile clicks, and brand new followers.' },
+                { stage: 2, title: 'Stage 2 — Engagement Quality', tag: 'Post activity', color: 'border-pink-500/20 text-pink-400', desc: 'NIDA ignores trivial double-tap bot likes. It calculates a genuine Quality Score based on: Watch completion rate, replays, shares, saves, deep threaded comments, profile clicks, and brand new followers.' },
                 { stage: 3, title: 'Stage 3 — Satisfaction Score', tag: 'Organic Enjoyment', color: 'border-cyan-500/20 text-cyan-400', desc: 'Estimates true satisfaction. Positive signals (complete loops, saves, profile visits) boost ranking, while negative signals (instant swipe-aways, reports, selecting "Not Interested") trigger dampening to depress cheap clickbait.' },
-                { stage: 4, title: 'Stage 4 — AI Content Parser', tag: 'Computer Vision & NLP', color: 'border-emerald-500/20 text-emerald-400', desc: 'Automated ingestion pipeline extracts topic taxonomy, metadata language, overall mood (vibe), detected faces, music, objects, activities, and originality metrics to construct a comprehensive target indexing blueprint.' },
-                { stage: 5, title: 'Stage 5 — Creator Reputation', tag: 'Living Compliance Score', color: 'border-amber-500/20 text-amber-400', desc: 'Account age, rules compliance, spam strikes, content originality, and previous community behaviors generate a slight modifier weight. Reputation assists slightly, but never guarantees unfair clout domination.' },
+                { stage: 4, title: 'Stage 4 — AI Content Parser', tag: 'Image and text checks', color: 'border-emerald-500/20 text-emerald-400', desc: 'Automated ingestion pipeline extracts topic taxonomy, metadata language, overall mood (vibe), detected faces, music, objects, activities, and originality metrics to construct a comprehensive target indexing blueprint.' },
+                { stage: 5, title: 'Stage 5 — Creator Reputation', tag: 'Account standing', color: 'border-amber-500/20 text-amber-400', desc: 'Account age, rules compliance, spam strikes, content originality, and previous community behaviors generate a slight modifier weight. Reputation assists slightly, but never guarantees unfair clout domination.' },
                 { stage: 6, title: 'Stage 6 — Trend Detection', tag: 'Rapid Velocity Tracker', color: 'border-indigo-500/20 text-indigo-400', desc: 'Monitors instantaneous momentum: rapid spikes in bookmark counts, shares, and watch time loops. If detected, NIDA unlocks immediate wider wave bandwidth to assist organic discovery.' },
                 { stage: 7, title: 'Stage 7 — Long-Term Discovery', tag: 'Evergreen Ingestion', color: 'border-purple-500/20 text-purple-400', desc: 'Post discovery is designed with lasting value. Exceptional evergreen posts never "die" after 48 hours—they are resurfaced weeks or months later to matching users when relevant topics spike again.' },
-                { stage: 8, title: 'Stage 8 — Interest Engine', tag: 'Evolving Fingerprints', color: 'border-rose-500/20 text-rose-400', desc: 'Every account builds an evolving Interest DNA based on organic watch times. Recommendations adapt seamlessly as hobbies and needs shift, avoiding algorithmic capture bias.' },
-                { stage: 9, title: 'Stage 9 — Anti-Spam Protection', tag: 'Originality Guard', color: 'border-teal-500/20 text-teal-400', desc: 'Severe dampeners are applied instantly to reposted or stolen media, repeating upload hashes, engagement loop farming, fake giveaways, and deceptive titles.' },
-                { stage: 10, title: 'Stage 10 — Fairness Engine', tag: 'Absolute Equal Chance', color: 'border-sky-500/20 text-sky-400', desc: 'Follower size is not a prerequisite for visibility. A fresh, newly created account with highly engaging, authentic content has the exact same chance to expand globally as any verified profile.' },
+                { stage: 8, title: 'Stage 8 — Interest Engine', tag: 'Changing interests', color: 'border-rose-500/20 text-rose-400', desc: 'Every account builds an evolving Your interests based on organic watch times. Recommendations adapt seamlessly as hobbies and needs shift, avoiding algorithmic capture bias.' },
+                { stage: 9, title: 'Stage 9 — Anti-Spam Protection', tag: 'Original content checks', color: 'border-teal-500/20 text-teal-400', desc: 'Severe dampeners are applied instantly to reposted or stolen media, repeating upload hashes, engagement loop farming, fake giveaways, and deceptive titles.' },
+                { stage: 10, title: 'Stage 10 — Fair feed ranking', tag: 'Absolute Equal Chance', color: 'border-sky-500/20 text-sky-400', desc: 'Follower size is not a prerequisite for visibility. A fresh, newly created account with highly engaging, authentic content has the exact same chance to expand globally as any verified profile.' },
                 { stage: 11, title: 'Stage 11 — Community Health', tag: 'Toxicity Shield', color: 'border-blue-500/20 text-blue-400', desc: 'Limits recommendation streams for content that repeatedly prompts community guidelines reports, harassment warnings, bulk comments, or coordinate manipulation.' },
-                { stage: 12, title: 'Stage 12 — Multi-Stage Waves', tag: 'Concentric Distribution', color: 'border-fuchsia-500/20 text-fuchsia-400', desc: 'Distribution expands in wave patterns: Local ➔ Regional ➔ National ➔ Global. Only posts that repeatedly pass engagement quality checks in the current wave advance to the next concentric layer.' },
+                { stage: 12, title: 'Stage 12 — Wider reach', tag: 'How posts reach people', color: 'border-fuchsia-500/20 text-fuchsia-400', desc: 'Distribution expands in wave patterns: Local ➔ Regional ➔ National ➔ Global. Only posts that repeatedly pass engagement quality checks in the current wave advance to the next concentric layer.' },
               ].map(playbook => (
                 <div 
                   key={playbook.stage}
