@@ -76,6 +76,19 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
     throw new Error('NEXORA returned an invalid upload authorization.');
   }
 
+  const abortR2Intent = async () => {
+    try {
+      const cleanupToken = await user.getIdToken();
+      await fetch(`/api/media/${encodeURIComponent(mediaId)}/abort`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${cleanupToken}` },
+      });
+    } catch {
+      // The server's pending-upload cleanup is best-effort; no credential is exposed.
+    }
+  };
+
+  try {
   await new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     let settled = false;
@@ -106,6 +119,12 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
     xhr.send(file);
   });
 
+  } catch (error) {
+    await abortR2Intent();
+    throw error;
+  }
+
+  try {
   const completeToken = await user.getIdToken();
   const completeResponse = await fetch(`/api/media/${encodeURIComponent(mediaId)}/complete`, {
     method: 'POST',
@@ -123,6 +142,10 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
     contentType: completed.contentType,
     size: completed.size,
   };
+  } catch (error) {
+    await abortR2Intent();
+    throw error;
+  }
 }
 
 export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploadResult> {
