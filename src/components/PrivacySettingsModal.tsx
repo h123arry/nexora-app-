@@ -536,7 +536,7 @@ export default function PrivacySettingsModal({
                 { id: 'messaging', label: 'Messaging Settings', icon: Radio, count: Object.keys(messaging).length },
                 { id: 'calls', label: 'Call settings', icon: Phone, count: Object.keys(calls).length },
                 { id: 'groups', label: 'Group permissions', icon: Lock, count: Object.keys(groups).length },
-                { id: 'discover', label: 'Who can find you', icon: Hidden, badge: discoverability.hiddenAccountMode ? 'Hidden' : '' },
+                { id: 'discover', label: 'Who can find you', icon: EyeOff, badge: discoverability.hiddenAccountMode ? 'Hidden' : '' },
                 { id: 'blocked', label: 'Blocked & Restricted', icon: ShieldBan, count: blockedUsers.length + restrictedUsers.length },
                 { id: 'hidden_chats', label: 'Hidden PIN Chats', icon: Key, badge: 'Locked' },
                 { id: 'safety', label: 'Safety and sign-ins', icon: ShieldAlert, badge: 'Alerts' }
