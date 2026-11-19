@@ -46,12 +46,12 @@ export default function GiftEarningsFinancePanel() {
     setBusyId(record.transactionId); setError(''); setNotice('');
     try {
       const result = await settleGiftCreatorEarning(record.transactionId);
-      const successMessage = result.replayed ? 'This gift was already paid out. It won't be counted twice.' : `Settled ${result.creatorShareNex?.toLocaleString() || '0'} NEX to the creator and ${result.platformShareNex?.toLocaleString() || '0'} NEX to the platform treasury.`;
+      const successMessage = result.replayed ? 'This gift was already paid out. It won’t be counted twice.' : `Settled ${result.creatorShareNex?.toLocaleString() || '0'} NEX to the creator and ${result.platformShareNex?.toLocaleString() || '0'} NEX to the platform treasury.`;
       await refresh();
       setNotice(successMessage);
     } catch (cause) {
       const code = (cause as { code?: string })?.code || '';
-      setError(code.includes('permission-denied') ? 'Your finance permission is no longer active.' : 'The payment wasn't confirmed. Check the payment history before trying again.');
+      setError(code.includes('permission-denied') ? 'Your finance permission is no longer active.' : 'The payment wasn’t confirmed. Check the payment history before trying again.');
     } finally { setBusyId(''); }
   };
 
