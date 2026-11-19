@@ -28,7 +28,7 @@ export default function OriginAttributionInbox() {
 
   const load = useCallback(async () => {
     const user = auth.currentUser;
-    if (!user) { setError('Sign in to manage attribution cases.'); setLoading(false); return; }
+    if (!user) { setError('Sign in to manage creator credit requests.'); setLoading(false); return; }
     setLoading(true); setError('');
     try {
       const list = httpsCallable(functions, 'listMyOriginAttributionCases');
@@ -46,7 +46,7 @@ export default function OriginAttributionInbox() {
         setQueue((queued.data as { cases?: QueueCase[] }).cases || []);
       } else setQueue([]);
     } catch {
-      setError('Origin cases could not be loaded. Check your connection and try again.');
+      setError('Creator credit requests couldn't load. Check your connection and try again.');
     } finally { setLoading(false); }
   }, []);
 
@@ -63,7 +63,7 @@ export default function OriginAttributionInbox() {
         await httpsCallable(functions, 'disputeOriginAttributionCorrection')({ caseId, reason: note });
       }
       setNotes(prev => ({ ...prev, [caseId]: '' }));
-      setNotice(action === 'respond' ? 'Your attribution response was saved.' : 'Your dispute was submitted for review.');
+      setNotice(action === 'respond' ? 'Your response was saved.' : 'Your dispute was sent for review.');
       await load();
     } catch (err: any) { setError(err?.message || 'That action could not be completed.'); }
     finally { setBusy(''); }
@@ -71,13 +71,13 @@ export default function OriginAttributionInbox() {
 
   const previewAttribution = async () => {
     const assetId = request.derivativeAssetId.trim();
-    if (!assetId) { setError('Enter your derivative asset ID before previewing attribution.'); return; }
+    if (!assetId) { setError('Enter the ID of the post that uses the original work to preview its credit.'); return; }
     setPreviewLoading(true); setError(''); setPreview(null);
     try {
       const callable = httpsCallable(functions, 'getMyOriginAttributionPreview');
       const result = await callable({ assetId });
       setPreview(result.data as { hasLineage: boolean; credentialState: 'absent' | 'verified' | 'untrusted' | 'invalid' | 'unsupported' | 'pending'; credentialValidationCodes: string[]; attribution: { sourceAssetId: string; creatorUid: string; permissionSnapshot: string }[] });
-    } catch (err: any) { setError(err?.message || 'The saved attribution preview could not be loaded.'); }
+    } catch (err: any) { setError(err?.message || 'The creator credit preview couldn't load.'); }
     finally { setPreviewLoading(false); }
   };
 
@@ -93,7 +93,7 @@ export default function OriginAttributionInbox() {
       setRequest({ derivativeAssetId: '', sourceAssetId: '', reason: '' });
       setPreview(null);
       setShowRequest(false);
-      setNotice('Your attribution correction request was submitted.');
+      setNotice('Your request to correct the creator credit was sent.');
       await load();
     } catch (err: any) { setError(err?.message || 'Your request could not be submitted.'); }
     finally { setBusy(''); }
