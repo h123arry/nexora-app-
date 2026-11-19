@@ -429,6 +429,7 @@ export default function NotificationsView({
       case 'spark':
         return <Zap className="w-4 h-4 text-amber-400 fill-amber-400/20" />;
       case 'comment':
+      case 'comment_reply':
         return <MessageSquare className="w-4 h-4 text-pink-400" />;
       case 'gift':
         return <Star className="w-4 h-4 text-violet-300" />;
