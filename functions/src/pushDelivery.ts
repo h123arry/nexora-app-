@@ -82,7 +82,7 @@ export function createNotificationPushDelivery(db: Firestore, app: App) {
       const type = typeof notification.type === 'string' ? notification.type : 'system';
       const detail = typeof notification.content === 'string' ? notification.content.slice(0, 300) : 'You have a new update.';
       const username = typeof notification.username === 'string' ? notification.username.replace(/^@+/, '').slice(0, 40) : '';
-      const title = username ? `@${username}` : notificationTitle(type);
+      const title = type === 'gift' ? notificationTitle(type) : username ? `@${username}` : notificationTitle(type);
       const data = buildNotificationPushData(notification, snapshot.id);
       const messaging = getMessaging(app);
 
