@@ -1116,6 +1116,26 @@ export default function App() {
     return () => { cancelled = true; };
   }, [currentUser?.id, isLoggedIn]);
 
+  // Resume the intended destination when a push alert launches a closed app.
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const params = new URLSearchParams(window.location.search);
+    const pushType = params.get('nxPushType');
+    if (!pushType) return;
+    const userId = params.get('nxPushUser');
+    const targetId = params.get('nxPushTarget');
+    params.delete('nxPushType');
+    params.delete('nxPushUser');
+    params.delete('nxPushTarget');
+    const remaining = params.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${remaining ? `?${remaining}` : ''}${window.location.hash}`);
+    if ((pushType === 'follow' || pushType === 'profile_view') && userId) {
+      window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userId } }));
+    } else {
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: pushType === 'message' || pushType === 'chat' ? 'inbox' : 'activity' } }));
+    }
+  }, [isLoggedIn, currentUser.id]);
+
   // Global VOH AI Command Center overlay state variables
   const [isAiCommandCenterOpen, setIsAiCommandCenterOpen] = useState(false);
   const [quickAiQuery, setQuickAiQuery] = useState('');
