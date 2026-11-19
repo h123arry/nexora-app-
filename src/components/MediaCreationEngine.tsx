@@ -1373,7 +1373,7 @@ export default function MediaCreationEngine({
       const durableImages: string[] = [];
       const uploadedOriginAssetIds: string[] = [];
       for (let index = 0; index < selectedImages.length; index += 1) {
-        setPublishStage(selectedImages.length > 1 ? 'Uploading your photos…' : 'Uploading your photo…');
+        setPublishStage(selectedImages.length > 1 ? `Uploading photo ${index + 1} of ${selectedImages.length}…` : 'Uploading your photo…');
         const selectedImage = selectedImages[index];
         const imageUrl = selectedImage.url;
         const hasEdits = selectedImage.rotation !== 0
