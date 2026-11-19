@@ -9,7 +9,7 @@ const pngDimensions = (buffer) => ({
   height: buffer.readUInt32BE(20),
 });
 
- test('the exact uploaded PNG is the canonical logo and generated web aliases match', async () => {
+test('the exact uploaded PNG is the canonical logo and generated web aliases match', async () => {
   const [source, icon, mark, legacy] = await Promise.all([
     readBinary('../assets/logo.png'),
     readBinary('../public/icons/icon-512.png'),
@@ -31,10 +31,12 @@ test('shared app branding and watermark use the generated exact-art PNG', async 
     readText('../index.html'),
   ]);
   assert.match(logo, /src="\/nexora-mark\.png"/);
+  assert.match(logo, /mixBlendMode: 'screen'/);
   assert.match(brand, /NexoraPremiumLogo/);
   assert.match(watermark, /NexoraPremiumLogo/);
   assert.match(index, /href="\/icons\/icon-48\.png"/);
   assert.match(index, /src="\/nexora-mark\.png"/);
+  assert.match(index, /mix-blend-mode:\s*screen/);
   assert.match(index, /og:image" content="\/icons\/icon-512\.png"/);
 });
 
