@@ -72,13 +72,13 @@ export function subscribeToPublicStories(
   );
 }
 
-export async function createTextStory(user: User, caption: string, storyId?: string): Promise<string> {
+export async function createTextStory(user: User, caption: string): Promise<string> {
   const signedInUser = auth.currentUser;
   const cleanCaption = caption.trim();
   if (!signedInUser || signedInUser.uid !== user.id) throw new Error('The signed-in account does not match the story author.');
   if (!cleanCaption || cleanCaption.length > 500) throw new Error('Story text must be between 1 and 500 characters.');
 
-  const storyRef = storyId ? doc(db, STORIES_COLLECTION, storyId) : doc(collection(db, STORIES_COLLECTION));
+  const storyRef = doc(collection(db, STORIES_COLLECTION));
   await setDoc(storyRef, {
     id: storyRef.id,
     userId: signedInUser.uid,
@@ -100,7 +100,6 @@ export async function createMediaStory(
   caption: string,
   onProgress?: (progress: number) => void,
   signal?: AbortSignal,
-  storyId?: string,
 ): Promise<string> {
   const signedInUser = auth.currentUser;
   const cleanCaption = caption.trim();
