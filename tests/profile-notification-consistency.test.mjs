@@ -67,6 +67,34 @@ test('Google signup does not assign a stock-person avatar when Google has no pho
   assert.doesNotMatch(auth, /photo-1535713875002-d1d0cf377fde/);
 });
 
+test('missing public profile links finish at the new member own profile after signup', async () => {
+  const [app, profile, setup] = await Promise.all([
+    read('../src/App.tsx'),
+    read('../src/services/firebase/profileService.ts'),
+    read('../src/components/PublicAccountSetup.tsx'),
+  ]);
+  assert.match(profile, /getPublicProfileByUsername\(username: string\)/);
+  assert.match(profile, /doc\(db, 'usernames', clean\)/);
+  assert.match(app, /getPublicProfileByUsername\(cleanIdOrUser\)/);
+  assert.match(app, /navigateTo\('profile', null\)/);
+  assert.doesNotMatch(app, /void handleViewProfile\(userIdOrUsername\)/);
+  assert.match(setup, /AuthService\.completeUsernameRegistration/);
+});
+
+test('public profile signup offers both username/password and email/password paths', async () => {
+  const [app, setup, authView, authService] = await Promise.all([
+    read('../src/App.tsx'),
+    read('../src/components/PublicAccountSetup.tsx'),
+    read('../src/components/AuthView.tsx'),
+    read('../src/services/firebase/authService.ts'),
+  ]);
+  assert.match(setup, /onSwitchToEmailSignup/);
+  assert.match(app, /<AuthView[\s\S]*initialMode="signup"/);
+  assert.match(authView, /handleEmailSignupSubmit/);
+  assert.match(authService, /createUserWithEmailAndPassword\(auth, cleanEmail, password\)/);
+  assert.match(authService, /sendEmailVerification\(fbUser\)/);
+});
+
 test('profile edits persist the private profile and update its public projection', async () => {
   const profile = await read('../src/services/firebase/profileService.ts');
   assert.match(profile, /await updateDoc\(docRef, \{ \.\.\.updates, updatedAt: serverTimestamp\(\) \}\)/);
