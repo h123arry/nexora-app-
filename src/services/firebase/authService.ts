@@ -409,7 +409,7 @@ export class AuthService {
       const code = source?.code || 'profile-setup-failed';
       console.error('[NEXORA] Profile setup failed after Firebase account creation', { code });
       const wrapped = new Error(
-        `Your Firebase account was created, but NEXORA could not finish setting up your profile (${code}). Your account is safe. Please try signing in again shortly.`
+        `Your Firebase account is ready, but NEXORA could not finish setting up your profile (${code}). Your account is safe. Please retry shortly.`
       ) as Error & { code?: string };
       wrapped.code = code;
       throw wrapped;
