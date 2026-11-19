@@ -168,7 +168,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     { id: 'thumbnail', name: 'Post and video previews', size: '45 MB', items: 1240, status: 'Optimized' },
     { id: 'media', name: 'Photos and videos', size: '854 MB', items: 820, status: 'Managed' },
     { id: 'ai', name: 'AI files', size: '120 MB', items: 15, status: 'Active' },
-    { id: 'search', name: 'Search data', size: '3 MB', items: 450, status: 'Indexed' },
+    { id: 'search', name: 'Search history', size: '3 MB', items: 450, status: 'Ready' },
     { id: 'emoji', name: 'Emoji images', size: '5 MB', items: 1400, status: 'Active' },
     { id: 'sticker', name: 'Saved stickers', size: '12 MB', items: 110, status: 'Optimized' },
     { id: 'story', name: 'Stories data', size: '88 MB', items: 65, status: 'Active' },
@@ -228,13 +228,13 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     indexHealth: '100%',
     queryCaching: 'Enabled',
     syncQueueSize: 0,
-    cryptographySeal: 'Verified',
+    cryptographySeal: 'Protected',
   });
 
   // 12. AI Performance Assistant Messages
   const [aiAssistantMessages, setAiAssistantMessages] = useState<any[]>([
     { id: 'm-1', sender: 'assistant', text: "Hello! I am I'm Nida. I can help you check storage, connection, and app speed. Here's what I found:", timestamp: 'Just now' },
-    { id: 'm-2', sender: 'assistant', text: "⚡ Recommendations:\n• Your virtualized RAM is extremely clean, but 854 MB of old video downloads could be compressed to reclaim disk space.\n• Toggle 'Battery Saver Mode' to immediately pause complex viewport canvas shaders.\n• Rebuild your thumbnail index to recover 12 MB of cache leaks.", timestamp: 'Just now', suggestions: true }
+    { id: 'm-2', sender: 'assistant', text: "⚡ Recommendations:\n• You have 854 MB of old videos. Making them smaller could free up space.\n• Turn on Battery Saver to help your battery last longer.\n• Clear old photo and video previews to free up more space.", timestamp: 'Just now', suggestions: true }
   ]);
   const [aiInput, setAiInput] = useState('');
 
@@ -529,7 +529,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const handleClearSpecificCache = (key: keyof typeof cacheLevels, name: string) => {
     setCacheLevels((prev: any) => ({ ...prev, [key]: 0 }));
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `🧹 Cleared Nexora ${name}. Reclaimed ${cacheLevels[key]} MB.` 
+      detail: `Cleared ${name}. Freed up ${cacheLevels[key]} MB.` 
     }));
   };
 
@@ -1808,7 +1808,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             { title: 'Storage protection', status: safeguards.storageExhaustion, desc: 'Stops preloads dynamically if disk drops below 50MB.' },
                             { title: 'Anti-Infinite Loop Watcher', status: safeguards.infiniteLoops, desc: 'Intercepts state loop iterations and safely releases execution.' },
                             { title: 'UI Freeze Guard (WebWorker)', status: safeguards.uiFreezes, desc: 'Offloads complex cryptography pipelines to secondary threads.' },
-                            { title: 'Slow DB Index Interceptor', status: safeguards.slowDbQueries, desc: 'Pre-compiles index keys for SQLite/IndexedDB lookup shortcuts.' },
+                            { title: 'Slow DB Index Interceptor', status: safeguards.slowDbQueries, desc: 'Pre-compiles index keys for SQLite/ReadyDB lookup shortcuts.' },
                             { title: 'Corrupted Cache Auto-Sanitizer', status: safeguards.corruptedCache, desc: 'Validates integrity hashes and auto-rebuilds broken assets.' }
                           ].map((safe, idx) => (
                             <div key={idx} className="p-3 bg-black/40 border border-white/5 rounded-xl flex flex-col justify-between text-left space-y-1.5">
