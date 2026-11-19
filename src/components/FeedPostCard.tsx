@@ -679,7 +679,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       )}
 
       {/* Action Row for text posts */}
-      {!(post.videoUrl || (post.image && !post.opportunityType) || (post.images && post.images.length > 0)) && (
+      {!(post.videoUrl || post.opportunityType) && (
         post.isBroadcastPost ? (
           <div className="px-4 sm:px-6 flex flex-col gap-3 border-t border-white/5 pt-3.5 mb-1 text-left w-full">
             <span className="text-[9.5px] font-mono text-amber-400 font-bold tracking-widest uppercase flex items-center gap-1">
