@@ -13,8 +13,7 @@ import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
 import { shapeAuthenticatedVohAccountContext } from './server/vohAccountContext';
-import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl } from './server/r2Storage';
-import { buildOriginUploadRecords } from './functions/src/originPolicy';
+import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, buildR2OriginUploadRecords } from './server/r2Storage';
 import { runVohContextTool, VOH_CONTEXT_TOOL_DECLARATIONS } from './server/vohTools';
 
 const isProduction = process.env.NEXORA_ENV === 'production' || process.env.NODE_ENV === 'production';
@@ -297,7 +296,7 @@ r2MediaRouter.post('/:mediaId/complete', async (req, res) => {
     const verified = await hashR2Object(asset.storagePath);
     if (verified.size !== asset.size) return res.status(400).json({ error: 'The uploaded file failed integrity verification.' });
     const generation = String(Date.now());
-    const records = buildOriginUploadRecords({
+    const records = buildR2OriginUploadRecords({
       assetId: mediaId,
       ownerUid: uid,
       mediaGeneration: generation,
