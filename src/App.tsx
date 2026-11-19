@@ -2472,7 +2472,22 @@ export default function App() {
                     />
                   )}
 
-                  {activeTab === 'profile' && (
+                  {activeTab === 'profile' && !isLoggedIn && !viewedUser ? (
+                    <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 p-8 text-center text-white">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full border border-violet-400/25 bg-violet-500/10">
+                        <UserIcon className="h-7 w-7 text-violet-300" />
+                      </div>
+                      <h2 className="text-lg font-bold">Your profile starts with you</h2>
+                      <p className="max-w-md text-sm text-zinc-400">Sign in or complete your NEXORA account setup to open your profile. There is no visitor profile to display.</p>
+                      <button
+                        type="button"
+                        className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500"
+                        onClick={() => requireAuth(() => navigateTo('profile', null), 'Sign in or complete your NEXORA account setup to open your profile.')}
+                      >
+                        Continue
+                      </button>
+                    </div>
+                  ) : activeTab === 'profile' && (
                     <ProfileView
                       currentUser={getRichUser(viewedUser || currentUser)}
                       isLoggedIn={isLoggedIn}
