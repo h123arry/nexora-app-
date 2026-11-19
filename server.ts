@@ -13,7 +13,7 @@ import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
 import { shapeAuthenticatedVohAccountContext } from './server/vohAccountContext';
-import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, buildR2OriginUploadRecords } from './server/r2Storage';
+import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, isCurrentPublicProfileMedia, buildR2OriginUploadRecords } from './server/r2Storage';
 import { runVohContextTool, VOH_CONTEXT_TOOL_DECLARATIONS } from './server/vohTools';
 
 const isProduction = process.env.NEXORA_ENV === 'production' || process.env.NODE_ENV === 'production';
@@ -267,7 +267,8 @@ r2MediaRouter.post('/upload-intent', async (req, res) => {
   if (typeof mediaId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) {
     return res.status(400).json({ error: 'A valid media asset ID is required.' });
   }
-  const purpose = metadata && typeof metadata.purpose === 'string' && ['post', 'story', 'studio-export'].includes(metadata.purpose)
+  const purpose = metadata && typeof metadata.purpose === 'string'
+    && ['post', 'story', 'studio-export', 'profile-avatar', 'profile-cover'].includes(metadata.purpose)
     ? metadata.purpose : 'post';
   const objectKey = createR2ObjectKey(uid, mediaId);
   try {
@@ -438,13 +439,14 @@ app.get('/api/media/:mediaId', async (req, res) => {
     if (!assetSnapshot.exists || asset?.storageProvider !== 'r2' || asset?.status !== 'uploaded'
       || typeof asset.ownerId !== 'string' || typeof asset.storagePath !== 'string') return res.status(404).end();
     const ownerId = asset.ownerId;
-    const [story, byArray, bySingle, ownerProfile, ownerSettings, ownerStatus] = await Promise.all([
+    const [story, byArray, bySingle, ownerProfile, ownerSettings, ownerStatus, publicProfileSnapshot] = await Promise.all([
       serverDb.collection('stories').doc(mediaId).get(),
       serverDb.collection('posts').where('mediaAssetIds', 'array-contains', mediaId).limit(5).get(),
       serverDb.collection('posts').where('mediaAssetId', '==', mediaId).limit(5).get(),
       serverDb.collection('users').doc(ownerId).get(),
       serverDb.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
       serverDb.collection('accountStatus').doc(ownerId).get(),
+      serverDb.collection('publicProfiles').doc(ownerId).get(),
     ]);
     const storyData = story.data();
     const storyIsPublic = story.exists && storyData?.userId === ownerId && storyData?.mediaId === mediaId
@@ -458,7 +460,13 @@ app.get('/api/media/:mediaId', async (req, res) => {
     const privacy = (ownerSettings.data()?.privacy || {}) as Record<string, unknown>;
     const status = ownerStatus.data() || {};
     const profile = ownerProfile.data() || {};
-    if ((!storyIsPublic && !linkedPublicPost) || privacy.isPrivate === true || privacy.isPrivateAccount === true
+    const publicProfile = publicProfileSnapshot.data() || {};
+    // Profile images are deliverable only while the public profile projection
+    // still points at this exact media gateway URL. This prevents orphaned,
+    // replaced, or private profile media from becoming public.
+    const isCurrentProfileMedia = isCurrentPublicProfileMedia(asset.purpose, mediaId, publicProfile);
+    if ((!storyIsPublic && !linkedPublicPost && !isCurrentProfileMedia)
+      || privacy.isPrivate === true || privacy.isPrivateAccount === true
       || profile.isSeedProfile === true || profile.isBanned === true || profile.isSuspended === true
       || status.banned === true || status.suspended === true) return res.status(404).end();
     const url = createR2PresignedUrl(r2Config, 'GET', asset.storagePath, 60);

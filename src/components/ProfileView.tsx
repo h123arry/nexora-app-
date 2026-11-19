@@ -330,7 +330,7 @@ export default function ProfileView({
       : identityVerification?.identityType === 'creator'
         ? 'creator'
         : 'default';
-  const [allContentFilter, setAllContentFilter] = useState<'all' | 'videos' | 'photos' | 'posts' | 'pinned'>('all');
+  const [allContentFilter, setAllContentFilter] = useState<'all' | 'photos' | 'posts' | 'pinned'>('all');
   const [showAllContentDropdown, setShowAllContentDropdown] = useState(false);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const [selectedGridPost, setSelectedGridPost] = useState<Post | null>(null);
@@ -938,6 +938,10 @@ export default function ProfileView({
   // Validate and submit profile updates (Locks rules)
   const handleSaveProfile = async () => {
     if (isSavingProfile || showSavedFeedback) return;
+    if (!isLoggedIn || auth.currentUser?.uid !== currentUser.id) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Sign in to this account before saving profile changes.' }));
+      return;
+    }
 
     // 7-day display name lock
     if (editName !== currentUser.name) {
@@ -979,7 +983,7 @@ export default function ProfileView({
       let persistedCover = editCover;
       // Cropped/captured photos are data URLs. Upload the binary to R2 instead
       // of writing a large base64 string into the Firestore profile document.
-      if (editAvatar.startsWith('data:image/jpeg;base64,')) {
+      if (/^data:image\/(?:jpeg|png|webp|gif|avif);base64,/i.test(editAvatar)) {
         const avatarBlob = await fetch(editAvatar).then(response => {
           if (!response.ok) throw new Error('NEXORA could not prepare your profile photo.');
           return response.blob();
@@ -987,13 +991,22 @@ export default function ProfileView({
         const uploadedAvatar = await uploadMediaFile({
           file: avatarBlob,
           userId: currentUser.id,
-          fileName: 'profile-avatar.jpg',
+          fileName: 'profile-avatar',
+          metadata: { purpose: 'profile-avatar' },
         });
         persistedAvatar = uploadedAvatar.downloadUrl;
       }
-      if (editCover.startsWith('data:image/')) {
-        const coverBlob = await fetch(editCover).then(response => { if (!response.ok) throw new Error('NEXORA could not prepare your cover photo.'); return response.blob(); });
-        const uploadedCover = await uploadMediaFile({ file: coverBlob, userId: currentUser.id, fileName: 'profile-cover.jpg' });
+      if (/^data:image\/(?:jpeg|png|webp|gif|avif);base64,/i.test(editCover)) {
+        const coverBlob = await fetch(editCover).then(response => {
+          if (!response.ok) throw new Error('NEXORA could not prepare your cover photo.');
+          return response.blob();
+        });
+        const uploadedCover = await uploadMediaFile({
+          file: coverBlob,
+          userId: currentUser.id,
+          fileName: 'profile-cover',
+          metadata: { purpose: 'profile-cover' },
+        });
         persistedCover = uploadedCover.downloadUrl;
       }
 
@@ -1025,10 +1038,14 @@ export default function ProfileView({
         setShowSavedFeedback(false);
         setActivePanel('profile');
       }, 1500);
-    } catch {
-      console.error('Profile update failed; details redacted.');
+    } catch (error) {
+      // Preserve the form state and surface only the safe, actionable error.
+      console.error('Profile update failed.', error instanceof Error ? error.message : 'Unknown error');
       setIsSavingProfile(false);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Failed to save profile updates. Please check connection.' }));
+      const message = error instanceof Error && error.message.trim()
+        ? error.message
+        : 'NEXORA could not save your profile. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: `❌ ${message}` }));
     }
   };
 
@@ -1437,19 +1454,29 @@ export default function ProfileView({
             {(currentUser.profileCategory || currentUser.creatorType) && <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-300">{[currentUser.profileCategory, currentUser.creatorType].filter(Boolean).join(' · ')}</p>}
             {(currentUser.socialTwitter || currentUser.socialInstagram) && <div className="flex flex-wrap gap-3 text-[11px]">{currentUser.socialTwitter && <a href={/^https?:\/\//i.test(currentUser.socialTwitter) ? currentUser.socialTwitter : 'https://' + currentUser.socialTwitter.replace(/^@/, '')} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:text-violet-200 hover:underline">X / Twitter</a>}{currentUser.socialInstagram && <a href={/^https?:\/\//i.test(currentUser.socialInstagram) ? currentUser.socialInstagram : 'https://instagram.com/' + currentUser.socialInstagram.replace(/^@/, '')} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:text-violet-200 hover:underline">Instagram</a>}</div>}
             {((currentUser.skills || []).length > 0 || Object.keys(currentUser.interestDNA || {}).length > 0) && <div className="flex flex-wrap gap-1.5 pt-1">{[...(currentUser.skills || []), ...Object.keys(currentUser.interestDNA || {}).sort((a,b) => (currentUser.interestDNA[b] || 0) - (currentUser.interestDNA[a] || 0))].filter((value,index,array) => value && array.indexOf(value) === index).slice(0,6).map(item => <span key={item} className="rounded-full border border-violet-400/15 bg-violet-500/10 px-2.5 py-1 text-[10px] font-medium text-violet-200">{item}</span>)}</div>}
-            {/* Nexora 6 Statistics Grid */}
-            <div className="nx-profile-stats grid grid-cols-3 sm:grid-cols-6 gap-y-1.5 gap-x-1 sm:gap-x-2 text-center mt-2 sm:mt-3">
+            {/* Nexora profile statistics: two rows, one central rule, short column separators */}
+            <div className="nx-profile-stats mx-auto mt-2 grid w-full max-w-xl grid-cols-3 text-center sm:mt-3">
               {[
                 { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
                 { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
                 { label: 'Posts', value: formatSecondaryStat(getPostsCount()) },
+              ].map((stat, index) => (
+                <button key={stat.label} type="button" onClick={() => { if (stat.label === 'Followers' || stat.label === 'Following') { setRelationsTab(stat.label === 'Followers' ? 'followers' : 'following'); setActivePanel('social-graph'); } else setProfileTab('media'); }} className="relative flex min-w-0 flex-col gap-0.5 bg-transparent px-1 py-2 text-center transition-colors hover:bg-violet-500/[0.06] focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-2px]">
+                  <span className="text-sm font-black leading-tight text-white sm:text-base">{stat.value}</span>
+                  <span className="text-[10px] font-medium leading-tight text-zinc-300 sm:text-xs">{stat.label}</span>
+                  {index < 2 && <span aria-hidden="true" className="pointer-events-none absolute right-0 top-1/2 h-4 w-px -translate-y-1/2 bg-white/10" />}
+                </button>
+              ))}
+              <div aria-hidden="true" className="col-span-3 h-px bg-white/10" />
+              {[
                 { label: 'Sparks', value: getSecondaryMetric('sparks') },
                 { label: 'Reputation', value: getSecondaryMetric('reputation') },
                 { label: 'Contributions', value: getSecondaryMetric('contributions') },
-              ].map(stat => (
-                <button key={stat.label} type="button" onClick={() => { if (stat.label === 'Followers' || stat.label === 'Following') { setRelationsTab(stat.label === 'Followers' ? 'followers' : 'following'); setActivePanel('social-graph'); } else if (stat.label === 'Posts') setProfileTab('media'); else if (stat.label === 'Sparks') setProfileTab('sparks'); }} className="flex flex-col gap-0.5 rounded-lg sm:rounded-xl border border-white/[0.06] bg-white/[0.025] px-1 py-1.5 text-center transition-colors hover:border-violet-400/30 hover:bg-violet-500/[0.07] sm:py-2">
-                  <span className="text-sm sm:text-base font-black text-white leading-tight">{stat.value}</span>
-                  <span className="text-[10px] sm:text-xs font-medium text-zinc-300 leading-tight">{stat.label}</span>
+              ].map((stat, index) => (
+                <button key={stat.label} type="button" onClick={() => { if (stat.label === 'Sparks') setProfileTab('sparks'); }} className="relative flex min-w-0 flex-col gap-0.5 bg-transparent px-1 py-2 text-center transition-colors hover:bg-violet-500/[0.06] focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-2px]">
+                  <span className="text-sm font-black leading-tight text-white sm:text-base">{stat.value}</span>
+                  <span className="text-[10px] font-medium leading-tight text-zinc-300 sm:text-xs">{stat.label}</span>
+                  {index < 2 && <span aria-hidden="true" className="pointer-events-none absolute right-0 top-1/2 h-4 w-px -translate-y-1/2 bg-white/10" />}
                 </button>
               ))}
             </div>
@@ -1546,8 +1573,8 @@ export default function ProfileView({
                 )}
               </section>
             )}
-            {profileTab === 'media' && <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-2 px-3 pb-1"><span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Content</span><div className="flex flex-wrap gap-1.5">{([{id:'all',label:'All'},{id:'photos',label:'Photos'},{id:'videos',label:'Videos'},{id:'posts',label:'Text'},{id:'pinned',label:'Pinned'}] as const).map(filter => <button key={filter.id} type="button" onClick={() => setAllContentFilter(filter.id)} aria-pressed={allContentFilter === filter.id} className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold transition-colors ${allContentFilter === filter.id ? 'border-violet-400/40 bg-violet-500/15 text-violet-100' : 'border-white/10 bg-white/[0.025] text-zinc-400 hover:text-white'}`}>{filter.label}</button>)}</div></div>}
-            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} isOwner={auth.currentUser?.uid === currentUser.id} onExplore={() => setShowGiftVerse(true)} /> : filteredTabPosts.filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'videos' ? !!post.videoUrl : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).length === 0 ? (
+            {profileTab === 'media' && <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-2 px-3 pb-1"><span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Content</span><div className="flex flex-wrap gap-1.5">{([{id:'all',label:'All'},{id:'photos',label:'Photos'},{id:'posts',label:'Text'},{id:'pinned',label:'Pinned'}] as const).map(filter => <button key={filter.id} type="button" onClick={() => setAllContentFilter(filter.id)} aria-pressed={allContentFilter === filter.id} className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold transition-colors ${allContentFilter === filter.id ? 'border-violet-400/40 bg-violet-500/15 text-violet-100' : 'border-white/10 bg-white/[0.025] text-zinc-400 hover:text-white'}`}>{filter.label}</button>)}</div></div>}
+            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} isOwner={auth.currentUser?.uid === currentUser.id} onExplore={() => setShowGiftVerse(true)} /> : filteredTabPosts.filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).length === 0 ? (
               <div className="p-8 py-16 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 max-w-md mx-auto my-6">
                 <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                   {profileTab === 'media' && <Camera className="w-6 h-6" />}
@@ -1572,7 +1599,7 @@ export default function ProfileView({
             ) : (
               <div className="w-full max-w-4xl mx-auto px-2">
                 <MediaGrid 
-                  gridPosts={[...filteredTabPosts].filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'videos' ? !!post.videoUrl : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
+                  gridPosts={[...filteredTabPosts].filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
                   pinnedPostIds={pinnedPostIdsList} 
                   onSelectPost={(post) => setSelectedGridPost(post)} 
                 />

@@ -114,7 +114,7 @@ export class ProfileService {
   }
 
   static async updateProfile(uid: string, updates: Partial<User>): Promise<void> {
-    if (!db) return;
+    if (!db) throw new Error('Profile storage is unavailable. Please try again.');
     if (!auth.currentUser || auth.currentUser.uid !== uid) {
       throw new Error('Only the signed-in account owner can update this profile.');
     }
