@@ -18,6 +18,7 @@ import {
 
 import { 
   getRichUser,
+  getSafeAvatar,
   followUserDb, 
   unfollowUserDb, 
   createPostDb, 
@@ -590,12 +591,12 @@ export default function App() {
       
       return {
         ...post,
-        avatar: getRenderableAvatarUrl(post.avatar) || '',
+        avatar: getSafeAvatar(post.avatar, post.name || post.username),
         timestamp: permanentTime,
         createdAt: post.createdAt || permanentTime,
         comments: comments.map((comment: any) => ({
           ...comment,
-          avatar: getRenderableAvatarUrl(comment.avatar) || '',
+          avatar: getSafeAvatar(comment.avatar, comment.name || comment.username),
         })),
       };
     });
