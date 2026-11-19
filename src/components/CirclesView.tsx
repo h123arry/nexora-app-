@@ -6,7 +6,7 @@ import { recordRecommendationEvent } from '../utils/recommendations';
 import { CommunityService } from '../services/firebase/communityService';
 import CircleEventsPanel from './CircleEventsPanel';
 import CircleFeedPanel from './CircleFeedPanel';
-import CircleInsightsPanel from './CircleInsightsPanel';
+import CirclePage insightsPanel from './CirclePage insightsPanel';
 import CircleMembersPanel from './CircleMembersPanel';
 import CircleAnnouncementsPanel from './CircleAnnouncementsPanel';
 import CircleGovernancePanel from './CircleGovernancePanel';
@@ -247,7 +247,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               type="text"
               required
               disabled={isBuilding}
-              placeholder='e.g., "Create a football community in Port Harcourt" or "Quantum physics discussion lounge"'
+              placeholder='e.g., "Create a football community in Port Harcourt" or "science discussion group"'
               value={promptInput}
               onChange={(e) => setPromptInput(e.target.value)}
               className="flex-1 px-4 py-2 bg-white/5 border border-white/10 focus:outline-hidden text-xs rounded-xl focus:border-white/10 text-white font-sans text-left"
@@ -336,7 +336,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                   setSelectedCircle(circle);
                   setActivePortalTab('feed');
                 } else {
-                  alert(`Join "${circle.name}" first to access this community's discussions and visual workspace modules.`);
+                  alert(`Join "${circle.name}" first to access this community's posts and tools.`);
                 }
               }}
               className="bg-[#0b0918] border border-white/10 rounded-3xl overflow-hidden hover:border-white/10 transition-all group flex flex-col justify-between cursor-pointer"
@@ -460,7 +460,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                     { id: 'announcements', label: '🔔 Announcements', icon: Megaphone },
                     { id: 'mods', label: '🛡 Moderators', icon: Shield },
                     { id: 'rules', label: '📋 Rules', icon: FileText },
-                                                            ...(selectedCircleCanManage ? [{ id: 'insights', label: '📈 Insights', icon: BarChart2 }] : [])
+                                                            ...(selectedCircleCanManage ? [{ id: 'insights', label: '📈 Page insights', icon: BarChart2 }] : [])
                   ].map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activePortalTab === tab.id;
@@ -494,7 +494,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
 
                 {activePortalTab === 'events' && <CircleEventsPanel communityId={selectedCircle.id} currentUserId={currentUser.id} />}
 
-                {activePortalTab === 'insights' && selectedCircleCanManage && <CircleInsightsPanel communityId={selectedCircle.id} />}
+                {activePortalTab === 'insights' && selectedCircleCanManage && <CirclePage insightsPanel communityId={selectedCircle.id} />}
 
                 {activePortalTab === 'files' && (
                   <div className="mx-auto max-w-2xl space-y-3 text-left">
