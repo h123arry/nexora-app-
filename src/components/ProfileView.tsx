@@ -1437,19 +1437,29 @@ export default function ProfileView({
             {(currentUser.profileCategory || currentUser.creatorType) && <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-300">{[currentUser.profileCategory, currentUser.creatorType].filter(Boolean).join(' · ')}</p>}
             {(currentUser.socialTwitter || currentUser.socialInstagram) && <div className="flex flex-wrap gap-3 text-[11px]">{currentUser.socialTwitter && <a href={/^https?:\/\//i.test(currentUser.socialTwitter) ? currentUser.socialTwitter : 'https://' + currentUser.socialTwitter.replace(/^@/, '')} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:text-violet-200 hover:underline">X / Twitter</a>}{currentUser.socialInstagram && <a href={/^https?:\/\//i.test(currentUser.socialInstagram) ? currentUser.socialInstagram : 'https://instagram.com/' + currentUser.socialInstagram.replace(/^@/, '')} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:text-violet-200 hover:underline">Instagram</a>}</div>}
             {((currentUser.skills || []).length > 0 || Object.keys(currentUser.interestDNA || {}).length > 0) && <div className="flex flex-wrap gap-1.5 pt-1">{[...(currentUser.skills || []), ...Object.keys(currentUser.interestDNA || {}).sort((a,b) => (currentUser.interestDNA[b] || 0) - (currentUser.interestDNA[a] || 0))].filter((value,index,array) => value && array.indexOf(value) === index).slice(0,6).map(item => <span key={item} className="rounded-full border border-violet-400/15 bg-violet-500/10 px-2.5 py-1 text-[10px] font-medium text-violet-200">{item}</span>)}</div>}
-            {/* Nexora 6 Statistics Grid */}
-            <div className="nx-profile-stats grid grid-cols-3 grid-rows-2 text-center mt-2 sm:mt-3">
+            {/* Nexora profile statistics: two rows, one central rule, short column separators */}
+            <div className="nx-profile-stats mx-auto mt-2 grid w-full max-w-xl grid-cols-3 text-center sm:mt-3">
               {[
                 { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
                 { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
                 { label: 'Posts', value: formatSecondaryStat(getPostsCount()) },
+              ].map((stat, index) => (
+                <button key={stat.label} type="button" onClick={() => { if (stat.label === 'Followers' || stat.label === 'Following') { setRelationsTab(stat.label === 'Followers' ? 'followers' : 'following'); setActivePanel('social-graph'); } else setProfileTab('media'); }} className="relative flex min-w-0 flex-col gap-0.5 bg-transparent px-1 py-2 text-center transition-colors hover:bg-violet-500/[0.06] focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-2px]">
+                  <span className="text-sm font-black leading-tight text-white sm:text-base">{stat.value}</span>
+                  <span className="text-[10px] font-medium leading-tight text-zinc-300 sm:text-xs">{stat.label}</span>
+                  {index < 2 && <span aria-hidden="true" className="pointer-events-none absolute right-0 top-1/2 h-4 w-px -translate-y-1/2 bg-white/10" />}
+                </button>
+              ))}
+              <div aria-hidden="true" className="col-span-3 h-px bg-white/10" />
+              {[
                 { label: 'Sparks', value: getSecondaryMetric('sparks') },
                 { label: 'Reputation', value: getSecondaryMetric('reputation') },
                 { label: 'Contributions', value: getSecondaryMetric('contributions') },
               ].map((stat, index) => (
-                <button key={stat.label} type="button" onClick={() => { if (stat.label === 'Followers' || stat.label === 'Following') { setRelationsTab(stat.label === 'Followers' ? 'followers' : 'following'); setActivePanel('social-graph'); } else if (stat.label === 'Posts') setProfileTab('media'); else if (stat.label === 'Sparks') setProfileTab('sparks'); }} className={`flex min-w-0 flex-col gap-0.5 rounded-none border-0 bg-transparent px-1 py-2 text-center transition-colors hover:bg-violet-500/[0.06] focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-2px] ${index < 3 ? 'border-b border-white/10' : ''} ${index % 3 !== 2 ? 'border-r border-white/10' : ''}`}>
-                  <span className="text-sm sm:text-base font-black text-white leading-tight">{stat.value}</span>
-                  <span className="text-[10px] sm:text-xs font-medium text-zinc-300 leading-tight">{stat.label}</span>
+                <button key={stat.label} type="button" onClick={() => { if (stat.label === 'Sparks') setProfileTab('sparks'); }} className="relative flex min-w-0 flex-col gap-0.5 bg-transparent px-1 py-2 text-center transition-colors hover:bg-violet-500/[0.06] focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-2px]">
+                  <span className="text-sm font-black leading-tight text-white sm:text-base">{stat.value}</span>
+                  <span className="text-[10px] font-medium leading-tight text-zinc-300 sm:text-xs">{stat.label}</span>
+                  {index < 2 && <span aria-hidden="true" className="pointer-events-none absolute right-0 top-1/2 h-4 w-px -translate-y-1/2 bg-white/10" />}
                 </button>
               ))}
             </div>
