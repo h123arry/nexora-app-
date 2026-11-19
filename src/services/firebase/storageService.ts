@@ -125,8 +125,8 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
 
       // R2 returns an XML error document for most S3-compatible failures.
       // Surface only its short error code, never the signed URL or response body.
-      const errorCode = xhr.responseText.match(/<Code>([^<]{1,80})<\\/Code>/i)?.[1]
-        || xhr.responseText.match(/"code"\\s*:\\s*"([^"]{1,80})"/i)?.[1];
+      const errorCode = xhr.responseText.match(/<Code>([^<]{1,80})<\/Code>/i)?.[1]
+        || xhr.responseText.match(/"code"\s*:\s*"([^"]{1,80})"/i)?.[1];
       const reason = errorCode
         ? `R2 upload failed (HTTP ${xhr.status}, ${errorCode}).`
         : `R2 upload failed (HTTP ${xhr.status}).`;
