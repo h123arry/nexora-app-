@@ -4,8 +4,8 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-comp
 // Initialize the Firebase app in the service worker
 firebase.initializeApp({
   projectId: "nexora-prod-voiceharrison",
-  appId: "1:128918144717:web:8dc433e0a390388d3e0b84",
-  apiKey: "AIzaSyA8RyvP6crBpI4Zg_bgLJw3U9cJBMTQ-Gk",
+  appId: "1:128918144717:web:1bf7a574fddb18bc3e0b84",
+  apiKey: "AIzaSyA8RyvP6crBpl4Zg_bgjlTqqgZkMA85NT4",
   messagingSenderId: "128918144717"
 });
 
