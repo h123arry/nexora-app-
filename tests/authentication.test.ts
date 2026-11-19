@@ -110,6 +110,7 @@ test('registers, restores, and signs in an email account through Firebase Auth',
 });
 
 test('rejects duplicate registration and invalid credentials without creating a second account', async () => {
+  await signOut(auth);
   await assert.rejects(
     () => AuthService.registerWithEmail(email, password, 'Duplicate User', 'duplicate_user'),
     (error: { code?: string; message?: string }) => error.code === 'auth/email-already-in-use' && /unable to create an account/i.test(error.message || '')
