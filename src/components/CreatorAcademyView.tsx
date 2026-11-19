@@ -38,9 +38,9 @@ const BASE_COURSES: Course[] = [
     { id: 'hosting', title: 'Host guests and audience participation', minutes: 10, summary: 'Make guests feel welcome while keeping the conversation focused.' },
     { id: 'safety', title: 'Moderate live sessions responsibly', minutes: 9, summary: 'Prepare moderator roles and escalation steps before going live.' },
   ]},
-  { id: 'creator-analytics', title: 'Understand your post results', level: 'Intermediate', category: 'Analytics', description: 'Read performance signals carefully and turn them into experiments.', lessons: [
+  { id: 'creator-analytics', title: 'Understand your post results', level: 'Intermediate', category: 'Analytics', description: 'Understand your results and use them to improve your posts.', lessons: [
     { id: 'metrics', title: 'Choose metrics that matter', minutes: 9, summary: 'Learn about views, watch time, comments, shares, and followers.' },
-    { id: 'retention', title: 'Understand audience retention', minutes: 10, summary: 'Find where attention changes and form testable explanations.' },
+    { id: 'retention', title: 'See how long people watch your videos', minutes: 10, summary: 'See when viewers stop watching and learn what you can improve.' },
     { id: 'experiments', title: 'Run a useful content experiment', minutes: 8, summary: 'Change one variable at a time and compare results over a fair period.' },
   ]},
   { id: 'personal-brand', title: 'Build your personal brand', level: 'Advanced', category: 'Brand', description: 'Build a clear profile, share your work, and grow your reputation.', lessons: [
@@ -49,14 +49,14 @@ const BASE_COURSES: Course[] = [
     { id: 'reputation', title: 'Protect your reputation', minutes: 8, summary: 'Respond to criticism thoughtfully and correct mistakes transparently.' },
   ]},
   { id: 'creator-safety', title: 'Creator Safety, Rights and Wellbeing', level: 'All levels', category: 'Safety', description: 'Protect your account, respect creative rights and build healthier creator habits.', lessons: [
-    { id: 'security', title: 'Secure your creator account', minutes: 8, summary: 'Use strong authentication and recognise impersonation and phishing attempts.' },
+    { id: 'security', title: 'Secure your creator account', minutes: 8, summary: 'Use a strong password and learn how to spot fake accounts and scam messages.' },
     { id: 'rights', title: 'Respect copyright and permissions', minutes: 10, summary: 'Understand ownership, licences, consent and responsible reuse.' },
     { id: 'wellbeing', title: 'Create sustainably', minutes: 8, summary: 'Set boundaries, manage pressure and build a healthy publishing rhythm.' },
   ]},
   { id: 'video-production', title: 'Make better videos', level: 'Beginner', category: 'Production', description: 'Plan, capture and edit clear video stories with accessible sound, intentional framing and a repeatable production workflow.', lessons: [
     { id: 'shot-planning', title: 'Plan a visual sequence', minutes: 9, summary: 'Plan a visual sequence through simple editing steps and checks.' },
     { id: 'sound-lighting', title: 'Record clean sound and usable light', minutes: 11, summary: 'Record clean sound and usable light through simple editing steps and checks.' },
-    { id: 'editing-workflow', title: 'Edit for clarity and rhythm', minutes: 9, summary: 'Edit for clarity and rhythm through simple editing steps and checks.' },
+    { id: 'editing-workflow', title: 'Edit for clarity and rhythm', minutes: 9, summary: 'Make your videos clear and enjoyable with a few simple editing steps.' },
   ]},
   { id: 'creator-finance', title: 'Creator Finance and Business Operations', level: 'Intermediate', category: 'Finance', description: 'Build a responsible operating model for creator income, costs, records, cash flow and tax preparation.', lessons: [
     { id: 'income-costs', title: 'Understand creator income and costs', minutes: 9, summary: 'Understand creator income and costs through simple editing steps and checks.' },
@@ -277,14 +277,14 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
     setBookingSessionId(sessionId); setMentorshipError(''); setMentorshipNotice('');
     try {
       await httpsCallable<{ sessionId: string }, { sessionId: string; booked: boolean; bookedCount: number }>(functions, 'academyBookMentorshipSession')({ sessionId });
-      setMentorshipNotice('Your place is booked. The session capacity has been updated.');
+      setMentorshipNotice('Your place is booked.');
       try {
         const refreshed = await httpsCallable<void, { sessions: MentorshipSession[]; truncated: boolean }>(functions, 'academyListMentorshipSessions')();
         setMentorshipSessions(refreshed.data.sessions);
         setMentorshipTruncated(refreshed.data.truncated);
-      } catch { setMentorshipError('Your booking succeeded, but the session list could not refresh.'); }
+      } catch { setMentorshipError('Your booking went through, but the session list couldn't refresh.'); }
     } catch (cause) {
-      setMentorshipError(cause instanceof Error ? cause.message : 'This mentorship session could not be booked.');
+      setMentorshipError(cause instanceof Error ? cause.message : 'This session couldn't be booked.');
     } finally { setBookingSessionId(null); }
   };
 
@@ -395,7 +395,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
                     {assessmentResult?.courseId===activeCourse.id && assessmentResult?.assessmentId===assessment.id && <span className={'text-xs font-bold '+(assessmentResult.passed?'text-emerald-300':'text-amber-200')}>{assessmentResult.scorePercent}% · {assessmentResult.passed?'Passed':'Not passed yet'}</span>}
                     {assessmentResult?.courseId===activeCourse.id && assessmentResult?.assessmentId===assessment.id && assessmentResult.passed && <button type="button" disabled={assessmentBusy} onClick={()=>void requestCertificate(assessment.id)} className="min-h-10 rounded-xl border border-violet-400/30 px-4 text-xs font-bold text-violet-200 disabled:opacity-40">Request certificate</button>}
                   </div>
-                  {certificate && certificate.courseId===activeCourse.id && certificate.assessmentId===assessment.id && assessmentResult?.courseId===activeCourse.id && assessmentResult?.assessmentId===assessment.id && <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3"><p className="text-xs font-bold text-emerald-200">Verified credential issued</p><p className="mt-1 text-[10px] text-white/50">{certificate.courseTitle} · {certificate.certificateId}</p><p className="mt-2 break-all font-mono text-xs text-white">{certificate.verificationCode}</p><p className="mt-1 text-[10px] text-white/40">Keep this code for independent certificate verification.</p></div>}
+                  {certificate && certificate.courseId===activeCourse.id && certificate.assessmentId===assessment.id && assessmentResult?.courseId===activeCourse.id && assessmentResult?.assessmentId===assessment.id && <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3"><p className="text-xs font-bold text-emerald-200">Certificate issued</p><p className="mt-1 text-[10px] text-white/50">{certificate.courseTitle} · {certificate.certificateId}</p><p className="mt-2 break-all font-mono text-xs text-white">{certificate.verificationCode}</p><p className="mt-1 text-[10px] text-white/40">Keep this code so others can check your certificate.</p></div>}
                 </article>
               ))}
             </section>
@@ -405,11 +405,11 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
       </div>
 
       <section className="space-y-4 rounded-3xl border border-white/10 bg-[#0b1020] p-5 md:p-6">
-        <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="flex items-center gap-2 text-violet-300"><GraduationCap size={17}/><span className="text-[10px] font-black uppercase tracking-[0.18em]">Mentorship programme</span></div><h3 className="mt-2 text-lg font-black text-white">Upcoming mentor sessions</h3><p className="mt-1 text-xs text-white/45">Book a place in a scheduled session. Seat limits are enforced transactionally.</p></div><span className="text-[10px] text-white/40">{mentorshipSessions.length} listed</span></div>
+        <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="flex items-center gap-2 text-violet-300"><GraduationCap size={17}/><span className="text-[10px] font-black uppercase tracking-[0.18em]">Mentorship programme</span></div><h3 className="mt-2 text-lg font-black text-white">Upcoming sessions with mentors</h3><p className="mt-1 text-xs text-white/45">Book a place in a scheduled session. Places are limited, so book early.</p></div><span className="text-[10px] text-white/40">{mentorshipSessions.length} listed</span></div>
         {mentorshipNotice && <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3 text-xs text-emerald-200">{mentorshipNotice}</p>}
         {mentorshipError && <p role="alert" className="rounded-xl border border-amber-300/20 bg-amber-400/5 p-3 text-xs text-amber-100">{mentorshipError}</p>}
         {mentorshipLoading ? <p className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-white/40">Loading upcoming sessions…</p> : mentorshipSessions.length === 0 ? <p className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-white/40">There are no upcoming sessions with available seats right now.</p> : <div className="grid gap-3 md:grid-cols-2">{mentorshipSessions.map(session => <article key={session.sessionId} className="rounded-2xl border border-white/10 bg-black/20 p-4"><div className="flex items-start justify-between gap-3"><div><h4 className="text-sm font-bold text-white">{session.title}</h4><p className="mt-1 text-[10px] text-violet-200">{session.mentorName}{session.mentorUsername?' · @'+session.mentorUsername:''}</p></div><span className="rounded-lg bg-violet-500/10 px-2 py-1 text-[10px] text-violet-200">{session.seatsAvailable} seats</span></div><p className="mt-3 text-xs leading-5 text-white/55">{session.description}</p><p className="mt-3 text-[10px] text-white/40">{new Date(session.startsAt).toLocaleString([], {dateStyle:'medium',timeStyle:'short'})} · {session.durationMinutes} minutes</p><button type="button" disabled={bookingSessionId!==null || session.isBooked} onClick={()=>void bookMentorship(session.sessionId)} className="mt-4 min-h-10 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 text-xs font-bold text-violet-100 disabled:opacity-40">{bookingSessionId===session.sessionId?'Booking…':session.isBooked?'Already booked':'Book this session'}</button></article>)}</div>}
-        {mentorshipTruncated && <p className="text-[10px] text-amber-200">Showing a bounded list of the first 50 scheduled sessions.</p>}
+        {mentorshipTruncated && <p className="text-[10px] text-amber-200">Showing the first 50 upcoming sessions.</p>}
       </section>
 
       <CreatorAcademyToolkit userId={currentUser.id} />
