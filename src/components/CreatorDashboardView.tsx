@@ -689,7 +689,7 @@ export default function CreatorDashboardView({
             <h2 className="text-2xl font-black text-white tracking-tight">NEXORA Studio</h2>
             <span className="text-[10px] border border-violet-400/20 bg-violet-500/10 text-violet-200 font-mono font-bold uppercase px-2 py-0.5 rounded-full">Creator tools</span>
           </div>
-          <p className="text-sm text-violet-200/60 mt-1">Create and manage posts, see how they’re doing, and grow your audience.</p>
+          <p className="text-sm text-violet-200/60 mt-1">Create posts, see how they're doing, and grow your audience.</p>
         </div>
         <div className="flex gap-2">
           {onClose && (
@@ -836,7 +836,7 @@ export default function CreatorDashboardView({
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Your results over time</h4>
-                      <p className="text-xs text-zinc-400 font-mono">Post results over time aren’t available yet.</p>
+                      <p className="text-xs text-zinc-400 font-mono">Post results will appear here when they're ready.</p>
                     </div>
                     <div className="flex items-center gap-3 text-[10px] font-bold">
                       <span className="text-zinc-500">No time-series data</span>
@@ -877,13 +877,13 @@ export default function CreatorDashboardView({
                       <option value={7}>7 days</option>
                       <option value={30}>30 days</option>
                     </select>
-                    <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">Backend recorded</span>
+                    <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">Recorded</span>
                   </div>
                 </div>
                 {isAudienceLoading ? (
-                  <p className="mt-5 text-xs text-zinc-400">Loading audience records…</p>
+                  <p className="mt-5 text-xs text-zinc-400">Loading your audience…</p>
                 ) : audienceError ? (
-                  <p className="mt-5 text-xs text-amber-200">Your audience details couldn’t load. Please try again.</p>
+                  <p className="mt-5 text-xs text-amber-200">Couldn't load your audience. Try again.</p>
                 ) : audienceAnalytics ? (
                   <>
                     <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -904,26 +904,26 @@ export default function CreatorDashboardView({
                         ))}
                       </div>
                     ) : (
-                      <p className="mt-4 text-xs text-zinc-400">No audience events have been recorded in this period yet.</p>
+                      <p className="mt-4 text-xs text-zinc-400">No audience activity yet.</p>
                     )}
                     <p className="mt-4 text-[10px] leading-relaxed text-zinc-500">Follow changes are written atomically with relationship edges by trusted Functions. Profile visits count signed-in visitors once per creator per UTC day; new-versus-returning reflects a 90-day hashed visitor history. It does not describe all video viewers or prove human attention. Historical follower activity before deployment is not backfilled.</p>
                   </>
                 ) : (
-                  <p className="mt-5 text-xs text-zinc-400">Audience records are not available yet.</p>
+                  <p className="mt-5 text-xs text-zinc-400">Audience details aren't available yet.</p>
                 )}
               </div>
               <div className="rounded-2xl border border-white/10 bg-[#0a071f]/70 p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Video audience retention</h4>
+                    <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">How long people watch your videos</h4>
                     <p className="mt-1 text-[11px] text-zinc-400">{analyticsDays}-day server-timed playback observations</p>
                   </div>
-                  <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">Server recorded</span>
+                  <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">Recorded</span>
                 </div>
                 {isVideoRetentionLoading ? (
-                  <p className="mt-5 text-xs text-zinc-400">Loading server-time records…</p>
+                  <p className="mt-5 text-xs text-zinc-400">Loading video views…</p>
                 ) : videoRetentionError ? (
-                  <p className="mt-5 text-xs text-amber-200">Video retention data could not be loaded. Try again later.</p>
+                  <p className="mt-5 text-xs text-amber-200">Couldn't load video watch time. Try again.</p>
                 ) : videoRetention?.points?.length ? (
                   <>
                     <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -942,17 +942,17 @@ export default function CreatorDashboardView({
                     <p className="mt-4 text-[10px] leading-relaxed text-zinc-500">The server timestamps and bounds credited viewing intervals. Playback position is still supplied by the client, so these records are abuse-bounded observations, not cryptographic proof of human attention. Daily unique-viewer counts are not cross-day unique reach.</p>
                   </>
                 ) : (
-                  <p className="mt-5 text-xs text-zinc-400">No server-timed video sessions have been recorded yet. Start receiving views after the updated player and Functions are deployed.</p>
+                  <p className="mt-5 text-xs text-zinc-400">Watch time will appear here as people watch your videos.</p>
                 )}
               </div>
               <div className="rounded-2xl border border-dashed border-white/10 bg-[#0a071f]/60 p-5">
-                <h4 className="text-xs font-bold text-white">Additional audience insights unavailable</h4>
+                <h4 className="text-xs font-bold text-white">More audience details aren't available yet.</h4>
                 <p className="mt-2 text-xs leading-relaxed text-zinc-400">Traffic source, device, geographic, new-versus-returning audience and frame-level retention curves are not yet supported by trusted event sources. Nexora does not estimate or fabricate these metrics.</p>
               </div>
               {videoRetention?.points?.length ? (
                 <div className="rounded-2xl border border-violet-400/15 bg-[#0a071f]/70 p-5">
                   <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Creator growth tips</h4>
-                  <p className="mt-1 text-[11px] text-zinc-400">Evidence-based observations from your server-timed playback data</p>
+                  <p className="mt-1 text-[11px] text-zinc-400">Tips based on how people watch your videos.</p>
                   <div className="mt-4 grid gap-3 md:grid-cols-3">
                     {buildCreatorGrowthInsights(videoRetention.points).map(insight => (
                       <article key={insight.id} className="rounded-xl border border-white/5 bg-white/[0.035] p-4">
@@ -1192,10 +1192,10 @@ export default function CreatorDashboardView({
 
               <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-violet-300" /><h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Scheduled Publishing</h4></div>
+                  <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-violet-300" /><h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Scheduled posts</h4></div>
                   <span className="text-[10px] text-zinc-500 font-mono">{scheduledPosts.filter(item => item.status === 'scheduled').length} pending</span>
                 </div>
-                <p className="text-xs text-zinc-400 leading-relaxed">Posts are published by NEXORA’s trusted scheduler. You can cancel a post while it is still pending.</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">Scheduled posts will be shared automatically. You can cancel them before they're posted.</p>
                 {isScheduledPostsLoading ? (
                   <p className="text-xs text-zinc-500 py-5">Loading scheduled posts…</p>
                 ) : scheduledPosts.length === 0 ? (
@@ -1234,7 +1234,7 @@ export default function CreatorDashboardView({
                   <button type="button" onClick={() => void handleSaveStudioTemplate()} className="px-4 py-2 rounded-xl bg-violet-600/20 border border-violet-400/20 text-violet-200 text-xs font-bold">Save current editor as template</button>
                 </div>
                 {isTemplatesLoading ? <p className="text-xs text-zinc-500 py-3">Loading your templates…</p> : studioTemplates.length === 0 ? (
-                  <p className="text-xs text-zinc-500 py-3">No templates saved yet. Open a draft, prepare its caption and tags, then save them here.</p>
+                  <p className="text-xs text-zinc-500 py-3">No templates yet. Save a caption and hashtags to use again.</p>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                     {studioTemplates.map(template => (
@@ -1336,7 +1336,7 @@ export default function CreatorDashboardView({
             <div className="space-y-6">
               <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-2">
                 <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Creator Achievements & Badges</h4>
-                <p className="text-xs text-zinc-400">Reach performance thresholds on Nexora to unlock permanent visual badge customizers on your profile.</p>
+                <p className="text-xs text-zinc-400">Reach creator milestones to unlock profile badges.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1399,13 +1399,13 @@ export default function CreatorDashboardView({
                     </div>
                     <div className="text-xs space-y-0.5">
                       <p className="font-bold text-emerald-400">Excellent Standing</p>
-                      <p className="text-zinc-400 leading-relaxed">No copyright infractions, duplicate strikes, or community guideline appeals registered on your account.</p>
+                      <p className="text-zinc-400 leading-relaxed">Your account is in good standing.</p>
                     </div>
                   </div>
                   
                   {/* Copyright Scan logs */}
                   <div className="space-y-3 pt-2">
-                    <span className="text-[10px] text-zinc-500 font-extrabold uppercase tracking-widest">Automatic Upload Scans</span>
+                    <span className="text-[10px] text-zinc-500 font-extrabold uppercase tracking-widest">Upload checks</span>
                     <div className="space-y-2">
                       {[
                         { title: 'Audio Fingerprint Analysis', desc: 'Provider-backed royalty matching is not connected.', status: 'Not connected' },
@@ -1429,7 +1429,7 @@ export default function CreatorDashboardView({
                   <h4 className="text-sm font-extrabold text-white tracking-tight uppercase flex items-center gap-1.5">
                     <AlertTriangle className="w-4 h-4 text-pink-400" /> Resolution Center
                   </h4>
-                  <p className="text-xs text-zinc-400 leading-relaxed">If a moderation decision affects your content, you can submit an appeal for review. Submission does not guarantee approval or an automated legal review.</p>
+                  <p className="text-xs text-zinc-400 leading-relaxed">If we remove or limit your content, you can ask us to review the decision.</p>
                   <button 
                     onClick={() => { setAppealPostId(''); setAppealModalOpen(true); }}
                     className="w-full py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold border border-white/5 transition-all text-center cursor-pointer"
@@ -1489,7 +1489,7 @@ export default function CreatorDashboardView({
               {/* Metrics that require an analytics event source */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-[#120a3a]/30 border border-white/10 space-y-2">
-                  <h5 className="text-xs font-extrabold text-white uppercase tracking-wider">Additional analytics unavailable</h5>
+                  <h5 className="text-xs font-extrabold text-white uppercase tracking-wider">More results aren't available yet.</h5>
                   <div className="space-y-3 pt-1 text-xs">
                     <div className="flex justify-between">
                       <span className="text-zinc-400">Profile visits generated</span>
@@ -1503,15 +1503,15 @@ export default function CreatorDashboardView({
                       <span className="text-zinc-400">Unique Viewers ratio</span>
                       <strong className="text-sky-400 font-mono">Unavailable</strong>
                     </div>
-                    <p className="text-[10px] text-zinc-500">These metrics require persisted analytics events; no estimates are shown.</p>
+                    <p className="text-[10px] text-zinc-500">These results will appear when enough activity is available.</p>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-white/3 border border-white/5 flex flex-col justify-between">
                   <div className="space-y-1.5 text-xs">
-                    <span className="text-[10px] text-pink-400 font-extrabold uppercase">Content recommendation</span>
+                    <span className="text-[10px] text-pink-400 font-extrabold uppercase">Post tips</span>
                     <p className="font-bold text-white">Unavailable</p>
-                    <p className="text-[10px] text-zinc-400 leading-relaxed">No verified recommendation or comparative completion-rate data is available for this post.</p>
+                    <p className="text-[10px] text-zinc-400 leading-relaxed">More post tips will appear when there's enough data.</p>
                   </div>
                 </div>
               </div>
@@ -1537,7 +1537,7 @@ export default function CreatorDashboardView({
                 <X className="w-4 h-4" />
               </button>
 
-              <h3 className="text-lg font-black text-white tracking-tight">Edit Post Metadata</h3>
+              <h3 className="text-lg font-black text-white tracking-tight">Edit post details</h3>
               
               <div className="space-y-3.5 text-xs">
                 <div className="space-y-1">
@@ -1633,7 +1633,7 @@ export default function CreatorDashboardView({
 
               <div className="space-y-3.5 text-xs">
                 <div className="space-y-1">
-                  <label className="text-zinc-400 font-bold">Release Caption</label>
+                  <label className="text-zinc-400 font-bold">Share post</label>
                   <textarea
                     value={draftCaption}
                     onChange={(e) => setDraftCaption(e.target.value)}
@@ -1662,7 +1662,7 @@ export default function CreatorDashboardView({
                       onChange={(e: any) => setDraftType(e.target.value)}
                       className="w-full bg-[#0a071f] border border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-300 outline-hidden"
                     >
-                      <option value="video">Short Video / Reel</option>
+                      <option value="video">Short video</option>
                       <option value="image">Image Display</option>
                       <option value="text">Pure Text Broadcast</option>
                     </select>
@@ -1696,7 +1696,7 @@ export default function CreatorDashboardView({
                   {isUploadingDraftMedia && (
                     <div className="space-y-1.5" role="status" aria-live="polite">
                       <div className="flex justify-between text-[10px] text-zinc-400">
-                        <span>Uploading to secure media storage</span>
+                        <span>Uploading your media…</span>
                         <span>{draftUploadProgress}%</span>
                       </div>
                       <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
@@ -1709,7 +1709,7 @@ export default function CreatorDashboardView({
                   )}
                 </div>
 
-                <div className="rounded-xl border border-white/5 bg-white/3 p-3 text-[11px] text-zinc-400">Publishing sends this post through Nexora’s post publishing process. Automatic scheduling is not enabled yet.</div>
+                <div className="rounded-xl border border-white/5 bg-white/3 p-3 text-[11px] text-zinc-400">Your post will be shared with your audience.</div>
 
                 <div className="flex gap-2 pt-4 justify-between border-t border-white/5">
                   <button 
