@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { Firestore } from 'firebase-admin/firestore';
 import { buildCommentNotification } from './commentNotificationPolicy.js';
 
@@ -68,6 +69,10 @@ export async function addPublicPostComment(
     const recipientProfileRef = authorId && authorId !== uid
       ? db.collection('publicProfiles').doc(authorId) : null;
     const recipientProfile = recipientProfileRef ? await transaction.get(recipientProfileRef) : null;
+    const mentionedUsernames = [...new Set([...content.matchAll(/@([a-zA-Z0-9_.]{1,40})/g)].map(match => match[1].toLowerCase()))].slice(0, 10);
+    const mentionedProfiles = mentionedUsernames.length
+      ? await transaction.get(db.collection('publicProfiles').where('username', 'in', mentionedUsernames))
+      : null;
     const nextCount = currentCount + 1;
     transaction.update(postRef, { comments: [...comments, comment], commentsCount: nextCount });
 
@@ -80,6 +85,22 @@ export async function addPublicPostComment(
         const notificationRef = db.collection('users').doc(authorId)
           .collection('notifications').doc(notification.id);
         transaction.create(notificationRef, notification);
+      }
+    }
+    if (mentionedProfiles) {
+      for (const mentioned of mentionedProfiles.docs) {
+        if (mentioned.id === uid) continue;
+        const mentionedData = mentioned.data();
+        const username = String(mentionedData.username || '').replace(/^@+/, '').toLowerCase();
+        if (!username || !mentionedUsernames.includes(username)) continue;
+        const digest = createHash('sha256').update(`${postId}:${commentId}:${mentioned.id}`).digest('hex').slice(0, 40);
+        const mentionRef = db.collection('users').doc(mentioned.id).collection('notifications').doc(`mention_${digest}`);
+        transaction.create(mentionRef, {
+          id: mentionRef.id, type: 'mention', userId: uid,
+          username: comment.username, actorName: comment.name, avatar: comment.avatar,
+          targetId: postId, content: `mentioned you in a comment: "${content.slice(0, 90)}"`,
+          timestamp, isRead: false, priority: 2, actionText: 'View Post', actionType: 'view_post', category: 'mentions',
+        });
       }
     }
     return { comment, created: true, commentsCount: nextCount };
