@@ -62,6 +62,8 @@ export const buyNexGiftForFriend = onCall({ maxInstances: 20 }, async request =>
         tx.get(requestRef), tx.get(senderWalletRef), tx.get(treasuryWalletRef),
         tx.get(db.collection('users').doc(senderId)), tx.get(db.collection('users').doc(recipientId)),
         tx.get(db.collection('accountStatus').doc(senderId)), tx.get(db.collection('accountStatus').doc(recipientId)),
+        tx.get(db.collection('users').doc(senderId).collection('settings').doc('preferences')),
+        tx.get(db.collection('users').doc(recipientId).collection('settings').doc('preferences')),
         tx.get(inventoryRef),
       ]);
 
@@ -81,6 +83,13 @@ export const buyNexGiftForFriend = onCall({ maxInstances: 20 }, async request =>
       };
       if (restricted(senderStatus) || restricted(recipientStatus)) {
         throw new HttpsError('permission-denied', 'Buying a gift for this account is unavailable.');
+      }
+      const senderSettings = senderPreferences.data() || {};
+      const recipientSettings = recipientPreferences.data() || {};
+      const senderBlocks = Array.isArray(senderSettings.messaging?.blockedUserIds) ? senderSettings.messaging.blockedUserIds : [];
+      const recipientBlocks = Array.isArray(recipientSettings.messaging?.blockedUserIds) ? recipientSettings.messaging.blockedUserIds : [];
+      if (senderBlocks.includes(recipientId) || recipientBlocks.includes(senderId)) {
+        throw new HttpsError('permission-denied', 'You cannot buy a gift for this member.');
       }
 
       const sender = senderWallet.data() || {};
