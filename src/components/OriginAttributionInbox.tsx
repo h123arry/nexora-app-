@@ -46,7 +46,7 @@ export default function OriginAttributionInbox() {
         setQueue((queued.data as { cases?: QueueCase[] }).cases || []);
       } else setQueue([]);
     } catch {
-      setError('Creator credit requests couldn't load. Check your connection and try again.');
+      setError('Creator credit requests could not load. Check your connection and try again.');
     } finally { setLoading(false); }
   }, []);
 
@@ -77,7 +77,7 @@ export default function OriginAttributionInbox() {
       const callable = httpsCallable(functions, 'getMyOriginAttributionPreview');
       const result = await callable({ assetId });
       setPreview(result.data as { hasLineage: boolean; credentialState: 'absent' | 'verified' | 'untrusted' | 'invalid' | 'unsupported' | 'pending'; credentialValidationCodes: string[]; attribution: { sourceAssetId: string; creatorUid: string; permissionSnapshot: string }[] });
-    } catch (err: any) { setError(err?.message || 'The creator credit preview couldn't load.'); }
+    } catch (err: any) { setError(err?.message || 'The creator credit preview could not load.'); }
     finally { setPreviewLoading(false); }
   };
 
