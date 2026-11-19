@@ -938,6 +938,10 @@ export default function ProfileView({
   // Validate and submit profile updates (Locks rules)
   const handleSaveProfile = async () => {
     if (isSavingProfile || showSavedFeedback) return;
+    if (!isLoggedIn || auth.currentUser?.uid !== currentUser.id) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Sign in to this account before saving profile changes.' }));
+      return;
+    }
 
     // 7-day display name lock
     if (editName !== currentUser.name) {
