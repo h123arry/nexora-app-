@@ -252,7 +252,7 @@ export default function SystemHubControlPanel({
                 <h2 className={`text-xs font-mono font-black uppercase tracking-wider ${
                   isHighContrast ? 'text-white' : 'text-violet-400'
                 }`}>SYSTEM HUB</h2>
-                <h1 className="text-base font-black tracking-tight text-white uppercase leading-none mt-0.5">Nexora Core</h1>
+                <h1 className="text-base font-black tracking-tight text-white uppercase leading-none mt-0.5">NEXORA settings</h1>
               </div>
             </div>
 
@@ -329,7 +329,7 @@ export default function SystemHubControlPanel({
             {/* Tab Title header */}
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Workspace Layer</h3>
+                <h3 className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">App settings</h3>
                 <h2 className="text-lg font-black text-white uppercase tracking-tight font-sans">
                   {activeTab === 'ux' && '🎨 UX, Themes & Tactile Motion'}
                   {activeTab === 'accessibility' && '👁️ Accessibility & Legibility Suite'}
@@ -340,7 +340,7 @@ export default function SystemHubControlPanel({
               
               <button
                 onClick={onClose}
-                onMouseEnter={() => speakAnnouncement("Close control center.")}
+                onMouseEnter={() => speakAnnouncement("Close settings.")}
                 className={`p-2 rounded-xl cursor-pointer ${
                   isHighContrast ? 'border border-white hover:bg-white hover:text-black' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white'
                 } transition-all`}
@@ -360,9 +360,9 @@ export default function SystemHubControlPanel({
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { id: 'neon-cyber', label: 'Cyber Void', color: 'bg-[#0c0a15] text-purple-400 border-white/10', style: 'border-[#8B5CF6]/40 text-[#8B5CF6]' },
+                      { id: 'neon-cyber', label: 'Violet', color: 'bg-[#0c0a15] text-purple-400 border-white/10', style: 'border-[#8B5CF6]/40 text-[#8B5CF6]' },
                       { id: 'stealth-dark', label: 'Stealth Slate', color: 'bg-zinc-900 text-zinc-400 border-zinc-700', style: 'border-zinc-500 text-zinc-300' },
-                      { id: 'emerald-glass', label: 'Matrix Emerald', color: 'bg-[#040e09] text-emerald-400 border-emerald-950', style: 'border-emerald-500 text-emerald-400' },
+                      { id: 'emerald-glass', label: 'Emerald', color: 'bg-[#040e09] text-emerald-400 border-emerald-950', style: 'border-emerald-500 text-emerald-400' },
                       { id: 'platinum-light', label: 'Ivory Platinum', color: 'bg-white text-slate-900 border-slate-200', style: 'border-slate-400 text-slate-800' }
                     ].map((t) => (
                       <button
@@ -860,7 +860,7 @@ export default function SystemHubControlPanel({
                     {[
                       { id: 'camera', label: 'Camera Capability', desc: 'Allows instant video post captures & stories recording.' },
                       { id: 'microphone', label: 'Microphone Capability', desc: 'Used for Nexora\'s signature auto-transcribed Voice Posts.' },
-                      { id: 'location', label: 'Geolocation Pulse', desc: 'Pinpoint region coordinates for localized World Pulse reporting.' }
+                      { id: 'location', label: 'Location', desc: 'Use your location to show nearby posts and updates.' }
                     ].map((perm) => {
                       const isGranted = (permissions as any)[perm.id] === 'granted';
                       return (
