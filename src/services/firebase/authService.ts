@@ -369,9 +369,11 @@ export class AuthService {
       const existingProfile = await ProfileService.getProfile(fbUser.uid);
       let userProfile: User;
       if (existingProfile) {
+        // Firebase Authentication owns the verified email. Firestore rules
+        // intentionally prevent clients from mutating the private email field.
+        // Persist only profile-editable fields and expose the auth email in memory.
         await ProfileService.updateProfile(fbUser.uid, {
           name: fullName.trim(),
-          email: cleanEmail,
         });
         userProfile = {
           ...existingProfile,
