@@ -173,6 +173,19 @@ export function buildR2OriginUploadRecords(input: R2OriginUploadInput) {
   };
 }
 
+/** Public profile media is exposed only while the public projection points at this exact asset. */
+export function isCurrentPublicProfileMedia(
+  purpose: unknown,
+  mediaId: string,
+  publicProfile: Record<string, unknown> | null | undefined,
+): boolean {
+  if (!publicProfile || (purpose !== 'profile-avatar' && purpose !== 'profile-cover')) return false;
+  const gatewayUrl = r2MediaGatewayUrl(mediaId);
+  return purpose === 'profile-avatar'
+    ? publicProfile.avatar === gatewayUrl
+    : publicProfile.coverImage === gatewayUrl;
+}
+
 export function r2MediaGatewayUrl(mediaId: string): string {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) throw new Error('Invalid media asset identifier.');
   return `/api/media/${encodeURIComponent(mediaId)}`;
