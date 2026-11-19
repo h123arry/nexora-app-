@@ -68,6 +68,7 @@ export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFi
 export { listCreatorMembershipTiers, createCreatorMembershipTier, updateCreatorMembershipTier, archiveCreatorMembershipTier } from './creatorMemberships.js';
 export { getNexWalletSnapshot } from './nexWallet.js';
 export { getGiftCatalog, quoteNexGift } from './giftCatalog.js';
+export { purchaseNexGift, getMyGiftInventory } from './giftPurchases.js';
 export { sendNexGift } from './giftDelivery.js';
 export { cleanupExpiredStories } from './storyCleanup.js';
 export { moderateLiveParticipant } from './liveModeration.js';
