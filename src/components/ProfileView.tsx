@@ -18,7 +18,6 @@ import { auth, db } from '../services/firebase/config';
 import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { uploadMediaFile } from '../services/firebase/storageService';
 import { SettingsService } from '../services/firebase/settingsService';
-import { subscribeToFollows } from '../services/dataService';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraLoader from './NexoraLoader';
@@ -103,7 +102,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
                     />
                   )}
                   <div className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md rounded-full z-20">
-                    <Film className="w-3.5 h-3.5 text-pink-400" />
+                    <Film className="w-3.5 h-3.5 text-violet-400" />
                   </div>
                   {/* Consistent Bottom overlays for video count and duration */}
                   <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[9px] font-mono font-bold z-20 flex items-center gap-1">
@@ -134,7 +133,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
               ) : isVoice ? (
                 <div className="w-full h-full bg-gradient-to-tr from-pink-950/75 via-[#1d1242] to-[#040212] flex flex-col justify-between p-3">
                   <div className="flex justify-between items-center">
-                    <Mic className="w-4 h-4 text-pink-400 group-hover:scale-110 transition-transform" />
+                    <Mic className="w-4 h-4 text-violet-400 group-hover:scale-110 transition-transform" />
                     <span className="text-[8px] font-mono text-purple-300 font-extrabold uppercase bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/15">Voice</span>
                   </div>
                   
@@ -214,7 +213,7 @@ interface ProfileViewProps {
   isLoggedIn?: boolean;
   posts: Post[];
   userSparks?: string[];
-  onUpdateProfile: (updatedData: Partial<User>) => void | Promise<void>;
+  onUpdateProfile: (updatedData: Partial<User>) => void;
   onLikePost: (postId: string) => void;
   onAddComment?: (postId: string, text: string) => void;
   onAddPost?: (content: string, imageUrl?: string, tagsString?: string, images?: string[], videoUrl?: string) => string;
@@ -267,32 +266,6 @@ export default function ProfileView({
     } catch { return []; }
   });
   const [receivedSparks, setReceivedSparks] = useState<Array<{ id: string; fromUserId: string; username: string; name: string; avatar: string; postId: string }>>([]);
-  const [profileFollows, setProfileFollows] = useState<Array<{ followerId: string; followingId: string }>>([]);
-  const [relationshipUsers, setRelationshipUsers] = useState<User[]>([]);
-  useEffect(() => {
-    if (!isLoggedIn || !currentUser.id || auth.currentUser?.uid !== currentUser.id) {
-      setProfileFollows([]);
-      setRelationshipUsers([]);
-      return;
-    }
-    let active = true;
-    const unsubscribe = subscribeToFollows(currentUser.id, follows => {
-      if (!active) return;
-      const edges = follows
-        .filter((follow: any) => typeof follow.followerId === 'string' && typeof follow.followingId === 'string')
-        .map((follow: any) => ({ followerId: follow.followerId, followingId: follow.followingId }));
-      setProfileFollows(edges);
-      const relatedIds = [...new Set(edges.map(edge => edge.followerId === currentUser.id ? edge.followingId : edge.followerId))];
-      void Promise.all(relatedIds.map(id => ProfileService.getPublicProfile(id))).then(profiles => {
-        if (active) setRelationshipUsers(profiles.filter((profile): profile is User => !!profile));
-      });
-    });
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [currentUser.id, isLoggedIn]);
-
   useEffect(() => {
     if (!isOwnProfile || auth.currentUser?.uid !== currentUser.id) {
       setReceivedSparks([]);
@@ -339,7 +312,11 @@ export default function ProfileView({
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
 
-  const profileTabsList = ['media', 'voice', 'reposts', 'sparks', 'gifts', 'bookmarks', 'archive'];
+  const profileTabsList = ['media', 'voice', 'reposts', 'sparks', 'gifts', ...(isOwnProfile ? ['bookmarks', 'archive'] : [])];
+
+  useEffect(() => {
+    if (!isOwnProfile && (profileTab === 'bookmarks' || profileTab === 'archive')) setProfileTab('media');
+  }, [isOwnProfile, profileTab]);
 
   const handleContentTouchStart = (e: React.TouchEvent) => {
     touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -618,13 +595,14 @@ export default function ProfileView({
   const [editBio, setEditBio] = useState(currentUser.bio);
   const [editLocation, setEditLocation] = useState(currentUser.location || '');
   const [editWebsite, setEditWebsite] = useState(currentUser.website || '');
-  const [editPronouns, setEditPronouns] = useState('');
-  const [editCategory, setEditCategory] = useState('Digital Creator');
-  const [editCreatorType, setEditCreatorType] = useState('Premium creator');
+  const [editPronouns, setEditPronouns] = useState(currentUser.pronouns || '');
+  const [editCategory, setEditCategory] = useState(currentUser.profileCategory || 'Digital Creator');
+  const [editCreatorType, setEditCreatorType] = useState(currentUser.creatorType || 'Premium creator');
   const [editAvatar, setEditAvatar] = useState(currentUser.avatar);
-  const [editCover, setEditCover] = useState(currentUser.coverImage);
-  const [editSocialTwitter, setEditSocialTwitter] = useState('');
-  const [editSocialInsta, setEditSocialInsta] = useState('');
+  const [editCover, setEditCover] = useState(currentUser.coverImage || '');
+  const [editSocialTwitter, setEditSocialTwitter] = useState(currentUser.socialTwitter || '');
+  const [editSocialInsta, setEditSocialInsta] = useState(currentUser.socialInstagram || '');
+  const coverInputRef = useRef<HTMLInputElement | null>(null);
 
   // Webcam capture states
   const [isWebcamActive, setIsWebcamActive] = useState(false);
@@ -851,8 +829,13 @@ export default function ProfileView({
     setEditBio(currentUser.bio);
     setEditLocation(currentUser.location || '');
     setEditWebsite(currentUser.website || '');
+    setEditPronouns(currentUser.pronouns || '');
+    setEditCategory(currentUser.profileCategory || 'Digital Creator');
+    setEditCreatorType(currentUser.creatorType || 'Premium creator');
+    setEditSocialTwitter(currentUser.socialTwitter || '');
+    setEditSocialInsta(currentUser.socialInstagram || '');
     setEditAvatar(currentUser.avatar);
-    setEditCover(currentUser.coverImage);
+    setEditCover(currentUser.coverImage || '');
   }, [currentUser.id]);
 
   // Web camera activation
@@ -969,6 +952,7 @@ export default function ProfileView({
 
     try {
       let persistedAvatar = editAvatar;
+      let persistedCover = editCover;
       // Cropped/captured photos are data URLs. Upload the binary to R2 instead
       // of writing a large base64 string into the Firestore profile document.
       if (editAvatar.startsWith('data:image/jpeg;base64,')) {
@@ -983,6 +967,11 @@ export default function ProfileView({
         });
         persistedAvatar = uploadedAvatar.downloadUrl;
       }
+      if (editCover.startsWith('data:image/')) {
+        const coverBlob = await fetch(editCover).then(response => { if (!response.ok) throw new Error('NEXORA could not prepare your cover photo.'); return response.blob(); });
+        const uploadedCover = await uploadMediaFile({ file: coverBlob, userId: currentUser.id, fileName: 'profile-cover.jpg' });
+        persistedCover = uploadedCover.downloadUrl;
+      }
 
       await Promise.resolve(onUpdateProfile({
         name: editName,
@@ -990,8 +979,13 @@ export default function ProfileView({
         bio: editBio,
         location: editLocation,
         website: editWebsite,
+        pronouns: editPronouns.trim(),
+        profileCategory: editCategory,
+        creatorType: editCreatorType,
+        socialTwitter: editSocialTwitter.trim(),
+        socialInstagram: editSocialInsta.trim(),
         avatar: persistedAvatar,
-        coverImage: editCover,
+        coverImage: persistedCover,
         lastDisplayNameChangeTime: editName !== currentUser.name ? new Date().toISOString() : currentUser.lastDisplayNameChangeTime,
         lastUsernameChangeTime: editUsername !== currentUser.username ? new Date().toISOString() : currentUser.lastUsernameChangeTime,
       }));
@@ -1002,7 +996,8 @@ export default function ProfileView({
       setIsSavingProfile(false);
       setShowSavedFeedback(true);
 
-      const successMsg = '✓ Profile updated successfully';
+      const isOnline = navigator.onLine;
+      const successMsg = isOnline ? '✓ Profile updated successfully' : '⚠️ Profile updated locally and queued for offline sync.';
       window.dispatchEvent(new CustomEvent('toast', { detail: successMsg }));
 
       // Wait 1.5s for the success message feedback, then transition back smoothly
@@ -1023,13 +1018,13 @@ export default function ProfileView({
     editBio !== currentUser.bio ||
     editLocation !== (currentUser.location || '') ||
     editWebsite !== (currentUser.website || '') ||
-    editPronouns !== '' ||
-    editCategory !== 'Digital Creator' ||
-    editCreatorType !== 'Premium creator' ||
-    editSocialTwitter !== '' ||
-    editSocialInsta !== '' ||
+    editPronouns !== (currentUser.pronouns || '') ||
+    editCategory !== (currentUser.profileCategory || 'Digital Creator') ||
+    editCreatorType !== (currentUser.creatorType || 'Premium creator') ||
+    editSocialTwitter !== (currentUser.socialTwitter || '') ||
+    editSocialInsta !== (currentUser.socialInstagram || '') ||
     editAvatar !== currentUser.avatar ||
-    editCover !== currentUser.coverImage;
+    editCover !== (currentUser.coverImage || '');
   const handleCancelEditProfile = () => {
     if (hasUnsavedProfileChanges && !window.confirm('Discard your unsaved profile changes?')) return;
     stopWebcam();
@@ -1038,8 +1033,13 @@ export default function ProfileView({
     setEditBio(currentUser.bio);
     setEditLocation(currentUser.location || '');
     setEditWebsite(currentUser.website || '');
+    setEditPronouns(currentUser.pronouns || '');
+    setEditCategory(currentUser.profileCategory || 'Digital Creator');
+    setEditCreatorType(currentUser.creatorType || 'Premium creator');
+    setEditSocialTwitter(currentUser.socialTwitter || '');
+    setEditSocialInsta(currentUser.socialInstagram || '');
     setEditAvatar(currentUser.avatar);
-    setEditCover(currentUser.coverImage);
+    setEditCover(currentUser.coverImage || '');
     setActivePanel('profile');
     window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Changes cancelled. Nothing was saved.' }));
   };
@@ -1074,7 +1074,7 @@ export default function ProfileView({
 
   // Tab filtered items (Media, Voice, Reposts, Sparks, Bookmarks, Archive)
   const getTabContent = () => {
-    const allActive = posts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const allActive = [...posts].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     const userMyPosts = allActive.filter(p => p.username === currentUser.username || p.userId === currentUser.id);
 
     switch (profileTab) {
@@ -1087,9 +1087,9 @@ export default function ProfileView({
       case 'sparks':
         return allActive.filter(p => !p.isArchived && (userSparks.includes(p.id) || (p as any).isSparkedByMe));
       case 'bookmarks':
-        return allActive.filter(p => !p.isArchived && userBookmarks.includes(p.id));
+        return isOwnProfile ? allActive.filter(p => !p.isArchived && userBookmarks.includes(p.id)) : [];
       case 'archive':
-        return userMyPosts.filter(p => p.isArchived);
+        return isOwnProfile ? userMyPosts.filter(p => p.isArchived) : [];
       default:
         return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.videoUrl));
     }
@@ -1334,13 +1334,14 @@ export default function ProfileView({
           )}
 
           {/* Profile cover with compact avatar anchored over its lower edge. */}
-          <div className="nx-profile-cover relative h-28 sm:h-36 overflow-visible rounded-2xl border border-white/10 bg-[#100B25]">
+          <div className="nx-profile-cover relative h-36 sm:h-48 overflow-visible rounded-2xl border border-white/10 bg-[#100B25]">
             {currentUser.coverImage ? (
               <img src={currentUser.coverImage} alt="" className="h-full w-full rounded-2xl object-cover" />
             ) : (
               <div className="h-full w-full rounded-2xl bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]" />
             )}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/35 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+            {isOwnProfile && <button type="button" onClick={() => setActivePanel('edit-profile')} className="absolute right-3 bottom-3 z-10 rounded-xl border border-white/15 bg-black/55 px-3 py-2 text-[10px] font-bold text-white backdrop-blur-md hover:bg-black/75"><Camera className="mr-1.5 inline h-3.5 w-3.5" /> Edit cover</button>}
             <div className="absolute left-4 -bottom-6">
               <div className="relative">
                 {currentUser.hasStory && <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 blur-[2px] opacity-80" />}
@@ -1411,6 +1412,12 @@ export default function ProfileView({
               </div>
             </div>
 
+            {currentUser.website && (() => { const href = /^https?:\/\//i.test(currentUser.website) ? currentUser.website : 'https://' + currentUser.website; return <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1.5 text-xs text-violet-300 underline-offset-4 hover:text-violet-200 hover:underline"><LinkIcon className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{currentUser.website}</span></a>; })()}
+            {(currentUser.location || currentUser.pronouns) && <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-zinc-400">{currentUser.location && <span><MapPin className="mr-1 inline h-3 w-3" />{currentUser.location}</span>}{currentUser.pronouns && <span>{currentUser.pronouns}</span>}</div>}
+            {(currentUser.profileCategory || currentUser.creatorType) && <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-300">{[currentUser.profileCategory, currentUser.creatorType].filter(Boolean).join(' · ')}</p>}
+            {(currentUser.socialTwitter || currentUser.socialInstagram) && <div className="flex flex-wrap gap-3 text-[11px]">{currentUser.socialTwitter && <a href={/^https?:\/\//i.test(currentUser.socialTwitter) ? currentUser.socialTwitter : 'https://' + currentUser.socialTwitter.replace(/^@/, '')} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:text-violet-200 hover:underline">X / Twitter</a>}{currentUser.socialInstagram && <a href={/^https?:\/\//i.test(currentUser.socialInstagram) ? currentUser.socialInstagram : 'https://instagram.com/' + currentUser.socialInstagram.replace(/^@/, '')} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:text-violet-200 hover:underline">Instagram</a>}</div>}
+            {((currentUser.skills || []).length > 0 || Object.keys(currentUser.interestDNA || {}).length > 0) && <div className="flex flex-wrap gap-1.5 pt-1">{[...(currentUser.skills || []), ...Object.keys(currentUser.interestDNA || {}).sort((a,b) => (currentUser.interestDNA[b] || 0) - (currentUser.interestDNA[a] || 0))].filter((value,index,array) => value && array.indexOf(value) === index).slice(0,6).map(item => <span key={item} className="rounded-full border border-violet-400/15 bg-violet-500/10 px-2.5 py-1 text-[10px] font-medium text-violet-200">{item}</span>)}</div>}
+
             {/* Nexora 6 Statistics Grid */}
             <div className="nx-profile-stats grid grid-cols-3 sm:grid-cols-6 gap-y-1.5 gap-x-1 sm:gap-x-2 text-center mt-2 sm:mt-3">
               {[
@@ -1421,10 +1428,10 @@ export default function ProfileView({
                 { label: 'Reputation', value: getSecondaryMetric('reputation') },
                 { label: 'Contributions', value: getSecondaryMetric('contributions') },
               ].map(stat => (
-                <div key={stat.label} className="flex flex-col gap-0.5 rounded-lg sm:rounded-xl border border-white/[0.06] bg-white/[0.025] px-1 py-1.5 sm:py-2">
+                <button key={stat.label} type="button" onClick={() => { if (stat.label === 'Followers' || stat.label === 'Following') { setRelationsTab(stat.label === 'Followers' ? 'followers' : 'following'); setActivePanel('social-graph'); } else if (stat.label === 'Posts') setProfileTab('media'); else if (stat.label === 'Sparks') setProfileTab('sparks'); }} className="flex flex-col gap-0.5 rounded-lg sm:rounded-xl border border-white/[0.06] bg-white/[0.025] px-1 py-1.5 text-center transition-colors hover:border-violet-400/30 hover:bg-violet-500/[0.07] sm:py-2">
                   <span className="text-sm sm:text-base font-black text-white leading-tight">{stat.value}</span>
                   <span className="text-[10px] sm:text-xs font-medium text-zinc-300 leading-tight">{stat.label}</span>
-                </div>
+                </button>
               ))}
             </div>
 
@@ -1520,7 +1527,8 @@ export default function ProfileView({
                 )}
               </section>
             )}
-            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} /> : filteredTabPosts.length === 0 ? (
+            {profileTab === 'media' && <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-2 px-3 pb-1"><span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Content</span><div className="flex flex-wrap gap-1.5">{([{id:'all',label:'All'},{id:'photos',label:'Photos'},{id:'videos',label:'Videos'},{id:'posts',label:'Text'},{id:'pinned',label:'Pinned'}] as const).map(filter => <button key={filter.id} type="button" onClick={() => setAllContentFilter(filter.id)} aria-pressed={allContentFilter === filter.id} className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold transition-colors ${allContentFilter === filter.id ? 'border-violet-400/40 bg-violet-500/15 text-violet-100' : 'border-white/10 bg-white/[0.025] text-zinc-400 hover:text-white'}`}>{filter.label}</button>)}</div></div>}
+            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} /> : filteredTabPosts.filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'videos' ? !!post.videoUrl : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).length === 0 ? (
               <div className="p-8 py-16 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 max-w-md mx-auto my-6">
                 <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                   {profileTab === 'media' && <Camera className="w-6 h-6" />}
@@ -1545,7 +1553,7 @@ export default function ProfileView({
             ) : (
               <div className="w-full max-w-4xl mx-auto px-2">
                 <MediaGrid 
-                  gridPosts={filteredTabPosts.sort((a, b) => (pinnedPostIdsList.includes(b.id) ? 1 : -1) - (pinnedPostIdsList.includes(a.id) ? 1 : 0))} 
+                  gridPosts={[...filteredTabPosts].filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'videos' ? !!post.videoUrl : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
                   pinnedPostIds={pinnedPostIdsList} 
                   onSelectPost={(post) => setSelectedGridPost(post)} 
                 />
@@ -1804,7 +1812,7 @@ export default function ProfileView({
                             className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold transition-all text-zinc-300 hover:text-white"
                           >
                             <span className="flex items-center gap-2.5">
-                              <Shield className="w-4 h-4 text-cyan-400" />
+                              <Shield className="w-4 h-4 text-violet-300" />
                               <div className="text-left">
                                 <p className="leading-tight text-xs font-bold">Privacy settings</p>
                                 <p className="text-[9px] text-zinc-500 font-normal">Choose who can see your profile and manage blocked accounts</p>
@@ -1838,7 +1846,7 @@ export default function ProfileView({
                             className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold transition-all text-zinc-300 hover:text-white"
                           >
                             <span className="flex items-center gap-2.5">
-                              <Bell className="w-4 h-4 text-pink-400" />
+                              <Bell className="w-4 h-4 text-violet-400" />
                               <div className="text-left">
                                 <p className="leading-tight text-xs font-bold">Notifications Control</p>
                                 <p className="text-[9px] text-zinc-500 font-normal">Sieve likes, comments, DM alert triggers</p>
@@ -2024,7 +2032,7 @@ export default function ProfileView({
                           {/* Save parameters */}
                           <button
                             onClick={handleSaveProfile}
-                            className="w-full py-2.5 bg-linear-to-r from-violet-600 to-pink-500 text-white rounded-xl text-[10px] font-mono font-black uppercase tracking-widest"
+                            className="w-full py-2.5 bg-linear-to-r from-violet-600 to-violet-500 text-white rounded-xl text-[10px] font-mono font-black uppercase tracking-widest"
                           >
                             Save Changes
                           </button>
@@ -2032,7 +2040,7 @@ export default function ProfileView({
 
                         {/* Camera Setup block */}
                         <div className="bg-[#0e0c24] p-4 rounded-2xl border border-white/10 space-y-3">
-                          <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">📸 PROFILE PHOTO</span>
+                          <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">📸 PROFILE PHOTO</span>
                           {isWebcamActive ? (
                             <div className="space-y-2 text-center">
                               <video ref={videoRef} autoPlay playsInline className="w-40 h-40 object-cover mx-auto rounded-xl border border-pink-500/20 scale-x-[-1]" />
@@ -2061,7 +2069,7 @@ export default function ProfileView({
                     {settingsActiveSubPanel === 'privacy' && (
                       <div className="space-y-4">
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-4">
-                          <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">🔒 PRIVACY SETTINGS</span>
+                          <span className="text-[9px] font-mono text-violet-300 font-extrabold uppercase tracking-widest block">🔒 PRIVACY SETTINGS</span>
                           
                           {/* Private account is deliberately unavailable until follower-request and
                               private-post reads are enforced together by trusted rules and services. */}
@@ -2232,7 +2240,7 @@ export default function ProfileView({
                         </div>
 
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-2" role="status">
-                          <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">Advanced sign-in protections</span>
+                          <span className="text-[9px] font-mono text-violet-300 font-extrabold uppercase tracking-widest block">Advanced sign-in protections</span>
                           <p className="text-[10px] text-zinc-400 leading-relaxed">Passkey and app-managed TOTP enrollment are not implemented in Nexora. No passkey or second factor is enabled by these settings. Check Firebase Authentication for provider-supported MFA options.</p>
                         </div>
 
@@ -2247,7 +2255,7 @@ export default function ProfileView({
                     {settingsActiveSubPanel === 'notifications' && (
                       <div className="space-y-4 text-left">
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3.5">
-                          <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">🔔 PUSH PREFERENCES</span>
+                          <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">🔔 PUSH PREFERENCES</span>
                           <p className="text-[10px] text-zinc-400 leading-normal font-sans">Manage how you receive notifications on this device.</p>
                           
                           <div className="space-y-3">
@@ -2350,7 +2358,7 @@ export default function ProfileView({
 
                         {/* Typography customizer */}
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
-                          <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">✍️ TYPOGRAPHY SCALES</span>
+                          <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">✍️ TYPOGRAPHY SCALES</span>
                           
                           {/* Text size selector */}
                           <div className="space-y-1">
@@ -2428,7 +2436,7 @@ export default function ProfileView({
                         </div>
 
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3.5">
-                          <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">Clear saved app data</span>
+                          <span className="text-[9px] font-mono text-violet-300 font-extrabold uppercase tracking-widest block">Clear saved app data</span>
                           
                           {/* Cache size meter */}
                           <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-2">
@@ -2439,7 +2447,7 @@ export default function ProfileView({
                             
                             {/* Visual SVG Progress loader bar */}
                             <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                              <div className="h-full bg-linear-to-r from-violet-600 to-pink-500 rounded-full" style={{ width: cacheSize === '0.0 B' ? '0%' : '65%' }} />
+                              <div className="h-full bg-linear-to-r from-violet-600 to-violet-500 rounded-full" style={{ width: cacheSize === '0.0 B' ? '0%' : '65%' }} />
                             </div>
                             <p className="text-[9px] text-zinc-500 font-sans leading-normal">This includes saved profile photos, video previews and other temporary files.</p>
                           </div>
@@ -2524,7 +2532,7 @@ export default function ProfileView({
                     {settingsActiveSubPanel === 'support' && (
                       <div className="space-y-4 text-left">
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
-                          <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">💬 Lagos Technical Grid Support</span>
+                          <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">💬 Lagos Technical Grid Support</span>
                           
                           {supportSubmitted ? (
                             <div className="p-6 text-center space-y-3 bg-black/20 rounded-xl border border-emerald-500/20">
@@ -2835,12 +2843,17 @@ export default function ProfileView({
               {/* Relation list render */}
               <div className="space-y-2 text-left">
                 {(() => {
-                  if ((relationsTab === 'followers' || relationsTab === 'following') && (!isOwnProfile || auth.currentUser?.uid !== currentUser.id)) {
-                    return <div className="text-center py-12 text-zinc-500 text-xs">Relationship lists are private for this account.</div>;
-                  }
                   let list: any[] = [];
-                  const allFollows = profileFollows;
-                  const allRegisteredUsers = relationshipUsers;
+                  let allFollows: { followerId: string; followingId: string }[] = [];
+                  try {
+                    allFollows = JSON.parse(localStorage.getItem('nexora_db_follows') || localStorage.getItem('nexora_db_follows_v1') || '[]');
+                  } catch {}
+
+                  let allRegisteredUsers: User[] = [];
+                  try {
+                    const rawUsers = localStorage.getItem('nexora_users_db');
+                    if (rawUsers) allRegisteredUsers = JSON.parse(rawUsers);
+                  } catch {}
 
                   if (relationsTab === 'followers') {
                     const followerIds = allFollows.filter(f => f.followingId === currentUser.id).map(f => f.followerId);
@@ -2888,7 +2901,7 @@ export default function ProfileView({
                       {/* Right actions context */}
                       <div className="flex items-center gap-1.5">
                         {relationsTab === 'following' && (
-                          <label className="flex items-center gap-1 text-[10px] font-mono text-pink-400 bg-pink-500/5 px-2 py-1 rounded-lg border border-pink-500/10 cursor-pointer">
+                          <label className="flex items-center gap-1 text-[10px] font-mono text-violet-400 bg-pink-500/5 px-2 py-1 rounded-lg border border-pink-500/10 cursor-pointer">
                             <input 
                               type="checkbox" 
                               checked={closeFriends.includes(item.id)}
@@ -3259,6 +3272,14 @@ export default function ProfileView({
 
                   </div>
 
+                  {/* Optional profile cover photo */}
+                  <div className="space-y-3 rounded-3xl border border-white/10 bg-[#0b081c] p-5">
+                    <div className="flex items-center justify-between"><span className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-violet-300">Profile cover</span><span className="text-[9px] text-zinc-500">Optional · wide image</span></div>
+                    <div className="relative h-28 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]">{editCover ? <img src={editCover} alt="Cover preview" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-zinc-500">Your cover photo preview</div>}</div>
+                    <div className="flex flex-wrap gap-2"><button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => coverInputRef.current?.click()} className="rounded-xl bg-violet-600 px-4 py-2 text-[10px] font-bold uppercase text-white hover:bg-violet-500 disabled:opacity-50"><Camera className="mr-1.5 inline h-3.5 w-3.5" /> {editCover ? 'Change cover' : 'Add cover photo'}</button>{editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => setEditCover('')} className="rounded-xl border border-white/10 px-4 py-2 text-[10px] font-bold uppercase text-zinc-300 hover:bg-white/5 disabled:opacity-50">Remove cover</button>}</div>
+                    <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) { window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a JPG, PNG or WebP image under 8 MB.' })); return; } const reader = new FileReader(); reader.onload = () => { if (typeof reader.result === 'string') setEditCover(reader.result); }; reader.onerror = () => window.dispatchEvent(new CustomEvent('toast', { detail: 'The cover photo could not be read. Please try again.' })); reader.readAsDataURL(file); }} />
+                  </div>
+
                   {/* Avatar photo editor trigger */}
                   <div className="bg-[#0b081c] p-6 rounded-3xl border border-white/10 space-y-4">
                     <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block border-b border-white/5 pb-2">📸 PROFILE PHOTO</span>
@@ -3274,7 +3295,7 @@ export default function ProfileView({
                         <button
                           disabled={isSavingProfile || showSavedFeedback}
                           onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
-                          className="px-4 py-2 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-4 py-2 bg-linear-to-r from-violet-600 to-violet-500 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Edit3 className="w-3.5 h-3.5" /> Configure Avatar
                         </button>
@@ -3290,7 +3311,8 @@ export default function ProfileView({
                     <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest pl-2">🔴 LIVE PREVIEW</span>
                     
                     {/* Simplified Profile Header simulation */}
-                    <div className="bg-[#0b0922] border border-white/10 rounded-2xl p-6 text-center space-y-4">
+                    <div className="bg-[#0b0922] border border-white/10 rounded-2xl p-4 text-center space-y-4">
+                      <div className="relative h-24 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]">{editCover ? <img src={editCover} alt="Cover photo preview" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-[10px] text-zinc-500">Optional cover photo</div>}</div>
                       <div className="relative w-20 h-20 rounded-full bg-black overflow-hidden mx-auto border-2 border-white/10">
                         <img src={editAvatar} className="w-full h-full object-cover" alt="live preview avatar" />
                       </div>
@@ -3305,7 +3327,7 @@ export default function ProfileView({
                       </p>
                       <div className="flex flex-wrap items-center justify-center gap-x-3 text-[10px] font-mono text-zinc-400">
                         {editLocation && <span>📍 {editLocation}</span>}
-                        {editWebsite && <span className="text-cyan-400">🔗 {editWebsite}</span>}
+                        {editWebsite && <span className="text-violet-300">🔗 {editWebsite}</span>}
                         {editPronouns && <span>👥 {editPronouns}</span>}
                       </div>
                     </div>
@@ -3324,7 +3346,7 @@ export default function ProfileView({
                         className={`flex-1 py-3.5 rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 ${
                           showSavedFeedback 
                             ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30' 
-                            : 'bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white shadow-violet-500/15 disabled:opacity-50 disabled:cursor-not-allowed'
+                            : 'bg-linear-to-r from-violet-600 to-violet-500 hover:brightness-110 text-white shadow-violet-500/15 disabled:opacity-50 disabled:cursor-not-allowed'
                         }`}
                       >
                         {isSavingProfile && (
@@ -3363,7 +3385,7 @@ export default function ProfileView({
               className="bg-[#0b0821] border border-white/10 rounded-2xl max-w-sm w-full overflow-hidden p-6 space-y-5 text-left"
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <span className="text-[10px] font-mono text-pink-400 font-extrabold uppercase tracking-widest">
+                <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest">
                   Avatar Configuration
                 </span>
                 <button
@@ -3507,7 +3529,7 @@ export default function ProfileView({
                       onClick={() => setAvatarRotation(prev => (prev + 90) % 360)}
                       className="px-3 py-1.5 bg-white/5 border border-white/10 text-white font-mono text-[9px] uppercase font-bold rounded-lg hover:bg-white/10 cursor-pointer flex items-center gap-1"
                     >
-                      <RefreshCw className="w-3 h-3 text-pink-400 animate-spin" /> Rotate 90°
+                      <RefreshCw className="w-3 h-3 text-violet-400 animate-spin" /> Rotate 90°
                     </button>
                   </div>
 
@@ -3524,7 +3546,7 @@ export default function ProfileView({
                     </button>
                     <button
                       onClick={handleSaveCroppedAvatar}
-                      className="flex-1 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white font-mono text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer"
+                      className="flex-1 py-2.5 bg-linear-to-r from-violet-600 to-violet-500 hover:brightness-110 text-white font-mono text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer"
                     >
                       Save Photo
                     </button>
@@ -3594,7 +3616,7 @@ export default function ProfileView({
                   <span className="text-emerald-400 font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Invariant: Rep ≤ Contrib
                   </span>
-                  <span className="text-cyan-400 font-bold flex items-center gap-1">
+                  <span className="text-violet-300 font-bold flex items-center gap-1">
                     <Lock className="w-3.5 h-3.5" /> Integrity protections
                   </span>
                 </div>
@@ -3656,7 +3678,7 @@ export default function ProfileView({
                     <span className="text-[9px] text-zinc-400 block mt-0.5">Trust Multiplier</span>
                   </div>
                   <div className="bg-white/5 p-2 rounded-xl">
-                    <span className="text-xs font-mono font-bold text-cyan-400 block">
+                    <span className="text-xs font-mono font-bold text-violet-300 block">
                       {currentUser.reputationBreakdown?.antiGamingStatus?.uniqueEngagerRatio == null ? 'N/A' : Math.round(currentUser.reputationBreakdown.antiGamingStatus.uniqueEngagerRatio * 100) + '%'}
                     </span>
                     <span className="text-[9px] text-zinc-400 block mt-0.5">Unique Engagers</span>
