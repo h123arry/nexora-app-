@@ -185,7 +185,7 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
                     setExpandedNotificationId(current => current === notif.id ? null : notif.id);
                     if (!notif.isRead) void markAsRead(notif.id);
                   }}
-                  role="button"
+                  role="group"
                   tabIndex={0}
                   aria-expanded={expandedNotificationId === notif.id}
                   onKeyDown={(event) => {
