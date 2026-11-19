@@ -86,6 +86,7 @@ export default function NotificationsView({
     creatorUploads: true,
     friendRequests: true,
     securityAlerts: true,
+    push: true,
   });
 
   // Notifications are hydrated from the real notification prop; no sample activity is seeded.
@@ -310,7 +311,7 @@ export default function NotificationsView({
     }
 
     // Interactive custom routing checks
-    if (notif.type === 'comment' || notif.type === 'spark' || notif.type === 'like' || notif.type === 'repost') {
+    if (notif.type === 'comment' || notif.type === 'comment_reply' || notif.type === 'mention' || notif.type === 'spark' || notif.type === 'like' || notif.type === 'repost') {
       // Redirect to Feed, look for element
       window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'feed' } }));
       setTimeout(() => {
@@ -665,7 +666,8 @@ export default function NotificationsView({
                       { key: 'communities', label: 'Communities' },
                       { key: 'events', label: 'Events Registration' },
                       { key: 'verification', label: 'Verification Status' },
-                      { key: 'securityAlerts', label: 'Security & Auth Alerts' }
+                      { key: 'securityAlerts', label: 'Security & Auth Alerts' },
+                      { key: 'push', label: 'Push alerts' }
                     ].map(pref => {
                       const val = settingsToggles[pref.key as keyof typeof settingsToggles];
                       return (
