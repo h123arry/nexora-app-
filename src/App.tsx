@@ -506,7 +506,7 @@ export default function App() {
     if (!isLoggedIn || !firebaseUser?.uid) return;
     const unsubNotif = subscribeToNotifications(firebaseUser.uid, (dbNotifs) => {
       if (dbNotifs) {
-        setNotifications(dbNotifs);
+        setNotifications(normalizeNotificationAvatars(dbNotifs));
       }
     });
     return () => {
@@ -523,6 +523,20 @@ export default function App() {
     const interval = setInterval(checkSyncStatus, 2000);
     return () => clearInterval(interval);
   }, []);
+
+  const normalizeNotificationAvatars = (rawNotifications: Notification[]): Notification[] => {
+    if (!Array.isArray(rawNotifications)) return [];
+    return rawNotifications.map((notification: any) => ({
+      ...notification,
+      avatar: getSafeAvatar(notification.avatar, notification.actorName || notification.username),
+      subActivities: Array.isArray(notification.subActivities)
+        ? notification.subActivities.map((actor: any) => ({
+            ...actor,
+            avatar: getSafeAvatar(actor.avatar, actor.name || actor.username),
+          }))
+        : notification.subActivities,
+    }));
+  };
 
   const normalizePosts = (rawPosts: any[]): Post[] => {
     if (!Array.isArray(rawPosts)) return [];
@@ -1233,7 +1247,7 @@ export default function App() {
       setMessages(readUserScopedJson(localStorage, 'nexora_messages', uid, INITIAL_MESSAGES));
 
       const savedNotifs = readUserScopedJson<Notification[]>(localStorage, 'nexora_notifications', uid, INITIAL_NOTIFICATIONS);
-      setNotifications(Array.isArray(savedNotifs) ? savedNotifs : INITIAL_NOTIFICATIONS);
+      setNotifications(normalizeNotificationAvatars(Array.isArray(savedNotifs) ? savedNotifs : INITIAL_NOTIFICATIONS));
 
       const savedFollowing = readUserScopedJson<string[] | null>(localStorage, 'nexora_following_ids', uid, null);
       if (savedFollowing) {
