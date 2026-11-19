@@ -606,7 +606,7 @@ export default function App() {
     const realPosts = normalized.filter((p: Post) => p && !['post-1', 'post-2', 'post-3'].includes(p.id));
     localStorage.setItem('nexora_posts', JSON.stringify(realPosts));
     return realPosts;
-  };
+  });
 
   // Public directory queries are deliberately bounded. Hydrate authors missing
   // from that window directly by UID so public posts never fall back to stale
@@ -628,8 +628,6 @@ export default function App() {
       .catch(error => console.warn('[NEXORA] Public post author hydration failed.', error));
     return () => { active = false; };
   }, [posts, globalUsersMap]);
-
-;
 
   const feedCursorRef = useRef<any>(null);
   const feedHasMoreRef = useRef(false);
