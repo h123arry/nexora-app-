@@ -2779,7 +2779,7 @@ export default function FeedView({
                     const isHighRep = nidaDiagnosticPost.username === 'voh' || nidaDiagnosticPost.username === 'nexora_ai' || nidaDiagnosticPost.username === 'voh_ai';
                     
                     const pillars = [
-                      { label: 'Interest Alignment', val: isHighRep ? 95 : 75, desc: 'Relevance to your personalized DNA interests.', color: 'bg-violet-500' },
+                      { label: 'Interest Alignment', val: isHighRep ? 95 : 75, desc: 'How well this matches your interests.', color: 'bg-violet-500' },
                       { label: 'Post engagement', val: nidaDiagnosticPost.likeCount && nidaDiagnosticPost.likeCount > 1000 ? 98 : 65, desc: 'Pure completion rates and organic shares.', color: 'bg-pink-500' },
                       { label: 'Creator reputation', val: isHighRep ? 100 : 85, desc: 'Historical compliance and content age.', color: 'bg-cyan-500' },
                       { label: 'Content Freshness', val: 90, desc: 'Recency and rapid velocity trend scaling.', color: 'bg-yellow-500' },
