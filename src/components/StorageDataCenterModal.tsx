@@ -188,7 +188,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       { id: 'q-1', type: 'Message', payload: 'Sending a secure message...', status: 'completed', timestamp: '10:41 AM' },
       { id: 'q-2', type: 'Reaction', payload: 'Added Heart reaction to @lucas_cyber', status: 'completed', timestamp: '10:42 AM' },
       { id: 'q-3', type: 'Poll Vote', payload: 'Voted in a poll', status: 'pending', timestamp: 'Just now' },
-      { id: 'q-4', type: 'AI Request', payload: 'VOH AI checked app storage', status: 'pending', timestamp: 'Just now' },
+      { id: 'q-4', type: 'VOH AI', payload: 'VOH AI checked app storage', status: 'pending', timestamp: 'Just now' },
       { id: 'q-5', type: 'Comment', payload: 'Writing a comment', status: 'pending', timestamp: 'Just now' },
     ];
   });
@@ -378,7 +378,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   // Helper: Queue Simulated Offline Message
   const handleQueueSimulatedMessage = () => {
-    const types = ['Message', 'Reaction', 'Comment', 'AI Request', 'Poll Vote'];
+    const types = ['Message', 'Reaction', 'Comment', 'VOH AI', 'Poll Vote'];
     const payloads = [
       'Encrypted message sent securely...',
       'Added Fire reaction to community thread',
@@ -826,7 +826,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
                     <div className="flex items-center gap-2">
                       <HardDrive className="h-5 w-5 text-violet-400" />
-                      <h4 className="text-sm font-bold text-white">Local storage snapshot</h4>
+                      <h4 className="text-sm font-bold text-white">Storage on this device</h4>
                     </div>
                     <p className="mt-2 text-xs leading-relaxed text-zinc-400">
                       This page only shows files saved on this device. It doesn't show cloud storage, online backups, phone memory, battery or connection details.
