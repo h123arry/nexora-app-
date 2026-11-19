@@ -15,6 +15,7 @@ import GiftVerseView from './GiftVerseView';
 import { validateUsername } from '../utils/username';
 import ReportModal from './ReportModal';
 import { auth } from '../services/firebase/config';
+import { uploadMediaFile } from '../services/firebase/storageService';
 import { SettingsService } from '../services/firebase/settingsService';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
@@ -926,13 +927,29 @@ export default function ProfileView({
     setIsSavingProfile(true);
 
     try {
+      let persistedAvatar = editAvatar;
+      // Cropped/captured photos are data URLs. Upload the binary to R2 instead
+      // of writing a large base64 string into the Firestore profile document.
+      if (editAvatar.startsWith('data:image/jpeg;base64,')) {
+        const avatarBlob = await fetch(editAvatar).then(response => {
+          if (!response.ok) throw new Error('NEXORA could not prepare your profile photo.');
+          return response.blob();
+        });
+        const uploadedAvatar = await uploadMediaFile({
+          file: avatarBlob,
+          userId: currentUser.id,
+          fileName: 'profile-avatar.jpg',
+        });
+        persistedAvatar = uploadedAvatar.downloadUrl;
+      }
+
       await Promise.resolve(onUpdateProfile({
         name: editName,
         username: editUsername,
         bio: editBio,
         location: editLocation,
         website: editWebsite,
-        avatar: editAvatar,
+        avatar: persistedAvatar,
         coverImage: editCover,
         lastDisplayNameChangeTime: editName !== currentUser.name ? new Date().toISOString() : currentUser.lastDisplayNameChangeTime,
         lastUsernameChangeTime: editUsername !== currentUser.username ? new Date().toISOString() : currentUser.lastUsernameChangeTime,

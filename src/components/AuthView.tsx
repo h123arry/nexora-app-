@@ -20,6 +20,7 @@ import { ProfileService } from '../services/firebase/profileService';
 import { EmailService } from '../services/firebase/emailService';
 import { SecurityNotificationService } from '../services/firebase/securityNotificationService';
 import { isPhoneAuthAvailable } from '../utils/authMethodAvailability';
+import { uploadMediaFile } from '../services/firebase/storageService';
 
 const runtimeEnv = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env || {}) as Record<string, string | undefined>;
 const PHONE_AUTH_ENABLED = isPhoneAuthAvailable(runtimeEnv);
@@ -28,15 +29,6 @@ interface AuthViewProps {
   onLoginSuccess: (loggedUser: User) => void;
   promptReason?: string;
 }
-
-const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
-];
 
 const COUNTRIES = [
   { code: '+1', name: 'United States', flag: '🇺🇸' },
@@ -133,8 +125,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
   });
 
   // Step 2 Avatar
-  const [selectedAvatar, setSelectedAvatar] = useState(PRESET_AVATARS[0]);
-  const [customAvatarUrl, setCustomAvatarUrl] = useState('');
+  const [selectedAvatar, setSelectedAvatar] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3 Interests
@@ -503,12 +494,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     }
   };
 
-  // Onboarding Step 2: Profile Photo Upload / Selection
-  const handleAvatarSelect = (url: string) => {
-    setSelectedAvatar(url);
-    setCustomAvatarUrl('');
-  };
-
   const handleCustomAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -516,7 +501,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       reader.onload = (uploadEvent) => {
         if (uploadEvent.target?.result) {
           const resultStr = uploadEvent.target.result as string;
-          setCustomAvatarUrl(resultStr);
           setSelectedAvatar(resultStr);
         }
       };
@@ -557,9 +541,22 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     setIsPending(true);
     setErrorMsg('');
     try {
+      let persistedAvatar = finalUser.avatar;
+      if (persistedAvatar.startsWith('data:image/')) {
+        const avatarBlob = await fetch(persistedAvatar).then(response => {
+          if (!response.ok) throw new Error('NEXORA could not prepare your profile photo.');
+          return response.blob();
+        });
+        const uploadedAvatar = await uploadMediaFile({
+          file: avatarBlob,
+          userId: finalUser.id,
+          fileName: 'profile-avatar-onboarding',
+        });
+        persistedAvatar = uploadedAvatar.downloadUrl;
+      }
       await AuthService.updateUserProfile(finalUser.id, {
         username: finalUser.username,
-        avatar: finalUser.avatar,
+        avatar: persistedAvatar,
         interestDNA: finalUser.interestDNA
       });
     } catch (e: any) {
@@ -702,18 +699,27 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                 <div>
                   <h2 className="text-xl font-extrabold text-white tracking-tight">Add Profile Photo</h2>
                   <p className="text-xs text-zinc-400 mt-1">
-                    Choose a profile picture or select one of our default avatars.
+                    Add your own photo, or continue with the neutral NEXORA placeholder.
                   </p>
                 </div>
 
                 {/* Avatar Preview */}
                 <div className="flex flex-col items-center gap-3">
                   <div className="relative group">
-                    <img 
-                      src={selectedAvatar} 
-                      alt="Avatar preview" 
-                      className="w-24 h-24 rounded-full object-cover border-2 border-violet-500 shadow-[0_0_25px_rgba(139,92,246,0.4)]"
-                    />
+                    {selectedAvatar ? (
+                      <img
+                        src={selectedAvatar}
+                        alt="Avatar preview"
+                        className="w-24 h-24 rounded-full object-cover border-2 border-violet-500 shadow-[0_0_25px_rgba(139,92,246,0.4)]"
+                      />
+                    ) : (
+                      <div
+                        aria-label="Neutral NEXORA avatar placeholder"
+                        className="w-24 h-24 rounded-full border-2 border-violet-500/60 bg-gradient-to-br from-[#21134b] to-[#090714] flex items-center justify-center shadow-[0_0_25px_rgba(139,92,246,0.25)]"
+                      >
+                        <span className="text-3xl font-black text-violet-200">{(onboardingUser?.name || 'N').trim().charAt(0).toUpperCase()}</span>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
@@ -730,23 +736,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                     />
                   </div>
                   <span className="text-xs text-zinc-400 font-mono">@{onboardingUser.username}</span>
-                </div>
-
-                {/* Preset Avatars */}
-                <div>
-                  <span className="text-xs font-bold text-zinc-300 block mb-2">Preset Avatars</span>
-                  <div className="grid grid-cols-6 gap-2">
-                    {PRESET_AVATARS.map((url, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleAvatarSelect(url)}
-                        className={`p-1 rounded-full border-2 transition-all cursor-pointer overflow-hidden ${selectedAvatar === url ? 'border-violet-500 scale-110 shadow-[0_0_12px_rgba(139,92,246,0.5)]' : 'border-transparent opacity-60 hover:opacity-100'}`}
-                      >
-                        <img src={url} alt={`Preset ${idx}`} className="w-10 h-10 rounded-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <div className="flex gap-3">

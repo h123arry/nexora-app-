@@ -72,7 +72,7 @@ export default function NotificationPopBanner({
   useEffect(() => {
     const handleRealtimeNotif = (e: Event) => {
       const customEvent = e as CustomEvent<{ notification: Notification; showPop?: boolean }>;
-      const { notification, showPop = true } = customEvent.detail || {};
+      const { notification, showPop = false } = customEvent.detail || {};
       
       if (!notification || showPop === false) return;
 

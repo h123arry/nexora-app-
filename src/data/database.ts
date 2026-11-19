@@ -338,24 +338,37 @@ export function isUserVerified(username: string): boolean {
   return lower === 'nexoraofficial' || lower === 'voh' || lower === 'voh_ai' || lower === 'nexora_ai' || lower === 'lunash';
 }
 
-// Generate an ultra-modern high-contrast deterministic gradient monogram default avatar
+// Brand-neutral NEXORA monogram used whenever a member has not chosen a photo.
 export function getDefaultAvatar(name: string): string {
-  const initial = (name || 'N').trim().charAt(0).toUpperCase();
-  const charCodeSum = (name || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) || 12;
-  const hue1 = charCodeSum % 360;
-  const hue2 = (hue1 + 140) % 360;
-  
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><defs><linearGradient id="grad-${charCodeSum}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(${hue1}, 75%, 60%)" /><stop offset="100%" stop-color="hsl(${hue2}, 85%, 45%)" /></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(#grad-${charCodeSum})" /><text x="50%" y="54%" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="900" font-size="42" text-anchor="middle" dominant-baseline="middle" style="letter-spacing:-0.05em">${initial}</text></svg>`;
-  
+  const initial = (name || 'N').trim().charAt(0).toUpperCase() || 'N';
+  const xmlEscapes: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&apos;',
+  };
+  const safeInitial = initial.replace(/[&<>"']/g, character => xmlEscapes[character]);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><defs><linearGradient id="nexora-avatar" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#302064" /><stop offset="100%" stop-color="#7138FF" /></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(#nexora-avatar)" /><text x="50%" y="54%" fill="#F5F7FF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="800" font-size="42" text-anchor="middle" dominant-baseline="middle">${safeInitial}</text></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-// Automatically maps old Unsplash male portraits or missing avatars to the beautiful default monogram
+// Replace legacy stock-person presets and missing photos with a neutral generated monogram.
+const LEGACY_STOCK_PERSON_AVATARS = [
+  'photo-1535713875002-d1d0cf377fde',
+  'photo-1494790108377-be9c29b29330',
+  'photo-1570295999919-56ceb5ecca61',
+  'photo-1580489944761-15a19d654956',
+  'photo-1507003211169-0a1dd7228f2d',
+  'photo-1534528741775-53994a69daeb',
+];
+
 export function getSafeAvatar(avatar: string | undefined, name: string): string {
-  if (!avatar || avatar.includes('photo-1535713875002-d1d0cf377fde') || avatar.trim() === '') {
+  const normalizedAvatar = (avatar || '').trim();
+  if (!normalizedAvatar || LEGACY_STOCK_PERSON_AVATARS.some(photoId => normalizedAvatar.includes(photoId))) {
     return getDefaultAvatar(name);
   }
-  return avatar;
+  return normalizedAvatar;
 }
 
 // Return authentic user with true persistent reputation & contributions metrics

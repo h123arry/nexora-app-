@@ -4,8 +4,8 @@ type Props = { className?: string };
 
 /**
  * Reuse the founder-approved NEXORA mark everywhere.
- * The source PNG retains its original black matte; screen blending makes that matte
- * visually disappear against the current midnight/violet surface without editing the artwork.
+ * The build pipeline serves the original transparent artwork for this UI asset;
+ * generated platform icons with solid backgrounds are kept separate.
  */
 export default function NexoraPremiumLogo({ className = '' }: Props) {
   return (
@@ -14,7 +14,7 @@ export default function NexoraPremiumLogo({ className = '' }: Props) {
       alt="NEXORA"
       aria-label="NEXORA"
       className={className}
-      style={{ mixBlendMode: 'screen', backgroundColor: 'transparent' }}
+      style={{ backgroundColor: 'transparent' }}
       loading="eager"
       decoding="async"
       draggable={false}

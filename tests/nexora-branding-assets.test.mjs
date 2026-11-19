@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import sharp from 'sharp';
 
 const readText = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 const readBinary = (path) => readFile(new URL(path, import.meta.url));
@@ -9,7 +10,7 @@ const pngDimensions = (buffer) => ({
   height: buffer.readUInt32BE(20),
 });
 
- test('the exact uploaded PNG is the canonical logo and generated web aliases match', async () => {
+ test('the approved source PNG and generated platform icon remain separate assets', async () => {
   const [source, icon, mark, legacy] = await Promise.all([
     readBinary('../assets/logo.png'),
     readBinary('../public/icons/icon-512.png'),
@@ -19,7 +20,14 @@ const pngDimensions = (buffer) => ({
   assert.equal(source.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   assert.deepEqual(pngDimensions(source), { width: 1920, height: 1920 });
   assert.deepEqual(pngDimensions(icon), { width: 512, height: 512 });
-  assert.deepEqual(mark, icon);
+  assert.deepEqual(pngDimensions(mark), { width: 1920, height: 1920 });
+  assert.equal(mark[25], 6, 'the generated in-app mark must have an RGBA channel');
+  const { data: markPixels } = await sharp(mark).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let transparentPixels = 0;
+  for (let offset = 3; offset < markPixels.length; offset += 4) {
+    if (markPixels[offset] === 0) transparentPixels += 1;
+  }
+  assert.ok(transparentPixels > 0, 'the generated in-app mark must contain transparent background pixels');
   assert.deepEqual(legacy, icon);
 });
 
@@ -47,7 +55,13 @@ test('mobile asset commands regenerate Android, iOS and PWA outputs from the PNG
   assert.ok(pkg.devDependencies['@capacitor/assets']);
   const sync = await readText('../scripts/sync-nexora-brand-assets.mjs');
   assert.match(sync, /icon-512\.png/);
+  assert.match(sync, /assets', 'logo\.png/);
+  assert.match(sync, /sharp\(approvedLogo\)/);
+  assert.match(sync, /isBlackMatte/);
   assert.match(sync, /nexora-mark\.png/);
+  assert.match(pkg.scripts.dev, /sync-nexora-brand-assets/);
+  assert.match(pkg.scripts.build, /sync-nexora-brand-assets/);
+  assert.match(pkg.scripts['build:web'], /sync-nexora-brand-assets/);
   assert.match(sync, /logo\.png/);
   assert.ok(sync.includes("type: 'image/png'"));
 });
