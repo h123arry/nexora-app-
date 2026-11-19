@@ -578,7 +578,7 @@ export default function ProfileView({
   const [editWebsite, setEditWebsite] = useState(currentUser.website || '');
   const [editPronouns, setEditPronouns] = useState('');
   const [editCategory, setEditCategory] = useState('Digital Creator');
-  const [editCreatorType, setEditCreatorType] = useState('Premium Node');
+  const [editCreatorType, setEditCreatorType] = useState('Premium creator');
   const [editAvatar, setEditAvatar] = useState(currentUser.avatar);
   const [editCover, setEditCover] = useState(currentUser.coverImage);
   const [editSocialTwitter, setEditSocialTwitter] = useState('');
@@ -968,7 +968,7 @@ export default function ProfileView({
     editWebsite !== (currentUser.website || '') ||
     editPronouns !== '' ||
     editCategory !== 'Digital Creator' ||
-    editCreatorType !== 'Premium Node' ||
+    editCreatorType !== 'Premium creator' ||
     editSocialTwitter !== '' ||
     editSocialInsta !== '' ||
     editAvatar !== currentUser.avatar ||
@@ -1457,7 +1457,7 @@ export default function ProfileView({
                     {profileTab === 'reposts' && 'Content reposted by this creator will appear here.'}
                     {profileTab === 'sparks' && 'Content sparked by this creator will appear here.'}
                     {profileTab === 'bookmarks' && 'Saved bookmarks and favorite posts will appear here.'}
-                    {profileTab === 'archive' && 'Archived studio posts and past assets will appear here.'}
+                    {profileTab === 'archive' && 'Your archived posts will appear here.'}
                   </p>
                 </div>
               </div>
@@ -1616,22 +1616,22 @@ export default function ProfileView({
                       const items = [
                         { id: 'edit-profile', title: 'Edit Profile Details', desc: 'Calibrate username, display name, pronouns, and bio', panel: 'account' },
                         { id: 'switch-account', title: 'Switch / Add Account', desc: 'Register other user accounts and toggle active sessions', panel: 'account' },
-                        { id: 'private-node', title: 'Private Account', desc: 'Limit feed access to approved friends and connections only', panel: 'privacy' },
+                        { id: 'private-node', title: 'Private Account', desc: 'Only approved followers can see your posts', panel: 'privacy' },
                         { id: 'comments-audience', title: 'Comments & Interactions', desc: 'Configure who is permitted to comment on your posts', panel: 'privacy' },
                         { id: 'mentions-audience', title: 'Mentions & Tags Visibility', desc: 'Control who can mention or tag you in threads', panel: 'privacy' },
                         { id: 'blocked-muted', title: 'Blocked & Muted Connections', desc: 'Manage blocked or muted accounts and unblock users', panel: 'privacy' },
                         { id: 'change-password', title: 'Change Account Password', desc: 'Rotate password credentials with full security audits', panel: 'security' },
-                        { id: 'two-factor', title: 'Two-Factor Authentication (2FA)', desc: 'Activate second key validation with verification codes', panel: 'security' },
+                        { id: 'two-factor', title: 'Two-Factor Authentication (2FA)', desc: 'Add another sign-in check with a verification code', panel: 'security' },
                         { id: 'passkeys', title: 'Passkeys Sign-On', desc: 'Configure secure biometric face or thumbprint lock registers', panel: 'security' },
                         { id: 'sessions-log', title: 'Recent Login Activity', desc: 'Review active browser locations and log out individual devices', panel: 'security' },
                         { id: 'notification-toggles', title: 'Push Alerts Toggles', desc: 'Adjust sparks, comments, direct messages alert modes', panel: 'notifications' },
-                        { id: 'appearance-theme', title: 'Theme Customization', desc: 'Switch Cyber Violet, Emerald Glass, or Stealth Dark modes', panel: 'appearance' },
+                        { id: 'appearance-theme', title: 'Theme Customization', desc: 'Switch Violet, Emerald Glass, or Stealth Dark modes', panel: 'appearance' },
                         { id: 'accent-color', title: 'Accent Colors Selector', desc: 'Customize glows with glowing neon highlights', panel: 'appearance' },
                         { id: 'text-size', title: 'Typography Text Sizing', desc: 'Adjust text sizes dynamically across the canvas', panel: 'appearance' },
                         { id: 'clear-cache', title: 'Clear Cache Tool', desc: 'Free temporary mesh asset store and logs', panel: 'storage' },
                         { id: 'data-saver', title: 'Data Saver Mode', desc: 'Compress high-resolution multimedia files', panel: 'storage' },
                         { id: 'support-ticket', title: 'Send Feedback & Support', desc: 'Connect to our technical help support lines', panel: 'support' },
-                        { id: 'about-matrix', title: 'About Nexora', description: 'Review system status and terms', panel: 'about' }
+                        { id: 'about-matrix', title: 'About NEXORA', description: 'Review system status and terms', panel: 'about' }
                       ];
 
                       const filtered = items.filter(item => 
@@ -1725,7 +1725,7 @@ export default function ProfileView({
                             <span className="flex items-center gap-2.5">
                               <Shield className="w-4 h-4 text-cyan-400" />
                               <div className="text-left">
-                                <p className="leading-tight text-xs font-bold">Privacy Dashboard</p>
+                                <p className="leading-tight text-xs font-bold">Privacy settings</p>
                                 <p className="text-[9px] text-zinc-500 font-normal">Tether visibility, manage mutes & blocked nodes</p>
                               </div>
                             </span>
@@ -1821,7 +1821,7 @@ export default function ProfileView({
                             <span className="flex items-center gap-2.5">
                               <Info className="w-4 h-4 text-indigo-400" />
                               <div className="text-left">
-                                <p className="leading-tight text-xs font-bold">About Nexora</p>
+                                <p className="leading-tight text-xs font-bold">About NEXORA</p>
                                 <p className="text-[9px] text-zinc-500 font-normal">App version and system information</p>
                               </div>
                             </span>
@@ -1832,7 +1832,7 @@ export default function ProfileView({
 
                       {/* Account Actions */}
                       <div className="space-y-1">
-                        <p className="text-[9px] font-mono uppercase text-red-500/80 tracking-widest pl-2">Danger Core</p>
+                        <p className="text-[9px] font-mono uppercase text-red-500/80 tracking-widest pl-2">Account actions</p>
                         <div className="rounded-2xl bg-red-950/10 border border-red-500/15 overflow-hidden divide-y divide-red-950/20">
                           <button 
                             onClick={() => setConfirmingLogout(true)}
@@ -1976,7 +1976,7 @@ export default function ProfileView({
                       </div>
                     )}
 
-                    {/* Drill down Panel 2: Privacy Dashboard */}
+                    {/* Drill down Panel 2: Privacy settings */}
                     {settingsActiveSubPanel === 'privacy' && (
                       <div className="space-y-4">
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-4">
@@ -2212,7 +2212,7 @@ export default function ProfileView({
                           
                           <div className="grid grid-cols-2 gap-2">
                             {[
-                              { id: 'neon-cyber', label: 'Cyber Violet', bg: 'bg-[#050409]', border: 'border-white/10 text-violet-300' },
+                              { id: 'neon-cyber', label: 'Violet', bg: 'bg-[#050409]', border: 'border-white/10 text-violet-300' },
                               { id: 'emerald-glass', label: 'Emerald Glass', bg: 'bg-[#010403]', border: 'border-emerald-600/40 text-emerald-400' },
                               { id: 'platinum-light', label: 'Platinum Light', bg: 'bg-[#f4f6fa]', border: 'border-slate-300 text-slate-800' },
                               { id: 'stealth-dark', label: 'Stealth Dark', bg: 'bg-zinc-950', border: 'border-zinc-800 text-zinc-400' }
@@ -2432,7 +2432,7 @@ export default function ProfileView({
                             >
                               <option value="standard">Standard Speed (Compressed)</option>
                               <option value="high">HD Quality (Pro High-Res)</option>
-                              <option value="lossless">Lossless Raw (Lekki locale grid node)</option>
+                              <option value="lossless">Original quality</option>
                             </select>
                           </div>
                         </div>
@@ -2450,8 +2450,8 @@ export default function ProfileView({
                               <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
                                 <Check className="w-5 h-5" />
                               </div>
-                              <h4 className="text-xs font-bold text-emerald-400">Transmission Dispatched!</h4>
-                              <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">Your report packet has been assigned to ticket ID #{Math.floor(Math.random() * 9000) + 1000}. A technical agent node will calibrate soon.</p>
+                              <h4 className="text-xs font-bold text-emerald-400">Report sent</h4>
+                              <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">Your report number is #{Math.floor(Math.random() * 9000) + 1000}. Our team will review it soon.</p>
                             </div>
                           ) : (
                             <div className="space-y-3 text-xs">
@@ -2465,7 +2465,7 @@ export default function ProfileView({
                                   <option value="feedback">Product Feedback Idea</option>
                                   <option value="bug">Report a Bug</option>
                                   <option value="auth">ID Verification Help</option>
-                                  <option value="billing">NEX Coin Monetization</option>
+                                  <option value="billing">NEX Coin and earnings</option>
                                 </select>
                               </div>
 
@@ -2499,7 +2499,7 @@ export default function ProfileView({
                       </div>
                     )}
 
-                    {/* Drill down Panel 8: About Nexora */}
+                    {/* Drill down Panel 8: About NEXORA */}
                     {settingsActiveSubPanel === 'about' && (
                       <div className="space-y-4 text-left">
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3 font-mono">
@@ -3174,9 +3174,9 @@ export default function ProfileView({
                           disabled={isSavingProfile || showSavedFeedback}
                           className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 disabled:opacity-50"
                         >
-                          <option value="Premium Node">Premium</option>
-                          <option value="Standard Node">Standard</option>
-                          <option value="Collaborator Node">Collaborator</option>
+                          <option value="Premium creator">Premium</option>
+                          <option value="Creator">Standard</option>
+                          <option value="Collaborator">Collaborator</option>
                         </select>
                       </div>
                     </div>
@@ -3220,7 +3220,7 @@ export default function ProfileView({
                       </div>
                       <div className="leading-tight">
                         <h4 className="text-sm font-sans font-black text-white flex items-center justify-center gap-1">
-                          {editName || 'UNNAMED PROFILE'} {identityVerification && <PurpleVerifiedBadge className="w-4 h-4" type={identityBadgeType} />}
+                          {editName || 'Your profile'} {identityVerification && <PurpleVerifiedBadge className="w-4 h-4" type={identityBadgeType} />}
                         </h4>
                         <p className="text-[10px] font-mono text-violet-400">@{editUsername || 'username'}</p>
                       </div>
@@ -3486,8 +3486,8 @@ export default function ProfileView({
                     <Shield className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-sans font-extrabold text-white">Nexora Algorithm Matrix</h3>
-                    <p className="text-[10px] font-mono text-zinc-400">Multi-Signal Trust & Value Engine</p>
+                    <h3 className="text-sm font-sans font-extrabold text-white">How your feed works</h3>
+                    <p className="text-[10px] font-mono text-zinc-400">How your account score works</p>
                   </div>
                 </div>
                 <button 
