@@ -8,14 +8,14 @@ export function createPublicProfileProjection(
   const {
     id, username, name, avatar, bio, website, followers, following,
     sparks, hasStory, coverImage, profileFrameId, profileBadgeId, joinedDate, reputationPoints,
-    reputationBreakdown, skills, statusText, statusEmoji,
+    reputationBreakdown, skills, statusText, statusEmoji, pronouns, profileCategory, creatorType, socialTwitter, socialInstagram,
     pinnedMusicSong, pinnedMusicArtist, pinnedMusicUrl, pinnedPosts,
     location,
   } = user;
   const projection: Partial<User> = Object.fromEntries(Object.entries({
     id, username, name, avatar, bio, website, followers, following,
     sparks, hasStory, coverImage, profileFrameId, profileBadgeId, joinedDate, reputationPoints,
-    reputationBreakdown, skills, statusText, statusEmoji,
+    reputationBreakdown, skills, statusText, statusEmoji, pronouns, profileCategory, creatorType, socialTwitter, socialInstagram,
     pinnedMusicSong, pinnedMusicArtist, pinnedMusicUrl, pinnedPosts,
   }).filter(([, value]) => value !== undefined));
   if (options.includeLocation && typeof location === 'string' && location.trim()) {

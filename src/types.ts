@@ -6,6 +6,11 @@ export interface User {
   bio: string;
   location: string;
   website: string;
+  pronouns?: string;
+  profileCategory?: string;
+  creatorType?: string;
+  socialTwitter?: string;
+  socialInstagram?: string;
   followers: number;
   following: number;
   sparks?: number;

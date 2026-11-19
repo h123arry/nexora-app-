@@ -56,3 +56,12 @@ test('publishes changed identity fields while keeping private account data out o
   assert.equal('phoneNumber' in updated, false);
   assert.equal('interestDNA' in updated, false);
 });
+
+test('includes profile identity fields and creator links in the public projection', () => {
+  const projection = createPublicProfileProjection({ ...profile, pronouns: 'they/them', profileCategory: 'Founder Mindset', creatorType: 'Creator', socialTwitter: 'https://x.com/example', socialInstagram: 'https://instagram.com/example' });
+  assert.equal(projection.pronouns, 'they/them');
+  assert.equal(projection.profileCategory, 'Founder Mindset');
+  assert.equal(projection.creatorType, 'Creator');
+  assert.equal(projection.socialTwitter, 'https://x.com/example');
+  assert.equal(projection.socialInstagram, 'https://instagram.com/example');
+});
