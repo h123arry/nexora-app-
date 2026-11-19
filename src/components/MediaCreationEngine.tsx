@@ -1762,7 +1762,7 @@ export default function MediaCreationEngine({
               <div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-sm font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
-                  <span className="text-[11px] font-semibold tracking-wide text-violet-300">CREATE</span>
+                  <span className="text-[11px] font-semibold tracking-wide text-violet-300">Create</span>
                 </div>
                 <h1 className="text-sm font-semibold font-sans tracking-tight text-[#EEEAF8]">Create a post</h1>
               </div>
@@ -2013,7 +2013,7 @@ export default function MediaCreationEngine({
                       <Video className="w-8 h-8 text-[#8E88A7] mx-auto animate-pulse" />
                       <div className="space-y-1">
                         <p className="text-xs text-[#D1CBE3] font-bold">Choose a video</p>
-                        <p className="text-[10px] text-[#8E88A7]">Choose a video from your gallery. Videos can be up to 20 minutes and 250 MB.</p>
+                        <p className="text-[10px] text-[#8E88A7]">Choose a video from your phone. Videos can be up to 20 minutes and 250 MB.</p>
                       </div>
                       <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
                         Choose from gallery
@@ -2047,7 +2047,7 @@ export default function MediaCreationEngine({
                       {isLensStudioOpen ? (
                         <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3">
                           <div className="flex items-center justify-between gap-2">
-                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Live effects are baked into your capture.</p></div>
+                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Your lens appears in the finished video.</p></div>
                             <div className="flex gap-2">
                               <button type="button" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
                               <button type="button" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{countdownTimer !== null ? 'Starting…' : isRecording || isSavingRecordedVideo ? 'Saving recording…' : 'Close'}</button>
@@ -2070,7 +2070,7 @@ export default function MediaCreationEngine({
                                 {RECORDING_DURATIONS.map(duration => <option key={duration.seconds} value={duration.seconds} className="bg-[#120E2B]">{duration.label}</option>)}
                               </select>
                             </label>
-                            {isRecording ? <button onClick={handleStopReelRecord} className="h-12 rounded-full bg-rose-600 px-6 text-xs font-bold text-white shadow-lg">Stop recording</button> : <button onClick={startReelRecording} disabled={!isLensStreamReady || isSavingRecordedVideo || countdownTimer !== null} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Record with filter</button>}
+                            {isRecording ? <button onClick={handleStopReelRecord} className="h-12 rounded-full bg-rose-600 px-6 text-xs font-bold text-white shadow-lg">Stop recording</button> : <button onClick={startReelRecording} disabled={!isLensStreamReady || isSavingRecordedVideo || countdownTimer !== null} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Record with lens</button>}
                             {isRecording && <span className="rounded-full bg-black/60 px-3 py-1 text-[10px] text-white">Recording: {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')}</span>}
                           </div>
                         </div>
@@ -2188,7 +2188,7 @@ export default function MediaCreationEngine({
                 <div className="space-y-4 animate-fadeIn">
                   <div>
                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[#B69BFF]">STEP 3 OF 6</span>
-                    <h3 className="text-base font-bold text-white">Review your photo or video</h3>
+                    <h3 className="text-base font-bold text-white">Preview</h3>
                     <p className="mt-1 text-xs leading-relaxed text-[#A39BBF]">Review your post before sharing.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
