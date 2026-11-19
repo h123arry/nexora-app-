@@ -701,7 +701,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             </h1>
           </div>
           <p className="text-xs text-current/60 font-sans leading-relaxed">
-            AI assistance for NEXORA conversations, creator workflows, discovery, and account context.
+            AI help for your chats, posts, search and account.
           </p>
         </div>
 
@@ -709,7 +709,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 bg-violet-950/40 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-mono">
             <VohIcon size={15} animated variant="violet" />
-            <span className="font-black text-violet-300 uppercase">NEXORA CONTEXT</span>
+            <span className="font-black text-violet-300 uppercase">YOUR NEXORA ACCOUNT</span>
           </div>
 
           <button 
