@@ -338,15 +338,17 @@ export function isUserVerified(username: string): boolean {
   return lower === 'nexoraofficial' || lower === 'voh' || lower === 'voh_ai' || lower === 'nexora_ai' || lower === 'lunash';
 }
 
-// Generate an ultra-modern high-contrast deterministic gradient monogram default avatar
+// Brand-neutral NEXORA monogram used whenever a member has not chosen a photo.
 export function getDefaultAvatar(name: string): string {
-  const initial = (name || 'N').trim().charAt(0).toUpperCase();
-  const charCodeSum = (name || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) || 12;
-  const hue1 = charCodeSum % 360;
-  const hue2 = (hue1 + 140) % 360;
-  
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><defs><linearGradient id="grad-${charCodeSum}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(${hue1}, 75%, 60%)" /><stop offset="100%" stop-color="hsl(${hue2}, 85%, 45%)" /></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(#grad-${charCodeSum})" /><text x="50%" y="54%" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="900" font-size="42" text-anchor="middle" dominant-baseline="middle" style="letter-spacing:-0.05em">${initial}</text></svg>`;
-  
+  const initial = (name || 'N').trim().charAt(0).toUpperCase() || 'N';
+  const safeInitial = initial.replace(/[&<>"']/g, character => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&apos;',
+  })[character] || '');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><defs><linearGradient id="nexora-avatar" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#302064" /><stop offset="100%" stop-color="#7138FF" /></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(#nexora-avatar)" /><text x="50%" y="54%" fill="#F5F7FF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="800" font-size="42" text-anchor="middle" dominant-baseline="middle">${safeInitial}</text></svg>`;
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
