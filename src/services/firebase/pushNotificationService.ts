@@ -70,11 +70,8 @@ export class PushNotificationService {
 
     try {
       // Check or request permission
-      let permission = Notification.permission;
-      if (permission === 'default') {
-        permission = await Notification.requestPermission();
-      }
-
+      const permission = Notification.permission;
+      // Ask only from the user's explicit Notifications inbox action.
       if (permission !== 'granted') {
         console.warn('Push Notification permission denied by user.');
         return null;
@@ -106,7 +103,7 @@ export class PushNotificationService {
           this.displayNativeNotification({
             title: payload.notification.title || 'Nexora Alert',
             body: payload.notification.body || '',
-            icon: payload.notification.icon || '/nexora-mark.png',
+            icon: '/nexora-mark.png',
             data: payload.data as any
           });
         }
@@ -145,7 +142,7 @@ export class PushNotificationService {
       return;
     }
 
-    const nIcon = payload.data?.senderAvatar || payload.icon || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80';
+    const nIcon = '/nexora-mark.png';
 
     try {
       const notif = new Notification(payload.title, {
