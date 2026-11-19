@@ -276,11 +276,11 @@ export default function FeedView({
   useEffect(() => {
     const handleOnline = () => {
       setIsOffline(false);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '💚 Connected! Restored synchronization tunnel.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '💚 You're back online.' }));
     };
     const handleOffline = () => {
       setIsOffline(true);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Connection lost. Running in isolated cache mode.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Connection lost. Some changes may not save until you're back online.' }));
     };
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -488,7 +488,7 @@ export default function FeedView({
     setPinnedPostIds(next);
     if (auth.currentUser?.uid === currentUser.id) {
       void ProfileService.updateProfile(currentUser.id, { pinnedPosts: next }).catch(() => {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Pinned posts could not be synced. Please try again.' }));
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Pinned posts couldn't be updated. Please try again.' }));
       });
     }
   };
@@ -629,7 +629,7 @@ export default function FeedView({
   const clearAllSearchHistory = () => {
     setSearchHistory([]);
     writeUserScopedJson(localStorage, 'nexora_search_history', feedCacheOwnerId, []);
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Clear Search history packet successfully executed!' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Search history cleared.' }));
   };
 
   // 4. Reporting Modal and Post Options Menu
@@ -955,7 +955,7 @@ export default function FeedView({
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
       }
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Feed updated with latest background activities!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Your feed is up to date.' }));
     }
   };
 
@@ -1034,7 +1034,7 @@ export default function FeedView({
     }));
     setEditingPostId(null);
     setEditingPostContent('');
-    window.dispatchEvent(new CustomEvent('toast', { detail: '✏️ Post updated & history preserved!' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: '✏️ Post updated.' }));
   };
 
   // Handle emoji reactions on Broadcast posts
@@ -1050,7 +1050,7 @@ export default function FeedView({
       }
       return p;
     }));
-    window.dispatchEvent(new CustomEvent('toast', { detail: `🙌 Reacted with ${emoji} to update!` }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: `🙌 Reacted with ${emoji}.` }));
   };
 
   // Spark / Like status toggle for comments
@@ -1156,16 +1156,16 @@ export default function FeedView({
       });
       
       if (maxTagScore > 3) {
-        reasons.push(`Your local preference profile shows interest in the topic #${maxTag} (affinity: +${maxTagScore}).`);
+        reasons.push(`You've shown interest in #${maxTag}.`);
       }
       
       const creatorScore = (profile.creators && (profile.creators[postItem.userId] || profile.creators[postItem.username])) || 0;
       if (creatorScore > 3) {
-        reasons.push(`Your local preference profile shows previous interaction with @${postItem.username} (affinity: +${creatorScore}).`);
+        reasons.push(`You've interacted with @${postItem.username} before.`);
       }
       
       if (reasons.length === 0) {
-        reasons.push(`This item is eligible for the ${feedTab} feed based on its current post metadata and your active feed controls.`);
+        reasons.push(`This post appears in your ${feedTab} feed based on your settings.`);
       }
       
       return reasons;
@@ -1191,7 +1191,7 @@ export default function FeedView({
     }
     
     setLastAction(null);
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🔄 Successfully reverted recent recommendation preference!' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: '🔄 Your previous feed setting has been restored.' }));
   };
 
   const handleResetRecommendations = () => {
@@ -1219,7 +1219,7 @@ export default function FeedView({
     setRecommendationsVersion(version => version + 1);
     window.dispatchEvent(new CustomEvent('nexora-recommendations-updated'));
     window.dispatchEvent(new CustomEvent('toast', {
-      detail: 'Recommendation controls reset. Your follows, posts, messages, and account were not changed.',
+      detail: 'Your feed settings have been reset. Your follows, posts, messages and account are unchanged.',
     }));
   };
 
@@ -2780,8 +2780,8 @@ export default function FeedView({
                     
                     const pillars = [
                       { label: 'Interest Alignment', val: isHighRep ? 95 : 75, desc: 'How well this matches your interests.', color: 'bg-violet-500' },
-                      { label: 'Post engagement', val: nidaDiagnosticPost.likeCount && nidaDiagnosticPost.likeCount > 1000 ? 98 : 65, desc: 'Pure completion rates and organic shares.', color: 'bg-pink-500' },
-                      { label: 'Creator reputation', val: isHighRep ? 100 : 85, desc: 'Historical compliance and content age.', color: 'bg-cyan-500' },
+                      { label: 'Post engagement', val: nidaDiagnosticPost.likeCount && nidaDiagnosticPost.likeCount > 1000 ? 98 : 65, desc: 'Video views and genuine shares.', color: 'bg-pink-500' },
+                      { label: 'Creator reputation', val: isHighRep ? 100 : 85, desc: 'Account history and post age.', color: 'bg-cyan-500' },
                       { label: 'Content Freshness', val: 90, desc: 'Recency and rapid velocity trend scaling.', color: 'bg-yellow-500' },
                     ];
 
@@ -2823,7 +2823,7 @@ export default function FeedView({
                     </div>
 
                     <div className="flex justify-between items-center text-xs font-mono">
-                      <span className="text-zinc-400">Creator Fairness Factor:</span>
+                      <span className="text-zinc-400">Creator fairness:</span>
                       <span className="text-cyan-400 font-black">ACTIVE (Legacy bias bypassed)</span>
                     </div>
                   </div>
@@ -3186,7 +3186,7 @@ export default function FeedView({
                     setMutedCreatorIds(prev => [...prev, contextualMenuPost.userId]);
                     setLastAction({ type: 'mute_creator', postId: contextualMenuPost.id, data: { creatorId: contextualMenuPost.userId } });
                     setContextualMenuPost(null);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: `🔇 Creator @${contextualMenuPost.username} muted in recommendation feeds.` }));
+                    window.dispatchEvent(new CustomEvent('toast', { detail: `🔇 You won't see posts from @${contextualMenuPost.username} in your feed.` }));
                   }}
                   className="w-full flex items-center gap-3 p-3 bg-white/3 hover:bg-white/10 rounded-xl text-left text-xs font-sans font-bold text-violet-100 transition-colors"
                 >
@@ -3251,7 +3251,7 @@ export default function FeedView({
                 </p>
 
                 <div className="p-3 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-2">
-                  <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest block font-black">Personalized Recommendation Details</span>
+                  <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest block font-black">Why you're seeing this post</span>
                   {getRecommendationExplanation(contextualMenuPost).map((reason, idx) => (
                     <div key={idx} className="flex gap-2 text-xs font-sans text-violet-200 leading-normal">
                       <span className="text-pink-500 font-mono">▸</span>
