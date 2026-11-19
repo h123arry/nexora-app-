@@ -139,14 +139,14 @@ export default function SettingsView({
   const revokeAllSessions = async () => {
     if (revokingSessions) return;
     const confirmed = typeof window !== 'undefined'
-      && window.confirm('Sign out of all devices? This device will also sign out, and you'll need to sign in again everywhere.');
+      && window.confirm('Sign out of all devices? This device will also sign out, and you’ll need to sign in again everywhere.');
     if (!confirmed) return;
     setRevokingSessions(true);
     setSessionRevokeError('');
     try {
       await AuthService.revokeAllSessions();
     } catch (error) {
-      setSessionRevokeError(error instanceof Error ? error.message : 'Couldn't sign out of your other devices. Please try again.');
+      setSessionRevokeError(error instanceof Error ? error.message : 'Couldn’t sign out of your other devices. Please try again.');
       setRevokingSessions(false);
     }
   };
