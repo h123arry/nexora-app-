@@ -177,7 +177,7 @@ export default function App() {
   }, [firebaseUser, isLoggedIn]);
 
   const [currentUser, setCurrentUser] = useState<User>(() => getRichUser({
-      id: 'guest_visitor_id',
+      id: 'public_explore_session',
       username: 'explore',
       name: 'Explore NEXORA',
       avatar: '/nexora-mark.png',
@@ -208,7 +208,7 @@ export default function App() {
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
 
   // Public browsing is the first experience. Ask for account details only when
-  // the visitor attempts an action that requires a complete public profile.
+  // an unauthenticated user attempts an action that requires a complete public profile.
 
   const accountPromptKey = firebaseUser?.uid ? `nexora_profile_setup_prompt_${firebaseUser.uid}` : null;
 
@@ -356,7 +356,7 @@ export default function App() {
     localStorage.removeItem('nexora_user');
     localStorage.removeItem('nexora_logged_in');
     setCurrentUser(getRichUser({
-      id: 'guest_visitor_id', username: 'explore', name: 'Explore NEXORA',
+      id: 'public_explore_session', username: 'explore', name: 'Explore NEXORA',
       avatar: '/nexora-mark.png',
       bio: 'Explore public posts. Sign in to create your profile and connect with the NEXORA community.', location: '', website: '',
       followers: 0, following: 0, sparks: 0, isVerified: false,
@@ -2035,7 +2035,7 @@ export default function App() {
             if (!requestedProfile) {
               // The link does not belong to an existing member. After signup,
               // open the new member's own empty profile instead of retrying a
-              // nonexistent visitor profile.
+              // nonexistent profile.
               navigateTo('profile', null);
               return;
             }
@@ -2291,7 +2291,7 @@ export default function App() {
 
   // Public browsing must not wait for Firebase's silent anonymous bootstrap.
   // Only hide a stale signed-in profile while the identity is being switched.
-  const staleAccountVisible = currentUser.id !== 'guest_visitor_id' && currentUser.id !== firebaseUser?.uid;
+  const staleAccountVisible = currentUser.id !== 'public_explore_session' && currentUser.id !== firebaseUser?.uid;
   if (staleAccountVisible) {
     return <div className="min-h-screen flex items-center justify-center bg-[#07060b]"><NexoraLoader center label="Restoring your NEXORA profile…" /></div>;
   }
@@ -2513,13 +2513,13 @@ export default function App() {
                         <UserIcon className="h-7 w-7 text-violet-300" />
                       </div>
                       <h2 className="text-lg font-bold">Your profile starts with you</h2>
-                      <p className="max-w-md text-sm text-zinc-400">Sign in or complete your NEXORA account setup to open your profile. There is no visitor profile to display.</p>
+                      <p className="max-w-md text-sm text-zinc-400">Your profile is not set up yet. Create your NEXORA account to start building it.</p>
                       <button
                         type="button"
                         className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500"
                         onClick={() => requireAuth(() => navigateTo('profile', null), 'Sign in or complete your NEXORA account setup to open your profile.')}
                       >
-                        Continue
+                        Create account
                       </button>
                     </div>
                   ) : activeTab === 'profile' && (
