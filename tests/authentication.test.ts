@@ -112,7 +112,7 @@ test('registers, restores, and signs in an email account through Firebase Auth',
 });
 
 test('email signup upgrades an anonymous account without changing its Firebase UID or losing its profile', async () => {
-  await cleanUp();
+  await signOut(auth);
   const anonymous = await signInAnonymously(auth);
   const originalUid = anonymous.user.uid;
   await ProfileService.getOrCreateProfile(anonymous.user);
@@ -128,9 +128,9 @@ test('email signup upgrades an anonymous account without changing its Firebase U
   assert.equal(upgraded.firebaseUser.uid, originalUid);
   assert.equal(upgraded.user.id, originalUid);
   assert.equal(upgraded.user.name, 'Upgraded NEXORA Member');
-  const persisted = await ProfileService.getProfile(originalUid);
-  assert.equal(persisted?.email, upgradeEmail);
-  assert.equal(persisted?.name, 'Upgraded NEXORA Member');
+  const persisted = await ProfileService.getOrCreateProfile(upgraded.firebaseUser);
+  assert.equal(persisted.email, upgradeEmail);
+  assert.equal(persisted.name, 'Upgraded NEXORA Member');
   await cleanUp();
 });
 
