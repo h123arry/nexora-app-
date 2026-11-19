@@ -89,6 +89,7 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
     const abort = () => xhr.abort();
     xhr.open('PUT', intent.uploadUrl, true);
     xhr.setRequestHeader('Content-Type', contentType);
+    xhr.setRequestHeader('If-None-Match', '*');
     xhr.upload.onprogress = event => {
       if (event.lengthComputable && event.total > 0) onProgress?.(Math.round((event.loaded / event.total) * 100));
     };
