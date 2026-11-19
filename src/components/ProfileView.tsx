@@ -368,7 +368,7 @@ export default function ProfileView({
     setIsNotificationsEnabled(localStorage.getItem(`nexora_notify_${currentUser.id}`) === 'true');
   }, [currentUser.id]);
   
-  // Storage & Performance
+  // Storage and data
   const [cacheSize, setCacheSize] = useState('128.4 MB');
   const [dataSaver, setDataSaver] = useState(false);
   const [autoplayVideos, setAutoplayVideos] = useState(true);
@@ -1214,7 +1214,7 @@ export default function ProfileView({
           {false && isOwnProfile && (
             <div className="nx-profile-completion mb-4 p-4 bg-violet-950/40 border border-white/10 rounded-2xl space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold text-violet-300 uppercase tracking-wider">✨ Profile Setup & Completion</span>
+                <span className="text-xs font-mono font-bold text-violet-300 uppercase tracking-wider">Complete your profile</span>
                 <span className="text-[10px] font-mono text-zinc-400">
                   {[
                     currentUser.name && currentUser.name !== 'New User',
@@ -1486,7 +1486,7 @@ export default function ProfileView({
             >
               <div className="space-y-4 shrink-0">
                 <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                  <h3 className="text-xs font-mono text-zinc-300 font-black uppercase tracking-wider">Profile Options</h3>
+                  <h3 className="text-xs font-mono text-zinc-300 font-black uppercase tracking-wider">Profile settings</h3>
                   <button
                     type="button"
                     onClick={() => setActivePanel('profile')}
@@ -1508,8 +1508,8 @@ export default function ProfileView({
                   >
                     <LinkIcon className="w-5 h-5 text-zinc-400" />
                     <div className="space-y-0.5">
-                      <span className="block text-sm font-semibold text-white">Copy Profile Link</span>
-                      <span className="block text-xs text-zinc-500 font-mono">Copy this creator’s profile URL</span>
+                      <span className="block text-sm font-semibold text-white">Copy profile link</span>
+                      <span className="block text-xs text-zinc-500 font-mono">Copy this profile link</span>
                     </div>
                   </button>
                   {!isOwnProfile && (
@@ -1535,7 +1535,7 @@ export default function ProfileView({
                         <VolumeX className="w-5 h-5 text-violet-400" />
                         <div className="space-y-0.5">
                           <span className="block text-sm font-semibold text-white">{mutedUsers.includes(currentUser.id) ? 'Unmute User' : 'Mute User'}</span>
-                          <span className="block text-xs text-zinc-500 font-mono">Persist this creator in your feed preferences</span>
+                          <span className="block text-xs text-zinc-500 font-mono">Show more posts from this creator</span>
                         </div>
                       </button>
                       <button
@@ -1546,7 +1546,7 @@ export default function ProfileView({
                         <Flag className="w-5 h-5 text-red-400" />
                         <div className="space-y-0.5">
                           <span className="block text-sm font-semibold text-red-400">Report User</span>
-                          <span className="block text-xs text-red-400/60 font-mono">Submit a durable moderation report</span>
+                          <span className="block text-xs text-red-400/60 font-mono">Report this profile</span>
                         </div>
                       </button>
                     </>
@@ -1705,7 +1705,7 @@ export default function ProfileView({
                             <span className="flex items-center gap-2.5">
                               <Edit3 className="w-4 h-4 text-violet-400" />
                               <div className="text-left">
-                                <p className="leading-tight text-xs font-bold">Profile Calibration</p>
+                                <p className="leading-tight text-xs font-bold">Profile appearance</p>
                                 <p className="text-[9px] text-zinc-500 font-normal">Edit display name, usernames, bio attributes</p>
                               </div>
                             </span>
@@ -1726,7 +1726,7 @@ export default function ProfileView({
                               <Shield className="w-4 h-4 text-cyan-400" />
                               <div className="text-left">
                                 <p className="leading-tight text-xs font-bold">Privacy settings</p>
-                                <p className="text-[9px] text-zinc-500 font-normal">Tether visibility, manage mutes & blocked nodes</p>
+                                <p className="text-[9px] text-zinc-500 font-normal">Choose who can see your profile and manage blocked accounts</p>
                               </div>
                             </span>
                             <ChevronRight className="w-4 h-4 text-zinc-600" />
@@ -1774,7 +1774,7 @@ export default function ProfileView({
                               <Sliders className="w-4 h-4 text-amber-400" />
                               <div className="text-left">
                                 <p className="leading-tight text-xs font-bold">Appearance & Canvas</p>
-                                <p className="text-[9px] text-zinc-500 font-normal">Dynamic live theme mood, fonts, sizes & colors</p>
+                                <p className="text-[9px] text-zinc-500 font-normal">Change the look of your app</p>
                               </div>
                             </span>
                             <ChevronRight className="w-4 h-4 text-zinc-600" />
@@ -1787,8 +1787,8 @@ export default function ProfileView({
                             <span className="flex items-center gap-2.5">
                               <Layers className="w-4 h-4 text-purple-400" />
                               <div className="text-left">
-                                <p className="leading-tight text-xs font-bold">Storage & Performance</p>
-                                <p className="text-[9px] text-zinc-500 font-normal">Clear data cache, data savers, video loop rules</p>
+                                <p className="leading-tight text-xs font-bold">Storage and data</p>
+                                <p className="text-[9px] text-zinc-500 font-normal">Manage storage, data use and video playback</p>
                               </div>
                             </span>
                             <ChevronRight className="w-4 h-4 text-zinc-600" />
@@ -1808,7 +1808,7 @@ export default function ProfileView({
                               <HelpCircle className="w-4 h-4 text-fuchsia-400" />
                               <div className="text-left">
                                 <p className="leading-tight text-xs font-bold">Technical Help Desk</p>
-                                <p className="text-[9px] text-zinc-500 font-normal">Report software bugs or request functional nodes</p>
+                                <p className="text-[9px] text-zinc-500 font-normal">Report a problem or suggest a feature</p>
                               </div>
                             </span>
                             <ChevronRight className="w-4 h-4 text-zinc-600" />
@@ -1856,7 +1856,7 @@ export default function ProfileView({
                               <Trash2 className="w-4 h-4" />
                               <div className="text-left">
                                 <p className="leading-none text-xs font-extrabold">Delete Nexora Account</p>
-                                <p className="text-[9px] text-red-500/50 font-normal mt-1">Irreversible wipe of social graph and posts</p>
+                                <p className="text-[9px] text-red-500/50 font-normal mt-1">Permanently delete your account and posts</p>
                               </div>
                             </span>
                             <ChevronRight className="w-4 h-4" />
@@ -1987,7 +1987,7 @@ export default function ProfileView({
                           <div className="flex items-center justify-between p-2 rounded-xl bg-black/20 opacity-80">
                             <div className="space-y-0.5 text-left max-w-[80%]">
                               <p className="text-xs font-bold text-white">Private Account</p>
-                              <p className="text-[9px] text-zinc-500 leading-normal">Not enabled yet. NEXORA must finish follower approvals and private-post access enforcement before this control can safely be turned on.</p>
+                              <p className="text-[9px] text-zinc-500 leading-normal">This option isn't available yet.</p>
                             </div>
                             <input
                               type="checkbox"
@@ -2208,7 +2208,7 @@ export default function ProfileView({
                         
                         {/* Themes Cards selection */}
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
-                          <span className="text-[9px] font-mono text-amber-400 font-extrabold uppercase tracking-widest block">🎨 Live Canvas Theme Mood</span>
+                          <span className="text-[9px] font-mono text-amber-400 font-extrabold uppercase tracking-widest block">App appearance</span>
                           
                           <div className="grid grid-cols-2 gap-2">
                             {[
@@ -2335,8 +2335,8 @@ export default function ProfileView({
                             <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">NEXORA PLATFORM UTILITY</span>
                           </div>
                           <div className="space-y-1">
-                            <h4 className="text-xs font-black font-sans uppercase text-white tracking-wider">Advanced Storage & Data Center</h4>
-                            <p className="text-[10px] text-zinc-400 leading-relaxed">Access storage visualizations and local controls. Backup and restore screens are demonstrations only; no production backup provider is connected.</p>
+                            <h4 className="text-xs font-black font-sans uppercase text-white tracking-wider">Storage and data</h4>
+                            <p className="text-[10px] text-zinc-400 leading-relaxed">Manage storage and data use on this device. Backup and restore aren't available yet.</p>
                           </div>
                           <button
                             onClick={() => setIsStorageCenterOpen(true)}
@@ -2347,12 +2347,12 @@ export default function ProfileView({
                         </div>
 
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3.5">
-                          <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">💾 LOCAL CACHE RE-CALIBRATION</span>
+                          <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">Clear saved app data</span>
                           
                           {/* Cache size meter */}
                           <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-2">
                             <div className="flex justify-between items-center text-xs">
-                              <span className="font-sans text-zinc-400">Total Cache Storage</span>
+                              <span className="font-sans text-zinc-400">Storage used by the app</span>
                               <span className="font-mono text-white font-bold">{cacheSize}</span>
                             </div>
                             
@@ -2360,7 +2360,7 @@ export default function ProfileView({
                             <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                               <div className="h-full bg-linear-to-r from-violet-600 to-pink-500 rounded-full" style={{ width: cacheSize === '0.0 B' ? '0%' : '65%' }} />
                             </div>
-                            <p className="text-[9px] text-zinc-500 font-sans leading-normal">Asset logs represent downloaded avatars, thumbnails, and cache metadata indexes.</p>
+                            <p className="text-[9px] text-zinc-500 font-sans leading-normal">This includes saved profile photos, video previews and other temporary files.</p>
                           </div>
 
                           <button
@@ -2421,7 +2421,7 @@ export default function ProfileView({
 
                           {/* Upload quality */}
                           <div className="space-y-1 text-left">
-                            <label className="text-[9px] font-mono text-zinc-500 uppercase">Multimedia Upload resolution</label>
+                            <label className="text-[9px] font-mono text-zinc-500 uppercase">Photo and video quality</label>
                             <select
                               value={mediaQuality}
                               onChange={(e) => {
@@ -2506,7 +2506,7 @@ export default function ProfileView({
                           <NexoraBranding size="sm" showSubtitle={true} className="mb-2" />
                           <div className="space-y-2 text-[10px] leading-relaxed text-zinc-300">
                             <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">APP:</span> <span>Nexora</span></p>
-                            <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">PLATFORM:</span> <span>Live Production</span></p>
+                            <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">PLATFORM:</span> <span>Live video</span></p>
                             <p className="flex justify-between pb-1"><span className="text-zinc-500">REGION:</span> <span>Global</span></p>
                           </div>
                           
@@ -3507,7 +3507,7 @@ export default function ProfileView({
                 </div>
                 <div className="p-3.5 rounded-2xl bg-violet-950/30 border border-violet-500/20 space-y-1">
                   <span className="text-[10px] font-mono text-violet-300 font-extrabold uppercase block">Contributions</span>
-                  <p className="text-xs font-sans text-zinc-200 font-medium">"The value you have added to the Nexora community."</p>
+                  <p className="text-xs font-sans text-zinc-200 font-medium">What you've shared with Nexora.</p>
                   <span className="text-[11px] font-black text-white block pt-1">{formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 0)} Value</span>
                 </div>
               </div>
@@ -3531,7 +3531,7 @@ export default function ProfileView({
               <div className="space-y-3">
                 <h4 className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider font-extrabold flex items-center justify-between">
                   <span>Internal Contribution Dimensions</span>
-                  <span className="text-violet-400 text-[10px]">6 Signals Tracked</span>
+                  <span className="text-violet-400 text-[10px]">6 things tracked</span>
                 </h4>
 
                 <div className="grid grid-cols-1 gap-2.5">
@@ -3571,7 +3571,7 @@ export default function ProfileView({
 
               {/* Quality & Anti-Gaming Diagnostics */}
               <div className="p-4 rounded-2xl bg-violet-950/20 border border-white/10 space-y-2 text-center">
-                <span className="text-[10px] font-mono text-violet-300 uppercase block font-extrabold">Algorithm Quality Multipliers</span>
+                <span className="text-[10px] font-mono text-violet-300 uppercase block font-extrabold">Feed preferences</span>
                 <div className="grid grid-cols-3 gap-2 text-center pt-1">
                   <div className="bg-white/5 p-2 rounded-xl">
                     <span className="text-xs font-mono font-bold text-emerald-400 block">
@@ -3648,7 +3648,7 @@ export default function ProfileView({
       {/* 📥 NEXORA SOCIAL SHARE SHEET MODAL */}
       {showGiftVerse && <div className="fixed inset-0 z-[160] overflow-y-auto bg-black/90 backdrop-blur-md">
         <div className="sticky top-0 z-[170] flex justify-end border-b border-white/10 bg-[#090714]/95 p-3">
-          <button type="button" onClick={() => setShowGiftVerse(false)} className="rounded-xl border border-white/15 px-4 py-2 text-xs font-bold text-white">Close GIFTVERSE</button>
+          <button type="button" onClick={() => setShowGiftVerse(false)} className="rounded-xl border border-white/15 px-4 py-2 text-xs font-bold text-white">Close GiftVerse</button>
         </div>
         <GiftVerseView isLoggedIn={isLoggedIn} recipientId={currentUser.id} deliveryContext="profile" deliveryContextId={currentUser.id}/>
       </div>}
