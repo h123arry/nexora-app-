@@ -2018,7 +2018,7 @@ export default function App() {
     // Resolve direct public links from the canonical username claim when the
     // profile is not already present in the local creator/post cache.
     if (!finalUserToView) {
-      const looksLikeFirebaseUid = /^[A-Za-z0-9_-]{20,}$/.test(userIdOrUsername);
+      const looksLikeFirebaseUid = /^[A-Za-z0-9_-]{21,}$/.test(userIdOrUsername);
       finalUserToView = looksLikeFirebaseUid
         ? await ProfileService.getPublicProfile(userIdOrUsername)
         : await ProfileService.getPublicProfileByUsername(cleanIdOrUser);
@@ -2028,7 +2028,7 @@ export default function App() {
       if (!isLoggedIn || requiresPublicAccountSetup) {
         requireAuth(() => {
           void (async () => {
-            const looksLikeFirebaseUid = /^[A-Za-z0-9_-]{20,}$/.test(userIdOrUsername);
+            const looksLikeFirebaseUid = /^[A-Za-z0-9_-]{21,}$/.test(userIdOrUsername);
             const requestedProfile = looksLikeFirebaseUid
               ? await ProfileService.getPublicProfile(userIdOrUsername)
               : await ProfileService.getPublicProfileByUsername(cleanIdOrUser);
