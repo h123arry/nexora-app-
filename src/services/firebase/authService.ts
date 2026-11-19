@@ -233,24 +233,28 @@ export class AuthService {
 
   /** Create a permanent username/password credential on the current anonymous UID. */
   static async completeUsernameRegistration(input: {
-    username: string; password: string; preferredName: string; dateOfBirth: string;
+    username: string; password?: string; preferredName: string; dateOfBirth: string;
   }): Promise<{ firebaseUser: FirebaseUser; user: User }> {
     this.requireConfigured();
     const username = input.username.trim().toLowerCase();
-    if (input.password.length < 8) throw new Error('Choose a password with at least 8 characters.');
-    const email = usernameLoginEmail(username);
+    if (input.password && input.password.length < 8) throw new Error('Choose a password with at least 8 characters.');
     let current = auth.currentUser;
     try {
-      if (current?.isAnonymous) {
-        const linked = await linkWithCredential(current, EmailAuthProvider.credential(email, input.password));
-        current = linked.user;
+      if (input.password) {
+        const email = usernameLoginEmail(username);
+        if (current?.isAnonymous) {
+          const linked = await linkWithCredential(current, EmailAuthProvider.credential(email, input.password));
+          current = linked.user;
+        } else if (!current) {
+          current = (await createUserWithEmailAndPassword(auth, email, input.password)).user;
+        } else if (!current.providerData.some(provider => provider.providerId === EmailAuthProvider.PROVIDER_ID)) {
+          const linked = await linkWithCredential(current, EmailAuthProvider.credential(email, input.password));
+          current = linked.user;
+        } else {
+          throw new Error('This account already has a password sign-in. Sign out before creating another account.');
+        }
       } else if (!current) {
-        current = (await createUserWithEmailAndPassword(auth, email, input.password)).user;
-      } else if (!current.providerData.some(provider => provider.providerId === EmailAuthProvider.PROVIDER_ID)) {
-        const linked = await linkWithCredential(current, EmailAuthProvider.credential(email, input.password));
-        current = linked.user;
-      } else {
-        throw new Error('This account already has a password sign-in. Sign out before creating another account.');
+        current = (await signInAnonymously(auth)).user;
       }
       await current.getIdToken(true);
       await ProfileService.reserveUsername(current.uid, username);
