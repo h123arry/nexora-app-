@@ -127,7 +127,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
     } catch (error) {
       console.error('Trending refresh failed:', error);
       setActivityError(true);
-      triggerToast('Trending posts couldn't refresh. Please try again.');
+      triggerToast('Trending posts could not refresh. Please try again.');
     } finally {
       setActivityRefreshing(false);
     }
