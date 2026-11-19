@@ -9,7 +9,7 @@ const pngDimensions = (buffer) => ({
   height: buffer.readUInt32BE(20),
 });
 
- test('the exact uploaded PNG is the canonical logo and generated web aliases match', async () => {
+ test('the original transparent PNG remains the UI mark while generated app icons stay separate', async () => {
   const [source, icon, mark, legacy] = await Promise.all([
     readBinary('../assets/logo.png'),
     readBinary('../public/icons/icon-512.png'),
@@ -19,7 +19,9 @@ const pngDimensions = (buffer) => ({
   assert.equal(source.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   assert.deepEqual(pngDimensions(source), { width: 1920, height: 1920 });
   assert.deepEqual(pngDimensions(icon), { width: 512, height: 512 });
-  assert.deepEqual(mark, icon);
+  assert.deepEqual(pngDimensions(mark), { width: 1920, height: 1920 });
+  assert.ok([4, 6].includes(mark[25]), 'the in-app mark must retain an alpha channel');
+  assert.deepEqual(mark, source);
   assert.deepEqual(legacy, icon);
 });
 
