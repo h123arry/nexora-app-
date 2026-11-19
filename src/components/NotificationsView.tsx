@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, BookmarkCheck, Eye, ArrowRight, Sparkle, History, VolumeX, AlertTriangle, Layers, Trash, Star, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, CheckSquare, Square, Check, Scale } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
-import { deleteOwnNotification, deleteOwnNotifications, setNotificationReadState, setNotificationsReadState } from '../services/dataService';
+import { addFollow, deleteOwnNotification, deleteOwnNotifications, setNotificationReadState, setNotificationsReadState } from '../services/dataService';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { getNotificationTimeSection } from '../utils/notificationTime';
@@ -57,6 +57,8 @@ export default function NotificationsView({
   // Multi-select management state
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [followBackPending, setFollowBackPending] = useState<string[]>([]);
+  const [followedBackIds, setFollowedBackIds] = useState<string[]>([]);
 
 
   // Floating notifications/toast feedback system
@@ -226,6 +228,22 @@ export default function NotificationsView({
       setIsMultiSelectMode(false);
     } catch {
       addToast("Some notifications couldn't be deleted. Please try again.");
+    }
+  };
+
+  const handleFollowBack = async (notif: RichNotification, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const actorId = notif.userId;
+    if (!actorId || actorId === 'multiple' || actorId === currentUser.id || followedBackIds.includes(actorId) || followBackPending.includes(actorId)) return;
+    setFollowBackPending(previous => [...previous, actorId]);
+    try {
+      await addFollow(currentUser.id, actorId);
+      setFollowedBackIds(previous => [...previous, actorId]);
+      addToast(`You're now following @${notif.username}.`);
+    } catch {
+      addToast(`Couldn't follow @${notif.username}. Please try again.`);
+    } finally {
+      setFollowBackPending(previous => previous.filter(id => id !== actorId));
     }
   };
 
@@ -964,6 +982,17 @@ export default function NotificationsView({
                               )}
 
                             </div>
+
+                            {notif.type === 'follow' && notif.userId && notif.userId !== currentUser.id && notif.userId !== 'multiple' && (
+                              <button
+                                type="button"
+                                onClick={(event) => void handleFollowBack(notif, event)}
+                                disabled={followBackPending.includes(notif.userId) || followedBackIds.includes(notif.userId)}
+                                className="px-3 py-1.5 rounded-xl border border-violet-400/25 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20 disabled:opacity-60 disabled:cursor-default text-[10px] font-semibold transition-colors"
+                              >
+                                {followBackPending.includes(notif.userId) ? 'Following…' : followedBackIds.includes(notif.userId) ? 'Following' : 'Follow back'}
+                              </button>
+                            )}
 
                             <div className="flex items-center gap-1.5 opacity-60 group-hover/item:opacity-100 transition-opacity">
                               <button
