@@ -6,7 +6,7 @@ import {
   X, Shield, ShieldCheck, Eye, EyeOff, Check, AlertCircle, HardDrive, Sparkles, 
   Search, ChevronRight, ChevronDown, User, ShieldAlert, Monitor, Info, Trash2, 
   Key, HelpCircle, LogOut, ArrowRight, CheckCircle, RefreshCw, Radio, Settings, 
-  Lock, Unlock, Phone, Video, AlertTriangle, Moon, Hidden, Ban, List, ShieldBan, 
+  Lock, Unlock, Phone, Video, AlertTriangle, Moon, EyeOff, Ban, List, ShieldBan, 
   Maximize2, EyeIcon, UserCheck, Smartphone, MoreHorizontal, Download, Play, 
   CornerUpLeft, CheckSquare, Clock
 } from 'lucide-react';
@@ -478,7 +478,7 @@ export default function PrivacySettingsModal({
           {discoverability.hiddenAccountMode && (
             <div className="bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-indigo-500/20 px-6 py-2 border-b border-emerald-500/20 flex items-center justify-between text-xs text-emerald-400 font-mono">
               <span className="flex items-center gap-2">
-                <Hidden className="w-4 h-4 animate-pulse text-emerald-400" />
+                <EyeOff className="w-4 h-4 animate-pulse text-emerald-400" />
                 <span>💎 HIDE MODE IS ON — Your account will not appear in search or suggestions.</span>
               </span>
               <button 
@@ -1043,7 +1043,7 @@ export default function PrivacySettingsModal({
                 <div className="space-y-6 text-left">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Hidden className="w-4 h-4 text-violet-400" /> Find your account
+                      <EyeOff className="w-4 h-4 text-violet-400" /> Find your account
                     </h4>
                     <p className="text-[11px] text-zinc-400 mt-1">Choose whether people can find your account in search and suggestions.</p>
                   </div>
@@ -1051,7 +1051,7 @@ export default function PrivacySettingsModal({
                   {/* MASTER GHOST MODE CARD */}
                   <div className="p-5 bg-gradient-to-r from-emerald-950/40 via-slate-950/90 to-teal-950/40 border border-emerald-500/25 rounded-3xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-10">
-                      <Hidden className="w-24 h-24 text-emerald-400" />
+                      <EyeOff className="w-24 h-24 text-emerald-400" />
                     </div>
 
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
