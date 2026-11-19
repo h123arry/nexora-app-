@@ -211,6 +211,7 @@ interface ProfileViewProps {
   currentUser: User;
   isLoggedIn?: boolean;
   posts: Post[];
+  userSparks?: string[];
   onUpdateProfile: (updatedData: Partial<User>) => void;
   onLikePost: (postId: string) => void;
   onAddComment?: (postId: string, text: string) => void;
@@ -233,6 +234,7 @@ export default function ProfileView({
   currentUser,
   isLoggedIn = false,
   posts,
+  userSparks = [],
   onUpdateProfile,
   onLikePost,
   onAddComment,
@@ -259,12 +261,6 @@ export default function ProfileView({
   const [userBookmarks] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(`nexora_bookmarks_${currentUser.id}`);
-      return saved ? JSON.parse(saved) : [];
-    } catch { return []; }
-  });
-  const [userSparks] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem(`nexora_sparks_${currentUser.id}`);
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
