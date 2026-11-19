@@ -15,6 +15,7 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
   const [loadError, setLoadError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'All' | 'Social' | 'Missions' | 'Rewards' | 'System'>('All');
+  const [expandedNotificationId, setExpandedNotificationId] = useState<string | null>(null);
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
@@ -180,7 +181,20 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
                 <motion.div 
                   key={notif.id} 
                   className={`p-4 mb-2 nx-surface border border-white/5 flex gap-4 items-start hover:border-white/10 rounded-2xl transition-colors group ${!notif.isRead ? 'ring-1 ring-violet-500/20' : ''}`} 
-                  onClick={() => markAsRead(notif.id)}
+                  onClick={() => {
+                    setExpandedNotificationId(current => current === notif.id ? null : notif.id);
+                    if (!notif.isRead) void markAsRead(notif.id);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={expandedNotificationId === notif.id}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      setExpandedNotificationId(current => current === notif.id ? null : notif.id);
+                      if (!notif.isRead) void markAsRead(notif.id);
+                    }
+                  }}
                   layout
                 >
                   <div className="p-2 bg-white/5 rounded-full shrink-0 relative">
@@ -189,10 +203,15 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-zinc-200">
-                        <span className="font-bold text-white">{notif.username} </span> 
-                        {notif.content}
+                        <span className="font-bold text-white">{notif.username} </span>
+                        {expandedNotificationId === notif.id || notif.content.length <= 100
+                          ? notif.content
+                          : `${notif.content.slice(0, 100)}…`}
                     </p>
-                    <p className="text-xs text-zinc-500 mt-1">{new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    <p className="text-xs text-zinc-500 mt-1">
+                      {new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      <span className="ml-2 text-violet-300">{expandedNotificationId === notif.id ? 'Close details' : 'Open details'}</span>
+                    </p>
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }} aria-label="Delete notification" className="p-2 text-zinc-500 hover:text-red-400 focus:text-red-400 transition-colors">
                     <Trash2 className='w-4 h-4'/>
