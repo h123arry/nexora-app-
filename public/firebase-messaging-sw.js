@@ -32,9 +32,11 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const data = event.notification.data || {};
-  const targetUrl = data.url || (data.targetId
-    ? `/#${data.type === 'chat' ? 'inbox' : 'activity'}?target=${encodeURIComponent(data.targetId)}`
-    : '/#activity');
+  const target = new URL(data.url || '/', self.location.origin);
+  target.searchParams.set('nxPushType', data.type || 'system');
+  if (data.userId) target.searchParams.set('nxPushUser', data.userId);
+  if (data.targetId) target.searchParams.set('nxPushTarget', data.targetId);
+  const targetUrl = target.toString();
   event.waitUntil((async () => {
     const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of windows) {
