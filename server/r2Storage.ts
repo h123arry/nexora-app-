@@ -118,7 +118,7 @@ export function createR2PresignedUrl(
     'X-Amz-SignedHeaders': signedHeaders,
   });
   const headers = contentType && method === 'PUT'
-    ? `content-type:${contentType.trim().toLowerCase()}\nhost:${host}\n${createOnly ? 'if-none-match:*\\n' : ''}`
+    ? `content-type:${contentType.trim().toLowerCase()}\nhost:${host}\n${createOnly ? 'if-none-match:*\n' : ''}`
     : `host:${host}\n`;
   const query = canonicalQuery(params);
   const canonicalRequest = [method, canonicalUri, query, headers, signedHeaders, 'UNSIGNED-PAYLOAD'].join('\n');
