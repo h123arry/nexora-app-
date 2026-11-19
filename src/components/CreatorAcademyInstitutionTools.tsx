@@ -70,7 +70,7 @@ export default function CreatorAcademyInstitutionTools() {
   return <section className="mt-8 space-y-5 rounded-3xl border border-violet-400/20 bg-[#090d1b] p-5 md:p-6">
     <div>
       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-300">NEXORA INSTITUTE SERVICES</p>
-      <h3 className="mt-2 text-xl font-black text-white">Institution workspace</h3>
+      <h3 className="mt-2 text-xl font-black text-white">Academy tools</h3>
       <p className="mt-1 text-xs leading-5 text-white/50">Course publishing, exams, credentials, the VOH AI Creator Tutor and mentor sessions use trusted server services. Instructor actions require an active Academy role.</p>
     </div>
 
@@ -99,7 +99,7 @@ export default function CreatorAcademyInstitutionTools() {
             void invoke('academySaveLesson', { courseId, lessonId, title: lessonTitle, body: lessonBody, transcript: lessonTranscript, order });
           }} className="mt-2 rounded-xl bg-violet-600/80 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Save lesson</button>
           <button disabled={busy || !courseId} onClick={() => void invoke('academySubmitCourseForReview', { courseId })} className="ml-2 rounded-xl border border-violet-400/30 px-4 py-2.5 text-xs font-bold text-violet-200 disabled:opacity-50">Submit for review</button>
-          <button disabled={busy || !courseId} onClick={() => void invoke('academyReviewCourse', { courseId, decision: 'approve', note: 'Approved through Academy editorial workspace.' })} className="ml-2 rounded-xl border border-emerald-400/30 px-4 py-2.5 text-xs font-bold text-emerald-200 disabled:opacity-50">Approve (editor)</button>
+          <button disabled={busy || !courseId} onClick={() => void invoke('academyReviewCourse', { courseId, decision: 'approve', note: 'Approved by the Academy team.' })} className="ml-2 rounded-xl border border-emerald-400/30 px-4 py-2.5 text-xs font-bold text-emerald-200 disabled:opacity-50">Approve (editor)</button>
         </div>
       </div>
 
