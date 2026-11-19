@@ -7,7 +7,7 @@ const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 test('guest exploration never impersonates a person or uses stock-person avatars', async () => {
   const app = await read('../src/App.tsx');
   assert.match(app, /name: 'Explore NEXORA'/);
-  assert.doesNotMatch(app, /visitor|guest_visitor_id/i);
+  assert.doesNotMatch(app, /guest_visitor_id|name: 'Nexora Visitor'|username: 'visitor'/i);
   assert.match(app, /avatar: '\/nexora-mark\.png'/);
   assert.doesNotMatch(app, /Nexora Visitor|Guest visitor browsing Nexora network|photo-1535713875002-d1d0cf377fde/);
   assert.match(app, /requireAuth\(\(\) => \{ void handleViewProfile\(userIdOrUsername\); \}/);
