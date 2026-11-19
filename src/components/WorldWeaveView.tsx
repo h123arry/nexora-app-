@@ -3,13 +3,13 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Camera, Globe2, LockKeyhole, Mic, Plus, Send, Sparkles, Trash2, Users, X } from 'lucide-react';
 import type { User } from '../types';
 import {
-  addWorldWeaveMediaMoment, addWorldWeaveTextMoment, resolveWorldWeaveMomentMediaUrl, createWorldWeave, deleteWorldWeaveMoment, fetchOlderWorldWeaveMoments, updateWorldWeaveDetails,
-  acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, revokeWorldWeaveInvite, subscribeToWorldWeaveInvites, subscribeToMyWorldWeaveInvites,
-  subscribeToMyWorldWeaves, discoverPublicWorldWeaves, subscribeToWorldWeaveMoments,
-  MAX_WORLDWEAVE_MEMBERS, listWorldWeaveContributors, leaveWorldWeave, removeWorldWeaveContributor, transferWorldWeaveOwnership, subscribeToWorldWeaveActivity,
-  toggleWorldWeaveMomentPin, fetchWorldWeavePinnedMoments, subscribeToWorldWeaveMomentReplies, addWorldWeaveMomentReply, deleteWorldWeaveMomentReply,
-  subscribeToWorldWeaveChapters, createWorldWeaveChapter, updateWorldWeaveChapter, archiveWorldWeaveChapter, reorderWorldWeaveChapters,
-  type WorldWeave, type WorldWeaveDiscoveryItem, type WorldWeaveInvite, type WorldWeaveMoment, type WorldWeaveContributor, type WorldWeaveActivity, type WorldWeaveReaction, type WorldWeaveReply, type WorldWeaveChapter, setWorldWeaveMomentReaction,
+  addShared storiesMediaMoment, addShared storiesTextMoment, resolveShared storiesMomentMediaUrl, createShared stories, deleteShared storiesMoment, fetchOlderShared storiesMoments, updateShared storiesDetails,
+  acceptShared storiesInvite, declineShared storiesInvite, inviteToShared storiesByUsername, joinPublicShared stories, revokeShared storiesInvite, subscribeToShared storiesInvites, subscribeToMyShared storiesInvites,
+  subscribeToMyShared storiess, discoverPublicShared storiess, subscribeToShared storiesMoments,
+  MAX_WORLDWEAVE_MEMBERS, listShared storiesContributors, leaveShared stories, removeShared storiesContributor, transferShared storiesOwnership, subscribeToShared storiesActivity,
+  toggleShared storiesMomentPin, fetchShared storiesPinnedMoments, subscribeToShared storiesMomentReplies, addShared storiesMomentReply, deleteShared storiesMomentReply,
+  subscribeToShared storiesChapters, createShared storiesChapter, updateShared storiesChapter, archiveShared storiesChapter, reorderShared storiesChapters,
+  type Shared stories, type Shared storiesDiscoveryItem, type Shared storiesInvite, type Shared storiesMoment, type Shared storiesContributor, type Shared storiesActivity, type Shared storiesReaction, type Shared storiesReply, type Shared storiesChapter, setShared storiesMomentReaction,
 } from '../services/firebase/worldWeaveService';
 
 interface Props { currentUser: User; }
@@ -20,25 +20,25 @@ const timeLabel = (value: unknown) => {
   return Number.isNaN(date.getTime()) ? 'Just now' : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 };
 
-export default function WorldWeaveView({ currentUser }: Props) {
-  const [myWeaves, setMyWeaves] = useState<WorldWeave[]>([]);
-  const [publicWeaves, setPublicWeaves] = useState<WorldWeaveDiscoveryItem[]>([]);
+export default function Shared storiesView({ currentUser }: Props) {
+  const [myWeaves, setMyWeaves] = useState<Shared stories[]>([]);
+  const [publicWeaves, setPublicWeaves] = useState<Shared storiesDiscoveryItem[]>([]);
   const [discoveryCursor, setDiscoveryCursor] = useState<string | null>(null);
   const [hasMorePublicWeaves, setHasMorePublicWeaves] = useState(false);
   const [loadingDiscovery, setLoadingDiscovery] = useState(false);
   const discoveryRequestRef = useRef(0);
-  const [invitations, setInvitations] = useState<WorldWeaveInvite[]>([]);
-  const [sentInvitations, setSentInvitations] = useState<WorldWeaveInvite[]>([]);
-  const [contributors, setContributors] = useState<WorldWeaveContributor[]>([]);
+  const [invitations, setInvitations] = useState<Shared storiesInvite[]>([]);
+  const [sentInvitations, setSentInvitations] = useState<Shared storiesInvite[]>([]);
+  const [members, setContributors] = useState<Shared storiesContributor[]>([]);
   const [selectedContributorId, setSelectedContributorId] = useState('');
-  const [activity, setActivity] = useState<WorldWeaveActivity[]>([]);
-  const [pinnedMoments, setPinnedMoments] = useState<WorldWeaveMoment[]>([]);
+  const [activity, setActivity] = useState<Shared storiesActivity[]>([]);
+  const [pinnedMoments, setPinnedMoments] = useState<Shared storiesMoment[]>([]);
   const [resolvedMediaUrls, setResolvedMediaUrls] = useState<Record<string, string>>({});
   const [loadingMediaMomentId, setLoadingMediaMomentId] = useState('');
   const [expandedReplyMomentId, setExpandedReplyMomentId] = useState<string | null>(null);
-  const [momentReplies, setMomentReplies] = useState<WorldWeaveReply[]>([]);
+  const [momentReplies, setMomentReplies] = useState<Shared storiesReply[]>([]);
   const [replyDraft, setReplyDraft] = useState('');
-  const [chapters, setChapters] = useState<WorldWeaveChapter[]>([]);
+  const [chapters, setChapters] = useState<Shared storiesChapter[]>([]);
   const [selectedChapterId, setSelectedChapterId] = useState('');
   const [chapterFilterId, setChapterFilterId] = useState('');
   const [chapterTitle, setChapterTitle] = useState('');
@@ -47,8 +47,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [editingChapterTitle, setEditingChapterTitle] = useState('');
   const [editingChapterDescription, setEditingChapterDescription] = useState('');
   const [discoveryQuery, setDiscoveryQuery] = useState('');
-  const [selected, setSelected] = useState<WorldWeaveDiscoveryItem | null>(null);
-  const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
+  const [selected, setSelected] = useState<Shared storiesDiscoveryItem | null>(null);
+  const [moments, setMoments] = useState<Shared storiesMoment[]>([]);
   const [hasMoreMoments, setHasMoreMoments] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -76,10 +76,10 @@ export default function WorldWeaveView({ currentUser }: Props) {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    const stopMine = subscribeToMyWorldWeaves(currentUser.id, items => {
+    const stopMine = subscribeToMyShared storiess(currentUser.id, items => {
       if (active) { setMyWeaves(items); setLoading(false); }
     }, err => { if (active) { setError(err.message); setLoading(false); } });
-    const stopInvites = subscribeToMyWorldWeaveInvites(currentUser.id, items => { if (active) setInvitations(items); }, err => { if (active) setError(err.message); });
+    const stopInvites = subscribeToMyShared storiesInvites(currentUser.id, items => { if (active) setInvitations(items); }, err => { if (active) setError(err.message); });
     return () => { active = false; stopMine(); stopInvites(); };
   }, [currentUser.id]);
 
@@ -91,7 +91,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       setPublicWeaves([]);
       setDiscoveryCursor(null);
       setHasMorePublicWeaves(false);
-      discoverPublicWorldWeaves(discoveryQuery).then(page => {
+      discoverPublicShared storiess(discoveryQuery).then(page => {
         if (!active || requestId !== discoveryRequestRef.current) return;
         setPublicWeaves(page.results);
         setDiscoveryCursor(page.nextCursor);
@@ -110,7 +110,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
 
   useEffect(() => {
     if (!selected || selected.ownerId !== currentUser.id) { setSentInvitations([]); return; }
-    return subscribeToWorldWeaveInvites(selected.id, setSentInvitations, err => setError(err.message));
+    return subscribeToShared storiesInvites(selected.id, setSentInvitations, err => setError(err.message));
   }, [selected?.id, selected?.ownerId, currentUser.id]);
 
   useEffect(() => {
@@ -120,7 +120,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       setChapterFilterId('');
       return;
     }
-    return subscribeToWorldWeaveChapters(selected.id, items => {
+    return subscribeToShared storiesChapters(selected.id, items => {
       setChapters(items);
       setSelectedChapterId(current => items.some(item => item.id === current) ? current : '');
       setChapterFilterId(current => current && current !== '__none__' && !items.some(item => item.id === current) ? '' : current);
@@ -134,13 +134,13 @@ export default function WorldWeaveView({ currentUser }: Props) {
       setSelectedContributorId('');
       return;
     }
-    listWorldWeaveContributors(selected.id).then(items => {
+    listShared storiesContributors(selected.id).then(items => {
       if (active) {
         setContributors(items);
         setSelectedContributorId(current => items.some(item => item.userId === current && item.role === 'contributor')
           ? current : (items.find(item => item.role === 'contributor')?.userId || ''));
       }
-    }).catch(err => { if (active) setError(err instanceof Error ? err.message : 'Could not load contributors.'); });
+    }).catch(err => { if (active) setError(err instanceof Error ? err.message : 'Could not load members.'); });
     return () => { active = false; };
   }, [selected?.id, selected?.ownerId, selectedIsMember]);
 
@@ -150,7 +150,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       setPinnedMoments([]);
       return;
     }
-    fetchWorldWeavePinnedMoments(selected.id).then(items => { if (active) setPinnedMoments(items); })
+    fetchShared storiesPinnedMoments(selected.id).then(items => { if (active) setPinnedMoments(items); })
       .catch(err => { if (active) setError(err instanceof Error ? err.message : 'Could not load pinned moments.'); });
     return () => { active = false; };
   }, [selected?.id, selected?.ownerId, selected?.pinnedMomentIds?.join('|'), selectedIsMember, currentUser.id]);
@@ -160,7 +160,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       setMomentReplies([]);
       return;
     }
-    return subscribeToWorldWeaveMomentReplies(selected.id, expandedReplyMomentId, setMomentReplies, err => setError(err.message));
+    return subscribeToShared storiesMomentReplies(selected.id, expandedReplyMomentId, setMomentReplies, err => setError(err.message));
   }, [selected?.id, expandedReplyMomentId]);
 
   useEffect(() => {
@@ -168,12 +168,12 @@ export default function WorldWeaveView({ currentUser }: Props) {
       setActivity([]);
       return;
     }
-    return subscribeToWorldWeaveActivity(selected.id, setActivity, err => setError(err.message));
+    return subscribeToShared storiesActivity(selected.id, setActivity, err => setError(err.message));
   }, [selected?.id, selected?.ownerId, selectedIsMember, currentUser.id]);
 
   useEffect(() => {
     if (!selected) { setMoments([]); setHasMoreMoments(false); return; }
-    return subscribeToWorldWeaveMoments(selected.id, items => {
+    return subscribeToShared storiesMoments(selected.id, items => {
       setMoments(current => {
         const liveIds = new Set(items.map(item => item.id));
         const older = current.filter(item => !liveIds.has(item.id));
@@ -194,7 +194,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
   }, [myWeaves, publicWeaves, selected?.id]);
 
   const weaves = useMemo(() => {
-    const unique = new Map<string, WorldWeaveDiscoveryItem>();
+    const unique = new Map<string, Shared storiesDiscoveryItem>();
     [...publicWeaves, ...myWeaves].forEach(item => unique.set(item.id, item));
     return [...unique.values()].sort((a, b) => {
       const aTime = a.updatedAt && typeof a.updatedAt === 'object' && 'toMillis' in a.updatedAt ? (a.updatedAt as {toMillis:()=>number}).toMillis() : 0;
@@ -222,7 +222,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     const requestedCursor = discoveryCursor;
     setLoadingDiscovery(true);
     try {
-      const page = await discoverPublicWorldWeaves(requestedQuery, requestedCursor);
+      const page = await discoverPublicShared storiess(requestedQuery, requestedCursor);
       if (requestId !== discoveryRequestRef.current) return;
       setPublicWeaves(current => {
         const unique = new Map(current.map(item => [item.id, item]));
@@ -238,11 +238,11 @@ export default function WorldWeaveView({ currentUser }: Props) {
     }
   };
 
-  const handleLoadMomentMedia = async (moment: WorldWeaveMoment) => {
+  const handleLoadMomentMedia = async (moment: Shared storiesMoment) => {
     if (!selected || !moment.storagePath || loadingMediaMomentId) return;
     setLoadingMediaMomentId(moment.id); setError('');
     try {
-      const url = await resolveWorldWeaveMomentMediaUrl(selected.id, moment.id);
+      const url = await resolveShared storiesMomentMediaUrl(selected.id, moment.id);
       setResolvedMediaUrls(current => ({ ...current, [moment.id]: url }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'This media is no longer available to your account.');
@@ -251,7 +251,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     }
   };
 
-  const momentMediaSrc = (moment: WorldWeaveMoment): string => {
+  const momentMediaSrc = (moment: Shared storiesMoment): string => {
     // Owner-scoped Storage objects must use freshly authorized short-lived URLs.
     // Direct legacy URLs remain a fallback only for older public moments without a Storage path.
     if (moment.storagePath) return resolvedMediaUrls[moment.id] || '';
@@ -262,55 +262,55 @@ export default function WorldWeaveView({ currentUser }: Props) {
     if (!selected) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      const joined = await joinPublicWorldWeave(selected.id);
+      const joined = await joinPublicShared stories(selected.id);
       setSelected(joined); setNotice('You are now a contributor. Add your perspective to the shared timeline.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Couldn't join this shared story.'); }
     finally { setBusy(false); }
   };
 
-  const handleAcceptInvite = async (invite: WorldWeaveInvite) => {
+  const handleAcceptInvite = async (invite: Shared storiesInvite) => {
     setBusy(true); setError(''); setNotice('');
     try {
-      const weave = await acceptWorldWeaveInvite(invite.weaveId);
+      const weave = await acceptShared storiesInvite(invite.weaveId);
       setSelected(weave); setNotice('You joined the shared story. Add your own moment.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not accept this invitation.'); }
     finally { setBusy(false); }
   };
 
-  const handleDeclineInvite = async (invite: WorldWeaveInvite) => {
+  const handleDeclineInvite = async (invite: Shared storiesInvite) => {
     setBusy(true); setError(''); setNotice('');
     try {
-      await declineWorldWeaveInvite(invite.weaveId);
+      await declineShared storiesInvite(invite.weaveId);
       setNotice('Invitation declined.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not decline this invitation.'); }
     finally { setBusy(false); }
   };
 
-  const handleRevokeInvite = async (invite: WorldWeaveInvite) => {
+  const handleRevokeInvite = async (invite: Shared storiesInvite) => {
     if (!selected) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      await revokeWorldWeaveInvite(selected.id, invite.inviteeId);
+      await revokeShared storiesInvite(selected.id, invite.inviteeId);
       setNotice('Invitation revoked.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not revoke this invitation.'); }
     finally { setBusy(false); }
   };
 
-  const handleLeaveWorldWeave = async () => {
+  const handleLeaveShared stories = async () => {
     if (!selected || selected.ownerId === currentUser.id || !window.confirm('Leave this shared story? Your past moments will stay in the story.')) return;
     setBusy(true); setError(''); setNotice('');
-    try { await leaveWorldWeave(selected.id); setSelected(null); setNotice('You left the shared story. Your posts will stay in it.'); }
+    try { await leaveShared stories(selected.id); setSelected(null); setNotice('You left the shared story. Your posts will stay in it.'); }
     catch (err) { setError(err instanceof Error ? err.message : 'Couldn't leave this shared story.'); }
     finally { setBusy(false); }
   };
 
   const handleRemoveContributor = async () => {
     if (!selected || selected.ownerId !== currentUser.id || !selectedContributorId) return;
-    const target = contributors.find(item => item.userId === selectedContributorId);
-    if (!target || target.role !== 'contributor' || !window.confirm('Remove ' + target.name + ' from this WorldWeave? Their past moments will remain.')) return;
+    const target = members.find(item => item.userId === selectedContributorId);
+    if (!target || target.role !== 'contributor' || !window.confirm('Remove ' + target.name + ' from this Shared stories? Their past moments will remain.')) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      await removeWorldWeaveContributor(selected.id, target.userId);
+      await removeShared storiesContributor(selected.id, target.userId);
       setSelected(current => current ? { ...current, participantIds: (current.participantIds || []).filter(id => id !== target.userId), memberCount: Math.max(1, current.memberCount - 1) } : current);
       setContributors(current => current.filter(item => item.userId !== target.userId));
       setSelectedContributorId('');
@@ -321,23 +321,23 @@ export default function WorldWeaveView({ currentUser }: Props) {
 
   const handleTransferOwnership = async () => {
     if (!selected || selected.ownerId !== currentUser.id || !selectedContributorId) return;
-    const target = contributors.find(item => item.userId === selectedContributorId);
+    const target = members.find(item => item.userId === selectedContributorId);
     if (!target || target.role !== 'contributor' || !window.confirm('Transfer ownership to ' + target.name + '? You will remain a contributor.')) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      await transferWorldWeaveOwnership(selected.id, target.userId);
+      await transferShared storiesOwnership(selected.id, target.userId);
       setSelected(current => current ? { ...current, ownerId: target.userId, ownerName: target.name } : current);
       setNotice('Ownership transferred to ' + target.name + '. You remain a contributor.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not transfer ownership.'); }
     finally { setBusy(false); }
   };
 
-  const handleArchiveChapter = async (chapter: WorldWeaveChapter) => {
+  const handleArchiveChapter = async (chapter: Shared storiesChapter) => {
     if (!selected || selected.ownerId !== currentUser.id || chapter.archived
       || !window.confirm('Archive "' + chapter.title + '"? Existing moments will remain in this chapter history.')) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      await archiveWorldWeaveChapter(selected.id, chapter.id);
+      await archiveShared storiesChapter(selected.id, chapter.id);
       setChapters(current => current.map(item => item.id === chapter.id ? { ...item, archived: true } : item));
       setSelectedChapterId(current => current === chapter.id ? '' : current);
       setNotice('Chapter archived. Its historical moments remain available.');
@@ -354,7 +354,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     [ordered[index], ordered[target]] = [ordered[target], ordered[index]];
     setBusy(true); setError(''); setNotice('');
     try {
-      await reorderWorldWeaveChapters(selected.id, ordered.map(item => item.id));
+      await reorderShared storiesChapters(selected.id, ordered.map(item => item.id));
       setChapters(ordered.map((item, position) => ({ ...item, position })));
       setNotice('Chapter order updated.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not reorder chapters. Refresh and try again.'); }
@@ -366,7 +366,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     if (!selected || selected.ownerId !== currentUser.id) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      const chapter = await createWorldWeaveChapter(selected.id, chapterTitle, chapterDescription);
+      const chapter = await createShared storiesChapter(selected.id, chapterTitle, chapterDescription);
       setChapters(current => [...current, chapter].sort((a, b) => a.position - b.position));
       setChapterTitle(''); setChapterDescription('');
       setNotice('Chapter created. You can assign new moments to it.');
@@ -379,7 +379,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     if (!selected || selected.ownerId !== currentUser.id || !editingChapterId) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      await updateWorldWeaveChapter(selected.id, editingChapterId, editingChapterTitle, editingChapterDescription);
+      await updateShared storiesChapter(selected.id, editingChapterId, editingChapterTitle, editingChapterDescription);
       setChapters(current => current.map(chapter => chapter.id === editingChapterId
         ? { ...chapter, title: editingChapterTitle.trim(), description: editingChapterDescription.trim() }
         : chapter));
@@ -392,7 +392,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');
     try {
-      const id = await createWorldWeave({ title, description, visibility, ownerName: currentUser.name });
+      const id = await createShared stories({ title, description, visibility, ownerName: currentUser.name });
       setTitle(''); setDescription(''); setShowCreate(false);
       setSelected({ id, ownerId: currentUser.id, ownerName: currentUser.name, title: title.trim(), description: description.trim(),
         visibility, participantIds: [currentUser.id], memberCount: 1, momentCount: 0 });
@@ -406,7 +406,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     if (!selected) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      await updateWorldWeaveDetails(selected.id, { title: editTitle, description: editDescription, visibility: editVisibility });
+      await updateShared storiesDetails(selected.id, { title: editTitle, description: editDescription, visibility: editVisibility });
       setSelected(current => current ? { ...current, title: editTitle.trim(), description: editDescription.trim(), visibility: editVisibility } : current);
       setEditingDetails(false);
       setNotice('Shared story details updated.');
@@ -419,8 +419,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
     setBusy(true); setError(''); setNotice(''); setProgress(0);
     const author = { id: currentUser.id, name: currentUser.name, username: currentUser.username, avatar: currentUser.avatar };
     try {
-      if (momentFile) await addWorldWeaveMediaMoment(selected.id, author, momentFile, momentText, setProgress, selectedChapterId || undefined);
-      else await addWorldWeaveTextMoment(selected.id, author, momentText, selectedChapterId || undefined);
+      if (momentFile) await addShared storiesMediaMoment(selected.id, author, momentFile, momentText, setProgress, selectedChapterId || undefined);
+      else await addShared storiesTextMoment(selected.id, author, momentText, selectedChapterId || undefined);
       setMomentText(''); setMomentFile(null); setNotice('Moment added to the shared timeline.');
       const input = document.getElementById('worldweave-media') as HTMLInputElement | null;
       if (input) input.value = '';
@@ -432,60 +432,60 @@ export default function WorldWeaveView({ currentUser }: Props) {
     if (!selected || !moments.length || loadingOlder) return;
     setLoadingOlder(true); setError('');
     try {
-      const older = await fetchOlderWorldWeaveMoments(selected.id, moments[0]);
+      const older = await fetchOlderShared storiesMoments(selected.id, moments[0]);
       setMoments(current => [...older.filter(item => !current.some(existing => existing.id === item.id)), ...current]);
       setHasMoreMoments(older.length === 100);
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not load older moments.'); }
     finally { setLoadingOlder(false); }
   };
 
-  const handleSubmitMomentReply = async (event: React.FormEvent, moment: WorldWeaveMoment) => {
+  const handleSubmitMomentReply = async (event: React.FormEvent, moment: Shared storiesMoment) => {
     event.preventDefault();
     if (!selected || !replyDraft.trim() || busy) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      await addWorldWeaveMomentReply(selected.id, moment.id, replyDraft);
+      await addShared storiesMomentReply(selected.id, moment.id, replyDraft);
       setReplyDraft('');
       setNotice('Your reply was added to the conversation.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not add your reply.'); }
     finally { setBusy(false); }
   };
 
-  const handleDeleteMomentReply = async (reply: WorldWeaveReply) => {
+  const handleDeleteMomentReply = async (reply: Shared storiesReply) => {
     if (!selected || !window.confirm('Remove this reply?')) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      await deleteWorldWeaveMomentReply(selected.id, reply.momentId, reply.id);
+      await deleteShared storiesMomentReply(selected.id, reply.momentId, reply.id);
       setNotice('Reply removed.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not remove this reply.'); }
     finally { setBusy(false); }
   };
 
-  const handleToggleMomentPin = async (moment: WorldWeaveMoment) => {
+  const handleToggleMomentPin = async (moment: Shared storiesMoment) => {
     if (!selected || selected.ownerId !== currentUser.id || busy) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      const result = await toggleWorldWeaveMomentPin(selected.id, moment.id);
+      const result = await toggleShared storiesMomentPin(selected.id, moment.id);
       setSelected(current => current ? { ...current, pinnedMomentIds: result.pinnedMomentIds } : current);
-      setPinnedMoments(await fetchWorldWeavePinnedMoments(selected.id));
+      setPinnedMoments(await fetchShared storiesPinnedMoments(selected.id));
       setNotice(result.pinned ? 'Moment pinned to the shared story.' : 'Moment unpinned from the story.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not update pinned moments.'); }
     finally { setBusy(false); }
   };
 
-  const handleMomentReaction = async (moment: WorldWeaveMoment, reaction: WorldWeaveReaction) => {
+  const handleMomentReaction = async (moment: Shared storiesMoment, reaction: Shared storiesReaction) => {
     if (!selected || busy) return;
     setBusy(true); setError('');
-    try { await setWorldWeaveMomentReaction(selected.id, moment.id, reaction); }
+    try { await setShared storiesMomentReaction(selected.id, moment.id, reaction); }
     catch (err) { setError(err instanceof Error ? err.message : 'Could not update your reaction.'); }
     finally { setBusy(false); }
   };
 
-  const handleDeleteMoment = async (moment: WorldWeaveMoment) => {
+  const handleDeleteMoment = async (moment: Shared storiesMoment) => {
     if (!selected || !window.confirm('Remove this moment from the shared timeline?')) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      await deleteWorldWeaveMoment(selected.id, moment);
+      await deleteShared storiesMoment(selected.id, moment);
       setMoments(current => current.filter(item => item.id !== moment.id));
       setNotice('Moment removed from the timeline.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not remove this moment.'); }
@@ -496,7 +496,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     event.preventDefault(); if (!selected) return;
     setBusy(true); setError(''); setNotice('');
     try {
-      await inviteToWorldWeaveByUsername(selected.id, inviteUsername);
+      await inviteToShared storiesByUsername(selected.id, inviteUsername);
       setInviteUsername(''); setNotice('Invitation created for that NEXORA member.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not send invitation.'); }
     finally { setBusy(false); }
@@ -508,13 +508,13 @@ export default function WorldWeaveView({ currentUser }: Props) {
       <div className="mx-auto w-full max-w-5xl space-y-5 pb-10">
         <button onClick={() => { setSelected(null); setError(''); setNotice(''); }} className="inline-flex items-center gap-2 text-sm text-violet-200 hover:text-white"><ArrowLeft size={16}/> All shared stories</button>
         <section className="overflow-hidden rounded-[28px] border border-violet-400/20 bg-[radial-gradient(circle_at_top_right,rgba(113,56,255,.28),transparent_42%),linear-gradient(145deg,#100c25,#080d19)] p-6 md:p-8">
-          <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-violet-200"><Sparkles size={13}/> SHARED STORIES <span className="text-white/30">·</span>{selected.visibility === 'public' ? 'Public experience' : 'Private experience'}</div>
+          <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-violet-200"><Sparkles size={13}/> SHARED STORIES <span className="text-white/30">·</span>{selected.visibility === 'public' ? 'Public story' : 'Private story'}</div>
           <h1 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">{selected.title}</h1>
           {selected.description && <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">{selected.description}</p>}
-          <div className="mt-5 flex flex-wrap gap-4 text-xs text-slate-300"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{selected.memberCount || selected.participantIds?.length || 1}/{MAX_WORLDWEAVE_MEMBERS} contributors</span><span>{moments.length} loaded · {selected.momentCount || moments.length} moments published</span><span>Started by {selected.ownerName}</span></div>
+          <div className="mt-5 flex flex-wrap gap-4 text-xs text-slate-300"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{selected.memberCount || selected.participantIds?.length || 1}/{MAX_WORLDWEAVE_MEMBERS} members</span><span>{moments.length} loaded · {selected.momentCount || moments.length} posts shared</span><span>Started by {selected.ownerName}</span></div>
         </section>
-        {selected.ownerId === currentUser.id && <div className="flex justify-end"><button type="button" onClick={() => { setEditTitle(selected.title); setEditDescription(selected.description); setEditVisibility(selected.visibility); setEditingDetails(value => !value); }} className="rounded-xl border border-violet-400/20 px-3 py-2 text-xs font-semibold text-violet-200 hover:bg-violet-500/10">{editingDetails ? 'Close settings' : 'Edit experience'}</button></div>}
-        {selected.ownerId !== currentUser.id && isMember && <div className="flex justify-end"><button type="button" disabled={busy} onClick={() => void handleLeaveWorldWeave()} className="rounded-xl border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-200 hover:bg-red-500/10 disabled:opacity-40">Leave shared story</button></div>}
+        {selected.ownerId === currentUser.id && <div className="flex justify-end"><button type="button" onClick={() => { setEditTitle(selected.title); setEditDescription(selected.description); setEditVisibility(selected.visibility); setEditingDetails(value => !value); }} className="rounded-xl border border-violet-400/20 px-3 py-2 text-xs font-semibold text-violet-200 hover:bg-violet-500/10">{editingDetails ? 'Close settings' : 'Edit story'}</button></div>}
+        {selected.ownerId !== currentUser.id && isMember && <div className="flex justify-end"><button type="button" disabled={busy} onClick={() => void handleLeaveShared stories()} className="rounded-xl border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-200 hover:bg-red-500/10 disabled:opacity-40">Leave shared story</button></div>}
         {editingDetails && selected.ownerId === currentUser.id && <form onSubmit={handleUpdateDetails} className="rounded-3xl border border-violet-400/20 bg-[#0b1221] p-4">
           <div className="grid gap-3 md:grid-cols-2"><input value={editTitle} onChange={e => setEditTitle(e.target.value)} minLength={3} maxLength={90} required className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60" aria-label="Shared story title"/><select value={editVisibility} onChange={e => setEditVisibility(e.target.value as 'public'|'private')} className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white"><option value="public">Public</option><option value="private">Private</option></select></div>
           <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} maxLength={500} rows={2} className="mt-3 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60" aria-label="Shared story description"/>
@@ -523,7 +523,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
         {notice && <p role="status" className="rounded-xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">{notice}</p>}
         {error && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</p>}
         {!isMember && selected.visibility === 'public' && <div className="rounded-3xl border border-violet-400/20 bg-violet-500/[.06] p-5">
-          <p className="text-sm text-slate-300">You can follow this public experience or join its contributors to add your own perspective.</p>
+          <p className="text-sm text-slate-300">You can follow this public experience or join its members to add your own perspective.</p>
           {selected.memberCount >= MAX_WORLDWEAVE_MEMBERS && <p className="mt-2 text-xs text-amber-200">This shared story has reached its member limit.</p>}
           <button disabled={busy || selected.memberCount >= MAX_WORLDWEAVE_MEMBERS} onClick={() => void handleJoinPublic()} className="mt-3 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40">Join this shared story</button>
         </div>}
@@ -573,17 +573,17 @@ export default function WorldWeaveView({ currentUser }: Props) {
               <button disabled={busy || !inviteUsername.trim() || selected.memberCount >= MAX_WORLDWEAVE_MEMBERS} className="mt-2 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2.5 text-xs font-bold text-violet-100 disabled:opacity-40">Send invitation</button>
             </form>
             <section className="rounded-3xl border border-violet-400/15 bg-[#0b1221] p-4">
-              <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-white">Contributor management</h3><span className="text-[10px] text-slate-500">{contributors.length} loaded</span></div>
+              <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-white">Contributor management</h3><span className="text-[10px] text-slate-500">{members.length} loaded</span></div>
               <p className="mb-3 text-xs leading-5 text-slate-400">Remove a contributor or transfer ownership. Previous moments are preserved.</p>
               <select value={selectedContributorId} onChange={event => setSelectedContributorId(event.target.value)} className="w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-xs text-white">
                 <option value="">Choose a contributor</option>
-                {contributors.filter(item => item.role === 'contributor').map(item => <option key={item.userId} value={item.userId}>{item.name}{item.username ? ' (@' + item.username + ')' : ''}</option>)}
+                {members.filter(item => item.role === 'contributor').map(item => <option key={item.userId} value={item.userId}>{item.name}{item.username ? ' (@' + item.username + ')' : ''}</option>)}
               </select>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button type="button" disabled={busy || !selectedContributorId} onClick={() => void handleRemoveContributor()} className="rounded-xl border border-red-400/20 px-2 py-2.5 text-[11px] font-bold text-red-200 disabled:opacity-40">Remove</button>
                 <button type="button" disabled={busy || !selectedContributorId} onClick={() => void handleTransferOwnership()} className="rounded-xl bg-violet-600 px-2 py-2.5 text-[11px] font-bold text-white disabled:opacity-40">Transfer ownership</button>
               </div>
-              {(selected.participantIds?.length || 0) > 100 && <p className="mt-2 text-[10px] text-amber-200">Showing the first 100 contributors. Larger member directories will be paginated in Membership V2.</p>}
+              {(selected.participantIds?.length || 0) > 100 && <p className="mt-2 text-[10px] text-amber-200">Showing the first 100 members. Larger member directories will be paginated in Membership V2.</p>}
             </section>
             <section className="rounded-3xl border border-white/10 bg-[#0b1221] p-4">
               <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-white">Pending invitations</h3><span className="text-[10px] text-slate-500">{sentInvitations.length}/50</span></div>
@@ -675,7 +675,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     <div className="mx-auto w-full max-w-6xl space-y-6 pb-10">
       <section className="relative overflow-hidden rounded-[30px] border border-violet-400/20 bg-[radial-gradient(circle_at_80%_0%,rgba(138,63,252,.3),transparent_40%),linear-gradient(140deg,#100c25,#080d19_65%,#0d1230)] p-6 md:p-9">
         <div className="absolute -right-8 -top-12 h-52 w-52 rounded-full border border-violet-300/10"/><div className="absolute -right-2 -top-6 h-40 w-40 rounded-full border border-violet-300/10"/>
-        <div className="relative max-w-2xl"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.24em] text-violet-200"><Sparkles size={14}/> A NEXORA original experience</div>
+        <div className="relative max-w-2xl"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.24em] text-violet-200"><Sparkles size={14}/> A NEXORA original</div>
           <h1 className="mt-4 text-4xl font-black tracking-tight text-white md:text-5xl">World<span className="text-violet-300">Weave</span></h1>
           <p className="mt-3 text-sm leading-7 text-slate-300 md:text-base">One moment in the world. Many people who lived it. One evolving story told from every perspective.</p>
           <button onClick={() => setShowCreate(true)} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white shadow-[0_10px_30px_rgba(113,56,255,.28)] hover:bg-violet-500"><Plus size={17}/> Start a shared story</button>
@@ -692,8 +692,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
       </section>}
       {showCreate && <form onSubmit={handleCreate} className="rounded-3xl border border-violet-400/20 bg-[#0b1221] p-5">
         <div className="mb-4 flex items-center justify-between"><h2 className="font-bold text-white">Create a shared story</h2><button type="button" onClick={() => setShowCreate(false)} aria-label="Close" className="text-slate-400"><X size={18}/></button></div>
-        <div className="grid gap-3 md:grid-cols-2"><input value={title} onChange={e => setTitle(e.target.value)} minLength={3} maxLength={90} required placeholder="Give this moment a name" className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60"/><select value={visibility} onChange={e => setVisibility(e.target.value as 'public'|'private')} className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white"><option value="public">Public · Anyone can follow the story</option><option value="private">Private · Invited contributors only</option></select></div>
-        <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={500} rows={2} placeholder="What is this experience about?" className="mt-3 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60"/>
+        <div className="grid gap-3 md:grid-cols-2"><input value={title} onChange={e => setTitle(e.target.value)} minLength={3} maxLength={90} required placeholder="Give this moment a name" className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60"/><select value={visibility} onChange={e => setVisibility(e.target.value as 'public'|'private')} className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white"><option value="public">Public · Anyone can follow the story</option><option value="private">Private · Invited members only</option></select></div>
+        <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={500} rows={2} placeholder="What is this story about?" className="mt-3 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60"/>
         <div className="mt-3 flex justify-end"><button disabled={busy || title.trim().length < 3} className="rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-40">{busy ? 'Creating…' : 'Create shared story'}</button></div>
       </form>}
       <div className="flex items-center justify-between"><div><h2 className="text-lg font-bold text-white">Shared stories</h2><p className="mt-1 text-xs text-slate-500">Your posts and public stories from the NEXORA community</p></div><span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-slate-400">{visibleWeaves.length} shown</span></div>
@@ -706,7 +706,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
         {visibleWeaves.map(weave => <button key={weave.id} onClick={() => { setSelected(weave); setNotice(''); setError(''); }} className="group rounded-3xl border border-white/10 bg-[#0b1221] p-5 text-left transition hover:-translate-y-0.5 hover:border-violet-400/35 hover:bg-[#100d23]">
           <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-violet-200"><Sparkles size={13}/>{weave.visibility === 'public' ? <Globe2 size={13}/> : <LockKeyhole size={13}/>} {weave.visibility}</div><span className="text-[10px] text-slate-500">{weave.ownerName}</span></div>
           <h3 className="mt-4 text-xl font-bold text-white group-hover:text-violet-100">{weave.title}</h3><p className="mt-2 line-clamp-2 min-h-10 text-sm leading-6 text-slate-400">{weave.description || 'A story told by everyone who was there.'}</p>
-          <div className="mt-5 flex items-center gap-4 text-xs text-slate-500"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{weave.memberCount || 1} contributors</span><span>{weave.momentCount || 0} moments</span></div>
+          <div className="mt-5 flex items-center gap-4 text-xs text-slate-500"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{weave.memberCount || 1} members</span><span>{weave.momentCount || 0} moments</span></div>
         </button>)}
       </div>
       {hasMorePublicWeaves && <div className="flex justify-center"><button type="button" disabled={loadingDiscovery} onClick={() => void handleLoadMorePublicWeaves()} className="rounded-xl border border-violet-400/25 px-5 py-2.5 text-xs font-semibold text-violet-200 transition hover:bg-violet-500/10 disabled:opacity-40">{loadingDiscovery ? 'Loading…' : 'Load more public experiences'}</button></div>}
