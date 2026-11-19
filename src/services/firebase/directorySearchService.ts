@@ -1,6 +1,7 @@
 import { httpsCallable } from 'firebase/functions';
 import { auth } from './config';
 import { functions } from '../../lib/firebase';
+import { getSafeAvatar } from '../../data/database';
 
 export interface PublicDirectoryResult {
   people: Array<{ id: string; username: string; name: string; avatar: string; bio: string; isVerified: boolean }>;
@@ -13,5 +14,16 @@ export async function searchPublicDirectory(query: string, cursor?: string | nul
   if (!auth.currentUser) throw new Error('Sign in to search NEXORA.');
   const callable = httpsCallable<{ query: string; cursor?: string | null }, PublicDirectoryResult>(functions, 'searchNexoraDirectory');
   const result = await callable({ query, cursor });
-  return result.data;
+  const data = result.data;
+  return {
+    ...data,
+    people: data.people.map(person => ({
+      ...person,
+      avatar: getSafeAvatar(person.avatar, person.name || person.username),
+    })),
+    pages: data.pages.map(page => ({
+      ...page,
+      avatar: getSafeAvatar(page.avatar, page.name || page.username),
+    })),
+  };
 }
