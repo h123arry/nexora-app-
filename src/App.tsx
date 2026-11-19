@@ -34,7 +34,8 @@ import {
   addPublicPostCommentDb,
   subscribeToPosts, 
   subscribeToUsers, 
-  savePostToDb, 
+  savePostToDb,
+  publishPostNow,
   subscribeToNotifications, 
   subscribeToFollows, 
   syncEngine,
@@ -64,6 +65,7 @@ import { addPostCommentReply } from './services/firebase/postReplyService';
 import { setPostCommentLike } from './services/firebase/postCommentReactionService';
 import { deletePostComment } from './services/firebase/postCommentDeletionService';
 import { uploadMediaFile } from './services/firebase/storageService';
+import { createMediaStory, createTextStory } from './services/firebase/storyService';
 import { setOriginRemixPolicy, type OriginRemixPolicy } from './services/originRemixPolicyService';
 import { normalizeMediaAssetId } from './utils/mediaAssetReference';
 
@@ -1632,7 +1634,7 @@ export default function App() {
     scheduledTime?: string,
     isBroadcastPost?: boolean,
     communityName?: string,
-    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[] }
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[]; publicationId?: string; signal?: AbortSignal }
   ): string => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       requireAuth(() => handleAddPost(content, imageUrl, tagsString, images, videoUrl, voiceTranscript, voiceAudioUrl, audience, isVoice, voiceDuration, interactivePoll, opportunityType, pulseRegion, imageFilter, imageFilters, scheduledTime, isBroadcastPost, communityName, postDetails), 'Complete your NEXORA profile to publish content.');
@@ -1643,7 +1645,7 @@ export default function App() {
       ? tagsString.split(',').map(t => t.trim().replace('#', '')).filter(t => t.length > 0)
       : [];
 
-    const postId = `post-${crypto.randomUUID()}`;
+    const postId = `post-${postDetails?.publicationId || crypto.randomUUID()}`;
     const newPost: Post = {
       id: postId,
       userId: currentUser.id,
@@ -1704,6 +1706,110 @@ export default function App() {
     }
     
     return postId;
+  };
+
+  const handlePublishPost = async (
+    content: string,
+    imageUrl?: string,
+    tagsString?: string,
+    images?: string[],
+    videoUrl?: string,
+    voiceTranscript?: string,
+    voiceAudioUrl?: string,
+    audience?: 'public' | 'circle' | 'community' | 'followers' | 'onlyme',
+    isVoice?: boolean,
+    voiceDuration?: number,
+    interactivePoll?: any,
+    opportunityType?: string,
+    pulseRegion?: string,
+    imageFilter?: string,
+    imageFilters?: string[],
+    scheduledTime?: string,
+    isBroadcastPost?: boolean,
+    communityName?: string,
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[]; publicationId?: string; signal?: AbortSignal }
+  ): Promise<string> => {
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+      throw new Error('Please finish signing in before sharing your post.');
+    }
+    if (isOffline || !navigator.onLine) {
+      throw new Error('You are offline. Your draft is safe on this device. Reconnect and try sharing again.');
+    }
+
+    const parsedTags = tagsString
+      ? tagsString.split(',').map(tag => tag.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30)
+      : [];
+    const postId = `post-${postDetails?.publicationId || crypto.randomUUID()}`;
+    const newPost: Post = {
+      id: postId,
+      userId: currentUser.id,
+      username: currentUser.username,
+      name: currentUser.name,
+      avatar: currentUser.avatar,
+      isVerified: currentUser.isVerified || false,
+      content,
+      image: imageUrl,
+      imageFilter,
+      images,
+      imageFilters,
+      videoUrl,
+      mediaAssetId: normalizeMediaAssetId(postDetails?.mediaAssetId || postDetails?.mediaAssetIds?.[0]),
+      mediaAssetIds: [...new Set((postDetails?.mediaAssetIds || [postDetails?.mediaAssetId]).map(normalizeMediaAssetId).filter((id): id is string => Boolean(id)))].slice(0, 10),
+      voiceTranscript,
+      voiceAudioUrl,
+      audience: 'public',
+      communityName,
+      location: postDetails?.location || pulseRegion,
+      taggedUsernames: (postDetails?.taggedUsernames || []).slice(0, 20),
+      imageAltText: postDetails?.imageAltText?.slice(0, 500),
+      commentsDisabled: postDetails?.commentsAllowed === false,
+      tags: parsedTags,
+      likes: 0,
+      commentsCount: 0,
+      shares: 0,
+      views: 0,
+      saves: 0,
+      timestamp: new Date().toISOString(),
+      isLikedByUser: false,
+      isBookmarkedByUser: false,
+      comments: [],
+      isVoice,
+      voiceDuration,
+      interactivePoll,
+      opportunityType,
+      scheduledTime,
+      isBroadcastPost,
+      broadcastReactions: isBroadcastPost ? { '🔥': 0, '🙌': 0, '⚡': 0, '🏆': 0 } : undefined
+    };
+
+    // Do not show the post in the feed or tell the creator it was shared until
+    // Firestore confirms the durable write.
+    await publishPostNow(newPost, postDetails?.signal);
+    setPosts(previous => [newPost, ...previous]);
+    let postType: 'post_create' | 'media_upload' | 'video_publish' | 'pulse_create' | 'voice_publish' = 'post_create';
+    if (videoUrl) postType = 'video_publish';
+    else if (imageUrl || (images && images.length > 0)) postType = 'media_upload';
+    else if (isVoice || voiceAudioUrl) postType = 'voice_publish';
+    else if (opportunityType) postType = 'pulse_create';
+    createPostDb(currentUser.id, postId, postType);
+    return postId;
+  };
+
+  const handlePublishStory = async (
+    caption: string,
+    file?: File,
+    onProgress?: (progress: number) => void,
+    signal?: AbortSignal,
+  ): Promise<string> => {
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+      throw new Error('Please finish signing in before sharing your story.');
+    }
+    if (isOffline || !navigator.onLine) {
+      throw new Error('You are offline. Reconnect before sharing your story.');
+    }
+    return file
+      ? createMediaStory(currentUser, file, caption, onProgress, signal)
+      : createTextStory(currentUser, caption);
   };
 
   const handleRemovePost = (postId: string) => {
@@ -2527,6 +2633,8 @@ export default function App() {
             currentUser={currentUser}
             onClose={handleCloseCreateModal}
             onAddPost={handleAddPost}
+            onPublishPost={handlePublishPost}
+            onPublishStory={handlePublishStory}
             theme={theme}
             isOffline={isOffline}
             initialMode={creationInitialMode}

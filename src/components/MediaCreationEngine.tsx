@@ -131,8 +131,10 @@ interface MediaCreationEngineProps {
     scheduledTime?: string,
     isBroadcastPost?: boolean,
     communityName?: string,
-    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[] }
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[]; publicationId?: string; signal?: AbortSignal }
   ) => string;
+  onPublishPost?: (...args: Parameters<MediaCreationEngineProps['onAddPost']>) => Promise<string>;
+  onPublishStory?: (caption: string, file?: File, onProgress?: (progress: number) => void, signal?: AbortSignal) => Promise<string>;
   theme: 'neon-cyber' | 'stealth-dark' | 'platinum-light' | 'emerald-glass';
   isStoryModeInitially?: boolean;
   isOffline?: boolean;
@@ -228,6 +230,8 @@ export default function MediaCreationEngine({
   currentUser,
   onClose,
   onAddPost,
+  onPublishPost,
+  onPublishStory,
   theme,
   isStoryModeInitially = false,
   isOffline = false,
@@ -354,6 +358,7 @@ export default function MediaCreationEngine({
   const [originRemixPolicy, setOriginRemixPolicyState] = useState<OriginRemixPolicy>('closed');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
+  const [publishStage, setPublishStage] = useState('Getting your post ready…');
   const [isMinimized, setIsMinimized] = useState(false);
 
   // Refs
@@ -369,6 +374,7 @@ export default function MediaCreationEngine({
   const loopTimerRef = useRef<any>(null);
   const createdObjectUrlsRef = useRef<Set<string>>(new Set());
   const uploadAbortControllerRef = useRef<AbortController | null>(null);
+  const publishAttemptIdRef = useRef<string | null>(null);
 
   const trackObjectUrl = (url: string) => {
     createdObjectUrlsRef.current.add(url);
@@ -1223,6 +1229,7 @@ export default function MediaCreationEngine({
     setBlur(0);
     setCommentsAllowed(true);
     setOriginRemixPolicyState('closed');
+    publishAttemptIdRef.current = null;
     setActiveMode(null);
     setCurrentStep(1);
   };
@@ -1242,13 +1249,86 @@ export default function MediaCreationEngine({
       setPostingStatus('failed');
       return;
     }
+    if (activeTab !== 'story' && !publishAttemptIdRef.current) {
+      publishAttemptIdRef.current = crypto.randomUUID();
+    }
     const uploadController = new AbortController();
     uploadAbortControllerRef.current = uploadController;
+    let publishTimedOut = false;
+    const publishTimeout = window.setTimeout(() => {
+      publishTimedOut = true;
+      uploadController.abort();
+    }, 5 * 60 * 1000);
     setErrorMessage('');
+    setPublishStage('Getting your post ready…');
     setPostingStatus('publishing');
     setUploadProgress(0);
 
     try {
+      if (activeTab === 'story') {
+        let storyFile: File | undefined;
+        if (videoRawBlob) {
+          storyFile = new File([videoRawBlob], `nexora-story-video-${Date.now()}.${videoFileExtension(videoRawBlob.type) || 'mp4'}`, {
+            type: videoRawBlob.type || 'video/mp4',
+          });
+        } else if (videoFileUrl || recordedVideoUrl) {
+          const sourceUrl = videoFileUrl || recordedVideoUrl || '';
+          const sourceBlob = sourceUrl.startsWith('db-media://')
+            ? await getMediaBlob(sourceUrl.slice('db-media://'.length))
+            : await (await fetch(sourceUrl)).blob();
+          if (!sourceBlob) throw new Error('We could not reopen that video. Please choose it again.');
+          storyFile = new File([sourceBlob], `nexora-story-video-${Date.now()}.${videoFileExtension(sourceBlob.type) || 'mp4'}`, {
+            type: sourceBlob.type || 'video/mp4',
+          });
+        } else if (selectedImages.length > 0) {
+          const selectedImage = selectedImages[0];
+          const sourceBlob = selectedImage.url.startsWith('db-media://')
+            ? await getMediaBlob(selectedImage.url.slice('db-media://'.length))
+            : await (await fetch(selectedImage.url)).blob();
+          if (!sourceBlob) throw new Error('We could not reopen that photo. Please choose it again.');
+          const hasEdits = selectedImage.rotation !== 0
+            || selectedImage.zoom !== 1
+            || Boolean(selectedImage.filterStyle && selectedImage.filterStyle !== 'none')
+            || brightness !== 100
+            || contrast !== 100
+            || saturation !== 100
+            || blur !== 0
+            || Boolean(stickerOverlay)
+            || Boolean(textOverlay.trim());
+          const finalBlob = hasEdits ? await renderEditedPhotoBlob(sourceBlob, {
+            rotation: selectedImage.rotation,
+            zoom: selectedImage.zoom,
+            filterStyle: selectedImage.filterStyle,
+            brightness,
+            contrast,
+            saturation,
+            blur,
+            sticker: stickerOverlay,
+            text: textOverlay,
+            textColor: textOverlayColor,
+          }) : sourceBlob;
+          storyFile = new File([finalBlob], `nexora-story-photo-${Date.now()}.jpg`, {
+            type: finalBlob.type || 'image/jpeg',
+          });
+        }
+
+        if (!storyFile && !caption.trim()) {
+          throw new Error('Add a photo, video or a short message before sharing your story.');
+        }
+        if (!onPublishStory) throw new Error('Story sharing is not available right now. Please try again.');
+        setPublishStage(storyFile ? 'Uploading your story…' : 'Sharing your story…');
+        await onPublishStory(caption, storyFile, progress => setUploadProgress(progress), uploadController.signal);
+        setUploadProgress(100);
+        setPostingStatus('completed');
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your story is live for the next 24 hours.' }));
+        window.setTimeout(() => {
+          setIsMinimized(false);
+          onClose();
+          resetStates();
+        }, 1200);
+        return;
+      }
+
       const requestedMentions = taggedUsernames.split(',').map(value => value.trim().replace(/^@/, '').toLowerCase()).filter(Boolean).slice(0, 20);
       if (requestedMentions.length) {
         setMentionValidation('checking');
@@ -1264,6 +1344,7 @@ export default function MediaCreationEngine({
       const durableImages: string[] = [];
       const uploadedOriginAssetIds: string[] = [];
       for (let index = 0; index < selectedImages.length; index += 1) {
+        setPublishStage(selectedImages.length > 1 ? 'Uploading your photos…' : 'Uploading your photo…');
         const selectedImage = selectedImages[index];
         const imageUrl = selectedImage.url;
         const hasEdits = selectedImage.rotation !== 0
@@ -1315,6 +1396,7 @@ export default function MediaCreationEngine({
         uploadVideoBlob = await getMediaBlob(videoFileUrl.slice('db-media://'.length));
       }
       if (uploadVideoBlob) {
+        setPublishStage('Uploading your video…');
         try {
           const thumb = videoCoverBlob ? URL.createObjectURL(videoCoverBlob) : await generateVideoThumbnail(uploadVideoBlob);
           if (thumb) mainImg = thumb;
@@ -1376,7 +1458,8 @@ export default function MediaCreationEngine({
         }
       }
 
-      const createdPostId = onAddPost(
+      setPublishStage('Saving your post…');
+      const publishArgs = [
         caption,
         mainImg,
         topics,
@@ -1402,13 +1485,19 @@ export default function MediaCreationEngine({
           commentsAllowed,
           mediaAssetId: uploadedOriginAssetIds[0],
           mediaAssetIds: uploadedOriginAssetIds,
+          publicationId: publishAttemptIdRef.current || undefined,
+          signal: uploadController.signal,
         }
-      );
-      if (!createdPostId) throw new Error('Nexora could not confirm this post. Please sign in and retry.');
+      ] as Parameters<MediaCreationEngineProps['onAddPost']>;
+      const createdPostId = onPublishPost
+        ? await onPublishPost(...publishArgs)
+        : onAddPost(...publishArgs);
+      if (!createdPostId) throw new Error('NEXORA could not confirm your post. Please sign in and try again.');
 
+      publishAttemptIdRef.current = null;
       setUploadProgress(100);
       setPostingStatus('completed');
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Post Published Successfully!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Your post is live on NEXORA.' }));
       setTimeout(() => {
         setIsMinimized(false);
         onClose();
@@ -1416,15 +1505,25 @@ export default function MediaCreationEngine({
       }, 1500);
     } catch (err) {
       if (uploadController.signal.aborted) {
-        setPostingStatus('idle');
-        setUploadProgress(0);
-        setErrorMessage('Upload canceled. Your draft is still available.');
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Upload canceled. Your draft is still available.' }));
-      } else {
         setPostingStatus('failed');
-        setErrorMessage(err instanceof Error ? err.message : 'Publishing failed. Your draft is still available to retry.');
+        setUploadProgress(0);
+        setErrorMessage(publishTimedOut
+          ? 'This is taking longer than expected. Check your connection and try again. Your draft is still safe.'
+          : 'Sharing was canceled. Your draft is still safe.');
+      } else {
+        const code = (err as { code?: string })?.code || '';
+        const rawMessage = err instanceof Error ? err.message : '';
+        const friendlyMessage = code === 'permission-denied' || rawMessage.includes('Missing or insufficient permissions')
+          ? 'NEXORA could not save this yet because the account does not have permission. Your draft is still safe. Please try again.'
+          : code.startsWith('storage/')
+            ? 'NEXORA could not upload that file. Check your connection and file type, then try again. Your draft is still safe.'
+            : rawMessage || 'Something went wrong while sharing. Your draft is still safe to retry.';
+        console.error('[NEXORA publishing] Share failed.', err);
+        setPostingStatus('failed');
+        setErrorMessage(friendlyMessage);
       }
     } finally {
+      window.clearTimeout(publishTimeout);
       if (uploadAbortControllerRef.current === uploadController) uploadAbortControllerRef.current = null;
     }
   };
@@ -1601,7 +1700,7 @@ export default function MediaCreationEngine({
                   <span className="text-sm font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
                   <span className="text-[11px] font-semibold tracking-wide text-violet-300">CREATE</span>
                 </div>
-                <h1 className="text-sm font-semibold font-sans tracking-tight text-[#EEEAF8]">Make something worth sharing</h1>
+                <h1 className="text-sm font-semibold font-sans tracking-tight text-[#EEEAF8]">Share something with your people</h1>
               </div>
             </div>
           </div>
@@ -1694,7 +1793,7 @@ export default function MediaCreationEngine({
                 <div className="space-y-4 animate-fadeIn">
                   <div>
                     <span className="text-xs font-semibold text-violet-300 block mb-1">Create</span>
-                    <h3 className="text-base font-bold text-white">What would you like to share?</h3>
+                    <h3 className="text-base font-bold text-white">What do you want to share?</h3>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -2390,36 +2489,44 @@ export default function MediaCreationEngine({
                       <div className="space-y-2.5 bg-[#07070d]/50 p-3.5 border border-[#292244] rounded-2xl text-left">
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <span className="text-xs font-bold text-[#EEEAF8] block">Public post</span>
-                            <p className="mt-1 text-[11px] leading-relaxed text-[var(--nx-muted)]">Anyone on NEXORA can see this post.</p>
+                            <span className="text-xs font-bold text-[#EEEAF8] block">{activeTab === 'story' ? 'Your story' : 'Public post'}</span>
+                            <p className="mt-1 text-[11px] leading-relaxed text-[var(--nx-muted)]">{activeTab === 'story' ? 'Your story will be visible on NEXORA for 24 hours.' : 'Anyone on NEXORA can see this post.'}</p>
                           </div>
                           <span className="shrink-0 rounded-full border border-[#7138FF]/40 bg-[#7138FF]/15 px-2.5 py-1 text-[10px] font-semibold text-[#C7B5FF]">Everyone</span>
                         </div>
-                        <label className="flex items-center justify-between gap-3 border-t border-[#292244] pt-3 text-xs text-[#EEEAF8]">
-                          <span>Allow comments</span>
-                          <input type="checkbox" checked={commentsAllowed} onChange={(event) => setCommentsAllowed(event.target.checked)} className="h-4 w-4 accent-violet-500" />
-                        </label>
-                        <div className="border-t border-[#292244] pt-3 space-y-2">
-                          <div>
-                            <span className="block text-xs font-bold text-[#EEEAF8]">NEXORA Origin · Remix permission</span>
-                            <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Choose whether other creators may build on the media you upload in this post. You can change this later.</p>
+                        {activeTab !== 'story' && (
+                          <label className="flex items-center justify-between gap-3 border-t border-[#292244] pt-3 text-xs text-[#EEEAF8]">
+                            <span>Allow comments</span>
+                            <input type="checkbox" checked={commentsAllowed} onChange={(event) => setCommentsAllowed(event.target.checked)} className="h-4 w-4 accent-violet-500" />
+                          </label>
+                        )}
+                        {activeTab !== 'story' ? (
+                          <>
+                            <div className="border-t border-[#292244] pt-3 space-y-2">
+                            <div>
+                              <span className="block text-xs font-bold text-[#EEEAF8]">NEXORA Origin · Remix permission</span>
+                              <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Choose whether other creators may build on the media you upload in this post. You can change this later.</p>
+                            </div>
+                            <select
+                              aria-label="NEXORA Origin remix permission"
+                              value={originRemixPolicy}
+                              onChange={(event) => setOriginRemixPolicyState(event.target.value as OriginRemixPolicy)}
+                              className="w-full rounded-xl border border-[#34265E] bg-[#120E2B] px-3 py-2.5 text-xs font-semibold text-white outline-none focus:border-violet-400"
+                            >
+                              <option value="closed">Closed · Only me</option>
+                              <option value="allow_with_attribution">Allow remixing · Attribution required</option>
+                            </select>
+                            <p className="text-[10px] leading-relaxed text-[#A39BBF]">
+                              {originRemixPolicy === 'closed'
+                                ? 'Your uploaded media stays closed to cross-account remixes by default.'
+                                : 'NEXORA will record creator attribution when another account remixes this media. Permission applies only to newly uploaded media in this post.'}
+                            </p>
                           </div>
-                          <select
-                            aria-label="NEXORA Origin remix permission"
-                            value={originRemixPolicy}
-                            onChange={(event) => setOriginRemixPolicyState(event.target.value as OriginRemixPolicy)}
-                            className="w-full rounded-xl border border-[#34265E] bg-[#120E2B] px-3 py-2.5 text-xs font-semibold text-white outline-none focus:border-violet-400"
-                          >
-                            <option value="closed">Closed · Only me</option>
-                            <option value="allow_with_attribution">Allow remixing · Attribution required</option>
-                          </select>
-                          <p className="text-[10px] leading-relaxed text-[#A39BBF]">
-                            {originRemixPolicy === 'closed'
-                              ? 'Your uploaded media stays closed to cross-account remixes by default.'
-                              : 'NEXORA will record creator attribution when another account remixes this media. Permission applies only to newly uploaded media in this post.'}
-                          </p>
-                        </div>
-                        <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
+                            <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
+                          </>
+                        ) : (
+                          <p className="border-t border-[#292244] pt-3 text-[10px] leading-relaxed text-[#8E88A7]">Stories are public and disappear automatically after 24 hours.</p>
+                        )}
                       </div>
 
                     </div>
@@ -2443,11 +2550,11 @@ export default function MediaCreationEngine({
 
                       <div className="space-y-1">
                         <span className="text-[10px] font-mono text-[#8E88A7] uppercase block tracking-wider">
-                          {postingStatus === 'publishing' && 'Sharing your post...'}
-                          {postingStatus === 'completed' && 'Your post is ready!'}
+                          {postingStatus === 'publishing' && publishStage}
+                          {postingStatus === 'completed' && (activeTab === 'story' ? 'Your story is live!' : 'Your post is ready!')}
                         </span>
                         <p className="text-xs text-[#D1CBE3] font-sans">
-                          {postingStatus === 'completed' ? 'Your post has been shared.' : postingStatus === 'failed' ? (errorMessage || 'Something went wrong. Your content is safe to try again.') : 'Getting your post ready...'}
+                          {postingStatus === 'completed' ? (activeTab === 'story' ? 'Your story will be available for 24 hours.' : 'Your post has been shared.') : postingStatus === 'failed' ? (errorMessage || 'Something went wrong. Your content is safe to try again.') : publishStage}
                         </p>
                       </div>
 

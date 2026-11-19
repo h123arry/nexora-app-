@@ -8,6 +8,7 @@ import {
 import { doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, storage } from './config';
 import { mediaStoragePath } from './storagePaths';
+import { normalizeMediaId } from './mediaId';
 
 export interface MediaUploadOptions {
   file: File | Blob;
@@ -77,7 +78,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
     })();
   }
 
-  const mediaId = safeFileName(options.mediaId || crypto.randomUUID());
+  const mediaId = normalizeMediaId(options.mediaId || crypto.randomUUID());
   const chatId = options.chatId ? safeFileName(options.chatId) : undefined;
   const name = safeFileName(options.fileName || (file instanceof File ? file.name : 'upload'));
   // Storage rules bind customMetadata.mediaId to this exact path segment.
