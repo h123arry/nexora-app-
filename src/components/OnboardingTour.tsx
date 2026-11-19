@@ -40,7 +40,7 @@ export default function OnboardingTour({ onClose, onInterestSelected, onStartFir
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-violet-300">You're in</p>
             <h2 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">Your {interest.toLowerCase()} corner is ready.</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">NEXORA will use this preference to guide discovery. Your first contribution can be as simple as introducing yourself or sharing one thought.</p>
-            <div className="mt-6 rounded-2xl border border-violet-400/15 bg-violet-500/[0.07] p-4"><div className="flex items-center gap-2 text-sm font-bold text-violet-200"><Check className="h-4 w-4" /> First-session mission</div><p className="mt-2 text-sm text-zinc-300">Publish one short post and see it appear in your NEXORA feed.</p></div>
+            <div className="mt-6 rounded-2xl border border-violet-400/15 bg-violet-500/[0.07] p-4"><div className="flex items-center gap-2 text-sm font-bold text-violet-200"><Check className="h-4 w-4" /> Your first task</div><p className="mt-2 text-sm text-zinc-300">Publish one short post and see it appear in your NEXORA feed.</p></div>
             <button type="button" onClick={onStartFirstTask || onClose} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-950/40">Create your first post <ArrowRight className="h-4 w-4" /></button>
             <button type="button" onClick={onClose} className="mt-3 w-full rounded-xl px-4 py-2 text-xs font-semibold text-zinc-400 hover:text-white">Explore NEXORA first</button>
           </>}
