@@ -56,7 +56,7 @@ export const CREATOR_ACADEMY_TOOLKITS: CreatorTemplate[] = [
     { id: 'variable', label: 'One main variable', prompt: 'What will change while other factors remain as comparable as possible?' },
     { id: 'comparison', label: 'Comparable posts or baseline', prompt: 'Which examples will you compare?', multiline: true },
     { id: 'measure', label: 'Main result and what must not get worse', prompt: 'Which result matters most, and what should stay just as good?' },
-    { id: 'decision', label: 'When to review and what you'll do', prompt: 'When will you review, and what result would support or weaken the hypothesis?', multiline: true },
+    { id: 'decision', label: 'When to review and what you will do', prompt: 'When will you review, and what result would support or weaken the hypothesis?', multiline: true },
   ]},
   { id: 'portfolio-case-study', title: 'Portfolio case study', category: 'Professional', description: 'Show your contribution and evidence without exaggerating outcomes.', outcome: 'A concise case study suitable for a portfolio or professional introduction.', fields: [
     { id: 'brief', label: 'Project brief', prompt: 'What was the objective and context?', multiline: true },
