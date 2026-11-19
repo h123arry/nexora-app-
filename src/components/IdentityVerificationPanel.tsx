@@ -50,7 +50,7 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
       }
     } catch {
       if (generation === refreshGeneration.current) {
-        setError('Could not load identity review status. Try again when your connection is stable.');
+        setError('Couldn't load your verification status. Check your connection and try again.');
       }
     } finally {
       if (generation === refreshGeneration.current) setLoading(false);
@@ -73,7 +73,7 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
     try {
       const callable = httpsCallable(functions, 'submitIdentityVerificationApplication');
       await callable({ identityType, displayName, evidenceSummary, evidenceUrls });
-      setSuccess('Your identity application has been submitted for review.');
+      setSuccess('Your verification request has been sent for review.');
       await refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The application could not be submitted.');
@@ -149,7 +149,7 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
             <span className="flex items-center gap-1 text-[10px] text-zinc-500"><ExternalLink className="h-3 w-3" /> Public links only. Do not upload passports, IDs, or private documents. {evidenceCount}/5 links</span>
           </label>
           <button type="submit" disabled={submitting || displayName.trim().length < 2 || evidenceSummary.trim().length < 20 || evidenceCount < 1 || evidenceCount > 5} className="w-full rounded-xl bg-violet-600 px-4 py-3 text-xs font-black text-white transition hover:bg-violet-500 disabled:opacity-50">
-            {submitting ? 'Submitting…' : application ? 'Resubmit for review' : 'Submit identity application'}
+            {submitting ? 'Submitting…' : application ? 'Send again' : 'Submit verification request'}
           </button>
         </form>
       ) : null}
