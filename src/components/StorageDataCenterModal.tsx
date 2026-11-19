@@ -6,7 +6,7 @@ import {
   X, HardDrive, ShieldCheck, Cpu, Battery, Activity, Info, AlertTriangle, 
   Trash2, RefreshCw, Sparkles, Search, Sliders, Check, Download, ChevronRight, 
   Image, Video, Mic, FileText, Globe, Share2, Archive, Star, Play, Pause, 
-  Smartphone, Wifi, Eye, Radio, Key, Cloud, Saved data, BarChart2, Zap, 
+  Smartphone, Wifi, Eye, Radio, Key, Cloud, Database, BarChart2, Zap, 
   Settings, Lock, Unlock, HelpCircle, FileSpreadsheet, ArrowDownCircle, AlertCircle
 } from 'lucide-react';
 
@@ -223,7 +223,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     level: 28,
   });
 
-  // 11. Saved data Optimization Index Check
+  // 11. Database Optimization Index Check
   const [dbOptimizations, setDbOptimizations] = useState({
     indexHealth: '100%',
     queryCaching: 'Enabled',
@@ -757,7 +757,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
             <div className="w-full md:w-64 border-r border-white/5 bg-black/20 overflow-y-auto p-3 space-y-1 shrink-0">
               {[
                 { id: 'dashboard', label: 'Storage on this device', icon: HardDrive, badge: `${totalNexoraSpaceGB} GB` },
-                { id: 'conversations', label: 'Chat storage', icon: Saved data, count: conversationsList.length },
+                { id: 'conversations', label: 'Chat storage', icon: Database, count: conversationsList.length },
                 { id: 'downloads', label: 'Download settings', icon: Download, badge: downloads.adaptiveDataSaver ? 'Saver On' : '' }
               ].map(tab => {
                 const Icon = tab.icon;
@@ -975,7 +975,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     <>
                       <div>
                         <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                          <Saved data className="w-4 h-4 text-violet-400" /> Conversation Storage Ledger
+                          <Database className="w-4 h-4 text-violet-400" /> Conversation Storage Ledger
                         </h4>
                         <p className="text-[11px] text-zinc-400 mt-1">List of chat communication bridges sorted by absolute disk storage allocation. Click any conversation card to open the complete media browser.</p>
                       </div>
@@ -983,7 +983,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       {/* Conversations listing */}
                       {filteredConversations.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 px-5 py-8 text-center">
-                          <Saved data className="mx-auto h-7 w-7 text-zinc-500" />
+                          <Database className="mx-auto h-7 w-7 text-zinc-500" />
                           <p className="mt-3 text-sm font-semibold text-white">No conversation storage data available</p>
                           <p className="mt-1 text-xs leading-relaxed text-zinc-400">This panel is not connected to a durable chat-media index yet. Your conversations and attachments have not been scanned or changed.</p>
                         </div>
@@ -1113,7 +1113,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       {/* Explorer Media Filters */}
                       <div className="flex flex-wrap gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
                         {[
-                          { id: 'all', label: 'All Files', icon: Saved data },
+                          { id: 'all', label: 'All Files', icon: Database },
                           { id: 'photo', label: 'Photos', icon: Image },
                           { id: 'video', label: 'Videos', icon: Video },
                           { id: 'voice', label: 'Voice Notes', icon: Mic },
@@ -1743,7 +1743,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         <div className="p-4 bg-slate-950/60 border border-white/5 rounded-2xl space-y-2.5 text-left">
                           <div className="flex justify-between items-center">
                             <span className="text-[10px] font-mono text-zinc-400 flex items-center gap-1">
-                              <Saved data className="w-3.5 h-3.5 text-pink-400" /> Smart loading
+                              <Database className="w-3.5 h-3.5 text-pink-400" /> Smart loading
                             </span>
                             <span className="font-mono text-xs text-pink-400 font-bold">1.25M Rows</span>
                           </div>
