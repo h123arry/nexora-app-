@@ -15,7 +15,7 @@ before(async () => {
   await Promise.all([
     ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
     ...fixtureUsers.map(id => db.recursiveDelete(db.doc(`users/${id}`))),
-    ...fixtureUsers.filter(id => id !== 'author').map(id => db.doc(`publicProfiles/${id}`).delete()),
+    ...fixtureUsers.map(id => db.doc(`publicProfiles/${id}`).delete()),
   ]);
   await db.doc('publicProfiles/author').set({ username: 'author', name: 'Author', avatar: '', sparks: 0 });
   await db.doc('users/author').set({ sparks: 0 });
