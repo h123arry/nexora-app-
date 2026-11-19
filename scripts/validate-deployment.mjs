@@ -49,8 +49,12 @@ if (webConfig) {
   if (webConfig.authDomain !== `${expectedProjectId}.firebaseapp.com`) {
     failures.push('firebase-applet-config.json: authDomain must match the owner-provided Firebase project');
   }
-  if (webConfig.storageBucket !== `${expectedProjectId}.appspot.com`) {
-    failures.push('firebase-applet-config.json: storageBucket must match the owner-provided bucket');
+  const validStorageBuckets = new Set([
+    `${expectedProjectId}.appspot.com`,
+    `${expectedProjectId}.firebasestorage.app`,
+  ]);
+  if (!validStorageBuckets.has(webConfig.storageBucket)) {
+    failures.push('firebase-applet-config.json: storageBucket must use the owner project bucket name');
   }
   for (const [name, value] of Object.entries(webConfig)) {
     if (typeof value === 'string' && value.includes('<owner-')) failures.push(`firebase-applet-config.json: ${name} still requires owner-provided configuration`);
