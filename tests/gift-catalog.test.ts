@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { GIFT_CATALOG, GIFT_CATALOG_VERSION, findNexoraGift } from '../functions/src/giftCatalogPolicy.js';
 
-test('GIFTVERSE contains 1,000 unique gift identities, names and image references', () => {
-  assert.equal(GIFT_CATALOG.length, 1000);
-  assert.equal(new Set(GIFT_CATALOG.map(g => g.id)).size, 1000);
-  assert.equal(new Set(GIFT_CATALOG.map(g => g.image)).size, 1000);
-  assert.equal(new Set(GIFT_CATALOG.map(g => g.name)).size, 1000);
+test('GIFTVERSE contains 1,100 unique gift identities, names and image references', () => {
+  assert.equal(GIFT_CATALOG.length, 1100);
+  assert.equal(new Set(GIFT_CATALOG.map(g => g.id)).size, 1100);
+  assert.equal(new Set(GIFT_CATALOG.map(g => g.image)).size, 1100);
+  assert.equal(new Set(GIFT_CATALOG.map(g => g.name)).size, 1100);
 });
 
 test('all catalogue artwork resolves to bundled SVG files and distinct sprite symbols', () => {
@@ -19,12 +19,12 @@ test('all catalogue artwork resolves to bundled SVG files and distinct sprite sy
     const artwork = cache.get(assetPath);
     assert.ok(artwork.startsWith('<svg'));
     if (symbolId) assert.ok(artwork.includes('<symbol id=\"' + symbolId + '\"'), 'Missing symbol for ' + gift.id);
-    else assert.ok(artwork.includes('data-gift-id=\"' + gift.id + '\"'), 'Missing image for ' + gift.id);
+    else assert.ok(artwork.includes('<title id=\"title\">' + gift.name + '</title>'), 'Missing dedicated artwork title for ' + gift.id);
   }
 });
 
 test('all gifts have unique descriptions, safe prices and valid rarity/animation', () => {
-  assert.equal(new Set(GIFT_CATALOG.map(g => g.description)).size, 1000);
+  assert.equal(new Set(GIFT_CATALOG.map(g => g.description)).size, 1100);
   for (const gift of GIFT_CATALOG) {
     assert.ok(Number.isSafeInteger(gift.priceNex) && gift.priceNex > 0);
     assert.ok(gift.description.length > 35);
@@ -35,7 +35,7 @@ test('all gifts have unique descriptions, safe prices and valid rarity/animation
 
 test('catalogue spans fifteen collections and a varied NEX price ladder', () => {
   assert.ok(new Set(GIFT_CATALOG.map(g => g.category)).size >= 15);
-  assert.deepEqual([...new Set(GIFT_CATALOG.map(g => g.priceNex))].sort((a,b) => a-b), [5,10,20,35,50,100,250,500,1500,5000,10000]);
+  assert.deepEqual([...new Set(GIFT_CATALOG.map(g => g.priceNex))].sort((a,b) => a-b), [5,10,20,25,35,50,80,100,120,180,250,300,500,900,1500,1800,5000,10000]);
 });
 
 test('880 imported artworks have unique source provenance and share-alike records', () => {
@@ -46,7 +46,7 @@ test('880 imported artworks have unique source provenance and share-alike record
 });
 
 test('server gift lookup retains existing prices and rejects unknown ids', () => {
-  assert.equal(GIFT_CATALOG_VERSION, 2);
+  assert.equal(GIFT_CATALOG_VERSION, 3);
   assert.equal(findNexoraGift('royal-01')?.priceNex, 5);
   assert.equal(findNexoraGift('missing'), undefined);
 });

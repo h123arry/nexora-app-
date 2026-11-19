@@ -1,6 +1,6 @@
 import type { NexoraGift } from './giftCatalogPolicy.js';
 
-// One hundred additional gifts with individual bundled SVG artwork.
+// One hundred additional gifts with dedicated bundled SVG artwork.
 export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
   {
     "id": "oceanic-n01",
@@ -14,7 +14,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Abyssal Crown: A distinctive common oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "oceanic-n02",
@@ -28,7 +28,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Sapphire Leviathan: A distinctive common oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "oceanic-n03",
@@ -42,7 +42,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Pearl Tide Palace: A distinctive uncommon oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "oceanic-n04",
@@ -56,7 +56,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Moonlit Manta: A distinctive uncommon oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "oceanic-n05",
@@ -70,7 +70,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Coral Cathedral: A distinctive rare oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "oceanic-n06",
@@ -84,7 +84,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Triton’s Royal Trident: A distinctive rare oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "oceanic-n07",
@@ -98,7 +98,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Drowned Treasure Vault: A distinctive epic oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "oceanic-n08",
@@ -112,7 +112,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Siren’s Glass Harp: A distinctive epic oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "oceanic-n09",
@@ -126,7 +126,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A legendary oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Aqua Seraph: A distinctive legendary oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "oceanic-n10",
@@ -140,7 +140,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": true,
     "icon": "✦",
-    "description": "A legendary oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Eternal Blue: A distinctive legendary oceanic wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "elemental-n01",
@@ -154,7 +154,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Solar Tempest: A distinctive common elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "elemental-n02",
@@ -168,7 +168,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Obsidian Inferno: A distinctive common elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "elemental-n03",
@@ -182,7 +182,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Frostfire Phoenix: A distinctive uncommon elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "elemental-n04",
@@ -196,7 +196,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Thunder Sovereign: A distinctive uncommon elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "elemental-n05",
@@ -210,7 +210,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Emerald Monsoon: A distinctive rare elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "elemental-n06",
@@ -224,7 +224,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Volcanic Heart: A distinctive rare elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "elemental-n07",
@@ -238,7 +238,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Glacier Titan: A distinctive epic elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "elemental-n08",
@@ -252,7 +252,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Aurora Flame: A distinctive epic elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "elemental-n09",
@@ -266,7 +266,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A legendary elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Stormcaller’s Orb: A distinctive legendary elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "elemental-n10",
@@ -280,7 +280,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": true,
     "icon": "✦",
-    "description": "A legendary elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Primal Convergence: A distinctive legendary elemental dominion collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "architecture-n01",
@@ -294,7 +294,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Skyglass Citadel: A distinctive common skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "architecture-n02",
@@ -308,7 +308,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Floating Palace: A distinctive common skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "architecture-n03",
@@ -322,7 +322,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Crystal Opera House: A distinctive uncommon skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "architecture-n04",
@@ -336,7 +336,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Golden Observatory: A distinctive uncommon skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "architecture-n05",
@@ -350,7 +350,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Moonbridge Pavilion: A distinctive rare skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "architecture-n06",
@@ -364,7 +364,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Sapphire Lighthouse: A distinctive rare skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "architecture-n07",
@@ -378,7 +378,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Imperial Clocktower: A distinctive epic skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "architecture-n08",
@@ -392,7 +392,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Cloudspire Cathedral: A distinctive epic skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "architecture-n09",
@@ -406,7 +406,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A legendary skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Infinite Atrium: A distinctive legendary skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "architecture-n10",
@@ -420,7 +420,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": true,
     "icon": "✦",
-    "description": "A legendary skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Crowned Metropolis: A distinctive legendary skyline wonders collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "gemstone-n01",
@@ -434,7 +434,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Amethyst Monarch: A distinctive common gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "gemstone-n02",
@@ -448,7 +448,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Cobalt Starfire: A distinctive common gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "gemstone-n03",
@@ -462,7 +462,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Ruby Constellation: A distinctive uncommon gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "gemstone-n04",
@@ -476,7 +476,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Diamond Rose Reliquary: A distinctive uncommon gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "gemstone-n05",
@@ -490,7 +490,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Opal Dreamcatcher: A distinctive rare gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "gemstone-n06",
@@ -504,7 +504,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Emerald Dragonstone: A distinctive rare gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "gemstone-n07",
@@ -518,7 +518,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Celestite Heart: A distinctive epic gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "gemstone-n08",
@@ -532,7 +532,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Black Onyx Panther: A distinctive epic gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "gemstone-n09",
@@ -546,7 +546,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A legendary gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Prismatic Crown Jewel: A distinctive legendary gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "gemstone-n10",
@@ -560,7 +560,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": true,
     "icon": "✦",
-    "description": "A legendary gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "First Diamond: A distinctive legendary gemstone atelier collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "adventure-n01",
@@ -574,7 +574,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Compass of First Light: A distinctive common explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "adventure-n02",
@@ -588,7 +588,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Lost Kingdom Map: A distinctive common explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "adventure-n03",
@@ -602,7 +602,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Voyager’s Airship: A distinctive uncommon explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "adventure-n04",
@@ -616,7 +616,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Sands of Time Hourglass: A distinctive uncommon explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "adventure-n05",
@@ -630,7 +630,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Seven Seas Sextant: A distinctive rare explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "adventure-n06",
@@ -644,7 +644,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Pathfinder’s Lantern: A distinctive rare explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "adventure-n07",
@@ -658,7 +658,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Atlas Key: A distinctive epic explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "adventure-n08",
@@ -672,7 +672,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Skybound Telescope: A distinctive epic explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "adventure-n09",
@@ -686,7 +686,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A legendary explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Explorer’s Crown: A distinctive legendary explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "adventure-n10",
@@ -700,7 +700,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": true,
     "icon": "✦",
-    "description": "A legendary explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Final Frontier: A distinctive legendary explorer’s relics collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "couture-n01",
@@ -714,7 +714,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Midnight Velvet Mantle: A distinctive common couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "couture-n02",
@@ -728,7 +728,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Aurora Gown: A distinctive common couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "couture-n03",
@@ -742,7 +742,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Empress’s Sapphire Fan: A distinctive uncommon couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "couture-n04",
@@ -756,7 +756,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Royal Silk Train: A distinctive uncommon couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "couture-n05",
@@ -770,7 +770,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Starlit Tiara: A distinctive rare couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "couture-n06",
@@ -784,7 +784,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Golden Phoenix Brooch: A distinctive rare couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "couture-n07",
@@ -798,7 +798,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Sovereign Cape: A distinctive epic couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "couture-n08",
@@ -812,7 +812,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Pearl-Threaded Parasol: A distinctive epic couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "couture-n09",
@@ -826,7 +826,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A legendary couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Imperial Masquerade: A distinctive legendary couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "couture-n10",
@@ -840,7 +840,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": true,
     "icon": "✦",
-    "description": "A legendary couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Crown of the First Lady: A distinctive legendary couture & regalia collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "spirit-n01",
@@ -854,7 +854,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Anansi’s Golden Thread: A distinctive common spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "spirit-n02",
@@ -868,7 +868,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Moon Jaguar Spirit: A distinctive common spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "spirit-n03",
@@ -882,7 +882,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Thunderbird Totem: A distinctive uncommon spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "spirit-n04",
@@ -896,7 +896,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Jade Kitsune: A distinctive uncommon spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "spirit-n05",
@@ -910,7 +910,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Ivory Sphinx: A distinctive rare spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "spirit-n06",
@@ -924,7 +924,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Spirit Baobab: A distinctive rare spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "spirit-n07",
@@ -938,7 +938,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Dream Weaver: A distinctive epic spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "spirit-n08",
@@ -952,7 +952,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Guardian’s Mask: A distinctive epic spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "spirit-n09",
@@ -966,7 +966,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A legendary spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Phoenix Oracle: A distinctive legendary spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "spirit-n10",
@@ -980,7 +980,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": true,
     "icon": "✦",
-    "description": "A legendary spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Ancestor’s Star: A distinctive legendary spirit & myth collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "arena-n01",
@@ -994,7 +994,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Championship Torch: A distinctive common arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "arena-n02",
@@ -1008,7 +1008,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Diamond Ball: A distinctive common arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "arena-n03",
@@ -1022,7 +1022,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Victory Laurels: A distinctive uncommon arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "arena-n04",
@@ -1036,7 +1036,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Golden Goalpost: A distinctive uncommon arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "arena-n05",
@@ -1050,7 +1050,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Stadium of Stars: A distinctive rare arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "arena-n06",
@@ -1064,7 +1064,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Grand Slam Racket: A distinctive rare arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "arena-n07",
@@ -1078,7 +1078,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Champion’s Belt: A distinctive epic arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "arena-n08",
@@ -1092,7 +1092,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "World Cup Comet: A distinctive epic arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "arena-n09",
@@ -1106,7 +1106,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A legendary arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Hall of Legends: A distinctive legendary arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "arena-n10",
@@ -1120,7 +1120,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": true,
     "icon": "✦",
-    "description": "A legendary arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Eternal Victory: A distinctive legendary arena legends collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "timepiece-n01",
@@ -1134,7 +1134,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Chronos’ Golden Dial: A distinctive common timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "timepiece-n02",
@@ -1148,7 +1148,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Sapphire Pendulum: A distinctive common timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "timepiece-n03",
@@ -1162,7 +1162,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Midnight Astrarium: A distinctive uncommon timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "timepiece-n04",
@@ -1176,7 +1176,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Infinity Pocket Watch: A distinctive uncommon timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "timepiece-n05",
@@ -1190,7 +1190,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Celestial Sundial: A distinctive rare timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "timepiece-n06",
@@ -1204,7 +1204,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Royal Hourglass: A distinctive rare timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "timepiece-n07",
@@ -1218,7 +1218,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Timekeeper’s Key: A distinctive epic timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "timepiece-n08",
@@ -1232,7 +1232,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Lunar Orrery: A distinctive epic timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "timepiece-n09",
@@ -1246,7 +1246,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A legendary timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Eternal Moment: A distinctive legendary timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "timepiece-n10",
@@ -1260,7 +1260,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": true,
     "icon": "✦",
-    "description": "A legendary timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "First Second: A distinctive legendary timekeepers’ gallery collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "dreamscape-n01",
@@ -1274,7 +1274,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Cloud Nine Palace: A distinctive common dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "dreamscape-n02",
@@ -1288,7 +1288,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A common dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Velvet Moon: A distinctive common dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "dreamscape-n03",
@@ -1302,7 +1302,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Stardust Carousel: A distinctive uncommon dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "dreamscape-n04",
@@ -1316,7 +1316,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A uncommon dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Lucid Dream Portal: A distinctive uncommon dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "dreamscape-n05",
@@ -1330,7 +1330,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Whispering Constellation: A distinctive rare dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "dreamscape-n06",
@@ -1344,7 +1344,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A rare dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Floating Island: A distinctive rare dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "dreamscape-n07",
@@ -1358,7 +1358,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Rainbow Observatory: A distinctive epic dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "dreamscape-n08",
@@ -1372,7 +1372,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A epic dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Dreamcatcher Crown: A distinctive epic dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "dreamscape-n09",
@@ -1386,7 +1386,7 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✦",
-    "description": "A legendary dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Infinite Night Sky: A distinctive legendary dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   },
   {
     "id": "dreamscape-n10",
@@ -1400,6 +1400,6 @@ export const GIFTVERSE_COLLECTION_TWO: NexoraGift[] = [
     "subscriptionExclusive": false,
     "limitedEdition": true,
     "icon": "✦",
-    "description": "A legendary dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
+    "description": "Universe in Bloom: A distinctive legendary dreamscape collection collectible, individually illustrated for NEXORA’s midnight-violet GiftVerse."
   }
 ];
