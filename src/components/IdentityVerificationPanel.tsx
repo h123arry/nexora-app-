@@ -50,7 +50,7 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
       }
     } catch {
       if (generation === refreshGeneration.current) {
-        setError('Couldn't load your verification status. Check your connection and try again.');
+        setError('Could not load your verification status. Check your connection and try again.');
       }
     } finally {
       if (generation === refreshGeneration.current) setLoading(false);
