@@ -1015,8 +1015,14 @@ export async function saveNotificationPreferences(userId: string, preferences: N
   if (!auth.currentUser || auth.currentUser.uid !== userId) throw new Error('Only the signed-in account can change its notification preferences.');
   const allowed: (keyof NotificationPreferenceMap)[] = ['likes','comments','followers','mentions','communities','events','verification','creatorUploads','friendRequests','securityAlerts','push'];
   const clean = Object.fromEntries(allowed.map(key => [key, preferences[key] === true])) as NotificationPreferenceMap;
-  await setDoc(doc(db, 'users', userId, 'settings', 'preferences'), {
-    notifications: clean,
-    updatedAt: serverTimestamp(),
-  }, { merge: true });
+  const preferencesRef = doc(db, 'users', userId, 'settings', 'preferences');
+  const existing = await getDoc(preferencesRef);
+  if (existing.exists()) {
+    await updateDoc(preferencesRef, { notifications: clean, updatedAt: serverTimestamp() });
+  } else {
+    await setDoc(preferencesRef, {
+      privacy: {}, notifications: clean, appearance: {}, content: {}, feed: {}, security: {},
+      updatedAt: serverTimestamp(),
+    });
+  }
 }
