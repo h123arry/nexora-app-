@@ -1867,30 +1867,33 @@ export default function App() {
     setPosts(prev => prev.filter(p => p.id !== postId));
   };
 
-  const handleAddComment = (postId: string, commentContent: string) => {
-    requireAuth(() => {
+  const handleAddComment = async (postId: string, commentContent: string): Promise<boolean> => {
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid || requiresPublicAccountSetup) {
+      requireAuth(() => { void handleAddComment(postId, commentContent); }, 'Join Nexora to comment on posts and join community discussions.');
+      return false;
+    }
+    try {
       const commentId = `comment-${crypto.randomUUID()}`;
-      void addPublicPostCommentDb(currentUser.id, postId, commentContent, commentId)
-        .then(result => {
-          if (result.created) {
-            const targetPost = posts.find(post => post.id === postId);
-            if (targetPost) void addHelpfulCommentDb(currentUser.id, result.comment.id, targetPost.userId);
-          }
-          setPosts(prevPosts => prevPosts.map(post => {
-            if (post.id !== postId) return post;
-            const alreadyPresent = post.comments.some(comment => comment.id === result.comment.id);
-            return {
-              ...post,
-              commentsCount: result.commentsCount,
-              comments: alreadyPresent ? post.comments : [...post.comments, result.comment],
-            };
-          }));
-        })
-        .catch(error => {
-          const message = error instanceof Error ? error.message : 'Could not post your comment. Please retry.';
-          window.dispatchEvent(new CustomEvent('toast', { detail: message }));
-        });
-    }, 'Join Nexora to comment on posts and join community discussions.');
+      const result = await addPublicPostCommentDb(currentUser.id, postId, commentContent, commentId);
+      if (result.created) {
+        const targetPost = posts.find(post => post.id === postId);
+        if (targetPost) void addHelpfulCommentDb(currentUser.id, result.comment.id, targetPost.userId);
+      }
+      setPosts(prevPosts => prevPosts.map(post => {
+        if (post.id !== postId) return post;
+        const alreadyPresent = post.comments.some(comment => comment.id === result.comment.id);
+        return {
+          ...post,
+          commentsCount: result.commentsCount,
+          comments: alreadyPresent ? post.comments : [...post.comments, result.comment],
+        };
+      }));
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not post your comment. Please retry.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+      return false;
+    }
   };
 
   const handleRepostPost = async (postId: string, quoteText?: string): Promise<boolean> => {
@@ -1901,11 +1904,9 @@ export default function App() {
     try {
       const result = await createPostRepost(postId, quoteText);
       setPosts(previous => {
-        const source = previous.find(post => post.id === postId);
-        if (!source) return previous;
-        const repostAlreadyLoaded = previous.some(post => post.id === result.post.id);
-        const updated = previous.map(post => post.id === postId ? { ...post, shares: result.shares } : post);
-        return repostAlreadyLoaded ? updated : [result.post, ...updated];
+        const withoutDuplicate = previous.filter(post => post.id !== result.post.id);
+        const updated = withoutDuplicate.map(post => post.id === postId ? { ...post, shares: result.shares } : post);
+        return [result.post, ...updated];
       });
       window.dispatchEvent(new CustomEvent('toast', { detail: quoteText ? 'Quote posted to your profile and the NEXORA feed.' : 'Reposted to your profile and the NEXORA feed.' }));
       return true;
