@@ -587,7 +587,7 @@ export default function PrivacySettingsModal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
                       { key: 'lastSeen', label: 'Last Seen Timestamp', desc: 'When you were last active on the ledger.' },
-                      { key: 'onlineStatus', label: 'Show when you're online', desc: 'Show people when you're active.' },
+                      { key: 'onlineStatus', label: 'Show when you are online', desc: 'Show people when you're active.' },
                       { key: 'typingIndicator', label: 'Typing indicator', desc: 'Let others know when you type.' },
                       { key: 'recordingIndicator', label: 'Recording indicator', desc: 'Show when you record a voice message.' },
                       { key: 'currentlyActive', label: 'Active Status List', desc: 'Appear in the currently active friends strip.' },
