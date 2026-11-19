@@ -222,7 +222,7 @@ export default function CreatorDashboardView({
       setScheduledPosts(prev => prev.map(item => item.id === scheduleId ? { ...item, status: 'cancelled' } : item));
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Scheduled post cancelled.' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Scheduled post could not be cancelled.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'The scheduled post couldn't be cancelled.' }));
     }
   };
 
@@ -239,7 +239,7 @@ export default function CreatorDashboardView({
       const refreshed = await listCreatorStudioTemplates();
       setStudioTemplates(refreshed);
       setTemplateName('');
-      window.dispatchEvent(new CustomEvent('toast', { detail: saved.saved ? 'Reusable template saved to your account.' : 'Template could not be saved.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: saved.saved ? 'Template saved to your account.' : 'Template could not be saved.' }));
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Template could not be saved.' }));
     }
@@ -409,7 +409,7 @@ export default function CreatorDashboardView({
       }, ...prev.filter(media => media.id !== `asset-${uploaded.mediaId}`)]);
       setDraftUrl(uploaded.downloadUrl);
       setDraftType(uploadedType);
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Media uploaded securely to your Nexora account.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Your media was uploaded to your NEXORA account.' }));
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', {
         detail: error instanceof Error ? error.message : 'Media upload failed. Please try again.'
@@ -689,7 +689,7 @@ export default function CreatorDashboardView({
             <h2 className="text-2xl font-black text-white tracking-tight">NEXORA Studio</h2>
             <span className="text-[10px] border border-violet-400/20 bg-violet-500/10 text-violet-200 font-mono font-bold uppercase px-2 py-0.5 rounded-full">Creator tools</span>
           </div>
-          <p className="text-sm text-violet-200/60 mt-1">Manage content publishing, deep metrics analysis, and platform growth.</p>
+          <p className="text-sm text-violet-200/60 mt-1">Create and manage posts, see how they're doing, and grow your audience.</p>
         </div>
         <div className="flex gap-2">
           {onClose && (
@@ -748,7 +748,7 @@ export default function CreatorDashboardView({
         {[
           { id: 'overview', label: 'Overview', icon: TrendingUp },
           { id: 'academy', label: 'Creator Academy', icon: GraduationCap },
-          { id: 'analytics', label: 'Audience Insights', icon: Users },
+          { id: 'analytics', label: 'Audience results', icon: Users },
           { id: 'content', label: 'Content Manager', icon: FileText },
           { id: 'drafts', label: 'Drafts & Schedule', icon: Calendar },
           { id: 'media', label: 'Media Library', icon: Folder },
@@ -835,8 +835,8 @@ export default function CreatorDashboardView({
                 <div className="lg:col-span-2 p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Performance over time</h4>
-                      <p className="text-xs text-zinc-400 font-mono">Time-series analytics are not available yet.</p>
+                      <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Your results over time</h4>
+                      <p className="text-xs text-zinc-400 font-mono">Post results over time aren't available yet.</p>
                     </div>
                     <div className="flex items-center gap-3 text-[10px] font-bold">
                       <span className="text-zinc-500">No time-series data</span>
@@ -869,8 +869,8 @@ export default function CreatorDashboardView({
               <div className="rounded-2xl border border-white/10 bg-[#0a071f]/70 p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Audience growth</h4>
-                    <p className="mt-1 text-[11px] text-zinc-400">{analyticsDays}-day server-transactional follower and profile activity</p>
+                    <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Your audience</h4>
+                    <p className="mt-1 text-[11px] text-zinc-400">New followers and profile visits over {analyticsDays} days</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <select value={analyticsDays} onChange={event => setAnalyticsDays(Number(event.target.value) as 7 | 30)} className="rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-[10px] font-bold text-zinc-300">
@@ -883,7 +883,7 @@ export default function CreatorDashboardView({
                 {isAudienceLoading ? (
                   <p className="mt-5 text-xs text-zinc-400">Loading audience records…</p>
                 ) : audienceError ? (
-                  <p className="mt-5 text-xs text-amber-200">Audience growth data could not be loaded. Try again later.</p>
+                  <p className="mt-5 text-xs text-amber-200">Your audience details couldn't load. Please try again.</p>
                 ) : audienceAnalytics ? (
                   <>
                     <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
