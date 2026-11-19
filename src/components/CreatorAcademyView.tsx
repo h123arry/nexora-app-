@@ -313,7 +313,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
           <div className="max-w-2xl space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-violet-200"><GraduationCap size={14}/> NEXORA INSTITUTE</div>
             <h2 className="text-3xl font-black tracking-tight md:text-4xl">The Creator Academy</h2>
-            <p className="max-w-xl text-sm leading-6 text-violet-100/70">A structured learning institution for creators. Learn the craft, build your community and develop a sustainable creator career.</p>
+            <p className="max-w-xl text-sm leading-6 text-violet-100/70">A place for creators to learn, build a community and grow a lasting career.</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4"><p className="text-2xl font-black">{completedCourses}<span className="text-sm text-white/40">/{courses.length}</span></p><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/50">Courses completed</p></div>
@@ -400,7 +400,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
               ))}
             </section>
           )}
-          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-violet-400/15 bg-violet-500/5 p-4"><Sparkles size={17} className="mt-0.5 shrink-0 text-violet-300"/><p className="text-xs leading-5 text-white/55">Your learning record syncs to your NEXORA account. Institutional assessments are server graded, and credentials are issued only after a passing result. Introductory lessons record progress but do not automatically award certificates.</p></div>
+          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-violet-400/15 bg-violet-500/5 p-4"><Sparkles size={17} className="mt-0.5 shrink-0 text-violet-300"/><p className="text-xs leading-5 text-white/55">Your progress is saved to your NEXORA account. Tests are marked automatically, and you receive a certificate after you pass. Introductory lessons help you learn but do not give certificates.</p></div>
         </section>
       </div>
 
@@ -416,9 +416,9 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
 
       <section className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/8 bg-[#0b1020] p-4"><div className="flex items-center gap-2 text-violet-300"><Award size={17}/><span className="text-xs font-bold">Institutional learning record</span></div><p className="mt-2 text-xs leading-5 text-white/45">Your completed lessons are saved against your account. Eligible courses can connect this learning record to assessed credentials and mentorship.</p></div>
-        <div className="rounded-2xl border border-white/8 bg-[#0b1020] p-4"><div className="flex items-center gap-2 text-violet-300"><GraduationCap size={17}/><span className="text-xs font-bold">Built for long-term growth</span></div><p className="mt-2 text-xs leading-5 text-white/45">The curriculum covers craft, audience, community, live production, analytics, business, brand and creator safety.</p></div>
+        <div className="rounded-2xl border border-white/8 bg-[#0b1020] p-4"><div className="flex items-center gap-2 text-violet-300"><GraduationCap size={17}/><span className="text-xs font-bold">Built for long-term growth</span></div><p className="mt-2 text-xs leading-5 text-white/45">Our courses cover content creation, growing your audience, building a community, going live, understanding your results, business and creator safety.</p></div>
       </section>
-      {loading && <p className="text-center text-xs text-white/35">Syncing your learning record…</p>}
+      {loading && <p className="text-center text-xs text-white/35">Saving your progress…</p>}
       {isInstructor && <CreatorAcademyInstitutionTools />}
     </div>
   );
