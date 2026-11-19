@@ -6,10 +6,10 @@ import { CREATOR_COMMUNITY_ASSETS, type CreatorAssetCategory, type CreatorCommun
 interface Props { currentUser: User; onUpdateProfile?: (data: Partial<User>) => void; }
 const categories: Array<{ id: CreatorAssetCategory; label: string; icon: React.ElementType; hint: string }> = [
   { id: 'profile-frame', label: 'Profile frames', icon: UserRound, hint: 'Give your portrait a distinctive border.' },
-  { id: 'profile-badge', label: 'Creator badges', icon: Award, hint: 'Showcase a creator identity emblem.' },
+  { id: 'profile-badge', label: 'Creator badges', icon: Award, hint: 'Show your creator badge.' },
   { id: 'circle-cover', label: 'Circle covers', icon: Users, hint: 'Choose a visual identity for a community.' },
-  { id: 'milestone-art', label: 'Milestone art', icon: Sparkles, hint: 'Celebrate meaningful creator achievements.' },
-  { id: 'live-overlay', label: 'Live overlays', icon: Radio, hint: 'Frame live sessions, events and premieres.' },
+  { id: 'milestone-art', label: 'Milestone art', icon: Sparkles, hint: 'Celebrate your achievements.' },
+  { id: 'live-overlay', label: 'Live overlays', icon: Radio, hint: 'Add a frame to your live videos and events.' },
 ];
 export default function CreatorCommunityAssetLibrary({ currentUser, onUpdateProfile }: Props) {
   const [category, setCategory] = useState<CreatorAssetCategory>('profile-frame');
@@ -33,7 +33,7 @@ export default function CreatorCommunityAssetLibrary({ currentUser, onUpdateProf
     <div className="rounded-3xl border border-violet-400/15 bg-gradient-to-br from-[#171039] via-[#0d0a22] to-[#080713] p-5 sm:p-6">
       <div className="flex items-center gap-2 text-violet-200"><ImageIcon className="h-4 w-4"/><span className="text-[10px] font-black uppercase tracking-[.22em]">NEXORA creative collection</span></div>
       <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div><h2 className="text-xl sm:text-2xl font-black">Creator & Community Asset Library</h2><p className="mt-1 max-w-2xl text-xs leading-relaxed text-violet-100/65">Original, lightweight vector artwork for identity, community spaces, milestones and live productions.</p></div>
+        <div><h2 className="text-xl sm:text-2xl font-black">Creator designs</h2><p className="mt-1 max-w-2xl text-xs leading-relaxed text-violet-100/65">Original designs for your profile, community, achievements and live videos.</p></div>
         <span className="w-fit rounded-full border border-violet-300/20 bg-violet-400/10 px-3 py-1.5 text-[10px] font-bold text-violet-200">{CREATOR_COMMUNITY_ASSETS.length} original assets</span>
       </div>
       <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-2">
