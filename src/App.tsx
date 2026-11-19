@@ -381,7 +381,7 @@ export default function App() {
 
   const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
   // Do not place a blocking onboarding modal over the public feed on first open.
-  // Visitors can explore immediately; participation prompts provide contextual setup.
+  // Public users can explore immediately; participation prompts provide contextual setup.
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const completeOnboarding = () => {
