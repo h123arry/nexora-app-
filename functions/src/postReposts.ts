@@ -104,6 +104,7 @@ export async function createPublicPostRepost(
         type: 'repost',
         userId: authorId,
         username: String(profile.username || 'A Nexora member').slice(0, 80),
+        actorName: String(profile.name || profile.username || 'NEXORA member').slice(0, 100),
         avatar: typeof profile.avatar === 'string' ? profile.avatar.slice(0, 1000) : '',
         targetId: postId,
         content: 'reposted your public post',
