@@ -197,6 +197,16 @@ export default function App() {
   // Public browsing is the first experience. Ask for account details only when
   // the visitor attempts an action that requires a complete public profile.
 
+  // Offer profile setup after ten seconds of public browsing. A dismissal is
+  // remembered for this anonymous UID; restricted actions can still reopen it.
+  useEffect(() => {
+    if (authInitializing || !isLoggedIn || !firebaseUser?.isAnonymous || !requiresPublicAccountSetup) return;
+    const dismissedKey = `nexora_profile_setup_dismissed_${firebaseUser.uid}`;
+    if (localStorage.getItem(dismissedKey) === 'true') return;
+    const timer = window.setTimeout(() => setShowPublicAccountSetup(true), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [authInitializing, isLoggedIn, firebaseUser?.uid, firebaseUser?.isAnonymous, requiresPublicAccountSetup]);
+
   const requestProfileSetup = () => {
     if (isLoggedIn && requiresPublicAccountSetup) {
       setShowPublicAccountSetup(true);
@@ -3305,6 +3315,7 @@ export default function App() {
         <PublicAccountSetup
           user={firebaseProfile}
           onCancel={() => {
+            if (firebaseUser) localStorage.setItem(`nexora_profile_setup_dismissed_${firebaseUser.uid}`, 'true');
             setShowPublicAccountSetup(false);
             setPendingAuthAction(null);
           }}
