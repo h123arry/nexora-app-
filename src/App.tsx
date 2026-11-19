@@ -1045,7 +1045,19 @@ export default function App() {
       if (target) handleViewProfile(target);
     };
     window.addEventListener('nexora-view-profile', handleViewProfileEvent);
+    const handleServiceWorkerPushOpen = (event: MessageEvent) => {
+      if (event.data?.type !== 'NEXORA_PUSH_OPEN') return;
+      const data = event.data.data || {};
+      if (data.type === 'follow' || data.type === 'profile_view') {
+        const profileId = data.userId || data.targetId;
+        if (profileId) handleViewProfile(profileId);
+        return;
+      }
+      navigateTo(data.type === 'message' || data.type === 'chat' ? 'inbox' : 'activity', null);
+    };
+    navigator.serviceWorker?.addEventListener('message', handleServiceWorkerPushOpen);
     return () => {
+      navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerPushOpen);
       window.removeEventListener('popstate', onPopState);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('toggleNavMenu', handleToggleNav);
