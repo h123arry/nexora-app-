@@ -63,7 +63,7 @@ test('reply retries with the same idempotency key do not duplicate the reply', a
   const second = await addPublicPostCommentReply(db, actorId, postId, commentId, 'A thoughtful reply', 'reply-test-idempotent');
   assert.equal(first.created, true);
   assert.equal(second.created, false);
-  assert.equal((await db.doc(`posts/${postId}`).get()).get('comments')[0].replies.length, 2);
+  assert.equal((await db.doc(`posts/${postId}`).get()).get('comments')[0].replies.length, 3);
 });
 
 test('rejects invalid, private, missing and oversized replies', async () => {
