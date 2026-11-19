@@ -534,7 +534,7 @@ export default function PrivacySettingsModal({
                 { id: 'presence', label: 'Presence & Activity', icon: Eye, count: Object.keys(presence).length },
                 { id: 'profile', label: 'Profile Visibility', icon: User, badge: 'Account saved' },
                 { id: 'messaging', label: 'Messaging Settings', icon: Radio, count: Object.keys(messaging).length },
-                { id: 'calls', label: 'Call Controls & Silence', icon: Phone, count: Object.keys(calls).length },
+                { id: 'calls', label: 'Call settings', icon: Phone, count: Object.keys(calls).length },
                 { id: 'groups', label: 'Group permissions', icon: Lock, count: Object.keys(groups).length },
                 { id: 'discover', label: 'Who can find you', icon: Hidden, badge: discoverability.hiddenAccountMode ? 'Hidden' : '' },
                 { id: 'blocked', label: 'Blocked & Restricted', icon: ShieldBan, count: blockedUsers.length + restrictedUsers.length },
@@ -1086,7 +1086,7 @@ export default function PrivacySettingsModal({
                         { key: 'searchResults', label: 'Include in Search Results', desc: 'Let people find you in search.' },
                         { key: 'friendSuggestions', label: 'Suggest to Mutual Connections', desc: 'Suggests your handle to friends of your friends.' },
                         { key: 'nearbyDiscovery', label: 'Nearby people', desc: 'Let people nearby find your account.' },
-                        { key: 'usernameLookup', label: 'Search by Direct Handle', desc: 'Permits exact handle querying in index lookups.' },
+                        { key: 'usernameLookup', label: 'Search by username', desc: 'Lets people find you by your username.' },
                         { key: 'phoneNumberLookup', label: 'Find you by contacts', desc: 'Let people find you using their phone contacts.' },
                         { key: 'trendingUsers', label: 'Trending / Popular Account list', desc: 'Permits listing inside popular creators listings.' }
                       ].map(item => {
@@ -1244,7 +1244,7 @@ export default function PrivacySettingsModal({
                           { id: 'PIN', label: 'Numeric PIN', desc: '4-digit secure code' },
                           { id: 'Password', label: 'Alphanumeric Key', desc: 'Secure high-entropy word' },
                           { id: 'Pattern', label: 'Swipe pattern', desc: 'Swipe pattern' },
-                          { id: 'FaceUnlock', label: 'Biometric Face ID', desc: 'Local facial contour scan' }
+                          { id: 'FaceUnlock', label: 'Face unlock', desc: 'Uses your face on this phone' }
                         ].map(type => (
                           <button
                             key={type.id}
