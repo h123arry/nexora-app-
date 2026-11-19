@@ -10,8 +10,12 @@ export interface PushNotificationPayload {
   badge?: string;
   image?: string;
   data?: {
-    type?: 'spark' | 'comment' | 'mention' | 'follow' | 'security' | 'chat' | 'system';
+    type?: 'spark' | 'like' | 'comment' | 'comment_reply' | 'mention' | 'follow' | 'profile_view' | 'repost' | 'security' | 'chat' | 'message' | 'system';
     targetId?: string;
+    notificationId?: string;
+    username?: string;
+    actorName?: string;
+    userId?: string;
     url?: string;
     senderAvatar?: string;
   };
@@ -137,41 +141,47 @@ export class PushNotificationService {
     if (typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
 
-    // Filter out low-value interactions (e.g., video replays)
-    if (payload.data?.type === 'video_replay' as any) {
-      return;
-    }
+    const data = payload.data || {};
+    const options: NotificationOptions = {
+      body: payload.body,
+      icon: '/nexora-mark.png',
+      badge: '/icons/icon-48.png',
+      tag: data.notificationId || ('nexora-' + (data.type || 'general') + '-' + (data.targetId || 'update')),
+      data,
+      silent: false,
+    };
 
-    const nIcon = '/nexora-mark.png';
-
-    try {
-      const notif = new Notification(payload.title, {
-        body: payload.body,
-        icon: nIcon,
-        badge: '/icons/icon-48.png',
-        tag: `nexora-${payload.data?.type || 'general'}-${Date.now()}`,
-        data: payload.data,
-        silent: false
-      });
-
-      notif.onclick = (event) => {
-        event.preventDefault();
+    // Mobile browsers and installed Android PWAs should display through the service worker.
+    const serviceWorkerReady = 'serviceWorker' in navigator
+      ? navigator.serviceWorker.ready
+      : Promise.reject(new Error('Service workers are unavailable.'));
+    void serviceWorkerReady.then(async registration => {
+      if (typeof registration.showNotification === 'function') {
+        await registration.showNotification(payload.title, options);
+        return;
+      }
+      const notification = new Notification(payload.title, options);
+      notification.onclick = () => {
         window.focus();
-        
-        // Deep link dispatch
-        if (payload.data?.url) {
-          window.location.href = payload.data.url;
-        } else if (payload.data?.type === 'chat' && payload.data.targetId) {
-          window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox', chatId: payload.data.targetId } }));
-        } else if (payload.data?.type === 'security') {
-          window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'profile', subTab: 'security' } }));
-        } else {
-          window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'pulse' } }));
-        }
-        notif.close();
+        if (data.url) window.location.href = data.url;
+        else window.dispatchEvent(new CustomEvent('changeTab', {
+          detail: { tab: data.type === 'chat' || data.type === 'message' ? 'inbox' : 'activity' }
+        }));
+        notification.close();
       };
-    } catch {
-      console.warn('Native notification could not be displayed.');
-    }
-  }
-}
+    }).catch(() => {
+      try {
+        const notification = new Notification(payload.title, options);
+        notification.onclick = () => {
+          window.focus();
+          if (data.url) window.location.href = data.url;
+          else window.dispatchEvent(new CustomEvent('changeTab', {
+            detail: { tab: data.type === 'chat' || data.type === 'message' ? 'inbox' : 'activity' }
+          }));
+          notification.close();
+        };
+      } catch {
+        console.warn('Native notification could not be displayed.');
+      }
+    });
+  }}
