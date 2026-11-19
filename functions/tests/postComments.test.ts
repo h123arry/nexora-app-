@@ -45,6 +45,7 @@ describe('trusted public post comments', () => {
     const notifications = await db.collection('users').doc('author').collection('notifications').get();
     assert.equal(notifications.size, 1);
     assert.equal(notifications.docs[0].get('type'), 'comment');
+    assert.equal(notifications.docs[0].get('actorName'), 'Commenter');
     assert.equal(notifications.docs[0].get('userId'), 'commenter');
     assert.equal(notifications.docs[0].get('targetId'), 'comment-post-public');
   });
