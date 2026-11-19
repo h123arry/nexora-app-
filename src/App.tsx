@@ -890,6 +890,15 @@ export default function App() {
   }, [activeTab]);
 
   const [viewedUser, setViewedUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (activeTab !== 'profile' || viewedUser) return;
+    if (requiresPublicAccountSetup) {
+      setShowPublicAccountSetup(true);
+    } else if (!isLoggedIn && !authInitializing) {
+      setShowUsernameLogin(true);
+    }
+  }, [activeTab, viewedUser?.id, requiresPublicAccountSetup, isLoggedIn, authInitializing]);
   const [matrixSubTabRedirect, setMatrixSubTabRedirect] = useState<'ai' | 'studio' | 'circles' | 'missions' | 'messages'>('ai');
   const [theme, setTheme] = useState<ThemeMood>(() => {
     const saved = localStorage.getItem('nexora_theme');
