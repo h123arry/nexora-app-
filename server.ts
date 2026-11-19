@@ -267,7 +267,7 @@ r2MediaRouter.post('/upload-intent', async (req, res) => {
   if (typeof mediaId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) {
     return res.status(400).json({ error: 'A valid media asset ID is required.' });
   }
-  const purpose = metadata && typeof metadata.purpose === 'string' && ['post', 'story', 'studio-export'].includes(metadata.purpose)
+  const purpose = metadata && typeof metadata.purpose === 'string' && ['post', 'story', 'studio-export', 'profile-avatar'].includes(metadata.purpose)
     ? metadata.purpose : 'post';
   const objectKey = createR2ObjectKey(uid, mediaId);
   try {
