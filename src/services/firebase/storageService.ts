@@ -269,8 +269,8 @@ export async function deleteMediaFile(storagePath: string): Promise<void> {
     if (response.ok) return;
     const result = await response.json().catch(() => ({}));
     const isLegacyFirebaseAsset = response.status === 409 && result.code === 'not_r2_asset';
-    const isLocalR2Fallback = response.status === 503 && result.code === 'r2_not_configured' && import.meta.env.DEV;
-    if (!isLegacyFirebaseAsset && !isLocalR2Fallback) {
+    const isR2Unavailable = response.status === 503 && result.code === 'r2_not_configured';
+    if (!isLegacyFirebaseAsset && !isR2Unavailable) {
       throw new Error(typeof result.error === 'string' ? result.error : 'The media object could not be deleted.');
     }
   }
