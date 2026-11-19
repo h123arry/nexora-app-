@@ -899,7 +899,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
           );
         })}
       </div>
-      {faceTracking === 'unavailable' && <p className="text-center text-[10px] text-[#8E88A7]">AR face lenses need a one-time on-device model download. Colour and beauty filters remain available.</p>}
+      {faceTracking === 'unavailable' && <p className="text-center text-[10px] text-[#8E88A7]">Face effects need a small download the first time you use them. Colour and beauty filters are still available.</p>}
     </div>
   );
 }
