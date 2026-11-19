@@ -2474,10 +2474,10 @@ export default function App() {
                     </div>
                   ) : activeTab === 'profile' && (
                     <ProfileView
-                      currentUser={getRichUser(viewedUser || currentUser)}
+                      currentUser={getRichUser((viewedUser && globalUsersMap[viewedUser.id]) || globalUsersMap[currentUser.id] || viewedUser || currentUser)}
                       isLoggedIn={isLoggedIn}
                       posts={resolvedPosts}
-                      userSparks={userSparks}
+                      userSparks={!viewedUser || viewedUser.id === currentUser.id ? userSparks : []}
                       onUpdateProfile={handleUpdateProfile}
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
