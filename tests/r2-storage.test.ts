@@ -6,6 +6,8 @@ import {
   buildR2OriginUploadRecords,
   resolveR2Config,
   validateR2Upload,
+  isCurrentPublicProfileMedia,
+  r2MediaGatewayUrl,
 } from '../server/r2Storage';
 
 const env = {
@@ -73,4 +75,20 @@ test('R2 completion produces the same verified Origin record shape as Firebase i
     assetId: 'asset-456', ownerUid: 'user_123', mediaGeneration: 'not-a-generation',
     contentDigest: 'a'.repeat(64), contentType: 'image/webp', byteSize: 2048, studioExport: false,
   }), /immutable media generation/);
+});
+
+
+test('public profile media is delivered only while the profile points to the exact current asset', () => {
+  const avatarUrl = r2MediaGatewayUrl('avatar-123');
+  const coverUrl = r2MediaGatewayUrl('cover-456');
+
+  assert.equal(isCurrentPublicProfileMedia('profile-avatar', 'avatar-123', { avatar: avatarUrl }), true);
+  assert.equal(isCurrentPublicProfileMedia('profile-cover', 'cover-456', { coverImage: coverUrl }), true);
+
+  // Replaced assets, mismatched purposes, absent projections and post media
+  // must not gain public access through the profile-media exception.
+  assert.equal(isCurrentPublicProfileMedia('profile-avatar', 'avatar-123', { avatar: r2MediaGatewayUrl('new-avatar') }), false);
+  assert.equal(isCurrentPublicProfileMedia('profile-cover', 'cover-456', { coverImage: avatarUrl }), false);
+  assert.equal(isCurrentPublicProfileMedia('post', 'avatar-123', { avatar: avatarUrl }), false);
+  assert.equal(isCurrentPublicProfileMedia('profile-avatar', 'avatar-123', null), false);
 });
