@@ -1,6 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { getDevicePerformanceProfile } from './utils/devicePerformance';
-import { playNexoraSound } from './services/soundExperience';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, HelpCircle, X, ShieldCheck, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward, Compass } from 'lucide-react';
 import VohIcon from './components/VohIcon';
@@ -1308,7 +1307,6 @@ export default function App() {
       const customEvent = e as CustomEvent;
       const message = customEvent.detail;
       if (!message) return;
-      playNexoraSound('interface.confirmation');
       
       const id = crypto.randomUUID();
       setToasts(prev => [...prev, { id, message }]);
