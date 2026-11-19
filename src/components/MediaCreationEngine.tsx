@@ -134,7 +134,7 @@ interface MediaCreationEngineProps {
     postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[]; publicationId?: string; signal?: AbortSignal }
   ) => string;
   onPublishPost?: (...args: Parameters<MediaCreationEngineProps['onAddPost']>) => Promise<string>;
-  onPublishStory?: (caption: string, file?: File, onProgress?: (progress: number) => void, signal?: AbortSignal, storyId?: string) => Promise<string>;
+  onPublishStory?: (caption: string, file?: File, onProgress?: (progress: number) => void, signal?: AbortSignal) => Promise<string>;
   theme: 'neon-cyber' | 'stealth-dark' | 'platinum-light' | 'emerald-glass';
   isStoryModeInitially?: boolean;
   isOffline?: boolean;
@@ -375,7 +375,6 @@ export default function MediaCreationEngine({
   const createdObjectUrlsRef = useRef<Set<string>>(new Set());
   const uploadAbortControllerRef = useRef<AbortController | null>(null);
   const publishAttemptIdRef = useRef<string | null>(null);
-  const publishStoryIdRef = useRef<string | null>(null);
 
   const trackObjectUrl = (url: string) => {
     createdObjectUrlsRef.current.add(url);
@@ -1231,7 +1230,6 @@ export default function MediaCreationEngine({
     setCommentsAllowed(true);
     setOriginRemixPolicyState('closed');
     publishAttemptIdRef.current = null;
-    publishStoryIdRef.current = null;
     setActiveMode(null);
     setCurrentStep(1);
   };
@@ -1250,9 +1248,6 @@ export default function MediaCreationEngine({
       setErrorMessage('Add a caption, media file, voice memo, or poll question before publishing.');
       setPostingStatus('failed');
       return;
-    }
-    if (activeTab === 'story' && !publishStoryIdRef.current) {
-      publishStoryIdRef.current = crypto.randomUUID();
     }
     if (activeTab !== 'story' && !publishAttemptIdRef.current) {
       publishAttemptIdRef.current = crypto.randomUUID();
@@ -1322,8 +1317,7 @@ export default function MediaCreationEngine({
         }
         if (!onPublishStory) throw new Error('Story sharing is not available right now. Please try again.');
         setPublishStage(storyFile ? 'Uploading your story…' : 'Sharing your story…');
-        await onPublishStory(caption, storyFile, progress => setUploadProgress(progress), uploadController.signal, publishStoryIdRef.current || undefined);
-        publishStoryIdRef.current = null;
+        await onPublishStory(caption, storyFile, progress => setUploadProgress(progress), uploadController.signal);
         setUploadProgress(100);
         setPostingStatus('completed');
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Your story is live for the next 24 hours.' }));
