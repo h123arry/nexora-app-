@@ -13,7 +13,7 @@ import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
 import { shapeAuthenticatedVohAccountContext } from './server/vohAccountContext';
-import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, buildR2OriginUploadRecords } from './server/r2Storage';
+import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, isCurrentPublicProfileMedia, buildR2OriginUploadRecords } from './server/r2Storage';
 import { runVohContextTool, VOH_CONTEXT_TOOL_DECLARATIONS } from './server/vohTools';
 
 const isProduction = process.env.NEXORA_ENV === 'production' || process.env.NODE_ENV === 'production';
@@ -464,11 +464,8 @@ app.get('/api/media/:mediaId', async (req, res) => {
     // Profile images are deliverable only while the public profile projection
     // still points at this exact media gateway URL. This prevents orphaned,
     // replaced, or private profile media from becoming public.
-    const isCurrentPublicProfileMedia = (
-      (asset.purpose === 'profile-avatar' && publicProfile.avatar === r2MediaGatewayUrl(mediaId))
-      || (asset.purpose === 'profile-cover' && publicProfile.coverImage === r2MediaGatewayUrl(mediaId))
-    );
-    if ((!storyIsPublic && !linkedPublicPost && !isCurrentPublicProfileMedia)
+    const isCurrentProfileMedia = isCurrentPublicProfileMedia(asset.purpose, mediaId, publicProfile);
+    if ((!storyIsPublic && !linkedPublicPost && !isCurrentProfileMedia)
       || privacy.isPrivate === true || privacy.isPrivateAccount === true
       || profile.isSeedProfile === true || profile.isBanned === true || profile.isSuspended === true
       || status.banned === true || status.suspended === true) return res.status(404).end();
