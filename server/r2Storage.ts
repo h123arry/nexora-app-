@@ -132,6 +132,47 @@ export function createR2PresignedUrl(
   return `${config.endpoint}${canonicalUri}?${canonicalQuery(params)}`;
 }
 
+
+export type R2OriginUploadInput = {
+  assetId: string;
+  ownerUid: string;
+  mediaGeneration: string;
+  contentDigest: string;
+  contentType: string;
+  byteSize: number;
+  studioExport: boolean;
+};
+
+/** Keep the server-side R2 ingest record shape aligned with functions/src/originPolicy.ts. */
+export function buildR2OriginUploadRecords(input: R2OriginUploadInput) {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(input.assetId) || !/^[A-Za-z0-9_-]{1,128}$/.test(input.ownerUid)) {
+    throw new Error('Origin asset and owner identifiers must be valid.');
+  }
+  if (!/^\\d{1,32}$/.test(input.mediaGeneration)) throw new Error('A valid immutable media generation is required.');
+  if (!/^[a-f0-9]{64}$/.test(input.contentDigest)) throw new Error('A server-computed SHA-256 content digest is required.');
+  if (!Number.isSafeInteger(input.byteSize) || input.byteSize <= 0) throw new Error('Origin media size must be a positive safe integer.');
+  if (typeof input.contentType !== 'string' || input.contentType.length < 3 || input.contentType.length > 128) {
+    throw new Error('A valid media content type is required.');
+  }
+  const originKind = input.studioExport ? 'studio_export' : 'upload_ingest';
+  return {
+    origin: {
+      assetId: input.assetId, ownerUid: input.ownerUid, originKind,
+      contentDigest: input.contentDigest, digestAlgorithm: 'sha256',
+      mediaGeneration: input.mediaGeneration, contentType: input.contentType,
+      byteSize: input.byteSize, credentialState: 'absent',
+      lineageState: 'unlinked', disclosureState: 'unknown', schemaVersion: 1,
+    },
+    event: {
+      eventId: `generation_${input.mediaGeneration}`, assetId: input.assetId,
+      actorUid: input.ownerUid, eventType: 'uploaded_to_nexora',
+      contributionRole: 'uploader', disclosureSource: 'platform_observed',
+      mediaGeneration: input.mediaGeneration, contentDigest: input.contentDigest,
+      digestAlgorithm: 'sha256', schemaVersion: 1,
+    },
+  };
+}
+
 export function r2MediaGatewayUrl(mediaId: string): string {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) throw new Error('Invalid media asset identifier.');
   return `/api/media/${encodeURIComponent(mediaId)}`;
