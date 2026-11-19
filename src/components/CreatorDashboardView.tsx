@@ -839,7 +839,7 @@ export default function CreatorDashboardView({
                       <p className="text-xs text-zinc-400 font-mono">Post results will appear here when they're ready.</p>
                     </div>
                     <div className="flex items-center gap-3 text-[10px] font-bold">
-                      <span className="text-zinc-500">No time-series data</span>
+                      <span className="text-zinc-500">No results yet</span>
                     </div>
                   </div>
 
@@ -891,8 +891,8 @@ export default function CreatorDashboardView({
                       <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Unfollows</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.unfollows.toLocaleString()}</strong></div>
                       <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Net growth</span><strong className={"mt-1 block text-lg " + (audienceAnalytics.totals.netFollowerChange >= 0 ? "text-emerald-300" : "text-amber-300")}>{audienceAnalytics.totals.netFollowerChange > 0 ? '+' : ''}{audienceAnalytics.totals.netFollowerChange.toLocaleString()}</strong></div>
                       <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Daily unique visitors</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.uniqueProfileVisitors.toLocaleString()}</strong></div>
-                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">New profile visitors (90d)</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.newProfileVisitors.toLocaleString()}</strong></div>
-                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Returning profile visitors (90d)</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.returningProfileVisitors.toLocaleString()}</strong></div>
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">New profile visitors</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.newProfileVisitors.toLocaleString()}</strong></div>
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Returning profile visitors</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.returningProfileVisitors.toLocaleString()}</strong></div>
                     </div>
                     {audienceAnalytics.points.length ? (
                       <div className="mt-4 space-y-2">
@@ -947,7 +947,7 @@ export default function CreatorDashboardView({
               </div>
               <div className="rounded-2xl border border-dashed border-white/10 bg-[#0a071f]/60 p-5">
                 <h4 className="text-xs font-bold text-white">More audience details aren't available yet.</h4>
-                <p className="mt-2 text-xs leading-relaxed text-zinc-400">Traffic source, device, geographic, new-versus-returning audience and frame-level retention curves are not yet supported by trusted event sources. Nexora does not estimate or fabricate these metrics.</p>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-400">More audience details aren't available yet.</p>
               </div>
               {videoRetention?.points?.length ? (
                 <div className="rounded-2xl border border-violet-400/15 bg-[#0a071f]/70 p-5">
@@ -1195,11 +1195,11 @@ export default function CreatorDashboardView({
                   <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-violet-300" /><h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Scheduled posts</h4></div>
                   <span className="text-[10px] text-zinc-500 font-mono">{scheduledPosts.filter(item => item.status === 'scheduled').length} pending</span>
                 </div>
-                <p className="text-xs text-zinc-400 leading-relaxed">Scheduled posts will be shared automatically. You can cancel them before they're posted.</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">Your scheduled posts will be shared automatically. You can cancel them anytime before they're posted.</p>
                 {isScheduledPostsLoading ? (
                   <p className="text-xs text-zinc-500 py-5">Loading scheduled posts…</p>
                 ) : scheduledPosts.length === 0 ? (
-                  <p className="text-xs text-zinc-500 text-center py-6">No scheduled posts yet. Schedule one from the draft editor.</p>
+                  <p className="text-xs text-zinc-500 text-center py-6">No scheduled posts yet.</p>
                 ) : (
                   <div className="space-y-2 max-h-80 overflow-y-auto">
                     {scheduledPosts.map(item => (
@@ -1225,13 +1225,13 @@ export default function CreatorDashboardView({
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Saved video templates</h4>
-                    <p className="text-xs text-zinc-500 mt-1">Save caption structures, hashtags and content formats for your next post.</p>
+                    <p className="text-xs text-zinc-500 mt-1">Save captions and hashtags to use again.</p>
                   </div>
                   <span className="text-[10px] font-mono bg-violet-600/20 text-violet-300 border border-white/10 px-2 py-1 rounded-full">{studioTemplates.length}/40</span>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input value={templateName} onChange={event => setTemplateName(event.target.value)} maxLength={60} placeholder="Template name" aria-label="Template name" className="flex-1 min-w-0 bg-[#0a071f] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500" />
-                  <button type="button" onClick={() => void handleSaveStudioTemplate()} className="px-4 py-2 rounded-xl bg-violet-600/20 border border-violet-400/20 text-violet-200 text-xs font-bold">Save current editor as template</button>
+                  <button type="button" onClick={() => void handleSaveStudioTemplate()} className="px-4 py-2 rounded-xl bg-violet-600/20 border border-violet-400/20 text-violet-200 text-xs font-bold">Save as template</button>
                 </div>
                 {isTemplatesLoading ? <p className="text-xs text-zinc-500 py-3">Loading your templates…</p> : studioTemplates.length === 0 ? (
                   <p className="text-xs text-zinc-500 py-3">No templates yet. Save a caption and hashtags to use again.</p>
