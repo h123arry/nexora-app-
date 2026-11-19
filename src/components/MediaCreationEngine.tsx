@@ -585,7 +585,7 @@ export default function MediaCreationEngine({
         const existing = new Set(previous.map(item => item.id));
         return [...previous, ...cloudDrafts.filter(item => !existing.has(item.id))].slice(0, 50);
       });
-    }).catch(error => console.warn('[Composer] Saved drafts couldn't be loaded.', error));
+    }).catch(error => console.warn('[Composer] Saved drafts could not be loaded.', error));
     return () => { active = false; };
   }, [currentUser.id]);
 
@@ -608,7 +608,7 @@ export default function MediaCreationEngine({
             if (videoPreviewRef.current) {
               videoPreviewRef.current.srcObject = stream;
               void videoPreviewRef.current.play().catch(() => {
-                window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview couldn't start. Allow camera access in your phone settings and try again.' }));
+                window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview could not start. Allow camera access in your phone settings and try again.' }));
               });
             }
           })
@@ -702,7 +702,7 @@ export default function MediaCreationEngine({
         if (video.srcObject === stream) video.srcObject = null;
         if (!cancelled) {
           window.dispatchEvent(new CustomEvent('toast', {
-            detail: error instanceof Error ? error.message : 'Camera preview couldn't start. Allow camera access in your phone settings and try again.',
+            detail: error instanceof Error ? error.message : 'Camera preview could not start. Allow camera access in your phone settings and try again.',
           }));
         }
       }
@@ -852,7 +852,7 @@ export default function MediaCreationEngine({
         try {
           await validateMediaFile(file, 'image');
         } catch (error) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This photo couldn't be checked.'}` }));
+          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This photo could not be checked.'}` }));
           return;
         }
         const reader = new FileReader();
@@ -918,7 +918,7 @@ export default function MediaCreationEngine({
           setVideoTrimEnd(Math.min(15, Math.max(1, Math.round(metadata.duration || 15))));
           setVideoDuration(metadata.duration || 15);
         } catch (error) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This video couldn't be checked.'}` }));
+          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
         }
       })();
     });
@@ -930,12 +930,12 @@ export default function MediaCreationEngine({
     if (!video || videoTrimEnd <= videoTrimStart) { setErrorMessage('Choose a valid video section before trimming.'); return; }
     const capture = video as HTMLVideoElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream };
     if (typeof MediaRecorder === 'undefined' || (!capture.captureStream && !capture.mozCaptureStream)) {
-      setErrorMessage('You can't trim videos in this browser. Your original video hasn't changed.'); return;
+      setErrorMessage('You cannot trim videos in this browser. Your original video has not changed.'); return;
     }
     setIsTrimmingVideo(true); setErrorMessage('');
     let stream: MediaStream | null = null; let recorder: MediaRecorder | null = null;
     try {
-      if (video.readyState < 1) await new Promise<void>((resolve, reject) => { video.onloadedmetadata = () => resolve(); video.onerror = () => reject(new Error('This video couldn't be opened.')); });
+      if (video.readyState < 1) await new Promise<void>((resolve, reject) => { video.onloadedmetadata = () => resolve(); video.onerror = () => reject(new Error('This video could not be opened.')); });
       stream = capture.captureStream ? capture.captureStream() : capture.mozCaptureStream!();
       const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
       recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
@@ -1111,7 +1111,7 @@ export default function MediaCreationEngine({
                     const result = await VoiceEngine.uploadVoice(audioBase64, blob.type || 'audio/webm');
                     setVoiceTranscript(result.transcription);
                   } catch (error) {
-                    window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'VOH couldn't turn this recording into text.' }));
+                    window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'VOH could not turn this recording into text.' }));
                   } finally {
                     setLoadingTranscript(false);
                   }
@@ -1819,7 +1819,7 @@ export default function MediaCreationEngine({
               {draftsList.length === 0 ? (
                 <div className="py-12 border border-[#292244] border-dashed rounded-2xl text-center space-y-2">
                   <FolderHeart className="w-8 h-8 text-[#756D91] mx-auto animate-pulse" />
-                  <p className="text-xs text-[#A39BBF] italic">No drafts yet. Save something you're working on and it will be waiting here.</p>
+                  <p className="text-xs text-[#A39BBF] italic">No drafts yet. Save something you are working on and it will be waiting here.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
