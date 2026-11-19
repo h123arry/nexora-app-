@@ -749,7 +749,9 @@ body {
   padding-top: 0;
 }
 .nx-feed-header .nx-brand-mark {
-  filter: drop-shadow(0 5px 18px rgba(116,43,255,.22));
+  background: transparent !important;
+  mix-blend-mode: screen;
+  filter: none;
 }
 .nx-feed-header .nx-gradient-text {
   letter-spacing: -.055em;
