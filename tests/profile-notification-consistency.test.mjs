@@ -90,11 +90,12 @@ test('missing public profile links finish at the new member own profile after si
 });
 
 test('public profile signup offers both username/password and email/password paths', async () => {
-  const [app, setup, authView, authService] = await Promise.all([
+  const [app, setup, authView, authService, profileService] = await Promise.all([
     read('../src/App.tsx'),
     read('../src/components/PublicAccountSetup.tsx'),
     read('../src/components/AuthView.tsx'),
     read('../src/services/firebase/authService.ts'),
+    read('../src/services/firebase/profileService.ts'),
   ]);
   assert.match(setup, /onSwitchToEmailSignup/);
   assert.match(app, /<AuthView[\s\S]*initialMode="signup"/);
@@ -102,7 +103,8 @@ test('public profile signup offers both username/password and email/password pat
   assert.match(authService, /createUserWithEmailAndPassword\(auth, cleanEmail, password\)/);
   assert.match(authService, /if \(existingUser\?\.isAnonymous\)/);
   assert.match(authService, /linkWithCredential\(\s*existingUser,\s*EmailAuthProvider\.credential\(cleanEmail, password\)/);
-  assert.match(authService, /ProfileService\.updateProfile\(fbUser\.uid, \{\s*name: fullName\.trim\(\),\s*email: cleanEmail/);
+  assert.match(authService, /ProfileService\.updateProfile\(fbUser\.uid, \{\s*name: fullName\.trim\(\)/);
+  assert.match(profileService, /email: firebaseUser\.email/);
 
   assert.match(authService, /sendEmailVerification\(fbUser\)/);
 });
