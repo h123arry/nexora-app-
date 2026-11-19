@@ -928,7 +928,10 @@ export default function ProfileView({
 
     try {
       let durableAvatar = editAvatar;
-      if (editAvatar.startsWith('data:')) {
+      if (editAvatar.startsWith('data:image/svg+xml')) {
+        // The SVG is only the UI initials fallback, never a member-uploaded photo.
+        durableAvatar = '';
+      } else if (editAvatar.startsWith('data:')) {
         const avatarBlob = await (await fetch(editAvatar)).blob();
         const uploadedAvatar = await uploadMediaFile({
           file: avatarBlob,
