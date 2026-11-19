@@ -458,7 +458,7 @@ export default function ProfileView({
         SettingsService.updateFeed(ownerId, { blockedCreatorIds }),
       ]);
       setBlockedUsers(blockedIds);
-      window.dispatchEvent(new CustomEvent('toast', { detail: currentlyBlocked ? 'Account unblocked.' : 'Account blocked in messaging and feed preferences.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: currentlyBlocked ? 'Account unblocked.' : 'This account is blocked from messaging you and appearing in your feed.' }));
       setActivePanel('profile');
     } catch {
       await refreshSafetyLists();
@@ -479,7 +479,7 @@ export default function ProfileView({
         : settings.feed.mutedCreatorIds.filter(id => id !== targetId);
       await SettingsService.updateFeed(ownerId, { mutedCreatorIds: mutedIds });
       setMutedUsers(mutedIds);
-      window.dispatchEvent(new CustomEvent('toast', { detail: muted ? 'Creator muted in your feed preferences.' : 'Creator unmuted.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: muted ? 'You won't see this creator's posts in your feed.' : 'Creator unmuted.' }));
     } catch {
       await refreshSafetyLists();
       window.dispatchEvent(new CustomEvent('toast', { detail: 'This mute setting could not be saved. Please retry.' }));
@@ -607,9 +607,9 @@ export default function ProfileView({
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Account data snapshot downloaded. It is bounded and is not a complete export.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'A copy of some account information was downloaded. It may not include everything.' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Account data snapshot could not be prepared. Please try again later.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Your account information couldn't be prepared. Please try again later.' }));
     } finally {
       setIsLifecycleBusy(false);
     }
@@ -623,9 +623,9 @@ export default function ProfileView({
       setDeletionRequest(request);
       setDeleteStep(3);
       setDeleteAccountPassword('');
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Account deletion request queued for review and asynchronous cleanup.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Your account deletion request has been received and will be processed.' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error && error.message.startsWith('For your safety') ? error.message : 'Deletion request could not be submitted. Reauthenticate and try again.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error && error.message.startsWith('For your safety') ? error.message : 'Your deletion request couldn't be sent. Sign in again and try once more.' }));
     } finally {
       setIsLifecycleBusy(false);
     }
@@ -984,7 +984,7 @@ export default function ProfileView({
     setEditAvatar(currentUser.avatar);
     setEditCover(currentUser.coverImage);
     setActivePanel('profile');
-    window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Re-calibration cancelled. No changes saved.' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Changes cancelled. Nothing was saved.' }));
   };
 
   // Pinned items filtering
