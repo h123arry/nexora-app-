@@ -1739,7 +1739,7 @@ export default function App() {
     const parsedTags = tagsString
       ? tagsString.split(',').map(tag => tag.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30)
       : [];
-    const postId = `post-${crypto.randomUUID()}`;
+    const postId = `post-${postDetails?.publicationId || crypto.randomUUID()}`;
     const newPost: Post = {
       id: postId,
       userId: currentUser.id,
