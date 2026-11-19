@@ -111,7 +111,7 @@ export async function createMediaStory(
   const mediaType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : null;
   if (!mediaType) throw new Error('Stories support image and video files only.');
 
-  const storyRef = storyId ? doc(db, STORIES_COLLECTION, storyId) : doc(collection(db, STORIES_COLLECTION));
+  const storyRef = doc(collection(db, STORIES_COLLECTION));
   let upload: Awaited<ReturnType<typeof uploadMediaFile>> | null = null;
   try {
     upload = await uploadMediaFile({
