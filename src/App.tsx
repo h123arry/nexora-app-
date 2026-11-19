@@ -1943,27 +1943,28 @@ export default function App() {
   const handleToggleFollow = (creatorId: string) => {
     requireAuth(() => {
       const isCurrentlyFollowing = followingIds.includes(creatorId);
-      let updatedFollowing: string[];
+      void (async () => {
+        try {
+          if (isCurrentlyFollowing) {
+            await removeFollow(currentUser.id, creatorId);
+            unfollowUserDb(currentUser.id, creatorId);
+            setFollowingIds(previous => previous.filter(id => id !== creatorId));
+          } else {
+            await addFollow(currentUser.id, creatorId);
+            followUserDb(currentUser.id, creatorId);
+            setFollowingIds(previous => [...new Set([...previous, creatorId])]);
 
-      if (isCurrentlyFollowing) {
-        unfollowUserDb(currentUser.id, creatorId);
-        removeFollow(currentUser.id, creatorId).catch(console.warn);
-        updatedFollowing = followingIds.filter(id => id !== creatorId);
-      } else {
-        followUserDb(currentUser.id, creatorId);
-        addFollow(currentUser.id, creatorId).catch(console.warn);
-        updatedFollowing = [...followingIds, creatorId];
-        
-        // record recommendation follow event
-        const targetCreator = (Object.values(globalUsersMap) as User[]).find(c => c.id === creatorId);
-        if (targetCreator) {
-          recordRecommendationEvent('follow', { creatorId, creatorUsername: targetCreator.username });
-          // The trusted follows/{followerId}_{creatorId} write creates the durable
-          // inbox notification; the realtime subscription delivers it to this UI.
+            const targetCreator = (Object.values(globalUsersMap) as User[]).find(creator => creator.id === creatorId);
+            if (targetCreator) {
+              recordRecommendationEvent('follow', { creatorId, creatorUsername: targetCreator.username });
+            }
+          }
+        } catch (error) {
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: error instanceof Error ? error.message : 'Your follow could not be saved. Please try again.',
+          }));
         }
-      }
-
-      setFollowingIds(updatedFollowing);
+      })();
     }, 'Join Nexora to follow creators, build your network, and personalize your feed.');
   };
 
