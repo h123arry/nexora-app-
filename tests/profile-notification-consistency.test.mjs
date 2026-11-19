@@ -111,7 +111,9 @@ test('public profile signup offers both username/password and email/password pat
 
 test('profile edits persist the private profile and update its public projection', async () => {
   const profile = await read('../src/services/firebase/profileService.ts');
-  assert.match(profile, /await updateDoc\(docRef, \{ \.\.\.updates, updatedAt: serverTimestamp\(\) \}\)/);
+  assert.match(profile, /await runTransaction\(db, async transaction =>/);
+  assert.match(profile, /transaction.update\(privateProfileRef, \{ \.\.\.updates, updatedAt: serverTimestamp\(\) \}\)/);
+  assert.match(profile, /transaction.set\(publicProfileRef/);
   assert.match(profile, /doc\(db, 'publicProfiles', uid\)/);
 });
 
@@ -122,4 +124,29 @@ test('public profile links resolve through canonical username claims, not privat
   assert.match(profile, /doc\(db, 'usernames', clean\)/);
   assert.match(profile, /return this\.getPublicProfile\(uid\)/);
   assert.match(app, /ProfileService\.getPublicProfileByUsername\(cleanIdOrUser\)/);
+});
+
+test('normalizes feed posts into a unique id set before rendering', async () => {
+  const app = await read('../src/App.tsx');
+  assert.match(app, /const uniquePosts = new Map<string, Post>\(\)/);
+  assert.match(app, /if \(post\?\.id && !uniquePosts\.has\(post\.id\)\) uniquePosts\.set\(post\.id, post\)/);
+  assert.match(app, /return \[\.\.\.uniquePosts\.values\(\)\]/);
+});
+
+test('profile relationship lists use live Firestore edges and respect participant privacy', async () => {
+  const profile = await read('../src/components/ProfileView.tsx');
+  assert.match(profile, /subscribeToFollows\(currentUser\.id/);
+  assert.match(profile, /const allFollows = profileFollows/);
+  assert.match(profile, /const allRegisteredUsers = relationshipUsers/);
+  assert.doesNotMatch(profile, /localStorage\.getItem\('nexora_db_follows'/);
+  assert.doesNotMatch(profile, /localStorage\.getItem\('nexora_users_db'/);
+  assert.match(profile, /Relationship lists are private for this account/);
+});
+
+test('loaded post authors and commenters receive live public profile subscriptions', async () => {
+  const app = await read('../src/App.tsx');
+  assert.match(app, /profileSubscriptionIds = useMemo/);
+  assert.match(app, /post\.comments \|\| \[\]/);
+  assert.match(app, /onSnapshot\(\s*doc\(db, 'publicProfiles', uid\)/);
+  assert.match(app, /setGlobalUsersMap\(previous => \(/);
 });

@@ -18,6 +18,7 @@ import { auth, db } from '../services/firebase/config';
 import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { uploadMediaFile } from '../services/firebase/storageService';
 import { SettingsService } from '../services/firebase/settingsService';
+import { subscribeToFollows } from '../services/dataService';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraLoader from './NexoraLoader';
@@ -213,7 +214,7 @@ interface ProfileViewProps {
   isLoggedIn?: boolean;
   posts: Post[];
   userSparks?: string[];
-  onUpdateProfile: (updatedData: Partial<User>) => void;
+  onUpdateProfile: (updatedData: Partial<User>) => void | Promise<void>;
   onLikePost: (postId: string) => void;
   onAddComment?: (postId: string, text: string) => void;
   onAddPost?: (content: string, imageUrl?: string, tagsString?: string, images?: string[], videoUrl?: string) => string;
@@ -266,6 +267,32 @@ export default function ProfileView({
     } catch { return []; }
   });
   const [receivedSparks, setReceivedSparks] = useState<Array<{ id: string; fromUserId: string; username: string; name: string; avatar: string; postId: string }>>([]);
+  const [profileFollows, setProfileFollows] = useState<Array<{ followerId: string; followingId: string }>>([]);
+  const [relationshipUsers, setRelationshipUsers] = useState<User[]>([]);
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser.id || auth.currentUser?.uid !== currentUser.id) {
+      setProfileFollows([]);
+      setRelationshipUsers([]);
+      return;
+    }
+    let active = true;
+    const unsubscribe = subscribeToFollows(currentUser.id, follows => {
+      if (!active) return;
+      const edges = follows
+        .filter((follow: any) => typeof follow.followerId === 'string' && typeof follow.followingId === 'string')
+        .map((follow: any) => ({ followerId: follow.followerId, followingId: follow.followingId }));
+      setProfileFollows(edges);
+      const relatedIds = [...new Set(edges.map(edge => edge.followerId === currentUser.id ? edge.followingId : edge.followerId))];
+      void Promise.all(relatedIds.map(id => ProfileService.getPublicProfile(id))).then(profiles => {
+        if (active) setRelationshipUsers(profiles.filter((profile): profile is User => !!profile));
+      });
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [currentUser.id, isLoggedIn]);
+
   useEffect(() => {
     if (!isOwnProfile || auth.currentUser?.uid !== currentUser.id) {
       setReceivedSparks([]);
@@ -975,8 +1002,7 @@ export default function ProfileView({
       setIsSavingProfile(false);
       setShowSavedFeedback(true);
 
-      const isOnline = navigator.onLine;
-      const successMsg = isOnline ? '✓ Profile updated successfully' : '⚠️ Profile updated locally and queued for offline sync.';
+      const successMsg = '✓ Profile updated successfully';
       window.dispatchEvent(new CustomEvent('toast', { detail: successMsg }));
 
       // Wait 1.5s for the success message feedback, then transition back smoothly
@@ -2809,17 +2835,12 @@ export default function ProfileView({
               {/* Relation list render */}
               <div className="space-y-2 text-left">
                 {(() => {
+                  if ((relationsTab === 'followers' || relationsTab === 'following') && (!isOwnProfile || auth.currentUser?.uid !== currentUser.id)) {
+                    return <div className="text-center py-12 text-zinc-500 text-xs">Relationship lists are private for this account.</div>;
+                  }
                   let list: any[] = [];
-                  let allFollows: { followerId: string; followingId: string }[] = [];
-                  try {
-                    allFollows = JSON.parse(localStorage.getItem('nexora_db_follows') || localStorage.getItem('nexora_db_follows_v1') || '[]');
-                  } catch {}
-
-                  let allRegisteredUsers: User[] = [];
-                  try {
-                    const rawUsers = localStorage.getItem('nexora_users_db');
-                    if (rawUsers) allRegisteredUsers = JSON.parse(rawUsers);
-                  } catch {}
+                  const allFollows = profileFollows;
+                  const allRegisteredUsers = relationshipUsers;
 
                   if (relationsTab === 'followers') {
                     const followerIds = allFollows.filter(f => f.followingId === currentUser.id).map(f => f.followerId);
