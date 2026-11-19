@@ -708,7 +708,7 @@ export default function SystemHubControlPanel({
                     </div>
                     <p className="text-[10px] text-zinc-400 leading-normal font-sans">
                       {isOffline 
-                        ? 'Simulating disconnected state. Creations are safely stored inside local IndexedDB and local state.' 
+                        ? 'Offline mode is on. New posts and drafts will be saved on this device until you're connected again.' 
                         : 'Online. Interfacing live client with blockchain consensus and AI mesh servers.'}
                     </p>
                   </div>
@@ -822,7 +822,7 @@ export default function SystemHubControlPanel({
                       <span className="text-white font-bold">0.02ms latency</span>
                     </p>
                     <p className="flex justify-between">
-                      <span>Local IndexedDB Key Size</span>
+                      <span>Saved data size</span>
                       <span className="text-zinc-500">12,408 bytes</span>
                     </p>
                   </div>
