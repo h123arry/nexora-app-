@@ -259,7 +259,7 @@ function uploadMediaFileWithFirebase(options: MediaUploadOptions): Promise<Media
 
 export async function deleteMediaFile(storagePath: string): Promise<void> {
   if (!storagePath) return;
-  const match = storagePath.match(/^users\\/([A-Za-z0-9_-]{1,128})\\/media\\/([A-Za-z0-9_-]{1,128})$/);
+  const match = storagePath.match(/^users\/([A-Za-z0-9_-]{1,128})\/media\/([A-Za-z0-9_-]{1,128})$/);
   if (match && auth.currentUser?.uid === match[1]) {
     const token = await auth.currentUser.getIdToken();
     const response = await fetch(`/api/media/${encodeURIComponent(match[2])}`, {
