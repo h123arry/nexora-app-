@@ -176,18 +176,18 @@ export default function App() {
 
   const [currentUser, setCurrentUser] = useState<User>(() => getRichUser({
       id: 'guest_visitor_id',
-      username: 'visitor',
-      name: 'Nexora Visitor',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      bio: 'Guest visitor browsing Nexora network.',
-      location: 'Earth Orbit',
-      website: 'https://nexora.app',
+      username: '',
+      name: '',
+      avatar: '',
+      bio: '',
+      location: '',
+      website: '',
       followers: 0,
       following: 0,
       sparks: 0,
       isVerified: false,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-      joinedDate: 'Joined 2026',
+      coverImage: '',
+      joinedDate: '',
       reputationPoints: 0,
       reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
       interestDNA: {},
@@ -350,12 +350,10 @@ export default function App() {
     localStorage.removeItem('nexora_user');
     localStorage.removeItem('nexora_logged_in');
     setCurrentUser(getRichUser({
-      id: 'guest_visitor_id', username: 'visitor', name: 'Nexora Visitor',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      bio: 'Guest visitor browsing Nexora network.', location: 'Earth Orbit', website: 'https://nexora.app',
+      id: 'guest_visitor_id', username: '', name: '', avatar: '',
+      bio: '', location: '', website: '', coverImage: '',
       followers: 0, following: 0, sparks: 0, isVerified: false,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-      joinedDate: 'Joined 2026', reputationPoints: 0,
+      joinedDate: '', reputationPoints: 0,
       reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
       interestDNA: {}, skills: []
     }));
@@ -2081,62 +2079,44 @@ export default function App() {
   };
 
   // 8. Studio profile settings update
-  const handleUpdateProfile = (updatedData: Partial<User>) => {
+  const handleUpdateProfile = async (updatedData: Partial<User>): Promise<void> => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
-      requireAuth(() => handleUpdateProfile(updatedData), 'Complete your NEXORA profile to edit your profile.');
+      requireAuth(() => { void handleUpdateProfile(updatedData); }, 'Complete your NEXORA profile to edit your profile.');
       return;
     }
-    setCurrentUser(prev => {
-      const freshUser = {
-        ...prev,
-        ...updatedData
-      };
 
-      // Invalidate profile cache so ProfileView receives fresh data
+    // The editor only reports success after both the private profile and its
+    // public projection have been updated. Never leave a local-only avatar.
+    await ProfileService.updateProfile(firebaseUser.uid, updatedData);
+
+    setCurrentUser(prev => {
+      const freshUser = { ...prev, ...updatedData };
+
       void import('./services/voh/profileEngine').then(({ ProfileEngine }) => {
         ProfileEngine.invalidateProfile(freshUser.id);
       }).catch(error => console.warn('Unable to invalidate profile cache.', error));
 
-      // Update global user map so all views pick up the updated profile instantly
-      setGlobalUsersMap(prevMap => ({
-        ...prevMap,
-        [freshUser.id]: freshUser
-      }));
-
-      // Propagate updates in real-time to posts and comments authored by the user
-      setPosts(prevPosts => {
-        return prevPosts.map(post => {
-          let newPost = { ...post };
-
-          if (post.userId === prev.id) {
-            if (updatedData.name !== undefined) newPost.name = updatedData.name;
-            if (updatedData.username !== undefined) newPost.username = updatedData.username;
-            if (updatedData.avatar !== undefined) newPost.avatar = updatedData.avatar;
-            if (updatedData.isVerified !== undefined) newPost.isVerified = updatedData.isVerified;
-          }
-
-          if (post.comments && post.comments.length > 0) {
-            newPost.comments = post.comments.map(comment => {
-              if (comment.userId === prev.id) {
-                const nextComment = { ...comment };
-                if (updatedData.name !== undefined) nextComment.name = updatedData.name;
-                if (updatedData.username !== undefined) nextComment.username = updatedData.username;
-                if (updatedData.avatar !== undefined) nextComment.avatar = updatedData.avatar;
-                return nextComment;
+      setGlobalUsersMap(prevMap => ({ ...prevMap, [freshUser.id]: freshUser }));
+      setPosts(prevPosts => prevPosts.map(post => {
+        let nextPost = { ...post };
+        if (post.userId === prev.id) {
+          if (updatedData.name !== undefined) nextPost.name = updatedData.name;
+          if (updatedData.username !== undefined) nextPost.username = updatedData.username;
+          if (updatedData.avatar !== undefined) nextPost.avatar = updatedData.avatar;
+          if (updatedData.isVerified !== undefined) nextPost.isVerified = updatedData.isVerified;
+        }
+        if (post.comments?.length) {
+          nextPost.comments = post.comments.map(comment => comment.userId === prev.id
+            ? {
+                ...comment,
+                ...(updatedData.name !== undefined ? { name: updatedData.name } : {}),
+                ...(updatedData.username !== undefined ? { username: updatedData.username } : {}),
+                ...(updatedData.avatar !== undefined ? { avatar: updatedData.avatar } : {}),
               }
-              return comment;
-            });
-          }
-
-          return newPost;
-        });
-      });
-
-      // Save to database/sync engine & ProfileService
-      if (isLoggedIn && firebaseUser?.uid === freshUser.id) {
-        ProfileService.updateProfile(freshUser.id, updatedData).catch(err => console.error('Error updating profile in ProfileService:', err));
-      }
-
+            : comment);
+        }
+        return nextPost;
+      }));
       return freshUser;
     });
   };
@@ -2473,27 +2453,44 @@ export default function App() {
                   )}
 
                   {activeTab === 'profile' && (
-                    <ProfileView
-                      currentUser={getRichUser(viewedUser || currentUser)}
-                      isLoggedIn={isLoggedIn}
-                      posts={resolvedPosts}
-                      onUpdateProfile={handleUpdateProfile}
-                      onLikePost={handleLikePost}
-                      onAddComment={handleAddComment}
-                      onAddPost={handleAddPost}
-                      isOwnProfile={!viewedUser || viewedUser.id === currentUser.id}
-                      onCloseProfile={viewedUser ? () => setViewedUser(null) : undefined}
-                      onToggleFollow={handleToggleFollow}
-                      isFollowingField={viewedUser ? followingIds.includes(viewedUser.id) : false}
-                      onStartChat={handleStartChat}
-                      onViewProfile={handleViewProfile}
-                      theme={theme}
-                      setTheme={setTheme}
-                      onLogout={() => setIsLogoutConfirming(true)}
-                      onTriggerPWAInstall={handleTriggerPWAInstall}
-                      onOpenVohAi={() => setIsAiCommandCenterOpen(true)}
-                      showPWAInstallPrompt={showPWAInstallPrompt}
-                    />
+                    !viewedUser && (!isLoggedIn || requiresPublicAccountSetup) ? (
+                      <div className="flex min-h-[620px] flex-col items-center justify-center gap-4 px-6 py-12 text-center text-white">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full border border-violet-400/20 bg-violet-500/10">
+                          <UserIcon className="h-7 w-7 text-violet-300" />
+                        </div>
+                        <h2 className="text-xl font-bold">Your profile starts with you.</h2>
+                        <p className="max-w-sm text-sm text-zinc-400">Sign in or finish setting up your account to view your profile.</p>
+                        <button
+                          type="button"
+                          onClick={() => isLoggedIn ? setShowPublicAccountSetup(true) : setShowUsernameLogin(true)}
+                          className="min-h-11 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500"
+                        >
+                          {isLoggedIn ? 'Set up my profile' : 'Sign in'}
+                        </button>
+                      </div>
+                    ) : (
+                      <ProfileView
+                        currentUser={getRichUser(viewedUser || currentUser)}
+                        isLoggedIn={isLoggedIn}
+                        posts={resolvedPosts}
+                        onUpdateProfile={handleUpdateProfile}
+                        onLikePost={handleLikePost}
+                        onAddComment={handleAddComment}
+                        onAddPost={handleAddPost}
+                        isOwnProfile={!viewedUser || viewedUser.id === currentUser.id}
+                        onCloseProfile={viewedUser ? () => setViewedUser(null) : undefined}
+                        onToggleFollow={handleToggleFollow}
+                        isFollowingField={viewedUser ? followingIds.includes(viewedUser.id) : false}
+                        onStartChat={handleStartChat}
+                        onViewProfile={handleViewProfile}
+                        theme={theme}
+                        setTheme={setTheme}
+                        onLogout={() => setIsLogoutConfirming(true)}
+                        onTriggerPWAInstall={handleTriggerPWAInstall}
+                        onOpenVohAi={() => setIsAiCommandCenterOpen(true)}
+                        showPWAInstallPrompt={showPWAInstallPrompt}
+                      />
+                    )
                   )}
 
                   {activeTab === 'live' && (
