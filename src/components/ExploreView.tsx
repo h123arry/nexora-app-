@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Flame, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Globe, Users, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
+import { getSafeAvatar } from '../data/database';
 import { SettingsService } from '../services/firebase/settingsService';
 import { normalizeFeedPreferences } from '../services/discovery/feedPreferences';
 import { auth } from '../services/firebase/config';
@@ -490,7 +491,7 @@ export default function ExploreView({
                           }}
                           className="min-w-0 flex flex-1 items-center gap-3 overflow-hidden rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300"
                         >
-                          <img src={user.avatar} alt="" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" />
+                          <img src={getSafeAvatar(user.avatar, user.name || user.username)} alt="" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" />
                           <div className="overflow-hidden">
                             <div className="flex items-center gap-1.5">
                               <h4 className="text-xs font-bold text-white truncate">{user.name}</h4>
@@ -530,7 +531,7 @@ export default function ExploreView({
                       <div key={post.id} className="p-4 rounded-2xl nx-surface space-y-2.5 shadow-sm">
                         <div className="flex items-center justify-between">
                           <button type="button" onClick={() => onViewProfile?.(post.userId || post.username)} aria-label={`View @${post.username}'s profile`} className="flex min-h-11 items-center gap-2.5 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
-                            <img src={post.avatar} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                            <img src={getSafeAvatar(post.avatar, post.name || post.username)} alt="" className="w-8 h-8 rounded-lg object-cover" />
                             <span>
                               <span className="flex items-center gap-1">
                                 <span className="text-xs font-bold text-white">{post.name}</span>
