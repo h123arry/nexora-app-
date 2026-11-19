@@ -8,6 +8,7 @@ import {
   BarChart2, Sliders, X, Check, ShieldCheck
 } from 'lucide-react';
 import { Post, User } from '../types';
+import { getSafeAvatar } from '../data/database';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraImagePlayer from './NexoraImagePlayer';
 import VohSummaryButton from './VohSummaryButton';
@@ -201,7 +202,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             }}
           >
             <img
-              src={post.avatar}
+              src={getSafeAvatar(post.avatar, post.name || post.username)}
               alt=""
               loading="lazy"
               decoding="async"
