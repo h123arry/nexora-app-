@@ -69,6 +69,7 @@ export default function NexoraImagePlayer({
 }: NexoraImagePlayerProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [downloadingState, setDownloadingState] = useState<string | null>(null);
@@ -292,9 +293,9 @@ export default function NexoraImagePlayer({
 
 
   return (
-    <div className="relative w-full overflow-hidden bg-black aspect-square sm:aspect-[4/3] md:aspect-[16/10] max-h-[580px] select-none group">
+    <div className="relative w-full overflow-hidden bg-black min-h-[220px] select-none group">
       {/* Background Image Display */}
-      <div className="w-full h-full relative overflow-hidden bg-[#080612] flex items-center justify-center">
+      <div className="w-full relative overflow-hidden bg-[#080612] flex items-center justify-center">
         {isResolvingMedia ? (
           <div role="status" aria-live="polite" className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#15102a] via-[#080612] to-[#1c0b20] p-6 text-center">
             <span className="w-8 h-8 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" aria-hidden="true" />
@@ -309,8 +310,9 @@ export default function NexoraImagePlayer({
               fetchPriority="low"
               aria-hidden={hasImageLoadError}
               onLoad={() => { setIsImageLoading(false); setHasImageLoadError(false); }}
+              onClick={() => setIsImageViewerOpen(true)}
               onError={() => { setIsImageLoading(false); setHasImageLoadError(true); }}
-              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${hasImageLoadError ? 'opacity-0' : ''}`}
+              className={`block w-full h-auto max-h-[min(78vh,760px)] object-contain cursor-zoom-in ${hasImageLoadError ? 'opacity-0' : ''}`}
               referrerPolicy="no-referrer"
               style={{ filter: (post.imageFilters && post.imageFilters[currentImageIndex]) || post.imageFilter || 'none' }}
             />
@@ -371,7 +373,7 @@ export default function NexoraImagePlayer({
 
       {/* 1. TOP-LEFT CREATOR INFORMATION OVERLAY (NO PROFILE PICTURE) */}
       <div 
-        className="absolute top-4 left-4 sm:top-5 sm:left-5 z-20 flex flex-col items-start gap-1 text-left pointer-events-auto max-w-[calc(100%-120px)] cursor-pointer group/creator"
+        className="hidden"
         onClick={(e) => { e.stopPropagation(); onViewProfile?.(post.userId || ''); }}
       >
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -398,7 +400,7 @@ export default function NexoraImagePlayer({
 
       {/* 2. RIGHT-SIDE ACTION RAIL */}
       <div 
-        className="absolute z-20 flex flex-col items-center gap-4 sm:gap-5"
+        className="hidden"
         style={{
           bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
           right: 'calc(env(safe-area-inset-right, 0px) + 14px)'
@@ -583,7 +585,7 @@ export default function NexoraImagePlayer({
 
       {/* 3. BOTTOM-LEFT INFORMATION OVERLAY */}
       <div 
-        className="absolute z-20 flex flex-col items-start gap-1.5 text-left pointer-events-auto max-w-[70%] sm:max-w-[75%]"
+        className="hidden"
         style={{
           bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
           left: 'calc(env(safe-area-inset-left, 0px) + 16px)'
@@ -685,6 +687,28 @@ export default function NexoraImagePlayer({
         isFollowing={isFollowing}
       />
 
+
+      {isImageViewerOpen && displayImages[currentImageIndex] && (
+        <div role="dialog" aria-modal="true" aria-label="Full-screen photo viewer"
+          className="fixed inset-0 z-[120] bg-black flex items-center justify-center p-2"
+          onClick={() => setIsImageViewerOpen(false)}>
+          <button type="button" aria-label="Close photo viewer"
+            onClick={() => setIsImageViewerOpen(false)}
+            className="absolute right-4 top-4 z-10 rounded-full bg-black/70 border border-white/20 px-4 py-2 text-sm font-semibold text-white">Close</button>
+          {rawImages.length > 1 && currentImageIndex > 0 && (
+            <button type="button" aria-label="Previous photo"
+              onClick={(event) => { event.stopPropagation(); setCurrentImageIndex(index => index - 1); }}
+              className="absolute left-3 z-10 rounded-full bg-black/70 border border-white/20 px-4 py-3 text-white">‹</button>
+          )}
+          <img src={displayImages[currentImageIndex]} alt={post.imageAltText || post.content || 'Full-size post photo'}
+            className="max-h-full max-w-full object-contain" onClick={(event) => event.stopPropagation()} referrerPolicy="no-referrer" />
+          {rawImages.length > 1 && currentImageIndex < rawImages.length - 1 && (
+            <button type="button" aria-label="Next photo"
+              onClick={(event) => { event.stopPropagation(); setCurrentImageIndex(index => index + 1); }}
+              className="absolute right-3 z-10 rounded-full bg-black/70 border border-white/20 px-4 py-3 text-white">›</button>
+          )}
+        </div>
+      )}
       {/* Downloading Export State Overlay */}
       {downloadingState && (
         <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center gap-3 z-30">
