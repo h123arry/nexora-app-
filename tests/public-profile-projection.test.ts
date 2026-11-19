@@ -35,3 +35,12 @@ test('does not publish blank locations even when visibility is enabled', () => {
   const projection = createPublicProfileProjection({ ...profile, location: '   ' }, { includeLocation: true });
   assert.equal(projection.location, undefined);
 });
+
+test('includes profile identity fields and creator links in the public projection', () => {
+  const projection = createPublicProfileProjection({ ...profile, pronouns: 'they/them', profileCategory: 'Founder Mindset', creatorType: 'Creator', socialTwitter: 'https://x.com/example', socialInstagram: 'https://instagram.com/example' });
+  assert.equal(projection.pronouns, 'they/them');
+  assert.equal(projection.profileCategory, 'Founder Mindset');
+  assert.equal(projection.creatorType, 'Creator');
+  assert.equal(projection.socialTwitter, 'https://x.com/example');
+  assert.equal(projection.socialInstagram, 'https://instagram.com/example');
+});
