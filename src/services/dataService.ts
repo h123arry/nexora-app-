@@ -122,12 +122,10 @@ class BackgroundSyncEngine {
         console.log(`[Sync Engine] Successfully executed pending action: ${item.action}`);
       } catch {
         console.error(`[Sync Engine] Error executing pending action: ${item.action}; details redacted.`);
-        item.retryCount += 1;
-        if (item.retryCount < 5) {
-          failedActions.push(item); // Keep in queue for next retry
-        } else {
-          console.error(`[Sync Engine] Discarding action ${item.action} after 5 failed retries.`);
-        }
+        // Keep failed work until Firestore confirms it. A temporary outage or
+        // expired session must never silently erase a user's pending action.
+        item.retryCount = Math.min(Number.MAX_SAFE_INTEGER, item.retryCount + 1);
+        failedActions.push(item);
       }
     }
 
@@ -143,7 +141,7 @@ class BackgroundSyncEngine {
 
     if (failedActions.length > 0 && typeof navigator !== 'undefined' && navigator.onLine && !this.retryTimer) {
       const maxRetryCount = Math.max(...failedActions.map(item => item.retryCount));
-      const retryDelay = Math.min(30_000, 2 ** Math.max(0, maxRetryCount - 1) * 1_000);
+      const retryDelay = Math.min(300_000, 2 ** Math.min(8, Math.max(0, maxRetryCount - 1)) * 1_000);
       this.retryTimer = setTimeout(() => {
         this.retryTimer = null;
         void this.processQueue();
@@ -157,7 +155,7 @@ class BackgroundSyncEngine {
         detail: {
           syncedCount,
           failedCount: failedActions.length,
-          message: `🔄 Background synchronization complete: ${syncedCount} queued ${syncedCount === 1 ? 'post/action has' : 'posts/actions have'} been successfully published and synced live to NEXORA.`
+          message: `${syncedCount} saved item${syncedCount === 1 ? '' : 's'} synced.`
         }
       }));
     }
