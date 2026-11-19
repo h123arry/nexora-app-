@@ -675,15 +675,15 @@ export default function ExploreView({
               className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:border-violet-300/30 hover:bg-violet-500/10"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Radio className="h-5 w-5" aria-hidden="true" /></span>
-              <span><span className="block text-sm font-bold text-white">Pulse</span><span className="mt-0.5 block text-[10px] text-zinc-400">Live aggregation not connected</span></span>
+              <span><span className="block text-sm font-bold text-white">Trending</span><span className="mt-0.5 block text-[10px] text-zinc-400">Updates are not available yet</span></span>
             </button>
           </div>
 
-          {/* Nexora Pulse: locally observed post topics, not network-wide aggregation */}
+          {/* Trending on Nexora: locally observed post topics, not network-wide aggregation */}
           <div className="nx-surface rounded-3xl p-5 space-y-4 shadow-sm text-left">
             <div className="flex items-center justify-between border-b border-white/5 pb-3">
               <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
-                <Flame className="w-4 h-4 text-pink-500" /> Nexora Pulse
+                <Flame className="w-4 h-4 text-pink-500" /> Trending on Nexora
               </h3>
               <button 
                 onClick={() => setShowAllPulse(!showAllPulse)} 
