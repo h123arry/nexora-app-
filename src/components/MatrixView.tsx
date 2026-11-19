@@ -63,7 +63,7 @@ export default function MatrixView({
   return (
     <div id="voh-ai-centre" className="space-y-6 pb-28 sm:pb-12">
       
-      {/* Control Center Banner Header */}
+      {/* VOH AI heading */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-5">
         <div>
           <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
@@ -72,7 +72,7 @@ export default function MatrixView({
               <VohIcon size={18} animated glow variant="brand" />
             </div>
             <h2 className="text-xl font-black font-sans tracking-tight text-current">
-              VOH AI Hub
+              VOH AI
             </h2>
           </div>
           <p className="text-xs text-current/60 font-sans">
@@ -82,7 +82,7 @@ export default function MatrixView({
 
     </div>
 
-      {/* Futuristic Menu Pills */}
+      {/* Main menu */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 select-none">
         {menuItems.map((item) => {
           const Icon = item.icon;
