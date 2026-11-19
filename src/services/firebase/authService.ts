@@ -409,7 +409,7 @@ export class AuthService {
         isNewUser = true;
         userProfile = await ProfileService.createProfile(fbUser.uid, {
           name: fbUser.displayName || 'Google User',
-          avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
+          avatar: fbUser.photoURL || '',
           isVerified: fbUser.emailVerified
         }, fbUser.email || '');
       }
