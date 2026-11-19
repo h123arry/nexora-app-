@@ -52,7 +52,7 @@ import { db } from './lib/firebase';
 import { functions } from './lib/firebase';
 import { mergeRealtimePosts } from './services/posts/postCollection';
 import { httpsCallable } from 'firebase/functions';
-import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, onSnapshot, query } from 'firebase/firestore';
 import { useFirebase } from './context/FirebaseContext';
 import { TRANSLATIONS, getLocaleDirection, resolveLocale } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
@@ -107,6 +107,21 @@ import PwaUpdatePrompt from './components/PwaUpdatePrompt';
 
 export default function App() {
   const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, retryProfileLoad, logout, loginWithUsername } = useFirebase();
+  // Keep the signed-in account's public identity live across devices and profile edits.
+  useEffect(() => {
+    if (!isLoggedIn || !firebaseUser?.uid) return;
+    return onSnapshot(doc(db, 'publicProfiles', firebaseUser.uid), snapshot => {
+      if (!snapshot.exists()) return;
+      const latest = { ...snapshot.data(), id: firebaseUser.uid } as User;
+      setGlobalUsersMap(previous => ({ ...previous, [firebaseUser.uid]: latest }));
+      setCurrentUser(previous => previous.id === firebaseUser.uid
+        ? getRichUser({ ...previous, ...latest })
+        : previous);
+    }, () => {
+      // The current cached profile remains visible if the live profile read is temporarily unavailable.
+    });
+  }, [firebaseUser?.uid, isLoggedIn]);
+
 
   useEffect(() => {
     const connection = (navigator as Navigator & {
