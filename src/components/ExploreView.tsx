@@ -12,9 +12,7 @@ import { searchPublicDirectory, type PublicDirectoryResult } from '../services/f
 import { getNexoraTrendingTopics, searchNexora, type NexoraSearchResult } from '../services/firebase/universalSearchService';
 import { getTranslations } from '../utils/translations';
 import { readUserScopedJson } from '../utils/userScopedStorage';
-import { getRenderableAvatarUrl } from '../utils/avatarUrl';
 
-const avatarInitial = (name?: string) => (name?.trim().charAt(0) || 'N').toUpperCase();
 
 function readExploreRecentSearches(userId: string): string[] {
   if (!userId) return [];
@@ -493,7 +491,7 @@ export default function ExploreView({
                           }}
                           className="min-w-0 flex flex-1 items-center gap-3 overflow-hidden rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300"
                         >
-                          {getRenderableAvatarUrl(user.avatar) ? <img src={getRenderableAvatarUrl(user.avatar) || undefined} alt="" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" /> : <span aria-hidden="true" className="grid h-12 w-12 place-items-center rounded-xl bg-violet-950/70 text-sm font-bold text-violet-100 ring-2 ring-violet-500/30">{avatarInitial(user.name || user.username)}</span>}
+                          <img src={user.avatar} alt="" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" />
                           <div className="overflow-hidden">
                             <div className="flex items-center gap-1.5">
                               <h4 className="text-xs font-bold text-white truncate">{user.name}</h4>
@@ -533,7 +531,7 @@ export default function ExploreView({
                       <div key={post.id} className="p-4 rounded-2xl nx-surface space-y-2.5 shadow-sm">
                         <div className="flex items-center justify-between">
                           <button type="button" onClick={() => onViewProfile?.(post.userId || post.username)} aria-label={`View @${post.username}'s profile`} className="flex min-h-11 items-center gap-2.5 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
-                            {getRenderableAvatarUrl(post.avatar) ? <img src={getRenderableAvatarUrl(post.avatar) || undefined} alt="" className="w-8 h-8 rounded-lg object-cover" /> : <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-lg bg-violet-950/70 text-[10px] font-bold text-violet-100">{avatarInitial(post.name || post.username)}</span>}
+                            <img src={post.avatar} alt="" className="w-8 h-8 rounded-lg object-cover" />
                             <span>
                               <span className="flex items-center gap-1">
                                 <span className="text-xs font-bold text-white">{post.name}</span>
@@ -736,7 +734,7 @@ export default function ExploreView({
                   onClick={() => onViewProfile?.(user.id)}
                   className="w-[150px] shrink-0 p-4 nx-surface hover:border-white/10 rounded-2xl flex flex-col items-center text-center gap-2.5 cursor-pointer transition-all group shadow-sm"
                 >
-                  {getRenderableAvatarUrl(user.avatar) ? <img src={getRenderableAvatarUrl(user.avatar) || undefined} alt={user.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-all" /> : <span aria-hidden="true" className="grid h-12 w-12 place-items-center rounded-xl bg-violet-950/70 text-sm font-bold text-violet-100 ring-2 ring-violet-500/30">{avatarInitial(user.name || user.username)}</span>}
+                  <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-all" />
                   <div className="w-full overflow-hidden">
                     <div className="flex items-center justify-center gap-1">
                       <h4 className="text-xs font-bold text-white truncate">{user.name}</h4>
