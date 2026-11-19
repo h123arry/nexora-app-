@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
-import { Gift, Sparkles } from 'lucide-react';
+import { Gift, Sparkles, ShoppingBag } from 'lucide-react';
 import { db } from '../lib/firebase';
+import { getMyGiftInventory, type GiftInventoryItem } from '../services/giftCatalogService';
 
 interface GalleryGift {
   id: string;
@@ -11,27 +12,63 @@ interface GalleryGift {
   quantity?: number;
   senderName?: string;
 }
-export default function CreatorGiftGallery({ userId }: { userId: string }) {
+function GiftGrid({ gifts, received = false }: { gifts: Array<GiftInventoryItem | GalleryGift>; received?: boolean }) {
+  if (!gifts.length) return null;
+  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    {gifts.map(gift => {
+      const name = 'giftName' in gift ? gift.giftName : gift.giftName;
+      const image = gift.image;
+      const quantity = gift.quantity || 1;
+      return <article key={gift.id} className="overflow-hidden rounded-2xl border border-violet-300/15 bg-[#100d20] shadow-[0_12px_36px_rgba(0,0,0,.18)]">
+        <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-[radial-gradient(circle,rgba(124,58,237,.24),transparent_72%)] p-4">
+          {image?.startsWith('/giftverse/gifts/') ? <img src={image} alt={name || 'NEXORA gift'} loading="lazy" decoding="async" className="h-full w-full object-contain transition-transform duration-500 hover:scale-105"/> : <Gift className="h-10 w-10 text-violet-300/60" aria-hidden="true"/>}
+          <span className="absolute right-2 top-2 rounded-full border border-violet-300/25 bg-black/65 px-2 py-1 text-[10px] font-bold text-violet-100">×{quantity}</span>
+        </div>
+        <div className="p-3">
+          <p className="truncate text-xs font-bold text-white">{name || 'Gift details unavailable'}</p>
+          <p className="mt-1 text-[10px] capitalize text-violet-200/65">{gift.rarity || 'Gift'}{received && 'senderName' in gift && gift.senderName ? ' · from ' + gift.senderName : ''}</p>
+        </div>
+      </article>;
+    })}
+  </div>;
+}
+export default function CreatorGiftGallery({ userId, isOwner = false, onExplore }: { userId: string; isOwner?: boolean; onExplore?: () => void }) {
   const [gifts, setGifts] = useState<GalleryGift[]>([]);
+  const [inventory, setInventory] = useState<GiftInventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [inventoryError, setInventoryError] = useState(false);
   useEffect(() => {
     let active = true;
     setLoading(true);
-    getDocs(query(collection(db, 'users', userId, 'giftGallery'), orderBy('receivedAt', 'desc'), limit(60)))
-      .then(snapshot => { if (active) setGifts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GalleryGift))); })
-      .catch(() => { if (active) setGifts([]); })
+    const received = getDocs(query(collection(db, 'users', userId, 'giftGallery'), orderBy('receivedAt', 'desc'), limit(100)));
+    const owned = isOwner ? getMyGiftInventory() : Promise.resolve([]);
+    Promise.all([received, owned])
+      .then(([snapshot, items]) => {
+        if (!active) return;
+        setGifts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GalleryGift)));
+        setInventory(items);
+        setInventoryError(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setGifts([]);
+        if (isOwner) setInventoryError(true);
+      })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [userId]);
+  }, [userId, isOwner]);
   if (loading) return <div className="mx-auto grid max-w-4xl grid-cols-2 gap-3 px-3 sm:grid-cols-4"><div className="aspect-square animate-pulse rounded-2xl bg-white/5"/><div className="aspect-square animate-pulse rounded-2xl bg-white/5"/></div>;
-  if (!gifts.length) return <div className="mx-auto max-w-md py-16 text-center"><Gift className="mx-auto mb-3 h-9 w-9 text-violet-300"/><p className="font-bold text-zinc-200">No gifts yet</p><p className="mt-1 text-xs text-zinc-500">Gifts people send you will appear here.</p></div>;
-  return <section className="mx-auto w-full max-w-4xl px-3 pb-8" aria-label="Creator gift gallery">
-    <div className="mb-4 flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-300"/><h3 className="text-sm font-bold text-white">Gift gallery</h3><span className="text-xs text-zinc-500">{gifts.length} keepsakes</span></div>
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      {gifts.map(gift => <article key={gift.id} className="overflow-hidden rounded-2xl border border-white/10 bg-[#100d20]">
-        <div className="flex aspect-square items-center justify-center bg-[radial-gradient(circle,rgba(124,58,237,.18),transparent_72%)] p-4">{gift.image?.startsWith('/giftverse/gifts/') ? <img src={gift.image} alt={gift.giftName || 'NEXORA gift'} loading="lazy" decoding="async" className="h-full w-full object-contain"/> : <div className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/10 text-zinc-500"><Gift className="h-8 w-8" aria-hidden="true"/><span className="text-[10px]">Artwork unavailable</span></div>}</div>
-        <div className="p-3"><p className="truncate text-xs font-bold text-white">{gift.giftName || 'Gift details unavailable'}</p><p className="mt-1 text-[10px] text-zinc-500">From {gift.senderName || 'Sender unavailable'}{gift.quantity && gift.quantity > 1 ? ' · ×' + gift.quantity : ''}</p></div>
-      </article>)}
-    </div>
+  return <section className="mx-auto w-full max-w-5xl space-y-8 px-3 pb-8" aria-label="Gift gallery">
+    {isOwner && <section>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div><div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-violet-300"/><h3 className="text-sm font-bold text-white">My Gift Collection</h3><span className="text-xs text-zinc-500">{inventory.reduce((sum, item) => sum + item.quantity, 0)} owned</span></div><p className="mt-1 text-xs text-zinc-500">Your gifts, ready to keep or send to someone.</p></div>
+        {onExplore && <button type="button" onClick={onExplore} className="inline-flex items-center gap-2 rounded-xl border border-violet-300/25 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-100 hover:bg-violet-500/20"><ShoppingBag className="h-3.5 w-3.5"/>Explore GiftVerse</button>}
+      </div>
+      {inventoryError ? <p className="rounded-xl border border-rose-300/15 bg-rose-500/5 p-4 text-xs text-rose-200">Your collection could not be loaded. Please refresh and try again.</p> : inventory.length ? <GiftGrid gifts={inventory}/> : <div className="rounded-2xl border border-dashed border-violet-300/15 bg-violet-500/[.035] px-5 py-10 text-center"><Gift className="mx-auto mb-3 h-9 w-9 text-violet-300"/><p className="text-sm font-bold text-white">Your collection is waiting</p><p className="mt-1 text-xs text-zinc-400">Explore GiftVerse, discover something extraordinary, and add your first gift.</p>{onExplore && <button type="button" onClick={onExplore} className="mt-4 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white">Explore the gift catalogue</button>}</div>}
+    </section>}
+    <section>
+      <div className="mb-4 flex items-center gap-2"><Gift className="h-4 w-4 text-violet-300"/><h3 className="text-sm font-bold text-white">{isOwner ? 'Gifts I’ve Received' : 'Gift gallery'}</h3><span className="text-xs text-zinc-500">{gifts.length} keepsakes</span></div>
+      {gifts.length ? <GiftGrid gifts={gifts} received/> : <div className="rounded-2xl border border-dashed border-white/10 py-12 text-center"><Gift className="mx-auto mb-3 h-8 w-8 text-violet-300/60"/><p className="text-sm font-semibold text-zinc-200">No gifts received yet</p><p className="mt-1 text-xs text-zinc-500">Gifts sent to this profile will appear here.</p></div>}
+    </section>
   </section>;
 }
