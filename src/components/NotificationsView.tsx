@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, BookmarkCheck, Eye, ArrowRight, Sparkle, History, VolumeX, AlertTriangle, Layers, Trash, Star, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, CheckSquare, Square, Check, Scale } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
-import { getSafeAvatar } from '../data/database';
 import { deleteOwnNotification, deleteOwnNotifications, setNotificationReadState, setNotificationsReadState } from '../services/dataService';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { getNotificationTimeSection } from '../utils/notificationTime';
+
+const hasCustomAvatar = (avatar?: string) => Boolean(avatar && !avatar.includes('photo-1535713875002-d1d0cf377fde'));
+const avatarInitial = (name?: string) => (name?.trim().charAt(0) || 'N').toUpperCase();
 import {
   requestPushPermission,
   isPushPermissionGranted,
@@ -862,16 +864,22 @@ export default function NotificationsView({
                                   }
                                 }}
                               >
-                                <img 
-                                  src={getSafeAvatar(notif.avatar, notif.actorName || notif.username || 'N')} 
-                                  alt="" 
-                                  className={`w-11 h-11 rounded-2xl object-cover border border-white/10 ${
-                                    notif.type === 'pulse_alert' && notif.content.includes('LIVE')
-                                      ? 'ring-2 ring-red-500 animate-pulse'
-                                      : ''
-                                  }`} 
-                                  referrerPolicy="no-referrer"
-                                />
+                                {hasCustomAvatar(notif.avatar) ? (
+                                  <img
+                                    src={notif.avatar}
+                                    alt=""
+                                    className={`w-11 h-11 rounded-2xl object-cover border border-white/10 ${
+                                      notif.type === 'pulse_alert' && notif.content.includes('LIVE')
+                                        ? 'ring-2 ring-red-500 animate-pulse'
+                                        : ''
+                                    }`}
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ) : (
+                                  <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-violet-950/70 text-sm font-bold text-violet-100">
+                                    {avatarInitial(notif.actorName || notif.username)}
+                                  </span>
+                                )}
                                 {/* Verification small overlay */}
                                 {notif.userId !== 'multiple' && (
                                   <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-violet-600 border border-slate-900 flex items-center justify-center text-[8px] text-white">
@@ -989,7 +997,7 @@ export default function NotificationsView({
                                   {notif.subActivities.map(user => (
                                     <div key={user.userId} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
                                       <div className="flex items-center gap-2">
-                                        <img src={getSafeAvatar(user.avatar, user.username || 'N')} alt="" className="w-7 h-7 rounded-lg object-cover" />
+                                        {hasCustomAvatar(user.avatar) ? <img src={user.avatar} alt="" className="w-7 h-7 rounded-lg object-cover" /> : <span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-lg bg-violet-950/70 text-[9px] font-bold text-violet-100">{avatarInitial(user.username)}</span>}
                                         <div className="text-left leading-none">
                                           <span className="text-xs text-white font-bold block">@{user.username}</span>
                                           <span className="text-[8.5px] font-mono text-zinc-500 block mt-0.5">{user.timestamp}</span>
