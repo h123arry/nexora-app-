@@ -42,7 +42,7 @@ export default function ReferralGrowthPanel({ currentUser }: Props) {
     } catch (reason) {
       if (!(reason instanceof Error && reason.name === 'AbortError')) {
         setError(reason instanceof Error && reason.message.includes('not currently available')
-          ? 'Invites aren't available yet. NEXORA needs to set up the rewards first.'
+          ? 'Invites are not available yet. NEXORA needs to set up the rewards first.'
           : 'Your invitation link could not be created. Please retry.');
       }
     } finally { setCreating(false); }
