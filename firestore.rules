@@ -456,6 +456,12 @@ service cloud.firestore {
       }
 
       match /activityEvents/{eventId} { allow read, write: if owner(userId); }
+      // Incoming Sparks are written by the trusted engagement transaction and
+      // visible only to the profile owner.
+      match /sparkEvents/{eventId} {
+        allow get, list: if owner(userId);
+        allow create, update, delete: if false;
+      }
       // Callable backend owns these markers and the corresponding post counter.
       match /postLikes/{postId} {
         allow get, list: if owner(userId);
