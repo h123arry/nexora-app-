@@ -16,7 +16,7 @@ export const CREATOR_ACADEMY_TOOLKITS: CreatorTemplate[] = [
     { id: 'formats', label: 'Repeatable formats', prompt: 'List the formats you can produce consistently.', multiline: true },
     { id: 'production', label: 'Production windows', prompt: 'When will you research, create, edit and publish?', multiline: true },
     { id: 'buffer', label: 'Buffer and rest', prompt: 'Where is your recovery time and contingency space?' },
-    { id: 'review', label: 'Review date and signal', prompt: 'When will you review the plan, and what evidence will matter?' },
+    { id: 'review', label: 'Review date and what to look for', prompt: 'When will you review the plan, and what evidence will matter?' },
   ]},
   { id: 'audience-interview', title: 'Audience interview guide', category: 'Research', description: 'Learn from real audience needs instead of relying on assumptions.', outcome: 'A short interview plan and a structured record of what you learn.', fields: [
     { id: 'participant', label: 'Participant context', prompt: 'Describe the relevant audience context without recording unnecessary private data.' },
@@ -24,7 +24,7 @@ export const CREATOR_ACADEMY_TOOLKITS: CreatorTemplate[] = [
     { id: 'challenge', label: 'Current challenge', prompt: 'What difficulty or unmet need did they describe?', multiline: true },
     { id: 'exact-words', label: 'Useful exact wording', prompt: 'Record a short quote only with permission. Otherwise paraphrase.' , multiline: true},
     { id: 'workaround', label: 'Current workaround', prompt: 'What do they do today, and what is frustrating about it?', multiline: true },
-    { id: 'next-test', label: 'Follow-up hypothesis', prompt: 'What should you investigate next? Separate evidence from assumptions.' , multiline: true},
+    { id: 'next-test', label: 'Your next idea to test', prompt: 'What should you investigate next? Separate evidence from assumptions.' , multiline: true},
   ]},
   { id: 'partnership-proposal', title: 'Brand partnership proposal', category: 'Business', description: 'Prepare a transparent, professional partnership outline before negotiating.', outcome: 'A proposal brief that makes scope, value and obligations clear.', fields: [
     { id: 'brand-fit', label: 'Why this brand fits', prompt: 'Explain the genuine connection between the brand and your work.', multiline: true },
@@ -50,13 +50,13 @@ export const CREATOR_ACADEMY_TOOLKITS: CreatorTemplate[] = [
     { id: 'moderation', label: 'Moderation and escalation', prompt: 'Describe warnings, content removal, restrictions and urgent escalation.', multiline: true },
     { id: 'reporting', label: 'How members can seek help', prompt: 'Explain the reporting route and what information to include.' },
   ]},
-  { id: 'content-experiment', title: 'Content experiment tracker', category: 'Analytics', description: 'Test a specific creative hypothesis without overreacting to one result.', outcome: 'A fair experiment with a defined variable, measures and decision rule.', fields: [
+  { id: 'content-experiment', title: 'Content test plan', category: 'Analytics', description: 'Try one change to your content without judging it from one result.', outcome: 'A fair test with one change, clear results to watch and a plan for what to do next.', fields: [
     { id: 'question', label: 'Question to investigate', prompt: 'What do you want to understand?' },
     { id: 'hypothesis', label: 'Hypothesis', prompt: 'What do you expect to happen, and why?', multiline: true },
     { id: 'variable', label: 'One main variable', prompt: 'What will change while other factors remain as comparable as possible?' },
     { id: 'comparison', label: 'Comparable posts or baseline', prompt: 'Which examples will you compare?', multiline: true },
-    { id: 'measure', label: 'Primary and guardrail measures', prompt: 'Which metric matters, and what quality or wellbeing signal must not worsen?' },
-    { id: 'decision', label: 'Review window and decision rule', prompt: 'When will you review, and what result would support or weaken the hypothesis?', multiline: true },
+    { id: 'measure', label: 'Main result and what must not get worse', prompt: 'Which result matters most, and what should stay just as good?' },
+    { id: 'decision', label: 'When to review and what you will do', prompt: 'When will you review, and what result would support or weaken the hypothesis?', multiline: true },
   ]},
   { id: 'portfolio-case-study', title: 'Portfolio case study', category: 'Professional', description: 'Show your contribution and evidence without exaggerating outcomes.', outcome: 'A concise case study suitable for a portfolio or professional introduction.', fields: [
     { id: 'brief', label: 'Project brief', prompt: 'What was the objective and context?', multiline: true },

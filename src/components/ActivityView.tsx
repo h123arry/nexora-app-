@@ -14,14 +14,14 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadError, setLoadError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'All' | 'Social' | 'Missions' | 'Rewards' | 'System'>('All');
+  const [activeTab, setActiveTab] = useState<'All' | 'Social' | 'Tasks' | 'Rewards' | 'Updates'>('All');
   const [expandedNotificationId, setExpandedNotificationId] = useState<string | null>(null);
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!db || !uid || uid !== currentUser.id) {
       setNotifications([]);
-      setLoadError('Sign in to view your account activity.');
+      setLoadError('Sign in to see your notifications.');
       setIsLoading(false);
       return;
     }
@@ -46,8 +46,8 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
       console.warn('[ActivityView] Notifications snapshot error; details redacted.');
       setIsLoading(false);
       setLoadError(error?.code === 'permission-denied'
-        ? 'You do not have permission to read this activity feed.'
-        : 'Activity could not be loaded. Check your connection and try again.');
+        ? 'You can’t view these notifications.'
+        : 'Notifications couldn’t load. Check your connection and try again.');
     });
 
     return () => unsubscribe();
@@ -59,13 +59,13 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
       case 'Social':
         filtered = notifications.filter(n => ['like', 'comment', 'follow', 'mention', 'share'].includes(n.type));
         break;
-      case 'Missions':
+      case 'Tasks':
         filtered = notifications.filter(n => ['mission_milestone'].includes(n.type));
         break;
       case 'Rewards':
         filtered = notifications.filter(n => ['reputation_milestone'].includes(n.type));
         break;
-      case 'System':
+      case 'Updates':
         filtered = notifications.filter(n => ['system', 'pulse_alert'].includes(n.type));
         break;
     }
@@ -160,13 +160,13 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
       <OriginAttributionInbox />
       {/* Tabs */}
       <div className="flex items-center border-b border-zinc-800 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-md z-10">
-        {(['All', 'Social', 'Missions', 'Rewards', 'System'] as const).map(tab => (
+        {(['All', 'Social', 'Tasks', 'Rewards', 'Updates'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`flex-1 py-4 text-sm font-semibold transition-colors relative ${activeTab === tab ? 'text-violet-400' : 'text-zinc-500'}`}
           >
-            {tab} <span className="ml-1 text-[10px] opacity-70">{tab === 'All' ? notifications.filter(n => !n.isRead).length : notifications.filter(n => !n.isRead && (tab === 'Social' ? ['like', 'comment', 'follow', 'mention', 'share'].includes(n.type) : tab === 'Missions' ? n.type === 'mission_milestone' : tab === 'Rewards' ? n.type === 'reputation_milestone' : ['system', 'pulse_alert'].includes(n.type))).length}</span>
+            {tab} <span className="ml-1 text-[10px] opacity-70">{tab === 'All' ? notifications.filter(n => !n.isRead).length : notifications.filter(n => !n.isRead && (tab === 'Social' ? ['like', 'comment', 'follow', 'mention', 'share'].includes(n.type) : tab === 'Tasks' ? n.type === 'mission_milestone' : tab === 'Rewards' ? n.type === 'reputation_milestone' : ['system', 'pulse_alert'].includes(n.type))).length}</span>
             {activeTab === tab && <motion.div className="absolute bottom-0 left-4 right-4 h-0.5 bg-violet-400 rounded-t-full" layoutId="activeTab" />}
           </button>
         ))}
@@ -176,7 +176,7 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
       {/* List */}
       <div className="flex-1 overflow-y-auto px-2">
         {isLoading ? (
-          <div role="status" className="flex h-full items-center justify-center p-6 text-sm text-zinc-400">Loading account activity…</div>
+          <div role="status" className="flex h-full items-center justify-center p-6 text-sm text-zinc-400">Loading notifications…</div>
         ) : loadError ? (
           <div role="status" className="flex flex-col items-center justify-center h-full p-6 text-center space-y-3">
             <Shield className="h-8 w-8 text-zinc-600" />
@@ -188,8 +188,8 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
               <Bell className="w-10 h-10 text-zinc-700" />
             </div>
             <div className='space-y-1'>
-                <p className="text-white text-lg font-bold">{activeTab === 'All' ? 'Nothing new yet.' : `No ${activeTab.toLowerCase()} activity yet.`}</p>
-                <p className="text-zinc-500 text-sm max-w-[250px]">{activeTab === 'All' ? "When people interact with you, you'll see everything here." : `New ${activeTab.toLowerCase()} notifications will appear here.`}</p>
+                <p className="text-white text-lg font-bold">{activeTab === 'All' ? 'You’re all caught up.' : `No ${activeTab.toLowerCase()} activity yet.`}</p>
+                <p className="text-zinc-500 text-sm max-w-[250px]">{activeTab === 'All' ? "When people interact with you, you’ll see everything here." : `New ${activeTab.toLowerCase()} notifications will appear here.`}</p>
             </div>
           </div>
         ) : (

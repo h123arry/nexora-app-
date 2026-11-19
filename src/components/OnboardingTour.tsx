@@ -35,13 +35,13 @@ export default function OnboardingTour({ onClose, onInterestSelected, onStartFir
             <h2 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">What are you most interested in?</h2>
             <p className="mt-2 text-sm leading-6 text-zinc-400">Choose one. We'll use it to shape the first things you see.</p>
             <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2">{interests.map(item => <button key={item.id} type="button" onClick={() => chooseInterest(item.id)} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-left transition hover:border-violet-400/50 hover:bg-violet-500/10"><span className="block text-sm font-bold text-white">{item.label}</span><span className="mt-1 block text-xs text-zinc-400">{item.detail}</span></button>)}</div>
-            <p className="mt-5 text-xs text-zinc-500">You can change your interests any time in your profile settings.</p>
+            <p className="mt-5 text-xs text-zinc-500">You can change your interests anytime in your profile.</p>
           </> : <>
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-violet-300">You're in</p>
             <h2 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">Your {interest.toLowerCase()} corner is ready.</h2>
-            <p className="mt-2 text-sm leading-6 text-zinc-400">NEXORA will use this preference to guide discovery. Your first contribution can be as simple as introducing yourself or sharing one thought.</p>
-            <div className="mt-6 rounded-2xl border border-violet-400/15 bg-violet-500/[0.07] p-4"><div className="flex items-center gap-2 text-sm font-bold text-violet-200"><Check className="h-4 w-4" /> First-session mission</div><p className="mt-2 text-sm text-zinc-300">Publish one short post and see it appear in your NEXORA feed.</p></div>
-            <button type="button" onClick={onStartFirstTask || onClose} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-950/40">Create your first post <ArrowRight className="h-4 w-4" /></button>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">We'll use your interests to show you posts you may like. You can start by introducing yourself or sharing a thought.</p>
+            <div className="mt-6 rounded-2xl border border-violet-400/15 bg-violet-500/[0.07] p-4"><div className="flex items-center gap-2 text-sm font-bold text-violet-200"><Check className="h-4 w-4" /> Your first task</div><p className="mt-2 text-sm text-zinc-300">Share your first post and see it in your feed.</p></div>
+            <button type="button" onClick={onStartFirstTask || onClose} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-950/40">Share your first post <ArrowRight className="h-4 w-4" /></button>
             <button type="button" onClick={onClose} className="mt-3 w-full rounded-xl px-4 py-2 text-xs font-semibold text-zinc-400 hover:text-white">Explore NEXORA first</button>
           </>}
         </motion.section>

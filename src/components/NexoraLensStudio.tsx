@@ -395,12 +395,12 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
         filter: record.filter,
         sticker: 'none',
         description: record.status === 'approved'
-          ? 'A community-approved creator lens.'
+          ? 'Approved lens.'
           : record.status === 'pending_review'
-            ? 'Your lens is awaiting NEXORA moderation.'
+            ? 'Your lens is being reviewed.'
             : record.status === 'rejected'
-              ? record.reviewNote || 'This lens needs changes before resubmission.'
-              : 'Your private creator lens draft.',
+              ? record.reviewNote || 'Please update this lens before sending it again.'
+              : 'Your saved lens draft.',
         intensity: 100,
         featured: record.status === 'approved',
       }));
@@ -733,7 +733,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
       category: 'Creator',
       filter: `brightness(${(customBrightness / 100).toFixed(2)}) contrast(${(customContrast / 100).toFixed(2)}) saturate(${(customSaturation / 100).toFixed(2)}) hue-rotate(${customHue}deg)`,
       sticker: 'none',
-      description: 'A custom look created in NEXORA Lensverse.',
+      description: 'A look you created in Lensverse.',
       intensity: 100,
       featured: true,
     };
@@ -764,7 +764,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
       const lens: NexoraLens = {
         id: saved.lensId, name: name.slice(0, 32), category: 'Creator',
         filter: `brightness(${(customBrightness / 100).toFixed(2)}) contrast(${(customContrast / 100).toFixed(2)}) saturate(${(customSaturation / 100).toFixed(2)}) hue-rotate(${customHue}deg)`,
-        sticker: 'none', description: 'Your lens is awaiting NEXORA moderation.',
+        sticker: 'none', description: 'Your lens is being reviewed.',
         intensity: 100, featured: false,
       };
       setCustomLenses(previous => {
@@ -799,7 +799,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
     <div className="space-y-3">
       <div className="relative mx-auto aspect-[4/5] w-full max-w-[420px] overflow-hidden rounded-[1.6rem] border border-[#44376F] bg-[#050914] shadow-[0_16px_48px_rgba(0,0,0,.38)]" data-lensverse-catalog-size={NEXORA_LENS_CATALOG.length}>
         <video ref={videoRef} autoPlay muted playsInline className="hidden" />
-        <canvas ref={canvasRef} className="h-full w-full object-cover" aria-label="Live NEXORA camera preview with selected lens" />
+        <canvas ref={canvasRef} className="h-full w-full object-cover" aria-label="Camera preview" />
         {countdownTimer !== null && <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#050914]/20"><span className="animate-ping text-7xl font-black text-white drop-shadow-[0_0_24px_rgba(138,63,252,.9)]">{countdownTimer}</span></div>}
         <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-[#050914]/75 px-3 py-1.5 text-[10px] font-semibold text-white backdrop-blur">
           <span className="h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_10px_#8A3FFC]" /> NEXORA LENSES
@@ -821,20 +821,20 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
       <div className="flex items-center justify-between gap-2 px-1">
         <div className="min-w-0">
           <p className="text-xs font-bold text-white">Lensverse</p>
-          <p className="text-[10px] text-[#8E88A7]">{visibleLenses.length} lenses in this collection · 300 original NEXORA lenses</p>
+          <p className="text-[10px] text-[#8E88A7]">{visibleLenses.length} lenses in this collection · 300 lenses</p>
         </div>
         <span className="shrink-0 rounded-full border border-[#7138FF]/40 bg-[#7138FF]/15 px-2.5 py-1 text-[9px] font-semibold text-[#D7C7FF]">NEXORA ORIGINALS</span>
       </div>
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-xs font-bold text-white">Create your own lens</p>
-          <p className="text-[10px] text-[#8E88A7]">Mix your own colour recipe and save it to your Creator collection.</p>
+          <p className="text-[10px] text-[#8E88A7]">Choose your colours and save your lens.</p>
         </div>
         <button type="button" onClick={() => setIsCreatorPanelOpen(value => !value)} className="shrink-0 rounded-full border border-[#7138FF]/50 bg-[#7138FF]/20 px-3 py-2 text-[10px] font-bold text-white">{isCreatorPanelOpen ? 'Close studio' : '+ Make a lens'}</button>
       </div>
       {isCreatorPanelOpen && (
         <div className="space-y-3 rounded-xl border border-[#44376F] bg-[#120E2B] p-3">
-          <input value={customLensName} onChange={event => setCustomLensName(event.target.value)} maxLength={32} placeholder="Name your original lens" className="w-full rounded-lg border border-white/10 bg-[#090714] px-3 py-2 text-xs text-white outline-none focus:border-violet-400" />
+          <input value={customLensName} onChange={event => setCustomLensName(event.target.value)} maxLength={32} placeholder="Name your lens" className="w-full rounded-lg border border-white/10 bg-[#090714] px-3 py-2 text-xs text-white outline-none focus:border-violet-400" />
           {[
             { label: 'Brightness', value: customBrightness, set: setCustomBrightness, min: 70, max: 140 },
             { label: 'Contrast', value: customContrast, set: setCustomContrast, min: 70, max: 150 },
@@ -848,7 +848,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
             </label>
           ))}
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[9px] text-[#8E88A7]">Preview is applied to your live camera.</span>
+            <span className="text-[9px] text-[#8E88A7]">See how it looks on your camera.</span>
             <div className="flex flex-wrap justify-end gap-2">
               <button type="button" onClick={saveCustomLens} className="rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold text-white">Save on device</button>
               <button type="button" disabled={isSubmittingCreatorLens} onClick={() => void submitCustomLensForReview()} className="rounded-lg bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50">{isSubmittingCreatorLens ? 'Submitting…' : 'Submit for review'}</button>
@@ -877,7 +877,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
           <span className="w-8 text-right text-[10px] tabular-nums text-[#A39BBF]">{beautyIntensity}%</span>
         </label>
       )}
-      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]" aria-label="Horizontally scrollable lens previews">
+      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]" aria-label="Swipe to see more lenses">
         {visibleLenses.map(lens => {
           const selected = activeLens === lens.id;
           const Icon = lens.sticker === 'crown' ? Crown : lens.sticker === 'cat' ? Cat : lens.sticker === 'glasses' ? Glasses : lens.sticker === 'hearts' ? Heart : lens.sticker === 'halo' ? Sun : lens.sticker === 'sparkles' ? Sparkles : lens.id === 'midnight' || lens.id === 'mono' ? Moon : Star;
@@ -899,7 +899,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
           );
         })}
       </div>
-      {faceTracking === 'unavailable' && <p className="text-center text-[10px] text-[#8E88A7]">AR face lenses need a one-time on-device model download. Colour and beauty filters remain available.</p>}
+      {faceTracking === 'unavailable' && <p className="text-center text-[10px] text-[#8E88A7]">Face effects need a small download the first time you use them. Colour and beauty filters are still available.</p>}
     </div>
   );
 }

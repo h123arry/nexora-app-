@@ -227,7 +227,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const createNewSession = (initialPrompt?: string, title?: string) => {
     const newSession: ChatSession = {
       id: `session-${Date.now()}`,
-      title: title || (initialPrompt ? initialPrompt.slice(0, 24) + '...' : `New Dialogue ${sessions.length + 1}`),
+      title: title || (initialPrompt ? initialPrompt.slice(0, 24) + '...' : `New chat ${sessions.length + 1}`),
       messages: initialPrompt ? [
         { id: `msg-${Date.now()}-user`, sender: 'user', text: initialPrompt, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
       ] : [
@@ -254,7 +254,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const deleteSession = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSessions(prev => prev.filter(s => s.id !== id));
-    showToast("Session removed.");
+    showToast("Chat deleted.");
   };
 
   const togglePinSession = (id: string, e: React.MouseEvent) => {
@@ -265,7 +265,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const toggleArchiveSession = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setSessions(prev => prev.map(s => s.id === id ? { ...s, isArchived: !s.isArchived } : s));
-    showToast("Session status updated.");
+    showToast("Chat updated.");
   };
 
   // Speech Recognition hook for continuous listening
@@ -393,7 +393,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       { id: userMsgId, sender: 'user', text: textToSend, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
     ];
 
-    setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: updatedMessages, title: s.title.startsWith('New Dialogue') ? textToSend.slice(0, 24) + '...' : s.title } : s));
+    setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: updatedMessages, title: s.title.startsWith('New chat') ? textToSend.slice(0, 24) + '...' : s.title } : s));
 
     const rememberRequest = textToSend.match(/^\s*(?:please\s+)?(?:remember(?:\s+that|\s+this)?|don't forget(?:\s+that)?|keep in mind(?:\s+that)?|save this(?: about me)?)\s*[:,-]?\s*(.+)$/i);
     if (rememberRequest?.[1]) {
@@ -701,7 +701,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             </h1>
           </div>
           <p className="text-xs text-current/60 font-sans leading-relaxed">
-            AI assistance for NEXORA conversations, creator workflows, discovery, and account context.
+            AI help for your chats, posts, search and account.
           </p>
         </div>
 
@@ -709,7 +709,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 bg-violet-950/40 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-mono">
             <VohIcon size={15} animated variant="violet" />
-            <span className="font-black text-violet-300 uppercase">NEXORA CONTEXT</span>
+            <span className="font-black text-violet-300 uppercase">YOUR NEXORA ACCOUNT</span>
           </div>
 
           <button 
@@ -1043,7 +1043,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                         >
                           <div className="flex items-center gap-2 mb-1">
                             <Compass className="w-4 h-4 text-cyan-400" />
-                            <span className="text-xs font-black font-sans text-white group-hover:text-cyan-300">Regional Node Pulse</span>
+                            <span className="text-xs font-black font-sans text-white group-hover:text-cyan-300">What's happening nearby</span>
                           </div>
                           <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Explore startup discussions and hashtags active in Nigeria.</p>
                         </button>
@@ -1254,7 +1254,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               {/* Left Column: Recording Controls */}
               <div className="md:col-span-5 flex flex-col justify-between border border-white/5 bg-white/2 p-5 rounded-2xl min-h-[350px]">
                 <div>
-                  <span className="text-[10px] font-sans font-black text-violet-400 uppercase tracking-widest block mb-1">VOICE TRANSMITTING MODULE</span>
+                  <span className="text-[10px] font-sans font-black text-violet-400 uppercase tracking-widest block mb-1">VOICE MESSAGE</span>
                   <h3 className="text-sm font-black font-sans text-white mb-2">Speak to transcribe</h3>
                   <p className="text-xs text-current/60 leading-relaxed">Record your voice and receive a transcript from the connected VOH AI transcription service. Translation and publishing are separate actions.</p>
                 </div>
@@ -1288,7 +1288,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                 <div className="border-t border-white/5 pt-3 flex gap-2">
                   <div className="flex-1 bg-white/5 rounded-xl p-2.5">
-                    <span className="text-[8px] text-current/40 uppercase block mb-0.5">Language Node</span>
+                    <span className="text-[8px] text-current/40 uppercase block mb-0.5">Language</span>
                     <select 
                       value={voiceConfig.language}
                       onChange={(e) => setVoiceConfig(prev => ({ ...prev, language: e.target.value }))}
@@ -1431,7 +1431,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             <div className="bg-[#03010b] border border-white/10 rounded-3xl p-6 space-y-6">
               
               <div className="space-y-2">
-                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">INTUITIVE ENGINE SEARCH</span>
+                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">Search</span>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-current/40" />
@@ -1527,7 +1527,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               
               {/* Left Column: Direct Metrics dashboard (NOT fake) */}
               <div className="md:col-span-4 bg-[#03010b] border border-white/10 rounded-3xl p-5 space-y-5">
-                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">NEXORA CREATOR ECONOMY</span>
+                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">CREATOR EARNINGS</span>
                 
                 <div className="space-y-4">
                   <div className="bg-white/2 border border-white/5 rounded-2xl p-4 text-center space-y-1">
@@ -1548,7 +1548,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                   <div className="border-t border-white/5 pt-3">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-current/60">Living Reputation:</span>
+                      <span className="text-current/60">Your reputation:</span>
                       <span className="font-extrabold text-violet-300">{currentUser.reputationPoints.toLocaleString()} PR</span>
                     </div>
                   </div>
@@ -1558,7 +1558,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               {/* Right Column: AI Earning Recommendations */}
               <div className="md:col-span-8 bg-[#03010b] border border-white/10 rounded-3xl p-5 space-y-4">
                 <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                  <span className="text-[10px] font-sans font-black text-violet-400 uppercase tracking-widest">NEX REWARDS INSIGHTS ENGINE</span>
+                  <span className="text-[10px] font-sans font-black text-violet-400 uppercase tracking-widest">NEX REWARDS</span>
                   <DollarSign className="w-4 h-4 text-violet-400" />
                 </div>
 
@@ -1580,7 +1580,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             <div className="bg-[#03010b] border border-white/10 rounded-3xl p-6 space-y-6">
               
               <div>
-                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block mb-1">MODERATION & SECURITY INTELLIGENCE</span>
+                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block mb-1">SAFETY & SECURITY</span>
                 <p className="text-xs text-current/60">Run a local text heuristic assessment. These results do not automatically moderate content, submit reports, or change live enforcement decisions.</p>
               </div>
 
@@ -1668,7 +1668,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Advanced parameters */}
                 <div className="bg-white/2 border border-white/5 p-4 rounded-2xl space-y-4">
-                  <span className="text-[9.5px] font-black text-violet-400 uppercase block">Engine Thresholds</span>
+                  <span className="text-[9.5px] font-black text-violet-400 uppercase block">Safety settings</span>
                   
                   <div className="space-y-3">
                     <div className="space-y-1">
@@ -1801,7 +1801,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
                   <div>
                     <span className="text-[10px] font-black text-violet-400 uppercase block tracking-wider">Global Terminology Registry</span>
-                    <p className="text-[11px] text-current/60">Customize core branding terms. Changes propagate in real-time across the platform and VOH AI engines.</p>
+                    <p className="text-[11px] text-current/60">Change the words used for your brand across NEXORA and VOH AI.</p>
                   </div>
                   <button
                     onClick={() => {

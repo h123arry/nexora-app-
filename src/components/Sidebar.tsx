@@ -40,7 +40,7 @@ export default function Sidebar({
   const destinations = [
     { id: 'feed', label: copy.navHome, hint: copy.navDailySignal, icon: Home },
     { id: 'explore', label: copy.navExplore, hint: copy.navFindPeople, icon: Compass },
-    { id: 'giftverse', label: 'Giftverse', hint: 'Discover 120 original creator gifts', icon: Gift },
+    { id: 'giftverse', label: 'Gifts', hint: 'Discover 120 original creator gifts', icon: Gift },
     { id: 'communities', label: copy.navCommunities, hint: copy.navSharedInterests, icon: Users },
     { id: 'worldweave', label: 'WorldWeave', hint: 'Shared moments, many perspectives', icon: Orbit },
     { id: 'inbox', label: copy.navMessages, hint: copy.navPrivateConversations, icon: MessageSquare, count: unreadMessagesCount },

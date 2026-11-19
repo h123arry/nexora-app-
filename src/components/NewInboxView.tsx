@@ -157,7 +157,7 @@ export default function NewInboxView({
       }
       setPinnedChats(preferences.filter(item => item.pinned).map(item => item.chatId).slice(0, 500));
       setArchivedChats(preferences.filter(item => item.archived).map(item => item.chatId).slice(0, 500));
-    }, error => console.warn('[NEXORA inbox] Cross-device preferences unavailable:', error));
+    }, error => console.warn('[NEXORA inbox] Chat settings could not be loaded:', error));
   }, [currentUser.id]);
 
   // Auto scroll
@@ -174,7 +174,7 @@ export default function NewInboxView({
     return watchInboxChats(currentUser.id, creatorsRef.current, serverChats => {
       setChats(serverChats);
     }, error => {
-      console.warn('[NEXORA inbox] Server conversation list unavailable:', error.message);
+      console.warn('[NEXORA inbox] Your chat list could not be loaded:', error.message);
     });
   }, [currentUser.id, isServerBackedInbox]);
 
@@ -222,9 +222,9 @@ export default function NewInboxView({
           ? message.recipientReceipts?.[currentUser.id]?.status !== 'read'
           : message.status !== 'read'))
         .map(message => updateMessageReadReceipt(activeChatId, message.id, 'read', Boolean(activeChat?.isGroup))))
-        .catch(() => console.warn('[Inbox] Read receipt sync failed; details redacted.'));
+        .catch(() => console.warn('[Inbox] Could not update the read status.'));
     }, () => {
-      console.warn('[Inbox] Message snapshot error; details redacted.');
+      console.warn('[Inbox] Could not load this message.');
     });
 
     return () => unsubscribe();
@@ -333,7 +333,7 @@ export default function NewInboxView({
         }
       });
     } catch {
-      console.warn('[Inbox] Unable to load older messages; details redacted.');
+      console.warn('[Inbox] Could not load older messages.');
     } finally {
       setIsLoadingOlderMessages(false);
     }
@@ -362,7 +362,7 @@ export default function NewInboxView({
     if (!contentToSend && !mediaData) return;
     if (!activeChatId) return;
     if (mediaData && !isSupportedOutgoingMediaType(mediaData.type)) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Image and video attachments are not available in direct messages yet.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'You cannot send photos or videos in direct messages yet.' }));
       return;
     }
 
@@ -433,8 +433,8 @@ export default function NewInboxView({
       try {
         await updateDoc(doc(db, 'chats', activeChatId), { lastMessage: previewText, lastTimestamp: nowIso });
       } catch {
-        console.warn('[Inbox] Message persisted, but chat preview sync failed; details redacted.');
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Message sent. Conversation preview will refresh when data syncs.' }));
+        console.warn('[Inbox] Message was sent, but the chat preview could not update yet.');
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Message sent. Your chat will update in a moment.' }));
       }
     } catch {
       console.warn('[Inbox] Firestore send error; details redacted.');
@@ -449,7 +449,7 @@ export default function NewInboxView({
           ? { ...chat, lastMessage: previousLastMessage, lastTimestamp: previousLastTimestamp }
           : chat));
         if (customContent === undefined && contentToSend) setNewMessageText(value => value || contentToSend);
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be sent. Your draft was kept; please retry.' }));
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be sent. Your draft is saved. Please try again.' }));
       }
     }
   };
@@ -529,7 +529,7 @@ export default function NewInboxView({
       });
     } catch {
       console.warn('[Inbox] Message reaction sync failed; details redacted.');
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Reaction could not be saved. Please try again.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Your reaction could not be saved. Please try again.' }));
     }
   };
 
@@ -1042,8 +1042,8 @@ export default function NewInboxView({
               });
               setShowVoiceRecorder(false);
             } catch {
-              console.warn('[Inbox] Voice note upload failed; details redacted.');
-              window.dispatchEvent(new CustomEvent('toast', { detail: 'Voice note could not be uploaded. Check your connection and retry.' }));
+              console.warn('[Inbox] Voice note could not be sent.');
+              window.dispatchEvent(new CustomEvent('toast', { detail: 'Voice note could not be sent. Check your connection and try again.' }));
             }
           }}
           onCancel={() => setShowVoiceRecorder(false)}

@@ -50,7 +50,7 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
       }
     } catch {
       if (generation === refreshGeneration.current) {
-        setError('Could not load identity review status. Try again when your connection is stable.');
+        setError('Could not load your verification status. Check your connection and try again.');
       }
     } finally {
       if (generation === refreshGeneration.current) setLoading(false);
@@ -73,7 +73,7 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
     try {
       const callable = httpsCallable(functions, 'submitIdentityVerificationApplication');
       await callable({ identityType, displayName, evidenceSummary, evidenceUrls });
-      setSuccess('Your identity application has been submitted for review.');
+      setSuccess('Your verification request has been sent for review.');
       await refresh();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The application could not be submitted.');
@@ -87,8 +87,8 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
       <div className="flex items-start gap-3">
         <div className="rounded-xl border border-violet-400/20 bg-violet-500/10 p-2 text-violet-300"><ShieldCheck className="h-5 w-5" /></div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-black text-white">Identity verification</h3>
-          <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">Apply for a public identity badge using official links and supporting context. Email or phone verification alone does not qualify.</p>
+          <h3 className="text-sm font-black text-white">Verify your account</h3>
+          <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">Apply for a verified badge. Add links and information that help us confirm your identity. Email or phone verification alone does not qualify.</p>
         </div>
       </div>
 
@@ -96,8 +96,8 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
 
       {!loading && application?.status === 'approved' ? (
         <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-3">
-          <div className="flex items-center gap-2 text-sm font-bold text-emerald-300"><CheckCircle2 className="h-4 w-4" /> Identity verified</div>
-          <p className="mt-1 text-xs text-zinc-300">{application.displayName} is verified as {application.identityType.replace('_', ' ')}.</p>
+          <div className="flex items-center gap-2 text-sm font-bold text-emerald-300"><CheckCircle2 className="h-4 w-4" /> Identity confirmed</div>
+          <p className="mt-1 text-xs text-zinc-300">{application.displayName} has been confirmed as {application.identityType.replace('_', ' ')}.</p>
         </div>
       ) : null}
 
@@ -140,7 +140,7 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
             <input value={displayName} onChange={event => setDisplayName(event.target.value)} minLength={2} maxLength={120} required className="w-full rounded-xl border border-white/10 bg-[#121027] px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400/60" />
           </label>
           <label className="block space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Why should this identity be verified?</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Why should we confirm this identity?</span>
             <textarea value={evidenceSummary} onChange={event => setEvidenceSummary(event.target.value)} minLength={20} maxLength={1000} rows={3} required placeholder="Explain who this account represents and how the evidence connects it to the identity." className="w-full resize-y rounded-xl border border-white/10 bg-[#121027] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-400/60" />
           </label>
           <label className="block space-y-1">
@@ -149,7 +149,7 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
             <span className="flex items-center gap-1 text-[10px] text-zinc-500"><ExternalLink className="h-3 w-3" /> Public links only. Do not upload passports, IDs, or private documents. {evidenceCount}/5 links</span>
           </label>
           <button type="submit" disabled={submitting || displayName.trim().length < 2 || evidenceSummary.trim().length < 20 || evidenceCount < 1 || evidenceCount > 5} className="w-full rounded-xl bg-violet-600 px-4 py-3 text-xs font-black text-white transition hover:bg-violet-500 disabled:opacity-50">
-            {submitting ? 'Submitting…' : application ? 'Resubmit for review' : 'Submit identity application'}
+            {submitting ? 'Submitting…' : application ? 'Send again' : 'Submit verification request'}
           </button>
         </form>
       ) : null}

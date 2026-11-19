@@ -198,7 +198,7 @@ export default function NotificationPopBanner({
     badgeIcon = <Radio className="w-3.5 h-3.5 text-white" />;
     badgeBg = "from-blue-500 via-indigo-500 to-purple-500 shadow-[0_0_14px_rgba(59,130,246,0.6)]";
     glowColor = "rgba(59, 130, 246, 0.3)";
-    actionLabel = "✉️ New Direct Transmission";
+    actionLabel = "✉️ New message";
   }
 
   const handleBannerClick = () => {

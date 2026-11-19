@@ -116,9 +116,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     cpu: 18, // %
     memory: 42, // %
     battery: 89, // %
-    storageHealth: 'Excellent (Green Status)',
+    storageHealth: 'Excellent',
     tasksCount: 6,
-    indexHealth: '100% Calibrated',
+    indexHealth: 'Working properly',
     integrityVerified: true
   });
 
@@ -163,15 +163,15 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   // 4. Intelligent Cache Engine
   const [cacheTable, setCacheTable] = useState([
-    { id: 'memory', name: 'Virtual RAM Cache', size: '28 MB', items: 230, status: 'Active' },
-    { id: 'disk', name: 'Persistent IndexedDB Store', size: '899 MB', items: 4120, status: 'Active' },
-    { id: 'thumbnail', name: 'Tiny Blur Thumbnails', size: '45 MB', items: 1240, status: 'Optimized' },
-    { id: 'media', name: 'Media Cache (Video/Images)', size: '854 MB', items: 820, status: 'Managed' },
-    { id: 'ai', name: 'AI Models & Embeddings Cache', size: '120 MB', items: 15, status: 'Active' },
-    { id: 'search', name: 'Search Ledger Index', size: '3 MB', items: 450, status: 'Indexed' },
-    { id: 'emoji', name: 'Emoji Sprites Cache', size: '5 MB', items: 1400, status: 'Active' },
-    { id: 'sticker', name: 'Custom Stickers Cache', size: '12 MB', items: 110, status: 'Optimized' },
-    { id: 'story', name: 'Stories Ephemeral Buffer', size: '88 MB', items: 65, status: 'Active' },
+    { id: 'memory', name: 'Memory used by NEXORA', size: '28 MB', items: 230, status: 'Active' },
+    { id: 'disk', name: 'Saved app data', size: '899 MB', items: 4120, status: 'Active' },
+    { id: 'thumbnail', name: 'Post and video previews', size: '45 MB', items: 1240, status: 'Optimized' },
+    { id: 'media', name: 'Photos and videos', size: '854 MB', items: 820, status: 'Managed' },
+    { id: 'ai', name: 'AI files', size: '120 MB', items: 15, status: 'Active' },
+    { id: 'search', name: 'Search history', size: '3 MB', items: 450, status: 'Ready' },
+    { id: 'emoji', name: 'Emoji images', size: '5 MB', items: 1400, status: 'Active' },
+    { id: 'sticker', name: 'Saved stickers', size: '12 MB', items: 110, status: 'Optimized' },
+    { id: 'story', name: 'Stories data', size: '88 MB', items: 65, status: 'Active' },
   ]);
   const [cacheMaintenanceActive, setCacheMaintenanceActive] = useState(true);
   const [rebuildingCacheId, setRebuildingCacheId] = useState<string | null>(null);
@@ -185,11 +185,11 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const [offlineQueue, setOfflineQueue] = useState<any[]>(() => {
     const saved = localStorage.getItem('nx_offline_queue');
     return saved ? JSON.parse(saved) : [
-      { id: 'q-1', type: 'Message', payload: 'Encrypting and tunnel-transmitting keys...', status: 'completed', timestamp: '10:41 AM' },
+      { id: 'q-1', type: 'Message', payload: 'Sending a secure message...', status: 'completed', timestamp: '10:41 AM' },
       { id: 'q-2', type: 'Reaction', payload: 'Added Heart reaction to @lucas_cyber', status: 'completed', timestamp: '10:42 AM' },
-      { id: 'q-3', type: 'Poll Vote', payload: 'Voted "Option B: Web3 Bridges" in DevCommunity', status: 'pending', timestamp: 'Just now' },
-      { id: 'q-4', type: 'AI Request', payload: 'VOH Summary on global security indexes', status: 'pending', timestamp: 'Just now' },
-      { id: 'q-5', type: 'Comment', payload: 'Adding commentary block to thread #42', status: 'pending', timestamp: 'Just now' },
+      { id: 'q-3', type: 'Poll Vote', payload: 'Voted in a poll', status: 'pending', timestamp: 'Just now' },
+      { id: 'q-4', type: 'VOH AI', payload: 'VOH AI checked app storage', status: 'pending', timestamp: 'Just now' },
+      { id: 'q-5', type: 'Comment', payload: 'Writing a comment', status: 'pending', timestamp: 'Just now' },
     ];
   });
   const [isSimulatedOffline, setIsSimulatedOffline] = useState(() => {
@@ -228,13 +228,13 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     indexHealth: '100%',
     queryCaching: 'Enabled',
     syncQueueSize: 0,
-    cryptographySeal: 'Verified',
+    cryptographySeal: 'Protected',
   });
 
   // 12. AI Performance Assistant Messages
   const [aiAssistantMessages, setAiAssistantMessages] = useState<any[]>([
-    { id: 'm-1', sender: 'assistant', text: "Hello! I am Nida's specialized performance subsystem. I monitor memory pages, network tunnels, and filesystem pipelines. Here are your custom diagnostic insights:", timestamp: 'Just now' },
-    { id: 'm-2', sender: 'assistant', text: "⚡ Recommendations:\n• Your virtualized RAM is extremely clean, but 854 MB of old video downloads could be compressed to reclaim disk space.\n• Toggle 'Battery Saver Mode' to immediately pause complex viewport canvas shaders.\n• Rebuild your thumbnail index to recover 12 MB of cache leaks.", timestamp: 'Just now', suggestions: true }
+    { id: 'm-1', sender: 'assistant', text: "Hello! I’m your NEXORA helper. I can help you check storage, connection and app speed. Here’s what I found:", timestamp: 'Just now' },
+    { id: 'm-2', sender: 'assistant', text: "⚡ Recommendations:\n• You have 854 MB of old videos. Making them smaller could free up space.\n• Turn on Battery Saver to help your battery last longer.\n• Clear old photo and video previews to free up more space.", timestamp: 'Just now', suggestions: true }
   ]);
   const [aiInput, setAiInput] = useState('');
 
@@ -248,7 +248,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     corruptedCache: 'Healthy'
   });
 
-  // 14. Performance Analytics History
+  // 14. Performance App results History
   const [performanceHistory, setPerformanceHistory] = useState([
     { name: '08:00', startup: 135, fps: 59, latency: 45 },
     { name: '09:00', startup: 122, fps: 60, latency: 32 },
@@ -322,7 +322,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
               const itemIdx = next.findIndex(x => x.id === updated[pendingIdx].id);
               if (itemIdx !== -1) {
                 next[itemIdx] = { ...next[itemIdx], status: 'completed', timestamp: 'Just now' };
-                window.dispatchEvent(new CustomEvent('toast', { detail: `⚡ Offline Queue: ${next[itemIdx].type} successfully synchronized!` }));
+                window.dispatchEvent(new CustomEvent('toast', { detail: `⚡ Saved ${next[itemIdx].type} while offline.` }));
               }
               return next;
             });
@@ -364,7 +364,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
         });
       });
       setRebuildingCacheId(null);
-      window.dispatchEvent(new CustomEvent('toast', { detail: `🧹 Cache Rebuilt: Cleared leaked pages in ${cacheId} cache!` }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: `🧹 Cleared old ${cacheId} files.` }));
     }, 1500);
   };
 
@@ -373,18 +373,18 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     setDiagnosticsActive(active);
     localStorage.setItem('nx_diagnostics_overlay', active ? 'true' : 'false');
     window.dispatchEvent(new CustomEvent('nx-diagnostics-toggle', { detail: active }));
-    window.dispatchEvent(new CustomEvent('toast', { detail: active ? '🛠️ Floating developer diagnostics overlay enabled!' : '🛠️ Floating overlay disabled.' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: active ? '🛠️ App details are now shown on screen.' : '🛠️ App details hidden.' }));
   };
 
   // Helper: Queue Simulated Offline Message
   const handleQueueSimulatedMessage = () => {
-    const types = ['Message', 'Reaction', 'Comment', 'AI Request', 'Poll Vote'];
+    const types = ['Message', 'Reaction', 'Comment', 'VOH AI', 'Poll Vote'];
     const payloads = [
-      'Encrypted message payload transmitted over node...',
+      'Encrypted message sent securely...',
       'Added Fire reaction to community thread',
-      'Comment payload #812 indexed local-side',
-      'VOH Request: summarize global network parameters',
-      'Voted "Option A: Rust microservices" in ledger poll'
+      'Comment saved on this device',
+      'VOH AI: Check my connection',
+      'Voted in a poll'
     ];
     const randIdx = Math.floor(Math.random() * types.length);
     const newQueueItem = {
@@ -395,7 +395,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       timestamp: 'Just now'
     };
     setOfflineQueue(prev => [...prev, newQueueItem]);
-    window.dispatchEvent(new CustomEvent('toast', { detail: `📥 Local Queue: Added simulated ${types[randIdx]}!` }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: `📥 Added ${types[randIdx]} to the offline list.` }));
   };
 
   // Helper: Execute AI Assistant Action Recommendations
@@ -403,18 +403,18 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     if (actionId === 'battery') {
       setBatterySaverActive(true);
       localStorage.setItem('nx_battery_saver_active', 'true');
-      window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ Smart Battery Saver enabled. Background polling throttled.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ Battery saver is on.' }));
       setAiAssistantMessages(prev => [...prev, {
         id: `action-${Date.now()}`,
         sender: 'assistant',
-        text: "🔋 Smart Battery Saver Mode has been enabled. I have adjusted the polling scheduler, suspended viewport shader threads, and deferred background sync payloads. Savings rate: +2.4h estimated battery life."
+        text: "🔋 Battery saver is on. NEXORA will use less power when running in the background."
       }]);
     } else if (actionId === 'rebuild_thumbnail') {
       triggerRebuildCache('thumbnail');
       setAiAssistantMessages(prev => [...prev, {
         id: `action-${Date.now()}`,
         sender: 'assistant',
-        text: "🧹 Rebuilding tiny thumbnail index cache... Completed! Recovered 41 MB of leaked RAM blocks."
+        text: "🧹 Post and video previews cleaned. More storage is now available."
       }]);
     } else if (actionId === 'compress_media') {
       setCacheLevels(prev => {
@@ -422,11 +422,11 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
         localStorage.setItem('nx_storage_cache', JSON.stringify(next));
         return next;
       });
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📦 Media compressed: Recovered 432 MB of disk space!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '📦 Photos and videos were made smaller. More storage is now available.' }));
       setAiAssistantMessages(prev => [...prev, {
         id: `action-${Date.now()}`,
         sender: 'assistant',
-        text: "📦 Media compression complete! Recompressed older media blocks using high-efficiency WebP/H.265. Recovered 432 MB without visible quality loss."
+        text: "📦 Older photos and videos were made smaller without a noticeable change in quality."
       }]);
     }
   };
@@ -440,19 +440,19 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     setAiInput('');
 
     setTimeout(() => {
-      let replyText = "I've analyzed Nexora's active memory pages. Your device pipeline is operating smoothly at 60 FPS.";
+      let replyText = "I’ve checked how NEXORA is running on your device. Everything looks smooth.";
       const query = currentInput.toLowerCase();
       
       if (query.includes('battery') || query.includes('power') || query.includes('drain')) {
-        replyText = "🔋 Power Management: Nexora is currently running at normal frequency. Activating 'Battery Saver Mode' will throttle non-critical database sync cycles and pause floating canvas particles, reducing battery consumption by 35%.";
+        replyText = "🔋 NEXORA is running normally. Turn on Battery Saver to help your battery last longer.";
       } else if (query.includes('cache') || query.includes('clean') || query.includes('purge')) {
-        replyText = "🧹 Cache Engine Scan: Found 12 MB of stale thumbnail assets. Click the 'Rebuild' button next to the Tiny Blur Thumbnails cache block to reclaim memory leakage.";
+        replyText = "🧹 Storage check: You may be able to free up space by clearing old photo and video previews.";
       } else if (query.includes('slow') || query.includes('lag') || query.includes('speed')) {
-        replyText = "⚡ Telemetry Audit: Low-end devices are fully protected via virtual list rendering (reducing active DOM nodes to only 15 components for 1.25M rows) and asset lazy-loading. Make sure 'Intelligent Lazy Loading' is checked.";
+        replyText = "⚡ NEXORA loads content as you need it to help the app run smoothly, even on phones with less memory.";
       } else if (query.includes('database') || query.includes('db') || query.includes('indexing')) {
-        replyText = "🗄️ Database Optimizations: All tables are properly keyed. Running 'Background Indexing' in the Database Integrity panel will speed up keyword searches on historical channels.";
+        replyText = "🗄️ Search is ready to use. Your older messages and posts may take a little longer to appear.";
       } else if (query.includes('offline') || query.includes('sync') || query.includes('queue')) {
-        replyText = "📡 Offline Synchronization: Nexora maintains a local FIFO offline queue. Once connectivity resumes, delta sync packets are batch-processed under conflict resolution rules.";
+        replyText = "📡 When you are offline, some changes wait on your phone. They will be sent when your connection returns.";
       }
 
       setAiAssistantMessages(prev => [...prev, {
@@ -466,9 +466,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   // Backup restoration records
   const availableBackupsList = [
-    { id: 'bak-1', deviceName: 'Nexora Core Node Alpha', date: 'Jul 09, 2026 04:00', size: '2.4 GB', includeItems: 'Messages, Media, Settings', secure: true },
+    { id: 'bak-1', deviceName: 'NEXORA backup', date: 'Jul 09, 2026 04:00', size: '2.4 GB', includeItems: 'Messages, Media, Settings', secure: true },
     { id: 'bak-2', deviceName: 'Nexora Mobile Client (iOS)', date: 'Jul 02, 2026 12:15', size: '1.1 GB', includeItems: 'Messages, Bookmarks, AI Memory', secure: true },
-    { id: 'bak-3', deviceName: 'London Ledger Hub NAS', date: 'Jun 28, 2026 23:59', size: '14.8 GB', includeItems: 'All Media, Broadcast Archives, Settings', secure: true }
+    { id: 'bak-3', deviceName: 'NEXORA backup', date: 'Jun 28, 2026 23:59', size: '14.8 GB', includeItems: 'All Media, Broadcast Archives, Settings', secure: true }
   ];
 
   // No production conversation/media storage provider is connected to this panel yet.
@@ -490,10 +490,10 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   // AI-Assisted Scan Recommendations State
   const [recommendations, setRecommendations] = useState([
-    { id: 'rec-1', title: 'Duplicate Assets Detected', desc: '4 copies of the Nexora whitepaper draft and 2 identical high-res banners.', size: '412 MB', risk: 'Safe to Delete', itemsCount: 6, type: 'duplicate' },
-    { id: 'rec-2', title: 'Large Videos (Older than 30 Days)', desc: 'Large raw videos, screen recordings and test assets not viewed recently.', size: '1.42 GB', risk: 'Medium Risk (Media archived)', itemsCount: 3, type: 'large_files' },
-    { id: 'rec-3', title: 'Old/Expired Temporary Files', desc: 'Unused client update segments, cached sticker sets, and old audio buffers.', size: '680 MB', risk: 'Safe to Delete', itemsCount: 140, type: 'temp' },
-    { id: 'rec-4', title: 'Forwarded Video Spams', desc: 'Media files forwarded multiple times across community channels.', size: '350 MB', risk: 'Review Before Deleting', itemsCount: 18, type: 'forwarded' }
+    { id: 'rec-1', title: 'Duplicate files found', desc: '4 copies of the Nexora whitepaper draft and 2 identical high-res banners.', size: '412 MB', risk: 'Safe to remove', itemsCount: 6, type: 'duplicate' },
+    { id: 'rec-2', title: 'Large older videos', desc: 'Large raw videos, screen recordings and test assets not viewed recently.', size: '1.42 GB', risk: 'Check before removing', itemsCount: 3, type: 'large_files' },
+    { id: 'rec-3', title: 'Old temporary files', desc: 'Old update files, saved stickers and voice drafts.', size: '680 MB', risk: 'Safe to remove', itemsCount: 140, type: 'temp' },
+    { id: 'rec-4', title: 'Repeated forwarded videos', desc: 'Media files forwarded multiple times across community channels.', size: '350 MB', risk: 'Check before removing', itemsCount: 18, type: 'forwarded' }
   ]);
 
   // Calculations for total Nexora Storage
@@ -513,7 +513,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const handleCleanupRecommendation = (id: string, size: string) => {
     setRecommendations(prev => prev.filter(r => r.id !== id));
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `✨ Cleaned recommendation! Safely recovered ${size} of device storage.` 
+      detail: `✨ Cleaned recommendation! Freed up ${size} of device storage.` 
     }));
   };
 
@@ -521,7 +521,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const handleOneTapCleanup = () => {
     setRecommendations([]);
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `🚀 Intelligent Cleanup: Cleared duplicates & temp files. Safely recovered 2.84 GB!` 
+      detail: `🚀 Intelligent Cleanup: Cleared duplicates & temp files. Freed up 2.84 GB!` 
     }));
   };
 
@@ -529,7 +529,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const handleClearSpecificCache = (key: keyof typeof cacheLevels, name: string) => {
     setCacheLevels((prev: any) => ({ ...prev, [key]: 0 }));
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `🧹 Cleared Nexora ${name}. Reclaimed ${cacheLevels[key]} MB.` 
+      detail: `Cleared ${name}. Freed up ${cacheLevels[key]} MB.` 
     }));
   };
 
@@ -539,7 +539,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       image: 0, video: 0, thumbnail: 0, sticker: 0, gif: 0, emoji: 0, search: 0, ai: 0, temporary: 0, database: 0
     });
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: "✨ All Nexora temporary asset cache tables cleared successfully!" 
+      detail: "✨ Temporary app files cleared." 
     }));
   };
 
@@ -624,7 +624,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   // Archive selected
   const handleArchiveSelectedMedia = () => {
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `📦 Archived ${selectedMediaItemIds.length} media items onto encrypted private cloud.` 
+      detail: `📦 Saved ${selectedMediaItemIds.length} media items to your private backup.` 
     }));
     setSelectedMediaItemIds([]);
   };
@@ -646,7 +646,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       return chat;
     }));
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `🧹 Conversation storage cleaned (Mode: ${mode})` 
+      detail: `🧹 Chat storage cleaned.` 
     }));
   };
 
@@ -664,7 +664,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
         integrityVerified: true
       }));
       window.dispatchEvent(new CustomEvent('toast', { 
-        detail: "⚡ Nexora Engine Calibrated! Battery draw reduced and file structures defragmented." 
+        detail: "⚡ NEXORA is running better. Storage has been cleaned up." 
       }));
     }, 2000);
   };
@@ -672,7 +672,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   // This interface is illustrative only; no provider backup operation is wired here.
   const triggerManualBackup = () => {
     window.dispatchEvent(new CustomEvent('toast', {
-      detail: 'Backups are not configured in this interface. No data was uploaded or backed up.'
+      detail: 'Online backups are not set up here. No files were uploaded or backed up.'
     }));
   };
 
@@ -694,7 +694,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     setNetworkResetTime(today);
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: "📊 Network database counters reset to zero." 
+      detail: "📊 Network counters reset." 
     }));
   };
 
@@ -720,8 +720,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                 <HardDrive className="w-5 h-5 text-violet-400" />
               </div>
               <div>
-                <h3 className="text-sm font-black font-sans uppercase tracking-wider text-white">Storage & Data Management Center</h3>
-                <p className="text-[10px] font-mono text-cyan-400 leading-none mt-0.5">Automated Asset Optimization & Bandwidth Control</p>
+                <h3 className="text-sm font-black font-sans uppercase tracking-wider text-white">Storage and data</h3>
+                <p className="text-[10px] font-mono text-cyan-400 leading-none mt-0.5">Manage downloads and free up space</p>
               </div>
             </div>
 
@@ -756,9 +756,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
             {/* Left Sidebar Tab selectors */}
             <div className="w-full md:w-64 border-r border-white/5 bg-black/20 overflow-y-auto p-3 space-y-1 shrink-0">
               {[
-                { id: 'dashboard', label: 'Local Storage Snapshot', icon: HardDrive, badge: `${totalNexoraSpaceGB} GB` },
-                { id: 'conversations', label: 'Conversations Ledger', icon: Database, count: conversationsList.length },
-                { id: 'downloads', label: 'Auto-Download Preferences', icon: Download, badge: downloads.adaptiveDataSaver ? 'Saver On' : '' }
+                { id: 'dashboard', label: 'Storage used', icon: HardDrive, badge: `${totalNexoraSpaceGB} GB` },
+                { id: 'conversations', label: 'Chat storage', icon: Database, count: conversationsList.length },
+                { id: 'downloads', label: 'Download settings', icon: Download, badge: downloads.adaptiveDataSaver ? 'Saver On' : '' }
               ].map(tab => {
                 const Icon = tab.icon;
                 const isSelected = activeTab === tab.id;
@@ -796,7 +796,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                 <div className="p-3 bg-zinc-950/80 border border-white/5 rounded-2xl">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold text-zinc-300 flex items-center gap-1">
-                      <Zap className="w-3.5 h-3.5 text-amber-400" /> Adaptive Data Saver
+                      <Zap className="w-3.5 h-3.5 text-amber-400" /> Data Saver
                     </span>
                     <button
                       onClick={() => {
@@ -812,7 +812,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <span className="w-3 h-3 bg-black rounded-full" />
                     </button>
                   </div>
-                  <p className="text-[9px] text-zinc-500 mt-1.5 leading-tight">Delays downloads, preloads, and reduces quality dynamically to prevent excessive data plan usage.</p>
+                  <p className="text-[9px] text-zinc-500 mt-1.5 leading-tight">Save data by loading photos and videos only when you open them.</p>
                 </div>
               </div>
             </div>
@@ -826,29 +826,29 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
                     <div className="flex items-center gap-2">
                       <HardDrive className="h-5 w-5 text-violet-400" />
-                      <h4 className="text-sm font-bold text-white">Local storage snapshot</h4>
+                      <h4 className="text-sm font-bold text-white">Storage used</h4>
                     </div>
                     <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                      This panel reports only browser-local cache and media records currently indexed by this device. Cloud storage usage, server backups, CPU, memory, battery and network telemetry are not connected here.
+                      This page only shows files saved on this device. It does not show cloud storage, online backups, phone memory, battery or connection details.
                     </p>
                     <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div className="rounded-xl border border-white/5 bg-black/20 p-4">
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Local cache</p>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Saved app files</p>
                         <p className="mt-1 text-xl font-black text-white">{totalCacheMB} MB</p>
                       </div>
                       <div className="rounded-xl border border-white/5 bg-black/20 p-4">
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Indexed media</p>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Photos and videos</p>
                         <p className="mt-1 text-xl font-black text-white">{(totalMediaBytes / 1000000000).toFixed(2)} GB</p>
                       </div>
                       <div className="rounded-xl border border-white/5 bg-black/20 p-4">
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Measured local total</p>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Total on this device</p>
                         <p className="mt-1 text-xl font-black text-white">{totalNexoraSpaceGB} GB</p>
                       </div>
                     </div>
                     <div className="mt-4 rounded-xl border border-dashed border-white/10 p-3 text-[11px] text-zinc-400">
-                      <span className="font-semibold text-zinc-300">Cloud storage index:</span> Not connected
+                      <span className="font-semibold text-zinc-300">Online storage:</span> Not available
                       <span className="mx-2 text-zinc-700">•</span>
-                      <span className="font-semibold text-zinc-300">Cloud backup:</span> Not connected
+                      <span className="font-semibold text-zinc-300">Online backup:</span> Not available
                     </div>
                   </div>
                 </div>
@@ -859,9 +859,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                        <VohIcon size={16} animated variant="brand" /> AI-Powered Storage Analyzer & Optimizer
+                        <VohIcon size={16} animated variant="brand" /> Find files you can remove
                       </h4>
-                      <p className="text-[11px] text-zinc-400 mt-1">Smart algorithms index your node database to identify heavy, duplicate, or stale media blocks safely.</p>
+                      <p className="text-[11px] text-zinc-400 mt-1">NEXORA checks your files to find large, duplicate, or old media safely.</p>
                     </div>
 
                     {recommendations.length > 0 && (
@@ -869,7 +869,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         onClick={handleOneTapCleanup}
                         className="px-4 py-2 bg-violet-600 hover:bg-violet-500 font-bold text-white text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
                       >
-                        <Zap className="w-3.5 h-3.5" /> One-Tap Safe Optimization (Reclaim 2.84 GB)
+                        <Zap className="w-3.5 h-3.5" /> Free up space
                       </button>
                     )}
                   </div>
@@ -880,12 +880,12 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
                         <Check className="w-6 h-6 animate-pulse" />
                       </div>
-                      <h4 className="text-sm font-black text-emerald-400 uppercase tracking-widest">Storage Calibrated & Optimized</h4>
-                      <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">No duplicate files, broken buffers or stale media detected. Your Nexora storage is running at absolute peak efficiency parameters.</p>
+                      <h4 className="text-sm font-black text-emerald-400 uppercase tracking-widest">You're not running low on storage</h4>
+                      <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">No duplicate or old files were found.</p>
                       <button onClick={() => setRecommendations([
-                        { id: 'rec-1', title: 'Duplicate Assets Detected', desc: '4 copies of the Nexora whitepaper draft and 2 identical high-res banners.', size: '412 MB', risk: 'Safe to Delete', itemsCount: 6, type: 'duplicate' },
-                        { id: 'rec-2', title: 'Large Videos (Older than 30 Days)', desc: 'Large raw videos, screen recordings and test assets not viewed recently.', size: '1.42 GB', risk: 'Medium Risk (Media archived)', itemsCount: 3, type: 'large_files' }
-                      ])} className="text-xs text-violet-400 underline font-mono cursor-pointer">Simulate Scanner Refresh</button>
+                        { id: 'rec-1', title: 'Duplicate files found', desc: '4 copies of the Nexora whitepaper draft and 2 identical high-res banners.', size: '412 MB', risk: 'Safe to remove', itemsCount: 6, type: 'duplicate' },
+                        { id: 'rec-2', title: 'Large older videos', desc: 'Large raw videos, screen recordings and test assets not viewed recently.', size: '1.42 GB', risk: 'Check before removing', itemsCount: 3, type: 'large_files' }
+                      ])} className="text-xs text-violet-400 underline font-mono cursor-pointer">Show sample results</button>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -902,7 +902,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             <div className="flex items-center gap-2 pt-1 text-[9px] font-mono">
                               <span className="px-2 py-0.5 rounded bg-zinc-900 border border-white/5 text-zinc-500">{rec.itemsCount} elements detected</span>
                               <span className={`px-2 py-0.5 rounded ${
-                                rec.risk === 'Safe to Delete' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                rec.risk === 'Safe to remove' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                               }`}>{rec.risk}</span>
                             </div>
                           </div>
@@ -934,7 +934,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl space-y-4">
                     <div>
                       <h4 className="text-xs font-black text-zinc-300 uppercase tracking-wider font-mono">Granular Purge Templates</h4>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">Quickly clear isolated elements based on storage size profiles.</p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">Clear temporary files to free up space.</p>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -954,7 +954,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           </div>
                           <button 
                             onClick={() => {
-                              window.dispatchEvent(new CustomEvent('toast', { detail: `🧹 Quick Purge active: Safely recovered ${item.saved}!` }));
+                              window.dispatchEvent(new CustomEvent('toast', { detail: `🧹 Quick Purge active: Freed up ${item.saved}!` }));
                             }}
                             className="w-full py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 rounded-lg text-[9px] text-rose-400 font-mono cursor-pointer"
                           >
@@ -977,14 +977,14 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         <h4 className="text-sm font-bold text-white flex items-center gap-2">
                           <Database className="w-4 h-4 text-violet-400" /> Conversation Storage Ledger
                         </h4>
-                        <p className="text-[11px] text-zinc-400 mt-1">List of chat communication bridges sorted by absolute disk storage allocation. Click any conversation card to open the complete media browser.</p>
+                        <p className="text-[11px] text-zinc-400 mt-1">Your chats, sorted by how much storage they use. Open a chat to see its photos and files.</p>
                       </div>
 
                       {/* Conversations listing */}
                       {filteredConversations.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 px-5 py-8 text-center">
                           <Database className="mx-auto h-7 w-7 text-zinc-500" />
-                          <p className="mt-3 text-sm font-semibold text-white">No conversation storage data available</p>
+                          <p className="mt-3 text-sm font-semibold text-white">No chat storage details available.</p>
                           <p className="mt-1 text-xs leading-relaxed text-zinc-400">This panel is not connected to a durable chat-media index yet. Your conversations and attachments have not been scanned or changed.</p>
                         </div>
                       ) : (
@@ -1050,7 +1050,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       )}
                     </>
                   ) : (
-                    // Conversation's Interactive Media Explorer Screen!
+                    // Conversation’s Interactive Media Explorer Screen!
                     <div className="space-y-5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
                         <div className="flex items-center gap-2.5">
@@ -1063,7 +1063,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           <img src={selectedChatForMedia.avatar} alt="" className="w-8 h-8 rounded-lg object-cover" />
                           <div className="text-left">
                             <h5 className="text-xs font-bold text-white">{selectedChatForMedia.name}</h5>
-                            <p className="text-[9px] font-mono text-zinc-500 mt-0.5">Media vault size: <b className="text-pink-400">{selectedChatForMedia.totalSize}</b></p>
+                            <p className="text-[9px] font-mono text-zinc-500 mt-0.5">Media storage: <b className="text-pink-400">{selectedChatForMedia.totalSize}</b></p>
                           </div>
                         </div>
 
@@ -1241,14 +1241,14 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                 </div>
               )}
 
-              {/* AUTO-DOWNLOAD & COMPRESSION CONTROLLER */}
+              {/* AUTO-DOWNLOAD NOW & COMPRESSION CONTROLLER */}
               {activeTab === 'downloads' && (
                 <div className="space-y-6 text-left">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Download className="w-4 h-4 text-violet-400" /> Granular Auto-Download Preferences
+                      <Download className="w-4 h-4 text-violet-400" /> Granular Download settings
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Dictate which media files are cached automatically depending on active routing transport protocols.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1">Choose which photos and videos are saved on your device.</p>
                   </div>
 
                   {/* Network parameters matrix */}
@@ -1358,7 +1358,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-4">
                     <div>
                       <span className="text-xs font-black text-violet-400 uppercase font-mono block">Intelligent Media Compression Preset</span>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">Control image and video bitrates prior to dispatcher sending on peer routing.</p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">Choose the quality of photos and videos before uploading.</p>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -1397,7 +1397,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-amber-400" /> Backup & restore demo — not connected
                     </h4>
-                    <p className="text-[11px] text-zinc-300 mt-1">No production backup provider, encryption, or recovery-key management is connected. Controls below only change local demo settings; they do not back up or restore data.</p>
+                    <p className="text-[11px] text-zinc-300 mt-1">Backup and restore aren't available yet. The settings below only affect this device.</p>
                   </div>
 
                   {/* Backup detail dashboard */}
@@ -1410,8 +1410,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                         <div className="flex items-center justify-between p-2.5 bg-black/40 border border-white/5 rounded-xl">
                           <div>
-                            <span className="font-bold text-zinc-300 block">Demo schedule (local only)</span>
-                            <span className="text-[9px] text-zinc-500 leading-none">No scheduled job is connected</span>
+                            <span className="font-bold text-zinc-300 block">Example schedule</span>
+                            <span className="text-[9px] text-zinc-500 leading-none">Nothing is scheduled yet.</span>
                           </div>
                           <select 
                             value={backups.schedule}
@@ -1442,7 +1442,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             { key: 'googleDrive', label: 'Google Drive' },
                             { key: 'iCloud', label: 'Apple iCloud' },
                             { key: 'localDevice', label: 'Local Disk' },
-                            { key: 'nas', label: 'Private NAS Hub' }
+                            { key: 'nas', label: 'Private backup drive' }
                           ].map(dest => {
                             const val = backups.destinations[dest.key as keyof typeof backups.destinations];
                             return (
@@ -1470,7 +1470,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           {[
                             { key: 'messages', label: 'Conversations text' },
                             { key: 'media', label: 'Videos & Images' },
-                            { key: 'groups', label: 'Group Channels' },
+                            { key: 'groups', label: 'Group chats' },
                             { key: 'settings', label: 'Preferences' }
                           ].map(it => {
                             const val = backups.enabledItems[it.key as keyof typeof backups.enabledItems];
@@ -1497,7 +1497,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl flex flex-col justify-between space-y-3" role="status">
                       <div>
                         <span className="text-xs font-black text-rose-400 font-mono uppercase block">Recovery is not configured</span>
-                        <p className="text-[9px] text-zinc-500 mt-1.5 leading-normal">No recovery key exists here. Do not enter a password or rely on this screen to recover data.</p>
+                        <p className="text-[9px] text-zinc-500 mt-1.5 leading-normal">A recovery key isn't available here. Don't enter your password on this screen.</p>
                       </div>
                     </div>
 
@@ -1507,7 +1507,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl space-y-4">
                     <div>
                       <h4 className="text-xs font-black text-zinc-300 uppercase tracking-wider font-mono">Restoration simulation only</h4>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">Sample snapshots are illustrative. Selecting one does not read or restore database or media data.</p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">These are examples only. Choosing one won't restore your photos, videos or messages.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1549,9 +1549,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                        <BarChart2 className="w-4 h-4 text-violet-400" /> Decentralized Network Telemetry
+                        <BarChart2 className="w-4 h-4 text-violet-400" /> Connection activity
                       </h4>
-                      <p className="text-[11px] text-zinc-400 mt-1">Live analytics monitoring data payloads traversing peer-to-peer tunnels since resetting counter ledger records.</p>
+                      <p className="text-[11px] text-zinc-400 mt-1">Connection activity since you last reset the counter.</p>
                     </div>
 
                     <button 
@@ -1567,12 +1567,12 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     {[
                       { label: 'Conversations (E2EE)', sent: '41,240 pkts', rec: '110,845 pkts', data: '1.24 GB' },
                       { label: 'Media upload / down', sent: '14.5 GB', rec: '41.2 GB', data: '55.7 GB' },
-                      { label: 'Dynamic Stories preloading', sent: '112 MB', rec: '1.45 GB', data: '1.56 GB' },
-                      { label: 'Voice / Video calls', sent: '42.5 hrs', rec: '31.2 hrs', data: '22.8 GB' },
-                      { label: 'AI Assistance Requests', sent: '150 msgs', rec: '150 msgs', data: '14.5 MB' },
-                      { label: 'Cloud Replication cycles', sent: '410 MB', rec: '2.4 GB', data: '2.81 GB' },
-                      { label: 'Active Group Communities', sent: '4,100 pkts', rec: '98,000 pkts', data: '4.85 GB' },
-                      { label: 'Live Streams metadata', sent: '0 B', rec: '5.12 GB', data: '5.12 GB' }
+                      { label: 'Stories', sent: '112 MB', rec: '1.45 GB', data: '1.56 GB' },
+                      { label: 'Voice and video calls', sent: '42.5 hrs', rec: '31.2 hrs', data: '22.8 GB' },
+                      { label: 'VOH AI messages', sent: '150 msgs', rec: '150 msgs', data: '14.5 MB' },
+                      { label: 'Backup uploads', sent: '410 MB', rec: '2.4 GB', data: '2.81 GB' },
+                      { label: 'Community activity', sent: '4,100 pkts', rec: '98,000 pkts', data: '4.85 GB' },
+                      { label: 'Live video data', sent: '0 B', rec: '5.12 GB', data: '5.12 GB' }
                     ].map((stat, i) => (
                       <div key={i} className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl text-left space-y-2">
                         <span className="text-[10.5px] font-bold text-zinc-300 block truncate leading-tight">{stat.label}</span>
@@ -1580,14 +1580,14 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         
                         <div className="pt-1 flex justify-between text-[8px] font-mono text-zinc-500 leading-none border-t border-white/5 pt-2">
                           <span>Sent: {stat.sent}</span>
-                          <span>Recv: {stat.rec}</span>
+                          <span>Received: {stat.rec}</span>
                         </div>
                       </div>
                     ))}
                   </div>
 
                   <p className="text-[10px] font-mono text-zinc-600 text-center">
-                    Ledger monitoring active since: <b>{networkResetTime}</b>
+                    Activity tracking started: <b>{networkResetTime}</b>
                   </p>
                 </div>
               )}
@@ -1599,20 +1599,20 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
                     <div>
                       <h4 className="text-sm font-black text-white flex items-center gap-2">
-                        <Cpu className="w-4 h-4 text-cyan-400 animate-pulse" /> Next-Gen Performance Optimization Engine
+                        <Cpu className="w-4 h-4 text-cyan-400 animate-pulse" /> App performance
                       </h4>
                       <p className="text-[11px] text-zinc-400 mt-1">
-                        Active pipeline: calibrate memory, toggle viewport virtualization multipliers, sync peer nodes, and consult AI Performance Subsystems.
+                        Check how the app is running, save data and change settings that can help it work better.
                       </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-1 bg-black/40 border border-white/5 rounded-xl p-1 shrink-0">
                       {[
-                        { id: 'dashboard', label: 'Engine Dashboard', icon: Cpu },
-                        { id: 'subsystems', label: 'Subsystems', icon: Sliders },
+                        { id: 'dashboard', label: 'Overview', icon: Cpu },
+                        { id: 'subsystems', label: 'More settings', icon: Sliders },
                         { id: 'queues', label: 'Offline Queue', icon: Radio },
                         { id: 'ai', label: 'AI Advisor', icon: Sparkles },
-                        { id: 'analytics', label: 'Analytics', icon: BarChart2 }
+                        { id: 'analytics', label: 'App results', icon: BarChart2 }
                       ].map(subTab => {
                         const SubIcon = subTab.icon;
                         const isSelected = performanceSubTab === subTab.id;
@@ -1651,9 +1651,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             </div>
                           </div>
                           <div className="text-left">
-                            <span className="text-[9px] font-mono uppercase text-cyan-500 font-bold block">Engine Rating</span>
-                            <h4 className="text-sm font-black text-white mt-0.5">Absolute Peak</h4>
-                            <span className="text-[8.5px] font-mono text-zinc-500 block">System performance: 100% stable</span>
+                            <span className="text-[9px] font-mono uppercase text-cyan-500 font-bold block">App speed score</span>
+                            <h4 className="text-sm font-black text-white mt-0.5">Excellent</h4>
+                            <span className="text-[8.5px] font-mono text-zinc-500 block">The app is running smoothly</span>
                           </div>
                         </div>
 
@@ -1710,7 +1710,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             />
                           </div>
                           <div className="flex justify-between text-[8px] font-mono text-zinc-600">
-                            <span>Indexing Tunnels</span>
+                            <span>Search updates</span>
                             <span>Scale-to-Zero</span>
                           </div>
                         </div>
@@ -1743,7 +1743,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         <div className="p-4 bg-slate-950/60 border border-white/5 rounded-2xl space-y-2.5 text-left">
                           <div className="flex justify-between items-center">
                             <span className="text-[10px] font-mono text-zinc-400 flex items-center gap-1">
-                              <Database className="w-3.5 h-3.5 text-pink-400" /> Virtualized Engine
+                              <Database className="w-3.5 h-3.5 text-pink-400" /> Smart loading
                             </span>
                             <span className="font-mono text-xs text-pink-400 font-bold">1.25M Rows</span>
                           </div>
@@ -1756,7 +1756,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             />
                           </div>
                           <div className="flex justify-between items-center text-[8px] font-mono text-zinc-600">
-                            <span>DOM nodes: <b>{visibleVirtualRecords} active</b></span>
+                            <span>Items on screen: <b>{visibleVirtualRecords}</b></span>
                             <span className="text-pink-500 font-black">100% Recycled ({recycledComponents})</span>
                           </div>
                         </div>
@@ -1804,12 +1804,12 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           {[
-                            { title: 'Memory Exhaustion Guard', status: safeguards.memoryExhaustion, desc: 'Auto-purges old cache rows before heap boundary hit.' },
-                            { title: 'Storage Safekeeper Engine', status: safeguards.storageExhaustion, desc: 'Stops preloads dynamically if disk drops below 50MB.' },
+                            { title: 'Help when memory is low', status: safeguards.memoryExhaustion, desc: 'Clears old temporary files when memory gets low.' },
+                            { title: 'Storage protection', status: safeguards.storageExhaustion, desc: 'Stops preloads dynamically if disk drops below 50MB.' },
                             { title: 'Anti-Infinite Loop Watcher', status: safeguards.infiniteLoops, desc: 'Intercepts state loop iterations and safely releases execution.' },
-                            { title: 'UI Freeze Guard (WebWorker)', status: safeguards.uiFreezes, desc: 'Offloads complex cryptography pipelines to secondary threads.' },
-                            { title: 'Slow DB Index Interceptor', status: safeguards.slowDbQueries, desc: 'Pre-compiles index keys for SQLite/IndexedDB lookup shortcuts.' },
-                            { title: 'Corrupted Cache Auto-Sanitizer', status: safeguards.corruptedCache, desc: 'Validates integrity hashes and auto-rebuilds broken assets.' }
+                            { title: 'Help prevent app freezes', status: safeguards.uiFreezes, desc: 'Moves heavy tasks out of the way to help keep the app responsive.' },
+                            { title: 'Faster search', status: safeguards.slowDbQueries, desc: 'Prepares search data so older posts and messages are easier to find.' },
+                            { title: 'Fix damaged saved files', status: safeguards.corruptedCache, desc: 'Checks saved files and replaces damaged ones.' }
                           ].map((safe, idx) => (
                             <div key={idx} className="p-3 bg-black/40 border border-white/5 rounded-xl flex flex-col justify-between text-left space-y-1.5">
                               <div className="flex items-center justify-between gap-1">
@@ -1828,15 +1828,15 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl">
                         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
                           <div>
-                            <h5 className="text-xs font-black text-zinc-300 font-mono uppercase tracking-wider">Dynamic CPU / RAM Telemetry Sparkline</h5>
-                            <p className="text-[9px] text-zinc-500 mt-0.5">Real-time graphing of core threads. Updates every 2.5 seconds.</p>
+                            <h5 className="text-xs font-black text-zinc-300 font-mono uppercase tracking-wider">CPU and memory use</h5>
+                            <p className="text-[9px] text-zinc-500 mt-0.5">This chart shows how much CPU and memory the app is using.</p>
                           </div>
                           <div className="flex items-center gap-3 text-[9px] font-mono">
                             <span className="flex items-center gap-1 text-cyan-400">
-                              <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block animate-pulse" /> CPU Threads
+                              <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block animate-pulse" /> CPU use
                             </span>
                             <span className="flex items-center gap-1 text-violet-400">
-                              <span className="w-2 h-2 rounded-full bg-violet-400 inline-block animate-pulse" /> RAM Pages
+                              <span className="w-2 h-2 rounded-full bg-violet-400 inline-block animate-pulse" /> Memory use
                             </span>
                           </div>
                         </div>
@@ -1864,7 +1864,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           </svg>
 
                           {/* Grid indicators */}
-                          <div className="absolute left-2 top-2 text-[8px] font-mono text-zinc-600">Peak Threading</div>
+                          <div className="absolute left-2 top-2 text-[8px] font-mono text-zinc-600">Highest activity</div>
                           <div className="absolute right-2 bottom-2 text-[8px] font-mono text-zinc-600 font-bold">Now</div>
                         </div>
                       </div>
@@ -1879,10 +1879,10 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl space-y-4 text-left">
                           <div>
                             <h5 className="text-xs font-black text-cyan-400 font-mono uppercase tracking-wider">
-                              Intelligent Lazy Loading Matrix
+                              Load content as you scroll
                             </h5>
                             <p className="text-[9px] text-zinc-500 mt-1 leading-relaxed">
-                              Control which viewport layouts are deferred until scroll intercept. Offloading sections reduces active memory pages and DOM depth.
+                              Choose what loads as you scroll. This can help the app use less memory.
                             </p>
                           </div>
 
@@ -1904,7 +1904,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                               >
                                 <span className="font-mono text-[9px] truncate uppercase">{key.replace(/([A-Z])/g, ' $1')}</span>
                                 <span className={`text-[8px] font-mono px-1 rounded shrink-0 ${value ? 'bg-cyan-500/20 text-cyan-300' : 'bg-zinc-800 text-zinc-600'}`}>
-                                  {value ? 'DEFER' : 'LOAD'}
+                                  {value ? 'WAIT' : 'LOAD NOW'}
                                 </span>
                               </button>
                             ))}
@@ -1912,7 +1912,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           
                           <div className="p-3 bg-cyan-950/10 border border-cyan-500/10 rounded-xl text-[9px] text-cyan-400 font-mono flex items-center gap-2">
                             <Info className="w-3.5 h-3.5 shrink-0" />
-                            <span>Viewport Recycler Ticker: <b>{recycledComponents} DOM cells fully recycled</b></span>
+                            <span>App has cleared {recycledComponents} old items from memory</span>
                           </div>
                         </div>
 
@@ -1920,10 +1920,10 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl space-y-4 text-left">
                           <div>
                             <h5 className="text-xs font-black text-violet-400 font-mono uppercase tracking-wider">
-                              Adaptive Channel Preloader
+                              Load chats faster
                             </h5>
                             <p className="text-[9px] text-zinc-500 mt-1 leading-relaxed">
-                              Nexora smart-preloads adjacent communication key packets based on predictive messaging frequency vectors to ensure instant chat loads.
+                              NEXORA can prepare nearby chats in advance so they open faster.
                             </p>
                           </div>
 
@@ -1931,10 +1931,10 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             {/* Preload conditions checkboxes */}
                             <div className="grid grid-cols-2 gap-2">
                               {[
-                                { key: 'idleOnly', label: 'Idle State Only', desc: 'Preload only when device not in active swipe' },
-                                { key: 'batteryHealthy', label: 'Battery Balanced', desc: 'Suspend preload if battery drops under 20%' },
-                                { key: 'networkStable', label: 'Stable Network Only', desc: 'Prevent preloads on poor roaming signals' },
-                                { key: 'memoryAvailable', label: 'Available Memory Pages', desc: 'Defer preload if system page cache is full' }
+                                { key: 'idleOnly', label: 'When you are not using the app', desc: 'Only load when you are not scrolling' },
+                                { key: 'batteryHealthy', label: 'Save battery', desc: 'Stop loading ahead when your battery is low' },
+                                { key: 'networkStable', label: 'Good connection only', desc: 'Do not load ahead when your connection is weak' },
+                                { key: 'memoryAvailable', label: 'Phone has enough memory', desc: 'Wait if your phone is low on memory' }
                               ].map(cond => (
                                 <button
                                   key={cond.key}
@@ -1953,8 +1953,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
                             <div className="p-4 bg-black/40 border border-white/5 rounded-xl space-y-3">
                               <div className="flex justify-between items-center text-[10px] font-mono">
-                                <span className="text-zinc-400">Preloaded adjacent keys:</span>
-                                <span className="text-violet-400 font-black">{preloadedChats.length} Channels</span>
+                                <span className="text-zinc-400">Chats ready to open:</span>
+                                <span className="text-violet-400 font-black">{preloadedChats.length} chats</span>
                               </div>
                               <div className="flex flex-wrap gap-1.5">
                                 {preloadedChats.map(ch => (
@@ -2023,7 +2023,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
                             <div className="space-y-2">
                               <div className="flex justify-between text-[10px] font-mono">
-                                <span className="text-zinc-500 font-bold">Loader depth level:</span>
+                                <span className="text-zinc-500 font-bold">Image quality:</span>
                                 <span className="text-cyan-400 font-black">Level {progressiveLevel} / 3</span>
                               </div>
                               <input
@@ -2034,25 +2034,25 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                                 onChange={(e) => {
                                   const val = parseInt(e.target.value);
                                   setProgressiveLevel(val);
-                                  window.dispatchEvent(new CustomEvent('toast', { detail: `⚙️ Progressive loading level set to: ${val}` }));
+                                  window.dispatchEvent(new CustomEvent('toast', { detail: `⚙️ Image quality set to level ${val}` }));
                                 }}
                                 className="w-full accent-cyan-400 cursor-pointer"
                               />
                               <div className="grid grid-cols-4 gap-1 text-[7px] text-center font-mono text-zinc-600 leading-none">
-                                <span>Tiny Blur hash (1KB)</span>
-                                <span>Low Res (20KB)</span>
-                                <span>WebP Balanced (100KB)</span>
-                                <span>Raw Original</span>
+                                <span>Small preview</span>
+                                <span>Low quality</span>
+                                <span>Balanced quality</span>
+                                <span>Original quality</span>
                               </div>
                             </div>
 
                             <div className="p-3 bg-[#0d151c] border border-cyan-500/10 rounded-xl text-left">
-                              <span className="text-[10px] font-black text-cyan-300 block">Preview Load Speed simulation:</span>
+                              <span className="text-[10px] font-black text-cyan-300 block">Preview loading speed:</span>
                               <span className="text-[9px] font-mono text-zinc-400 mt-1 block">
-                                {progressiveLevel === 0 && '⚡ Loaded in 2 ms. Displaying 16px compressed vector placeholder.'}
-                                {progressiveLevel === 1 && '⚡ Loaded in 12 ms. Displaying sub-sampled 240p image map.'}
-                                {progressiveLevel === 2 && '⚡ Loaded in 38 ms. Displaying high-efficiency 720p WebP layout.'}
-                                {progressiveLevel === 3 && '⚡ Loaded in 140 ms. Fetching intact uncompressed source binary.'}
+                                {progressiveLevel === 0 && '⚡ Loaded quickly. Showing a small preview.'}
+                                {progressiveLevel === 1 && '⚡ Loaded. Showing a low-quality preview.'}
+                                {progressiveLevel === 2 && '⚡ Loaded. Showing a clear preview.'}
+                                {progressiveLevel === 3 && '⚡ Loaded. Showing the original image.'}
                               </span>
                             </div>
                           </div>
@@ -2063,17 +2063,17 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           <div className="flex justify-between items-center">
                             <div>
                               <h5 className="text-xs font-black text-violet-400 font-mono uppercase tracking-wider">
-                                Subsystem Cache Registries
+                                Saved app files
                               </h5>
                               <p className="text-[9px] text-zinc-500 mt-0.5">
-                                Granular cache indices managed dynamically. Cleans stale tables safely.
+                                Manage temporary files saved by the app. Clear old files to free up space.
                               </p>
                             </div>
                             <button
                               onClick={handleClearAllCache}
                               className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-mono border border-rose-500/25 rounded-lg text-[9px] cursor-pointer"
                             >
-                              Flush All
+                              Clear all
                             </button>
                           </div>
 
@@ -2132,8 +2132,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                                 localStorage.setItem('nx_is_simulated_offline', nextVal.toString());
                                 window.dispatchEvent(new CustomEvent('toast', { 
                                   detail: nextVal 
-                                    ? '🔌 Node disconnected. All outgoing payloads will be buffered in offline queue.' 
-                                    : '🔌 Resumed connectivity. Initiating batch sync of local queue...' 
+                                    ? '🔌 You are offline. Your pending changes will be sent when you reconnect.' 
+                                    : '🔌 Connection restored. Sending your pending changes...' 
                                 }));
                               }}
                               className={`px-3 py-1 rounded text-[10px] font-mono font-bold cursor-pointer transition-all ${
@@ -2150,15 +2150,15 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         {/* Background Synchronizer */}
                         <div className="p-4 bg-slate-950/60 border border-white/5 rounded-2xl flex flex-col justify-between space-y-3 text-left">
                           <div>
-                            <span className="text-[10px] font-mono text-violet-400 font-black uppercase block">P2P Synchronizer</span>
-                            <h5 className="text-xs font-bold text-white mt-1">Replication Schedule</h5>
+                            <span className="text-[10px] font-mono text-violet-400 font-black uppercase block">Sync settings</span>
+                            <h5 className="text-xs font-bold text-white mt-1">Sync schedule</h5>
                             <p className="text-[8.5px] text-zinc-500 mt-1 leading-relaxed">
                               Select background sync interval algorithm. Incremental delta synchronization minimizes physical radio wake-up cycles.
                             </p>
                           </div>
                           
                           <div className="flex justify-between items-center text-xs">
-                            <span className="text-zinc-400 text-[10px] font-mono">Sync Tier:</span>
+                            <span className="text-zinc-400 text-[10px] font-mono">Sync setting:</span>
                             <select
                               value={syncSchedule}
                               onChange={(e) => {
@@ -2178,15 +2178,15 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         {/* Sync Rate Info */}
                         <div className="p-4 bg-slate-950/60 border border-white/5 rounded-2xl flex flex-col justify-between space-y-3 text-left">
                           <div>
-                            <span className="text-[10px] font-mono text-pink-400 font-black uppercase block">Bandwidth Throttle</span>
-                            <h5 className="text-xs font-bold text-white mt-1">Live Synchronization rate</h5>
+                            <span className="text-[10px] font-mono text-pink-400 font-black uppercase block">Data use</span>
+                            <h5 className="text-xs font-bold text-white mt-1">Update speed</h5>
                             <p className="text-[8.5px] text-zinc-500 mt-1 leading-relaxed">
-                              Current background socket throughput metrics. Enabling Adaptive Data Saver immediately throttles non-essential assets preloading.
+                              Shows how quickly the app sends and receives updates. Data Saver can reduce photo and video downloads.
                             </p>
                           </div>
 
                           <div className="flex justify-between items-center text-[10px] font-mono">
-                            <span className="text-zinc-500">Live Delta flow:</span>
+                            <span className="text-zinc-500">Data used:</span>
                             <span className="text-pink-400 font-black">{isSimulatedOffline ? '0.0 B/s' : deltaRate}</span>
                           </div>
                         </div>
@@ -2197,10 +2197,10 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                           <div>
                             <h5 className="text-xs font-black text-cyan-400 font-mono uppercase tracking-wider flex items-center gap-1.5">
-                              <Radio className="w-4 h-4 text-cyan-400" /> Offline Transaction FIFO Buffer
+                              <Radio className="w-4 h-4 text-cyan-400" /> Changes waiting to send
                             </h5>
                             <p className="text-[9px] text-zinc-500 mt-0.5">
-                              Unsynchronized message payloads, reactions, comments, and votes held locally until peer connectivity is established.
+                              Messages, reactions, comments and votes stay on your phone until your connection returns.
                             </p>
                           </div>
                           
@@ -2209,16 +2209,16 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                               onClick={handleQueueSimulatedMessage}
                               className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 font-bold text-white text-[10px] font-mono rounded-lg transition-all flex items-center gap-1 cursor-pointer"
                             >
-                              Queue Simulated Action
+                              Add sample change
                             </button>
                             <button
                               onClick={() => {
                                 setOfflineQueue([]);
-                                window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Cleared local transactions ledger.' }));
+                                window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Waiting changes cleared.' }));
                               }}
                               className="px-2.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 text-[10px] font-mono rounded-lg cursor-pointer"
                             >
-                              Clear Ledger
+                              Clear list
                             </button>
                           </div>
                         </div>
@@ -2227,8 +2227,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                           {offlineQueue.length === 0 ? (
                             <div className="p-8 text-center bg-black/40 border border-white/5 rounded-xl space-y-1.5">
-                              <span className="text-xs font-bold text-zinc-400 block">Queue Empty</span>
-                              <p className="text-[10px] text-zinc-600 max-w-sm mx-auto">No pending local actions waiting to sync. All transactions are fully synchronized with core nodes!</p>
+                              <span className="text-xs font-bold text-zinc-400 block">Nothing waiting</span>
+                              <p className="text-[10px] text-zinc-600 max-w-sm mx-auto">Nothing is waiting to send. Your changes are up to date.</p>
                             </div>
                           ) : (
                             offlineQueue.map(item => (
@@ -2277,7 +2277,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                                   <span className="text-[9px] font-mono text-zinc-500">Autonomous hardware indexing active</span>
                                 </div>
                               </div>
-                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse" title="System normal" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-pulse" title="App is running normally" />
                             </div>
 
                             {/* Scrollable messages area */}
@@ -2295,7 +2295,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                                     {msg.text}
                                   </div>
                                   <span className="text-[8px] font-mono text-zinc-600 mt-1 uppercase">
-                                    {msg.sender === 'user' ? 'User node' : 'Nida Subsystem'} • {msg.timestamp}
+                                    {msg.sender === 'user' ? 'You' : 'Nida'} • {msg.timestamp}
                                   </span>
                                 </div>
                               ))}
@@ -2309,7 +2309,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                               value={aiInput}
                               onChange={(e) => setAiInput(e.target.value)}
                               onKeyDown={(e) => e.key === 'Enter' && handleSendAiMessage()}
-                              placeholder="Ask Nida regarding RAM, background synchronization, or power drain..."
+                              placeholder="Ask about storage, app speed or battery use..."
                               className="w-full bg-black/60 border border-white/5 rounded-xl px-3.5 py-2 text-xs text-zinc-300 placeholder-zinc-600 outline-none focus:border-cyan-500/25 transition-all"
                             />
                             <button
@@ -2324,18 +2324,18 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         {/* Quick Interactive Actions sidecard */}
                         <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl flex flex-col justify-between text-left space-y-4">
                           <div>
-                            <span className="text-[10px] font-mono text-cyan-400 font-black uppercase block">One-Tap Recommendations</span>
-                            <h5 className="text-xs font-bold text-white mt-1 font-sans">Autonomous Optimizer</h5>
+                            <span className="text-[10px] font-mono text-cyan-400 font-black uppercase block">Quick tips</span>
+                            <h5 className="text-xs font-bold text-white mt-1 font-sans">Improve app performance</h5>
                             <p className="text-[8.5px] text-zinc-500 mt-1 leading-relaxed">
-                              Nida is actively monitoring client state and has isolated high-efficiency adjustments. Click below to immediately execute the calibration routine.
+                              These suggestions may help your phone run NEXORA more smoothly. Choose one to get started.
                             </p>
                           </div>
 
                           <div className="space-y-3 flex-1 mt-4 overflow-y-auto pr-1">
                             {[
-                              { id: 'battery', title: 'Smart Battery Saver', desc: 'Throttles background sync cycles & suspends canvas shader particles.', actionLabel: 'Enable Saver', metric: '+2.4h life' },
-                              { id: 'rebuild_thumbnail', title: 'Rebuild Thumbnail Cache', desc: 'Purges stale thumbnail arrays from local session memory.', actionLabel: 'Purge & Rebuild', metric: 'Recover 41MB' },
-                              { id: 'compress_media', title: 'Compress Old Video Media', desc: 'Recompresses raw historic records using high-efficiency WebP/H.265.', actionLabel: 'Defragment Space', metric: 'Recover 432MB' }
+                              { id: 'battery', title: 'Battery Saver', desc: 'Reduces background activity to help your battery last longer.', actionLabel: 'Enable Saver', metric: '+2.4h life' },
+                              { id: 'rebuild_thumbnail', title: 'Clear old previews', desc: 'Removes old photo and video previews.', actionLabel: 'Clear old previews', metric: 'Recover 41MB' },
+                              { id: 'compress_media', title: 'Make old videos smaller', desc: 'Makes older videos smaller to free up storage.', actionLabel: 'Free up space', metric: 'Recover 432MB' }
                             ].map(rec => (
                               <div key={rec.id} className="p-3 bg-black/40 border border-white/5 rounded-xl text-xs space-y-2 hover:border-cyan-500/25 transition-all">
                                 <div className="flex justify-between items-center gap-1">
@@ -2362,9 +2362,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     <div className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {[
-                          { title: 'Startup Latency', current: '118 ms', target: '150 ms', desc: 'Active viewport initialization and asset catalog compilation duration.' },
-                          { title: 'Dynamic Frame Rate', current: '60 FPS', target: '60 FPS', desc: 'Scrolling stability index tracked across active chat and story feeds.' },
-                          { title: 'Tunnels Ping Latency', current: '24 ms', target: '40 ms', desc: 'Response cycle duration on outgoing peer-to-peer ledger sync requests.' }
+                          { title: 'App start time', current: '118 ms', target: '150 ms', desc: 'How long the app takes to open and show content.' },
+                          { title: 'Scrolling smoothness', current: '60 FPS', target: '60 FPS', desc: 'How smoothly the app scrolls through chats and stories.' },
+                          { title: 'Connection speed', current: '24 ms', target: '40 ms', desc: 'How quickly the app receives updates.' }
                         ].map((anal, idx) => (
                           <div key={idx} className="p-4 bg-slate-950/60 border border-white/5 rounded-2xl text-left space-y-2">
                             <span className="text-[10px] font-mono text-cyan-400 font-black uppercase block">{anal.title}</span>
@@ -2381,18 +2381,18 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl space-y-4 text-left">
                         <div>
                           <h5 className="text-xs font-black text-zinc-300 font-mono uppercase tracking-wider flex items-center gap-1.5">
-                            <BarChart2 className="w-4 h-4 text-cyan-400" /> Historical Performance Logs
+                            <BarChart2 className="w-4 h-4 text-cyan-400" /> App speed history
                           </h5>
-                          <p className="text-[9px] text-zinc-500 mt-0.5 font-sans">Hour-by-hour telemetry summaries extracted from core logging pages.</p>
+                          <p className="text-[9px] text-zinc-500 mt-0.5 font-sans">A summary of app speed over time.</p>
                         </div>
 
                         <div className="border border-white/5 rounded-xl overflow-hidden bg-black/40 overflow-x-auto">
                           <table className="w-full text-left text-[11px] font-mono min-w-[500px]">
                             <thead>
                               <tr className="bg-zinc-950/80 border-b border-white/5 text-zinc-400">
-                                <th className="p-3">LOG TIMESTAMP</th>
-                                <th className="p-3">STARTUP SPEED</th>
-                                <th className="p-3">AVERAGE FPS</th>
+                                <th className="p-3">TIME</th>
+                                <th className="p-3">APP START TIME</th>
+                                <th className="p-3">AVERAGE SCROLLING SPEED</th>
                                 <th className="p-3">PING LATENCY</th>
                                 <th className="p-3">STATUS</th>
                               </tr>
@@ -2430,7 +2430,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
               <div className="text-center space-y-4">
                 <RefreshCw className="w-12 h-12 text-violet-400 animate-spin mx-auto" />
                 <h4 className="text-sm font-black text-white uppercase tracking-widest font-mono">Calibrating Filesystem Indices</h4>
-                <p className="text-xs text-zinc-500 max-w-xs leading-relaxed">Defragmenting memory pages, reindexing database blocks, and emptying temporary socket queues.</p>
+                <p className="text-xs text-zinc-500 max-w-xs leading-relaxed">Clearing temporary files and making more space.</p>
               </div>
             </div>
           )}

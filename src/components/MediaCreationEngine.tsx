@@ -585,7 +585,7 @@ export default function MediaCreationEngine({
         const existing = new Set(previous.map(item => item.id));
         return [...previous, ...cloudDrafts.filter(item => !existing.has(item.id))].slice(0, 50);
       });
-    }).catch(error => console.warn('[Composer] Cloud drafts could not be restored.', error));
+    }).catch(error => console.warn('[Composer] Saved drafts could not be loaded.', error));
     return () => { active = false; };
   }, [currentUser.id]);
 
@@ -608,7 +608,7 @@ export default function MediaCreationEngine({
             if (videoPreviewRef.current) {
               videoPreviewRef.current.srcObject = stream;
               void videoPreviewRef.current.play().catch(() => {
-                window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview could not start. Check browser camera permissions and try again.' }));
+                window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview could not start. Allow camera access in your phone settings and try again.' }));
               });
             }
           })
@@ -702,7 +702,7 @@ export default function MediaCreationEngine({
         if (video.srcObject === stream) video.srcObject = null;
         if (!cancelled) {
           window.dispatchEvent(new CustomEvent('toast', {
-            detail: error instanceof Error ? error.message : 'Camera preview could not start. Check browser camera permissions and try again.',
+            detail: error instanceof Error ? error.message : 'Camera preview could not start. Allow camera access in your phone settings and try again.',
           }));
         }
       }
@@ -825,7 +825,7 @@ export default function MediaCreationEngine({
             const live = videoStreamRef.current?.getVideoTracks().some(track => track.readyState === 'live');
             if (live) pendingAction();
             else if (++attempts < 40) window.setTimeout(waitForPreview, 100);
-            else window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera permission was granted, but the preview is still starting. Please tap Record again in a moment.' }));
+            else window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera access is on, but the preview is still starting. Tap Record again in a moment.' }));
           };
           window.setTimeout(waitForPreview, 100);
         } else {
@@ -852,7 +852,7 @@ export default function MediaCreationEngine({
         try {
           await validateMediaFile(file, 'image');
         } catch (error) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'Image validation failed.'}` }));
+          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This photo could not be checked.'}` }));
           return;
         }
         const reader = new FileReader();
@@ -918,7 +918,7 @@ export default function MediaCreationEngine({
           setVideoTrimEnd(Math.min(15, Math.max(1, Math.round(metadata.duration || 15))));
           setVideoDuration(metadata.duration || 15);
         } catch (error) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'Video validation failed.'}` }));
+          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
         }
       })();
     });
@@ -930,12 +930,12 @@ export default function MediaCreationEngine({
     if (!video || videoTrimEnd <= videoTrimStart) { setErrorMessage('Choose a valid video section before trimming.'); return; }
     const capture = video as HTMLVideoElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream };
     if (typeof MediaRecorder === 'undefined' || (!capture.captureStream && !capture.mozCaptureStream)) {
-      setErrorMessage('Video trimming is not supported by this browser. Your original video is unchanged.'); return;
+      setErrorMessage('You cannot trim videos in this browser. Your original video has not changed.'); return;
     }
     setIsTrimmingVideo(true); setErrorMessage('');
     let stream: MediaStream | null = null; let recorder: MediaRecorder | null = null;
     try {
-      if (video.readyState < 1) await new Promise<void>((resolve, reject) => { video.onloadedmetadata = () => resolve(); video.onerror = () => reject(new Error('The video could not be opened.')); });
+      if (video.readyState < 1) await new Promise<void>((resolve, reject) => { video.onloadedmetadata = () => resolve(); video.onerror = () => reject(new Error('This video could not be opened.')); });
       stream = capture.captureStream ? capture.captureStream() : capture.mozCaptureStream!();
       const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
       recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
@@ -1111,7 +1111,7 @@ export default function MediaCreationEngine({
                     const result = await VoiceEngine.uploadVoice(audioBase64, blob.type || 'audio/webm');
                     setVoiceTranscript(result.transcription);
                   } catch (error) {
-                    window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'VOH could not transcribe this recording.' }));
+                    window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'VOH could not turn this recording into text.' }));
                   } finally {
                     setLoadingTranscript(false);
                   }
@@ -1653,7 +1653,7 @@ export default function MediaCreationEngine({
               </div>
               <div>
                 <h4 className="text-sm font-sans font-bold text-white">Leave this post?</h4>
-                <p className="text-xs text-[#A39BBF] mt-1">Save your work as a draft so you can come back to it later.</p>
+                <p className="text-xs text-[#A39BBF] mt-1">Save as a draft and come back to it anytime.</p>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2">
                 <button 
@@ -1762,9 +1762,9 @@ export default function MediaCreationEngine({
               <div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-sm font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
-                  <span className="text-[11px] font-semibold tracking-wide text-violet-300">CREATE</span>
+                  <span className="text-[11px] font-semibold tracking-wide text-violet-300">Create</span>
                 </div>
-                <h1 className="text-sm font-semibold font-sans tracking-tight text-[#EEEAF8]">Share something with your people</h1>
+                <h1 className="text-sm font-semibold font-sans tracking-tight text-[#EEEAF8]">Create a post</h1>
               </div>
             </div>
           </div>
@@ -1819,7 +1819,7 @@ export default function MediaCreationEngine({
               {draftsList.length === 0 ? (
                 <div className="py-12 border border-[#292244] border-dashed rounded-2xl text-center space-y-2">
                   <FolderHeart className="w-8 h-8 text-[#756D91] mx-auto animate-pulse" />
-                  <p className="text-xs text-[#A39BBF] italic">No drafts yet. Save something you're working on and it will be waiting here.</p>
+                  <p className="text-xs text-[#A39BBF] italic">No drafts yet.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1857,7 +1857,7 @@ export default function MediaCreationEngine({
                 <div className="space-y-4 animate-fadeIn">
                   <div>
                     <span className="text-xs font-semibold text-violet-300 block mb-1">Create</span>
-                    <h3 className="text-base font-bold text-white">What do you want to share?</h3>
+                    <h3 className="text-base font-bold text-white">What's on your mind?</h3>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1947,7 +1947,7 @@ export default function MediaCreationEngine({
                       {isLensStudioOpen && (
                         <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3 sm:col-span-2">
                           <div className="flex items-center justify-between">
-                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Take a photo with your live lens applied.</p></div>
+                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Take a photo with your lens.</p></div>
                             <div className="flex gap-2">
                               <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
                               <button type="button" onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white">Close</button>
@@ -2013,7 +2013,7 @@ export default function MediaCreationEngine({
                       <Video className="w-8 h-8 text-[#8E88A7] mx-auto animate-pulse" />
                       <div className="space-y-1">
                         <p className="text-xs text-[#D1CBE3] font-bold">Choose a video</p>
-                        <p className="text-[10px] text-[#8E88A7]">Choose a video from your gallery. Videos can be up to 20 minutes and 250 MB.</p>
+                        <p className="text-[10px] text-[#8E88A7]">Choose a video from your phone. Videos can be up to 20 minutes and 250 MB.</p>
                       </div>
                       <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
                         Choose from gallery
@@ -2023,7 +2023,7 @@ export default function MediaCreationEngine({
                         <div className="max-w-sm mx-auto p-3 bg-[#120E2B] border border-[#292244] rounded-xl space-y-3 text-left">
                           <p className="text-[10px] text-emerald-300 font-semibold">✓ Video ready · {Math.round(videoDuration)} seconds</p>
                           <video ref={trimVideoRef} src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" onLoadedMetadata={event => { const duration = Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : videoDuration; setVideoDuration(duration); setVideoTrimEnd(previous => Math.min(previous, duration)); }} className="w-full rounded-lg bg-black" />
-                           {videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-lg border border-violet-400/40 bg-violet-500/10 px-3 py-2.5 text-xs font-semibold text-violet-100 hover:bg-violet-500/20">Edit this video in NEXORA Studio</button>}
+                           {videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-lg border border-violet-400/40 bg-violet-500/10 px-3 py-2.5 text-xs font-semibold text-violet-100 hover:bg-violet-500/20">Edit video</button>}
                           <div className="space-y-2">
                             <div className="flex justify-between text-[10px] text-[#A39BBF]"><label htmlFor="video-trim-start">Start · {videoTrimStart.toFixed(1)}s</label><span>End · {videoTrimEnd.toFixed(1)}s</span></div>
                             <input id="video-trim-start" aria-label="Video trim start" type="range" min="0" max={Math.max(0, videoDuration - 1)} step="0.1" value={Math.min(videoTrimStart, Math.max(0, videoDuration - 1))} onChange={event => { const value = Number(event.target.value); setVideoTrimStart(value); if (value >= videoTrimEnd) setVideoTrimEnd(Math.min(videoDuration, value + 1)); }} className="w-full accent-violet-500" />
@@ -2047,7 +2047,7 @@ export default function MediaCreationEngine({
                       {isLensStudioOpen ? (
                         <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3">
                           <div className="flex items-center justify-between gap-2">
-                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Live effects are baked into your capture.</p></div>
+                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Your lens appears in the finished video.</p></div>
                             <div className="flex gap-2">
                               <button type="button" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
                               <button type="button" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{countdownTimer !== null ? 'Starting…' : isRecording || isSavingRecordedVideo ? 'Saving recording…' : 'Close'}</button>
@@ -2070,7 +2070,7 @@ export default function MediaCreationEngine({
                                 {RECORDING_DURATIONS.map(duration => <option key={duration.seconds} value={duration.seconds} className="bg-[#120E2B]">{duration.label}</option>)}
                               </select>
                             </label>
-                            {isRecording ? <button onClick={handleStopReelRecord} className="h-12 rounded-full bg-rose-600 px-6 text-xs font-bold text-white shadow-lg">Stop recording</button> : <button onClick={startReelRecording} disabled={!isLensStreamReady || isSavingRecordedVideo || countdownTimer !== null} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Record with filter</button>}
+                            {isRecording ? <button onClick={handleStopReelRecord} className="h-12 rounded-full bg-rose-600 px-6 text-xs font-bold text-white shadow-lg">Stop recording</button> : <button onClick={startReelRecording} disabled={!isLensStreamReady || isSavingRecordedVideo || countdownTimer !== null} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Record with lens</button>}
                             {isRecording && <span className="rounded-full bg-black/60 px-3 py-1 text-[10px] text-white">Recording: {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')}</span>}
                           </div>
                         </div>
@@ -2096,7 +2096,7 @@ export default function MediaCreationEngine({
                             </label>
                             {isRecording ? <button onClick={handleStopReelRecord} className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-rose-600 text-[10px] font-bold text-white">Stop</button> : <button onClick={startReelRecording} className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-black bg-gradient-to-tr from-[#8A3FFC] to-[#1600A3] text-[10px] font-black text-white shadow-md">{recordedVideoUrl ? 'Again' : 'Record'}</button>}
                             {isRecording && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-mono text-white">Recording: {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')} / {Math.floor(recordingLimitSecs / 60)}:{String(recordingLimitSecs % 60).padStart(2, '0')}</span>}
-                            {!isRecording && recordedVideoUrl && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] text-white">Video ready · record again or continue</span>}
+                            {!isRecording && recordedVideoUrl && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] text-white">Video ready</span>}
                              {!isRecording && videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="rounded-full border border-violet-300/40 bg-violet-500/15 px-4 py-2 text-[10px] font-semibold text-violet-100">Edit in NEXORA Studio</button>}
                           </div>
                         </div>
@@ -2188,8 +2188,8 @@ export default function MediaCreationEngine({
                 <div className="space-y-4 animate-fadeIn">
                   <div>
                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[#B69BFF]">STEP 3 OF 6</span>
-                    <h3 className="text-base font-bold text-white">Review your photo or video</h3>
-                    <p className="mt-1 text-xs leading-relaxed text-[#A39BBF]">Check your media before adding a caption and sharing it.</p>
+                    <h3 className="text-base font-bold text-white">Preview</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-[#A39BBF]">Review your post before sharing.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Media render wrapper */}
@@ -2224,7 +2224,7 @@ export default function MediaCreationEngine({
                       ) : (
                         <div className="text-center p-6 space-y-2 text-[#8E88A7]">
                           <Sliders className="w-8 h-8 mx-auto" />
-                          <p className="text-xs">Your photo or video preview will appear here.</p>
+                          <p className="text-xs"></p>
                         </div>
                       )}
                     </div>
@@ -2333,7 +2333,7 @@ export default function MediaCreationEngine({
                     {selectedImages.length === 0 && (videoFileUrl || recordedVideoUrl) && (
                       <div className="flex flex-col justify-center rounded-2xl border border-[#7138FF]/25 bg-[#120E2B] p-5">
                         <span className="mb-2 text-xs font-semibold text-[#B69BFF]">Your video is ready</span>
-                        <p className="text-sm leading-relaxed text-[#EEEAF8]">Review your clip on the left. Add a caption and details next, then preview it before sharing.</p>
+                        <p className="text-sm leading-relaxed text-[#EEEAF8]">Add a caption, check your video, then share it.</p>
                       </div>
                     )}
                   </div>
@@ -2528,7 +2528,7 @@ export default function MediaCreationEngine({
                       {selectedImages.length > 0 && (
                         <div className="flex items-center gap-2 text-xs">
                           {isAltTextMissing ? (
-                            <span className="text-amber-400">Add a short photo description to help people using screen readers.</span>
+                            <span className="text-amber-400">Describe your photo (optional).</span>
                           ) : (
                             <span className="text-emerald-400">✓ Photo description added</span>
                           )}
@@ -2569,7 +2569,7 @@ export default function MediaCreationEngine({
                             <div className="border-t border-[#292244] pt-3 space-y-2">
                             <div>
                               <span className="block text-xs font-bold text-[#EEEAF8]">NEXORA Origin · Remix permission</span>
-                              <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Choose whether other creators may build on the media you upload in this post. You can change this later.</p>
+                              <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Let other people remix this post. You can change this later.</p>
                             </div>
                             <select
                               aria-label="NEXORA Origin remix permission"
@@ -2586,7 +2586,7 @@ export default function MediaCreationEngine({
                                 : 'NEXORA will record creator attribution when another account remixes this media. Permission applies only to newly uploaded media in this post.'}
                             </p>
                           </div>
-                            <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
+                            <p className="text-[10px] leading-relaxed text-[#8E88A7]"></p>
                           </>
                         ) : (
                           <p className="border-t border-[#292244] pt-3 text-[10px] leading-relaxed text-[#8E88A7]">Stories are public and disappear automatically after 24 hours.</p>
@@ -2595,7 +2595,7 @@ export default function MediaCreationEngine({
 
                     </div>
                   ) : (
-                    /* Dynamic Publish Loading indicators */
+                    /* Publishing progress */
                     <div className="py-12 flex flex-col items-center justify-center text-center space-y-5">
                       {postingStatus === 'completed' ? (
                         <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center animate-bounce">
@@ -2617,14 +2617,14 @@ export default function MediaCreationEngine({
                           <div
                             className="h-2 w-full overflow-hidden rounded-full bg-[#19143A]"
                             role="progressbar"
-                            aria-label="Actual media upload progress"
+                            aria-label="Upload progress"
                             aria-valuemin={0}
                             aria-valuemax={100}
                             aria-valuenow={uploadProgress}
                           >
                             <div className="h-full rounded-full bg-violet-500 transition-[width] duration-200" style={{ width: `${uploadProgress}%` }} />
                           </div>
-                          <p className="text-[10px] text-[#8E88A7]">Progress is based on the file transfer. Large videos and slower connections can take longer.</p>
+                          <p className="text-[10px] text-[#8E88A7]">Upload progress. Large videos may take longer to upload.</p>
                         </div>
                       )}
 
@@ -2678,7 +2678,7 @@ export default function MediaCreationEngine({
 
         </div>
 
-        {/* Wizard Footer controls */}
+        {/* Publishing controls */}
         {activeTab !== 'drafts' && postingStatus === 'idle' && (
           <div className="border-t border-[#292244]/60 pt-4 flex justify-between items-center shrink-0">
             <div>

@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { getDevicePerformanceProfile } from './utils/devicePerformance';
+import { playNexoraSound } from './services/soundExperience';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, HelpCircle, X, ShieldCheck, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward, Compass } from 'lucide-react';
 import VohIcon from './components/VohIcon';
@@ -1291,7 +1292,8 @@ export default function App() {
       const customEvent = e as CustomEvent;
       const message = customEvent.detail;
       if (!message) return;
-      // In-app toast feedback is silent; only operating-system push alerts may make a sound.
+      playNexoraSound('interface.confirmation');
+      
       const id = crypto.randomUUID();
       setToasts(prev => [...prev, { id, message }]);
       
@@ -1461,7 +1463,7 @@ export default function App() {
       }
 
       window.dispatchEvent(new CustomEvent('toast', { 
-        detail: archiveState ? '📥 Post sent to studio archives.' : '📤 Post restored to live feed!' 
+        detail: archiveState ? '📥 Post moved to your archive.' : '📤 Post restored to your profile.' 
       }));
     };
 
@@ -3165,7 +3167,7 @@ export default function App() {
                   </div>
                   <div>
                     <h3 className="text-xs font-mono font-bold text-violet-400 tracking-wider uppercase">NEXORA AI HUB</h3>
-                    <h2 className="text-base font-black font-sans text-white uppercase tracking-tight">VOH Command Center</h2>
+                    <h2 className="text-base font-black font-sans text-white uppercase tracking-tight">VOH AI</h2>
                   </div>
                 </div>
                 <button
@@ -3177,7 +3179,7 @@ export default function App() {
               </div>
 
               <p className="text-zinc-300 font-sans leading-relaxed mb-4 relative z-10 text-[11px]">
-                Access VOH AI, Nexora's core intelligence, from anywhere. Submit a query below to immediately trigger on-chain summaries, feed optimization, or direct assistant dialogues.
+                Chat with VOH AI for help with your account, posts, videos, and community activity.
               </p>
 
               {/* Suggested Direct Triggers */}
@@ -3266,7 +3268,7 @@ export default function App() {
                 </div>
 
                 <div className="flex items-center justify-between pt-2 border-t border-white/5">
-                  <span className="text-[9px] font-mono text-zinc-500">Linked to VOH Core v3.5</span>
+                  <span className="text-[9px] font-mono text-zinc-500">VOH AI</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -3426,7 +3428,7 @@ export default function App() {
                 {/* Subsystem Tunnels Stats */}
                 <div className="space-y-1.5 pt-1 border-t border-white/5 text-zinc-300">
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Virtual List Engine:</span>
+                    <span className="text-zinc-500">Feed loading:</span>
                     <span className="text-emerald-400 font-bold">15 / 1.25M (0.001%)</span>
                   </div>
                   <div className="flex justify-between">
@@ -3444,7 +3446,7 @@ export default function App() {
                     <span className="text-cyan-400 font-bold">Intact & Sealed</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-zinc-500">Core Network Delay:</span>
+                    <span className="text-zinc-500">Network delay:</span>
                     <span className="text-violet-400 font-bold">~24ms (Excellent)</span>
                   </div>
                 </div>

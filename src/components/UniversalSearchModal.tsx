@@ -219,7 +219,7 @@ export default function UniversalSearchModal({
     searchText(p.communityName).includes(trimmedQ)
   ).slice(0, 5);
 
-  // 3. World Pulse
+  // 3. Trending
   const matchedPulse = posts.filter(p =>
     (p.location || p.tags?.some(t => ['pulse', 'breaking', 'news', 'world'].includes(t.toLowerCase()))) &&
     (searchText(p.content).includes(trimmedQ) || p.tags?.some(t => searchText(t).includes(trimmedQ)) || searchText(p.location).includes(trimmedQ))
@@ -338,7 +338,7 @@ export default function UniversalSearchModal({
         {/* Quick Suggestion Pills */}
         <div className="max-w-4xl mx-auto w-full flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar text-xs">
           <span className="text-zinc-400 font-mono shrink-0">Trending:</span>
-          {['#NexoraGlobal', 'VOH AI Core', 'Quantum Mesh', 'Creator Grants', 'Soundwave', 'Global Tech'].map((tag) => (
+          {['#NexoraGlobal', 'VOH AI', 'Communities', 'Creator Grants', 'Soundwave', 'Technology'].map((tag) => (
             <button
               key={tag}
               onClick={() => {
@@ -364,7 +364,7 @@ export default function UniversalSearchModal({
               
               {/* Quick Actions / Productivity Hub */}
               <div className="space-y-3">
-                <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-400 px-1">Command Center & Quick Actions</h3>
+                <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-400 px-1">Shortcuts</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   {[
                     { label: 'Create Post', icon: Plus, action: () => { onClose(); onOpenCreatePost('text'); }, color: 'from-violet-600 to-indigo-600' },
@@ -375,7 +375,7 @@ export default function UniversalSearchModal({
                     { label: 'View Saved', icon: Bookmark, action: () => { onClose(); onSelectTab('saved'); }, color: 'from-purple-600 to-fuchsia-600' },
                     { label: 'Communities', icon: Users, action: () => { onClose(); onSelectTab('communities'); }, color: 'from-blue-600 to-indigo-600' },
                     { label: 'Circles', icon: Globe, action: () => { onClose(); onSelectTab('matrix'); }, color: 'from-violet-500 to-purple-600' },
-                    { label: 'Creator Hub', icon: Shield, action: () => { onClose(); onSelectTab('creator'); }, color: 'from-rose-500 to-pink-600' },
+                    { label: 'Creator tools', icon: Shield, action: () => { onClose(); onSelectTab('creator'); }, color: 'from-rose-500 to-pink-600' },
                     { label: 'Settings', icon: ArrowRight, action: () => { onClose(); onSelectTab('settings'); }, color: 'from-zinc-700 to-zinc-800' },
                   ].map((act, i) => {
                     const Icon = act.icon;
@@ -443,7 +443,7 @@ export default function UniversalSearchModal({
                 <div className="space-y-1.5 text-left">
                   <h4 className="text-base font-sans font-bold text-white flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-violet-400" />
-                    <span>Nexora Unified Search & Command Center</span>
+                    <span>Search NEXORA</span>
                   </h4>
                   <p className="text-xs text-zinc-300 font-sans leading-relaxed max-w-xl">
                     Searches public people, Pages and Circles through NEXORA's server-backed directory, alongside posts, chats, saved content, opportunities and VOH AI history currently loaded in this browser.
@@ -609,7 +609,7 @@ export default function UniversalSearchModal({
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-widest text-cyan-400 flex items-center gap-2">
                           <Globe className="w-4 h-4" />
-                          <span>World Pulse ({matchedPulse.length})</span>
+                          <span>Trending ({matchedPulse.length})</span>
                         </h4>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -623,7 +623,7 @@ export default function UniversalSearchModal({
                             className="p-3.5 rounded-2xl bg-cyan-950/20 hover:bg-cyan-950/40 border border-cyan-500/20 hover:border-cyan-500/40 transition-all cursor-pointer space-y-1.5"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-mono text-[10px]">World Pulse</span>
+                              <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 font-mono text-[10px]">Trending</span>
                               <span className="text-[11px] text-zinc-400">{pulse.location || 'Global'}</span>
                             </div>
                             <h5 className="text-sm font-sans font-bold text-white truncate">{pulse.content}</h5>
