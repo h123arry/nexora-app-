@@ -74,7 +74,7 @@ export async function addPublicPostComment(
     if (recipientProfile?.exists && authorId && authorId !== uid) {
       const notification = buildCommentNotification({
         eventId: `${postId}:${commentId}`, commentId, postId, actorId: uid, recipientId: authorId,
-        username: comment.username, avatar: comment.avatar, content, timestamp,
+        username: comment.username, actorName: comment.name, avatar: comment.avatar, content, timestamp,
       });
       if (notification) {
         const notificationRef = db.collection('users').doc(authorId)
