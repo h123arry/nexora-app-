@@ -15,6 +15,7 @@ import GiftVerseView from './GiftVerseView';
 import { validateUsername } from '../utils/username';
 import ReportModal from './ReportModal';
 import { auth } from '../services/firebase/config';
+import { uploadMediaFile } from '../services/firebase/storageService';
 import { SettingsService } from '../services/firebase/settingsService';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
@@ -210,7 +211,7 @@ interface ProfileViewProps {
   currentUser: User;
   isLoggedIn?: boolean;
   posts: Post[];
-  onUpdateProfile: (updatedData: Partial<User>) => void;
+  onUpdateProfile: (updatedData: Partial<User>) => void | Promise<void>;
   onLikePost: (postId: string) => void;
   onAddComment?: (postId: string, text: string) => void;
   onAddPost?: (content: string, imageUrl?: string, tagsString?: string, images?: string[], videoUrl?: string) => string;
@@ -926,17 +927,30 @@ export default function ProfileView({
     setIsSavingProfile(true);
 
     try {
+      let durableAvatar = editAvatar;
+      if (editAvatar.startsWith('data:')) {
+        const avatarBlob = await (await fetch(editAvatar)).blob();
+        const uploadedAvatar = await uploadMediaFile({
+          file: avatarBlob,
+          userId: currentUser.id,
+          fileName: `profile-avatar-${Date.now()}.jpg`,
+          metadata: { purpose: 'profile-avatar' },
+        });
+        durableAvatar = uploadedAvatar.downloadUrl;
+      }
+
       await Promise.resolve(onUpdateProfile({
         name: editName,
         username: editUsername,
         bio: editBio,
         location: editLocation,
         website: editWebsite,
-        avatar: editAvatar,
+        avatar: durableAvatar,
         coverImage: editCover,
         lastDisplayNameChangeTime: editName !== currentUser.name ? new Date().toISOString() : currentUser.lastDisplayNameChangeTime,
         lastUsernameChangeTime: editUsername !== currentUser.username ? new Date().toISOString() : currentUser.lastUsernameChangeTime,
       }));
+      if (durableAvatar !== editAvatar) setEditAvatar(durableAvatar);
 
       localStorage.setItem(`nexora_status_text_${currentUser.id}`, statusText);
       localStorage.setItem(`nexora_status_emoji_${currentUser.id}`, statusEmoji);
