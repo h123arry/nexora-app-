@@ -452,7 +452,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       } else if (query.includes('database') || query.includes('db') || query.includes('indexing')) {
         replyText = "🗄️ Search is ready to use. Your older messages and posts may take a little longer to appear.";
       } else if (query.includes('offline') || query.includes('sync') || query.includes('queue')) {
-        replyText = "📡 When you're offline, some changes wait on your phone. They'll be sent when your connection returns.";
+        replyText = "📡 When you are offline, some changes wait on your phone. They will be sent when your connection returns.";
       }
 
       setAiAssistantMessages(prev => [...prev, {
@@ -672,7 +672,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   // This interface is illustrative only; no provider backup operation is wired here.
   const triggerManualBackup = () => {
     window.dispatchEvent(new CustomEvent('toast', {
-      detail: 'Online backups aren't set up here. No files were uploaded or backed up.'
+      detail: 'Online backups are not set up here. No files were uploaded or backed up.'
     }));
   };
 
@@ -829,7 +829,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <h4 className="text-sm font-bold text-white">Storage on this device</h4>
                     </div>
                     <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                      This page only shows files saved on this device. It doesn't show cloud storage, online backups, phone memory, battery or connection details.
+                      This page only shows files saved on this device. It does not show cloud storage, online backups, phone memory, battery or connection details.
                     </p>
                     <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div className="rounded-xl border border-white/5 bg-black/20 p-4">
@@ -1931,9 +1931,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             {/* Preload conditions checkboxes */}
                             <div className="grid grid-cols-2 gap-2">
                               {[
-                                { key: 'idleOnly', label: 'When you're not using the app', desc: 'Only load when you're not scrolling' },
+                                { key: 'idleOnly', label: 'When you are not using the app', desc: 'Only load when you are not scrolling' },
                                 { key: 'batteryHealthy', label: 'Save battery', desc: 'Stop loading ahead when your battery is low' },
-                                { key: 'networkStable', label: 'Good connection only', desc: 'Don't load ahead when your connection is weak' },
+                                { key: 'networkStable', label: 'Good connection only', desc: 'Do not load ahead when your connection is weak' },
                                 { key: 'memoryAvailable', label: 'Phone has enough memory', desc: 'Wait if your phone is low on memory' }
                               ].map(cond => (
                                 <button
