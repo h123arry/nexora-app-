@@ -234,6 +234,7 @@ async function saveUserToDbDirect(user: any) {
 async function savePostToDbDirect(post: any) {
   const path = 'posts';
   const sanitizedPost = JSON.parse(JSON.stringify(post));
+  delete sanitizedPost.isVerified;
   if (sanitizedPost.audience && sanitizedPost.audience !== 'public') {
     throw new Error('Only public posts can be published until secure private-audience access is implemented.');
   }
@@ -398,6 +399,30 @@ export async function savePostToDb(post: any) {
   // Save in memory cache immediately for zero latency
   cacheManager.setPost(post.id, post);
   await syncEngine.enqueue('savePost', post);
+}
+
+/**
+ * Publish a post synchronously from the user's point of view.
+ * Unlike the background sync queue, this resolves only after Firestore confirms
+ * the write, so the composer never reports success for a merely queued post.
+ */
+export async function publishPostNow(post: any): Promise<void> {
+  const signedInUser = auth.currentUser;
+  if (!signedInUser || signedInUser.uid !== post?.userId) {
+    throw new Error('Your account session changed. Sign in again before sharing.');
+  }
+  if (!post?.id || typeof post.id !== 'string') {
+    throw new Error('This post is missing its ID. Please try again.');
+  }
+  const sanitizedPost = JSON.parse(JSON.stringify(post));
+  delete sanitizedPost.isVerified; // Verification is sourced from the trusted public profile, never from a post.
+  if (sanitizedPost.audience && sanitizedPost.audience !== 'public') {
+    throw new Error('Only public posts can be shared right now.');
+  }
+  sanitizedPost.audience = 'public';
+  const { setDoc } = await import('firebase/firestore');
+  await setDoc(doc(db, 'posts', sanitizedPost.id), sanitizedPost);
+  cacheManager.setPost(sanitizedPost.id, sanitizedPost);
 }
 
 export async function addFollow(followerId: string, followingId: string) {
