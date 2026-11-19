@@ -676,7 +676,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       <section className="relative overflow-hidden rounded-[30px] border border-violet-400/20 bg-[radial-gradient(circle_at_80%_0%,rgba(138,63,252,.3),transparent_40%),linear-gradient(140deg,#100c25,#080d19_65%,#0d1230)] p-6 md:p-9">
         <div className="absolute -right-8 -top-12 h-52 w-52 rounded-full border border-violet-300/10"/><div className="absolute -right-2 -top-6 h-40 w-40 rounded-full border border-violet-300/10"/>
         <div className="relative max-w-2xl"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.24em] text-violet-200"><Sparkles size={14}/> A NEXORA original</div>
-          <h1 className="mt-4 text-4xl font-black tracking-tight text-white md:text-5xl">World<span className="text-violet-300">Weave</span></h1>
+          <h1 className="mt-4 text-4xl font-black tracking-tight text-white md:text-5xl">Shared stories</h1>
           <p className="mt-3 text-sm leading-7 text-slate-300 md:text-base">One moment in the world. Many people who lived it. One evolving story told from every perspective.</p>
           <button onClick={() => setShowCreate(true)} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white shadow-[0_10px_30px_rgba(113,56,255,.28)] hover:bg-violet-500"><Plus size={17}/> Start a shared story</button>
         </div>
