@@ -58,7 +58,7 @@ export const buyNexGiftForFriend = onCall({ maxInstances: 20 }, async request =>
   try {
     return await db.runTransaction(async tx => {
       const [prior, senderWallet, treasuryWallet, senderProfile, recipientProfile,
-        senderStatus, recipientStatus, inventory] = await Promise.all([
+        senderStatus, recipientStatus, senderPreferences, recipientPreferences, inventory] = await Promise.all([
         tx.get(requestRef), tx.get(senderWalletRef), tx.get(treasuryWalletRef),
         tx.get(db.collection('users').doc(senderId)), tx.get(db.collection('users').doc(recipientId)),
         tx.get(db.collection('accountStatus').doc(senderId)), tx.get(db.collection('accountStatus').doc(recipientId)),
