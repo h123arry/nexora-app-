@@ -502,6 +502,27 @@ export default function App() {
     };
   }, [firebaseUser?.uid, isLoggedIn]);
 
+  // Public directory queries are deliberately bounded. Hydrate authors missing
+  // from that window directly by UID so public posts never fall back to stale
+  // author labels just because a profile is outside the first directory page.
+  useEffect(() => {
+    let active = true;
+    const missingIds = [...new Set(posts.map(post => post.userId).filter(Boolean))]
+      .filter(uid => !globalUsersMap[uid]);
+    if (!missingIds.length) return;
+    void Promise.all(missingIds.slice(0, 40).map(uid => ProfileService.getPublicProfile(uid)))
+      .then(profiles => {
+        if (!active) return;
+        setGlobalUsersMap(previous => {
+          const next = { ...previous };
+          profiles.forEach(profile => { if (profile?.id) next[profile.id] = profile; });
+          return next;
+        });
+      })
+      .catch(error => console.warn('[NEXORA] Public post author hydration failed.', error));
+    return () => { active = false; };
+  }, [posts, globalUsersMap]);
+
   // Real-time notifications synchronization for active logged-in identity
   useEffect(() => {
     if (!isLoggedIn || !firebaseUser?.uid) return;
@@ -2219,6 +2240,15 @@ export default function App() {
   // Render Core layout
   return (
     <div id="nexora-master-wrapper" lang={resolveLocale(currentUser.preferredLanguage)} dir={getLocaleDirection(currentUser.preferredLanguage)} className={`nx-app-shell ${getThemeWrapperClass(theme)} transition-colors duration-500`}>
+      {isLoggedIn && firebaseUser?.isAnonymous && (
+        <button
+          type="button"
+          onClick={() => setShowUsernameLogin(true)}
+          className="fixed right-4 top-4 z-[80] rounded-full border border-violet-400/30 bg-[#0B1424]/95 px-4 py-2 text-xs font-bold text-violet-200 shadow-lg backdrop-blur hover:bg-violet-600 hover:text-white"
+        >
+          Log in
+        </button>
+      )}
       <a
         href="#nexora-main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-violet-600 focus:px-4 focus:py-3 focus:text-sm focus:font-bold focus:text-white focus:shadow-xl"
