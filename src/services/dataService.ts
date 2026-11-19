@@ -445,11 +445,11 @@ export async function publishPostNow(post: any, signal?: AbortSignal): Promise<v
 }
 
 export async function addFollow(followerId: string, followingId: string) {
-  await syncEngine.enqueue('addFollow', { followerId, followingId });
+  await addFollowDirect(followerId, followingId);
 }
 
 export async function removeFollow(followerId: string, followingId: string) {
-  await syncEngine.enqueue('removeFollow', { followerId, followingId });
+  await removeFollowDirect(followerId, followingId);
 }
 
 export async function addPublicPostCommentDb(

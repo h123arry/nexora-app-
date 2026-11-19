@@ -56,6 +56,22 @@ const publicProfile = (uid) => ({
 });
 
  describe('Firestore authorization regression tests', () => {
+  it('lets only the profile owner read received Spark activity', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'users', 'alice', 'sparkEvents', 'spark-1'), {
+        fromUserId: 'bob', username: 'bob', postId: 'post-1'
+      });
+    });
+    const aliceDb = dbFor('alice');
+    const bobDb = dbFor('bob');
+    await assertSucceeds(getDoc(doc(aliceDb, 'users', 'alice', 'sparkEvents', 'spark-1')));
+    await assertSucceeds(getDocs(collection(aliceDb, 'users', 'alice', 'sparkEvents')));
+    await assertFails(getDoc(doc(bobDb, 'users', 'alice', 'sparkEvents', 'spark-1')));
+    await assertFails(setDoc(doc(aliceDb, 'users', 'alice', 'sparkEvents', 'forged'), {
+      fromUserId: 'alice', username: 'alice', postId: 'post-2'
+    }));
+  });
+
   it('blocks tokens authenticated before the server-side session revocation cutoff', async () => {
     const cutoffSeconds = Math.ceil(Date.now() / 1000);
     await seed(async adminDb => {

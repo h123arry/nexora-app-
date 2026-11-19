@@ -15,8 +15,10 @@ before(async () => {
   await Promise.all([
     ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
     ...fixtureUsers.map(id => db.recursiveDelete(db.doc(`users/${id}`))),
-    ...fixtureUsers.filter(id => id !== 'author').map(id => db.doc(`publicProfiles/${id}`).delete()),
+    ...fixtureUsers.map(id => db.doc(`publicProfiles/${id}`).delete()),
   ]);
+  await db.doc('publicProfiles/author').set({ username: 'author', name: 'Author', avatar: '', sparks: 0 });
+  await db.doc('users/author').set({ sparks: 0 });
   await db.doc('publicProfiles/alice').set({ username: 'alice', avatar: 'https://example.test/alice.png' });
   for (let index = 0; index < 12; index += 1) {
     await db.doc(`publicProfiles/user-${index}`).set({ username: `user-${index}`, avatar: '' });
@@ -30,7 +32,7 @@ after(async () => {
   await Promise.all([
     ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
     ...fixtureUsers.map(id => db.recursiveDelete(db.doc(`users/${id}`))),
-    ...fixtureUsers.filter(id => id !== 'author').map(id => db.doc(`publicProfiles/${id}`).delete()),
+    ...fixtureUsers.map(id => db.doc(`publicProfiles/${id}`).delete()),
   ]);
   await deleteApp(app);
 });
@@ -44,6 +46,9 @@ describe('trusted post engagement', () => {
     assert.deepEqual(await setPostLike(db, 'alice', 'public-post', false), { liked: false, likes: 0, changed: false });
     assert.equal((await db.doc('posts/public-post').get()).get('likes'), 0);
     assert.equal((await db.doc('users/alice/postLikes/public-post').get()).exists, false);
+    assert.equal((await db.doc('publicProfiles/author').get()).get('sparks'), 0);
+    assert.equal((await db.doc('users/author').get()).get('sparks'), 0);
+    assert.equal((await db.collection('users/author/sparkEvents').get()).size, 0);
     const notifications = await db.collection('users').doc('author').collection('notifications').get();
     assert.equal(notifications.size, 1);
     assert.equal(notifications.docs[0].get('username'), 'alice');
@@ -54,6 +59,9 @@ describe('trusted post engagement', () => {
     const results = await Promise.all(Array.from({ length: 12 }, (_, index) => setPostLike(db, `user-${index}`, 'public-post', true)));
     assert.equal(results.filter(result => result.changed).length, 12);
     assert.equal((await db.doc('posts/public-post').get()).get('likes'), 12);
+    assert.equal((await db.doc('publicProfiles/author').get()).get('sparks'), 12);
+    assert.equal((await db.doc('users/author').get()).get('sparks'), 12);
+    assert.equal((await db.collection('users/author/sparkEvents').get()).size, 12);
     const markers = await Promise.all(Array.from({ length: 12 }, (_, index) => db.doc(`users/user-${index}/postLikes/public-post`).get()));
     assert.equal(markers.filter(marker => marker.exists).length, 12);
     const notifications = await db.collection('users').doc('author').collection('notifications').get();

@@ -52,7 +52,7 @@ import { db } from './lib/firebase';
 import { functions } from './lib/firebase';
 import { mergeRealtimePosts } from './services/posts/postCollection';
 import { httpsCallable } from 'firebase/functions';
-import { collection, getDocs, limit, query } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, onSnapshot, query } from 'firebase/firestore';
 import { useFirebase } from './context/FirebaseContext';
 import { TRANSLATIONS, getLocaleDirection, resolveLocale } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
@@ -107,7 +107,6 @@ import PwaUpdatePrompt from './components/PwaUpdatePrompt';
 
 export default function App() {
   const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, retryProfileLoad, logout, loginWithUsername } = useFirebase();
-
   useEffect(() => {
     const connection = (navigator as Navigator & {
       connection?: EventTarget & { saveData?: boolean };
@@ -196,6 +195,21 @@ export default function App() {
 
   // Only profiles received from Firebase or the authenticated session are shown as people.
   const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>({});
+
+  // Keep the signed-in account's public identity live across devices and profile edits.
+  useEffect(() => {
+    if (!isLoggedIn || !firebaseUser?.uid) return;
+    return onSnapshot(doc(db, 'publicProfiles', firebaseUser.uid), snapshot => {
+      if (!snapshot.exists()) return;
+      const latest = { ...snapshot.data(), id: firebaseUser.uid } as User;
+      setGlobalUsersMap(previous => ({ ...previous, [firebaseUser.uid]: latest }));
+      setCurrentUser(previous => previous.id === firebaseUser.uid
+        ? getRichUser({ ...previous, ...latest })
+        : previous);
+    }, () => {
+      // The current cached profile remains visible if the live profile read is temporarily unavailable.
+    });
+  }, [firebaseUser?.uid, isLoggedIn]);
 
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
 
@@ -459,7 +473,11 @@ export default function App() {
           const incomingPosts = normalizePosts(dbPosts);
           if (!receivedInitialPosts) return incomingPosts;
           const incomingIds = new Set(incomingPosts.map(post => post.id));
-          return [...incomingPosts, ...previousPosts.filter(post => !incomingIds.has(post.id))];
+          const merged = new Map<string, Post>();
+          [...incomingPosts, ...previousPosts].forEach(post => {
+            if (post?.id && !merged.has(post.id)) merged.set(post.id, post);
+          });
+          return [...merged.values()];
         });
         if (!receivedInitialPosts && page) {
           feedCursorRef.current = page.nextCursor;
@@ -1832,7 +1850,7 @@ export default function App() {
     // Do not show the post in the feed or tell the creator it was shared until
     // Firestore confirms the durable write.
     await publishPostNow(newPost, postDetails?.signal);
-    setPosts(previous => [newPost, ...previous]);
+    setPosts(previous => [newPost, ...previous.filter(post => post.id !== newPost.id)]);
     let postType: 'post_create' | 'media_upload' | 'video_publish' | 'pulse_create' | 'voice_publish' = 'post_create';
     if (videoUrl) postType = 'video_publish';
     else if (imageUrl || (images && images.length > 0)) postType = 'media_upload';
@@ -1863,30 +1881,33 @@ export default function App() {
     setPosts(prev => prev.filter(p => p.id !== postId));
   };
 
-  const handleAddComment = (postId: string, commentContent: string) => {
-    requireAuth(() => {
+  const handleAddComment = async (postId: string, commentContent: string): Promise<boolean> => {
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid || requiresPublicAccountSetup) {
+      requireAuth(() => { void handleAddComment(postId, commentContent); }, 'Join Nexora to comment on posts and join community discussions.');
+      return false;
+    }
+    try {
       const commentId = `comment-${crypto.randomUUID()}`;
-      void addPublicPostCommentDb(currentUser.id, postId, commentContent, commentId)
-        .then(result => {
-          if (result.created) {
-            const targetPost = posts.find(post => post.id === postId);
-            if (targetPost) void addHelpfulCommentDb(currentUser.id, result.comment.id, targetPost.userId);
-          }
-          setPosts(prevPosts => prevPosts.map(post => {
-            if (post.id !== postId) return post;
-            const alreadyPresent = post.comments.some(comment => comment.id === result.comment.id);
-            return {
-              ...post,
-              commentsCount: result.commentsCount,
-              comments: alreadyPresent ? post.comments : [...post.comments, result.comment],
-            };
-          }));
-        })
-        .catch(error => {
-          const message = error instanceof Error ? error.message : 'Could not post your comment. Please retry.';
-          window.dispatchEvent(new CustomEvent('toast', { detail: message }));
-        });
-    }, 'Join Nexora to comment on posts and join community discussions.');
+      const result = await addPublicPostCommentDb(currentUser.id, postId, commentContent, commentId);
+      if (result.created) {
+        const targetPost = posts.find(post => post.id === postId);
+        if (targetPost) void addHelpfulCommentDb(currentUser.id, result.comment.id, targetPost.userId);
+      }
+      setPosts(prevPosts => prevPosts.map(post => {
+        if (post.id !== postId) return post;
+        const alreadyPresent = post.comments.some(comment => comment.id === result.comment.id);
+        return {
+          ...post,
+          commentsCount: result.commentsCount,
+          comments: alreadyPresent ? post.comments : [...post.comments, result.comment],
+        };
+      }));
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not post your comment. Please retry.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+      return false;
+    }
   };
 
   const handleRepostPost = async (postId: string, quoteText?: string): Promise<boolean> => {
@@ -1897,11 +1918,9 @@ export default function App() {
     try {
       const result = await createPostRepost(postId, quoteText);
       setPosts(previous => {
-        const source = previous.find(post => post.id === postId);
-        if (!source) return previous;
-        const repostAlreadyLoaded = previous.some(post => post.id === result.post.id);
-        const updated = previous.map(post => post.id === postId ? { ...post, shares: result.shares } : post);
-        return repostAlreadyLoaded ? updated : [result.post, ...updated];
+        const withoutDuplicate = previous.filter(post => post.id !== result.post.id);
+        const updated = withoutDuplicate.map(post => post.id === postId ? { ...post, shares: result.shares } : post);
+        return [result.post, ...updated];
       });
       window.dispatchEvent(new CustomEvent('toast', { detail: quoteText ? 'Quote posted to your profile and the NEXORA feed.' : 'Reposted to your profile and the NEXORA feed.' }));
       return true;
@@ -1938,27 +1957,28 @@ export default function App() {
   const handleToggleFollow = (creatorId: string) => {
     requireAuth(() => {
       const isCurrentlyFollowing = followingIds.includes(creatorId);
-      let updatedFollowing: string[];
+      void (async () => {
+        try {
+          if (isCurrentlyFollowing) {
+            await removeFollow(currentUser.id, creatorId);
+            unfollowUserDb(currentUser.id, creatorId);
+            setFollowingIds(previous => previous.filter(id => id !== creatorId));
+          } else {
+            await addFollow(currentUser.id, creatorId);
+            followUserDb(currentUser.id, creatorId);
+            setFollowingIds(previous => [...new Set([...previous, creatorId])]);
 
-      if (isCurrentlyFollowing) {
-        unfollowUserDb(currentUser.id, creatorId);
-        removeFollow(currentUser.id, creatorId).catch(console.warn);
-        updatedFollowing = followingIds.filter(id => id !== creatorId);
-      } else {
-        followUserDb(currentUser.id, creatorId);
-        addFollow(currentUser.id, creatorId).catch(console.warn);
-        updatedFollowing = [...followingIds, creatorId];
-        
-        // record recommendation follow event
-        const targetCreator = (Object.values(globalUsersMap) as User[]).find(c => c.id === creatorId);
-        if (targetCreator) {
-          recordRecommendationEvent('follow', { creatorId, creatorUsername: targetCreator.username });
-          // The trusted follows/{followerId}_{creatorId} write creates the durable
-          // inbox notification; the realtime subscription delivers it to this UI.
+            const targetCreator = (Object.values(globalUsersMap) as User[]).find(creator => creator.id === creatorId);
+            if (targetCreator) {
+              recordRecommendationEvent('follow', { creatorId, creatorUsername: targetCreator.username });
+            }
+          }
+        } catch (error) {
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: error instanceof Error ? error.message : 'Your follow could not be saved. Please try again.',
+          }));
         }
-      }
-
-      setFollowingIds(updatedFollowing);
+      })();
     }, 'Join Nexora to follow creators, build your network, and personalize your feed.');
   };
 
@@ -2469,9 +2489,10 @@ export default function App() {
                     </div>
                   ) : activeTab === 'profile' && (
                     <ProfileView
-                      currentUser={getRichUser(viewedUser || currentUser)}
+                      currentUser={getRichUser((viewedUser && globalUsersMap[viewedUser.id]) || globalUsersMap[currentUser.id] || viewedUser || currentUser)}
                       isLoggedIn={isLoggedIn}
                       posts={resolvedPosts}
+                      userSparks={!viewedUser || viewedUser.id === currentUser.id ? userSparks : []}
                       onUpdateProfile={handleUpdateProfile}
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
