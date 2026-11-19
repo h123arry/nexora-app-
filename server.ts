@@ -348,6 +348,36 @@ r2MediaRouter.post('/:mediaId/complete', async (req, res) => {
   }
 });
 
+
+r2MediaRouter.post('/:mediaId/abort', async (req, res) => {
+  if (!r2Config) return res.status(503).json({ code: 'r2_not_configured' });
+  const uid = res.locals.userId as string;
+  const mediaId = req.params.mediaId;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) return res.status(400).json({ error: 'Invalid media asset ID.' });
+  try {
+    const assetRef = serverDb.collection('mediaAssets').doc(mediaId);
+    const asset = await assetRef.get();
+    if (!asset.exists || asset.get('storageProvider') !== 'r2' || asset.get('ownerId') !== uid) return res.status(404).end();
+    if (asset.get('status') === 'uploaded') return res.status(409).json({ error: 'A completed upload cannot be aborted.' });
+    if (asset.get('status') !== 'pending_upload') return res.status(204).end();
+    const objectKey = asset.get('storagePath');
+    if (typeof objectKey === 'string') {
+      const deleteUrl = createR2PresignedUrl(r2Config, 'DELETE', objectKey, 900);
+      const deleted = await fetch(deleteUrl, { method: 'DELETE' });
+      if (!deleted.ok && deleted.status !== 404) return res.status(503).json({ error: 'The incomplete R2 upload could not be cleaned up.' });
+    }
+    await assetRef.set({
+      status: 'failed',
+      failureCategory: 'upload_cancelled',
+      failureMessage: 'Upload cancelled before verification.',
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return res.status(204).end();
+  } catch {
+    return res.status(503).json({ error: 'The incomplete R2 upload could not be cleaned up.' });
+  }
+});
+
 r2MediaRouter.delete('/:mediaId', async (req, res) => {
   if (!r2Config) return res.status(503).json({ code: 'r2_not_configured', error: 'R2 media storage is not configured.' });
   const uid = res.locals.userId as string;
