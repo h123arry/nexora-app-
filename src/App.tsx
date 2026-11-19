@@ -74,6 +74,7 @@ import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
 const FeedView = lazy(() => import('./components/FeedView'));
 const ProfileView = lazy(() => import('./components/ProfileView'));
+const AuthView = lazy(() => import('./components/AuthView'));
 const NotificationsView = lazy(() => import('./components/NotificationsView'));
 const WorldPulseView = lazy(() => import('./components/WorldPulseView'));
 const MatrixView = lazy(() => import('./components/MatrixView'));
@@ -201,6 +202,7 @@ export default function App() {
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
 
   const [showPublicAccountSetup, setShowPublicAccountSetup] = useState(false);
+  const [showEmailAuth, setShowEmailAuth] = useState(false);
   const [showUsernameLogin, setShowUsernameLogin] = useState(false);
   const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
@@ -3552,6 +3554,7 @@ export default function App() {
           user={firebaseProfile}
           onCancel={dismissPublicAccountSetup}
           onSwitchToLogin={() => { setShowPublicAccountSetup(false); setShowUsernameLogin(true); }}
+          onSwitchToEmailSignup={() => { setShowPublicAccountSetup(false); setShowEmailAuth(true); }}
           onComplete={(updatedUser) => {
             setCurrentUser(getRichUser(updatedUser));
             setShowPublicAccountSetup(false);
@@ -3560,6 +3563,32 @@ export default function App() {
             });
           }}
         />
+      )}
+
+      {showEmailAuth && (
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#04020a]">
+          <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-violet-200">Preparing secure signup…</div>}>
+            <AuthView
+              initialMode="signup"
+              promptReason="Create your NEXORA account to continue."
+              onLoginSuccess={(user) => {
+                setCurrentUser(getRichUser(user));
+                setShowEmailAuth(false);
+                setShowPublicAccountSetup(false);
+                void retryProfileLoad().catch(() => {
+                  window.dispatchEvent(new CustomEvent('toast', { detail: 'Your account was created, but profile sync is still finishing. Please retry.' }));
+                });
+              }}
+            />
+          </Suspense>
+          <button
+            type="button"
+            onClick={() => { setShowEmailAuth(false); setShowPublicAccountSetup(true); }}
+            className="fixed right-4 top-4 z-[110] rounded-xl border border-white/15 bg-[#0B1424]/95 px-3 py-2 text-xs font-semibold text-violet-200 shadow-lg backdrop-blur"
+          >
+            Back to username signup
+          </button>
+        </div>
       )}
 
       {showUsernameLogin && (
