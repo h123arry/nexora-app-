@@ -16,6 +16,9 @@ test('guest exploration never impersonates a person or uses stock-person avatars
   assert.match(app, /getSafeAvatar\(u\.avatar, u\.name \|\| u\.username\)/);
   assert.match(app, /!isLoggedIn \|\| !firebaseUser \|\| currentUser\.id !== firebaseUser\.uid/);
   assert.match(app, /!pendingAuthAction \|\| !firebaseUser \|\| currentUser\.id !== firebaseUser\.uid/);
+  assert.match(app, /authenticatedUserId=\{firebaseUser\?\.uid \|\| ''\}/);
+  assert.match(app, /navigateTo\('profile', null\)/);
+
 });
 
 test('transient notification banners stay disabled while the saved inbox and device push remain available', async () => {
@@ -68,4 +71,13 @@ test('profile edits persist the private profile and update its public projection
   const profile = await read('../src/services/firebase/profileService.ts');
   assert.match(profile, /await updateDoc\(docRef, \{ \.\.\.updates, updatedAt: serverTimestamp\(\) \}\)/);
   assert.match(profile, /doc\(db, 'publicProfiles', uid\)/);
+});
+
+test('public profile links resolve through canonical username claims, not private user documents', async () => {
+  const profile = await read('../src/services/firebase/profileService.ts');
+  const app = await read('../src/App.tsx');
+  assert.match(profile, /getPublicProfileByUsername\(username: string\)/);
+  assert.match(profile, /doc\(db, 'usernames', clean\)/);
+  assert.match(profile, /return this\.getPublicProfile\(uid\)/);
+  assert.match(app, /ProfileService\.getPublicProfileByUsername\(cleanIdOrUser\)/);
 });
