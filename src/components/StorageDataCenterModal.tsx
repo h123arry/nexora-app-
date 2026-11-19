@@ -170,7 +170,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     { id: 'ai', name: 'AI files', size: '120 MB', items: 15, status: 'Active' },
     { id: 'search', name: 'Search data', size: '3 MB', items: 450, status: 'Indexed' },
     { id: 'emoji', name: 'Emoji images', size: '5 MB', items: 1400, status: 'Active' },
-    { id: 'sticker', name: 'Custom Stickers Cache', size: '12 MB', items: 110, status: 'Optimized' },
+    { id: 'sticker', name: 'Saved stickers', size: '12 MB', items: 110, status: 'Optimized' },
     { id: 'story', name: 'Stories data', size: '88 MB', items: 65, status: 'Active' },
   ]);
   const [cacheMaintenanceActive, setCacheMaintenanceActive] = useState(true);
@@ -187,8 +187,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     return saved ? JSON.parse(saved) : [
       { id: 'q-1', type: 'Message', payload: 'Sending a secure message...', status: 'completed', timestamp: '10:41 AM' },
       { id: 'q-2', type: 'Reaction', payload: 'Added Heart reaction to @lucas_cyber', status: 'completed', timestamp: '10:42 AM' },
-      { id: 'q-3', type: 'Poll Vote', payload: 'Voted in a community poll', status: 'pending', timestamp: 'Just now' },
-      { id: 'q-4', type: 'AI Request', payload: 'VOH Summary on global security indexes', status: 'pending', timestamp: 'Just now' },
+      { id: 'q-3', type: 'Poll Vote', payload: 'Voted in a poll', status: 'pending', timestamp: 'Just now' },
+      { id: 'q-4', type: 'AI Request', payload: 'VOH AI checked app storage', status: 'pending', timestamp: 'Just now' },
       { id: 'q-5', type: 'Comment', payload: 'Writing a comment', status: 'pending', timestamp: 'Just now' },
     ];
   });
@@ -384,7 +384,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       'Added Fire reaction to community thread',
       'Comment saved on this device',
       'VOH AI: Check my connection',
-      'Voted in a community poll'
+      'Voted in a poll'
     ];
     const randIdx = Math.floor(Math.random() * types.length);
     const newQueueItem = {
@@ -446,7 +446,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       if (query.includes('battery') || query.includes('power') || query.includes('drain')) {
         replyText = "🔋 NEXORA is running normally. Turn on Battery Saver to help your battery last longer.";
       } else if (query.includes('cache') || query.includes('clean') || query.includes('purge')) {
-        replyText = "🧹 Storage check: Found 12 MB of stale thumbnail assets. Click the 'Rebuild' button next to the Post and video previews cache block to reclaim memory leakage.";
+        replyText = "🧹 Storage check: You may be able to free up space by clearing old photo and video previews.";
       } else if (query.includes('slow') || query.includes('lag') || query.includes('speed')) {
         replyText = "⚡ NEXORA loads content as you need it to help the app run smoothly, even on phones with less memory.";
       } else if (query.includes('database') || query.includes('db') || query.includes('indexing')) {
@@ -468,7 +468,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const availableBackupsList = [
     { id: 'bak-1', deviceName: 'NEXORA backup', date: 'Jul 09, 2026 04:00', size: '2.4 GB', includeItems: 'Messages, Media, Settings', secure: true },
     { id: 'bak-2', deviceName: 'Nexora Mobile Client (iOS)', date: 'Jul 02, 2026 12:15', size: '1.1 GB', includeItems: 'Messages, Bookmarks, AI Memory', secure: true },
-    { id: 'bak-3', deviceName: 'London Ledger Hub NAS', date: 'Jun 28, 2026 23:59', size: '14.8 GB', includeItems: 'All Media, Broadcast Archives, Settings', secure: true }
+    { id: 'bak-3', deviceName: 'NEXORA backup', date: 'Jun 28, 2026 23:59', size: '14.8 GB', includeItems: 'All Media, Broadcast Archives, Settings', secure: true }
   ];
 
   // No production conversation/media storage provider is connected to this panel yet.
@@ -492,7 +492,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const [recommendations, setRecommendations] = useState([
     { id: 'rec-1', title: 'Duplicate files found', desc: '4 copies of the Nexora whitepaper draft and 2 identical high-res banners.', size: '412 MB', risk: 'Safe to remove', itemsCount: 6, type: 'duplicate' },
     { id: 'rec-2', title: 'Large older videos', desc: 'Large raw videos, screen recordings and test assets not viewed recently.', size: '1.42 GB', risk: 'Check before removing', itemsCount: 3, type: 'large_files' },
-    { id: 'rec-3', title: 'Old temporary files', desc: 'Unused client update segments, cached sticker sets, and old audio buffers.', size: '680 MB', risk: 'Safe to remove', itemsCount: 140, type: 'temp' },
+    { id: 'rec-3', title: 'Old temporary files', desc: 'Old update files, saved stickers and voice drafts.', size: '680 MB', risk: 'Safe to remove', itemsCount: 140, type: 'temp' },
     { id: 'rec-4', title: 'Repeated forwarded videos', desc: 'Media files forwarded multiple times across community channels.', size: '350 MB', risk: 'Check before removing', itemsCount: 18, type: 'forwarded' }
   ]);
 
@@ -539,7 +539,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       image: 0, video: 0, thumbnail: 0, sticker: 0, gif: 0, emoji: 0, search: 0, ai: 0, temporary: 0, database: 0
     });
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: "✨ All Nexora temporary asset cache tables cleared successfully!" 
+      detail: "✨ Temporary app files cleared." 
     }));
   };
 
@@ -672,7 +672,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   // This interface is illustrative only; no provider backup operation is wired here.
   const triggerManualBackup = () => {
     window.dispatchEvent(new CustomEvent('toast', {
-      detail: 'Backups are not configured in this interface. No data was uploaded or backed up.'
+      detail: 'Online backups aren't set up here. No files were uploaded or backed up.'
     }));
   };
 
@@ -694,7 +694,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     setNetworkResetTime(today);
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: "📊 Network database counters reset to zero." 
+      detail: "📊 Network counters reset." 
     }));
   };
 
@@ -720,8 +720,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                 <HardDrive className="w-5 h-5 text-violet-400" />
               </div>
               <div>
-                <h3 className="text-sm font-black font-sans uppercase tracking-wider text-white">Storage & Data Management Center</h3>
-                <p className="text-[10px] font-mono text-cyan-400 leading-none mt-0.5">Automated Asset Optimization & Bandwidth Control</p>
+                <h3 className="text-sm font-black font-sans uppercase tracking-wider text-white">Storage and data</h3>
+                <p className="text-[10px] font-mono text-cyan-400 leading-none mt-0.5">Manage downloads and free up space</p>
               </div>
             </div>
 
@@ -756,9 +756,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
             {/* Left Sidebar Tab selectors */}
             <div className="w-full md:w-64 border-r border-white/5 bg-black/20 overflow-y-auto p-3 space-y-1 shrink-0">
               {[
-                { id: 'dashboard', label: 'Local Storage Snapshot', icon: HardDrive, badge: `${totalNexoraSpaceGB} GB` },
-                { id: 'conversations', label: 'Conversations Ledger', icon: Database, count: conversationsList.length },
-                { id: 'downloads', label: 'Auto-Download Preferences', icon: Download, badge: downloads.adaptiveDataSaver ? 'Saver On' : '' }
+                { id: 'dashboard', label: 'Storage on this device', icon: HardDrive, badge: `${totalNexoraSpaceGB} GB` },
+                { id: 'conversations', label: 'Chat storage', icon: Database, count: conversationsList.length },
+                { id: 'downloads', label: 'Download settings', icon: Download, badge: downloads.adaptiveDataSaver ? 'Saver On' : '' }
               ].map(tab => {
                 const Icon = tab.icon;
                 const isSelected = activeTab === tab.id;
@@ -796,7 +796,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                 <div className="p-3 bg-zinc-950/80 border border-white/5 rounded-2xl">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-bold text-zinc-300 flex items-center gap-1">
-                      <Zap className="w-3.5 h-3.5 text-amber-400" /> Adaptive Data Saver
+                      <Zap className="w-3.5 h-3.5 text-amber-400" /> Data Saver
                     </span>
                     <button
                       onClick={() => {
@@ -812,7 +812,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <span className="w-3 h-3 bg-black rounded-full" />
                     </button>
                   </div>
-                  <p className="text-[9px] text-zinc-500 mt-1.5 leading-tight">Delays downloads, preloads, and reduces quality dynamically to prevent excessive data plan usage.</p>
+                  <p className="text-[9px] text-zinc-500 mt-1.5 leading-tight">Uses less data by waiting to load photos and videos until needed.</p>
                 </div>
               </div>
             </div>
@@ -829,26 +829,26 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <h4 className="text-sm font-bold text-white">Local storage snapshot</h4>
                     </div>
                     <p className="mt-2 text-xs leading-relaxed text-zinc-400">
-                      This panel reports only browser-local cache and media records currently indexed by this device. Cloud storage usage, server backups, CPU, memory, battery and network telemetry are not connected here.
+                      This page only shows files saved on this device. It doesn't show cloud storage, online backups, phone memory, battery or connection details.
                     </p>
                     <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
                       <div className="rounded-xl border border-white/5 bg-black/20 p-4">
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Local cache</p>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Saved app files</p>
                         <p className="mt-1 text-xl font-black text-white">{totalCacheMB} MB</p>
                       </div>
                       <div className="rounded-xl border border-white/5 bg-black/20 p-4">
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Indexed media</p>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Photos and videos</p>
                         <p className="mt-1 text-xl font-black text-white">{(totalMediaBytes / 1000000000).toFixed(2)} GB</p>
                       </div>
                       <div className="rounded-xl border border-white/5 bg-black/20 p-4">
-                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Measured local total</p>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Total on this device</p>
                         <p className="mt-1 text-xl font-black text-white">{totalNexoraSpaceGB} GB</p>
                       </div>
                     </div>
                     <div className="mt-4 rounded-xl border border-dashed border-white/10 p-3 text-[11px] text-zinc-400">
-                      <span className="font-semibold text-zinc-300">Cloud storage index:</span> Not connected
+                      <span className="font-semibold text-zinc-300">Cloud storage:</span> Not available
                       <span className="mx-2 text-zinc-700">•</span>
-                      <span className="font-semibold text-zinc-300">Cloud backup:</span> Not connected
+                      <span className="font-semibold text-zinc-300">Online backup:</span> Not available
                     </div>
                   </div>
                 </div>
@@ -859,7 +859,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                        <VohIcon size={16} animated variant="brand" /> AI-Powered Storage Analyzer & Optimizer
+                        <VohIcon size={16} animated variant="brand" /> Find files you can remove
                       </h4>
                       <p className="text-[11px] text-zinc-400 mt-1">NEXORA checks your files to find large, duplicate, or old media safely.</p>
                     </div>
@@ -869,7 +869,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         onClick={handleOneTapCleanup}
                         className="px-4 py-2 bg-violet-600 hover:bg-violet-500 font-bold text-white text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
                       >
-                        <Zap className="w-3.5 h-3.5" /> One-Tap Safe Optimization (Reclaim 2.84 GB)
+                        <Zap className="w-3.5 h-3.5" /> Free up space
                       </button>
                     )}
                   </div>
@@ -880,12 +880,12 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
                         <Check className="w-6 h-6 animate-pulse" />
                       </div>
-                      <h4 className="text-sm font-black text-emerald-400 uppercase tracking-widest">Storage Calibrated & Optimized</h4>
-                      <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">No duplicate files, broken buffers or stale media detected. Your Nexora storage is running at absolute peak efficiency parameters.</p>
+                      <h4 className="text-sm font-black text-emerald-400 uppercase tracking-widest">Your storage looks good</h4>
+                      <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">No duplicate or old files were found.</p>
                       <button onClick={() => setRecommendations([
                         { id: 'rec-1', title: 'Duplicate files found', desc: '4 copies of the Nexora whitepaper draft and 2 identical high-res banners.', size: '412 MB', risk: 'Safe to remove', itemsCount: 6, type: 'duplicate' },
                         { id: 'rec-2', title: 'Large older videos', desc: 'Large raw videos, screen recordings and test assets not viewed recently.', size: '1.42 GB', risk: 'Check before removing', itemsCount: 3, type: 'large_files' }
-                      ])} className="text-xs text-violet-400 underline font-mono cursor-pointer">Simulate Scanner Refresh</button>
+                      ])} className="text-xs text-violet-400 underline font-mono cursor-pointer">Show sample results</button>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1246,7 +1246,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                 <div className="space-y-6 text-left">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Download className="w-4 h-4 text-violet-400" /> Granular Auto-Download Preferences
+                      <Download className="w-4 h-4 text-violet-400" /> Granular Download settings
                     </h4>
                     <p className="text-[11px] text-zinc-400 mt-1">Dictate which media files are cached automatically depending on active routing transport protocols.</p>
                   </div>
@@ -2181,7 +2181,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             <span className="text-[10px] font-mono text-pink-400 font-black uppercase block">Bandwidth Throttle</span>
                             <h5 className="text-xs font-bold text-white mt-1">Live Synchronization rate</h5>
                             <p className="text-[8.5px] text-zinc-500 mt-1 leading-relaxed">
-                              Current background socket throughput metrics. Enabling Adaptive Data Saver immediately throttles non-essential assets preloading.
+                              Current background socket throughput metrics. Enabling Data Saver immediately throttles non-essential assets preloading.
                             </p>
                           </div>
 
