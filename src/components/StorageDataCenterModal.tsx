@@ -756,7 +756,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
             {/* Left Sidebar Tab selectors */}
             <div className="w-full md:w-64 border-r border-white/5 bg-black/20 overflow-y-auto p-3 space-y-1 shrink-0">
               {[
-                { id: 'dashboard', label: 'Storage on this device', icon: HardDrive, badge: `${totalNexoraSpaceGB} GB` },
+                { id: 'dashboard', label: 'Storage used', icon: HardDrive, badge: `${totalNexoraSpaceGB} GB` },
                 { id: 'conversations', label: 'Chat storage', icon: Database, count: conversationsList.length },
                 { id: 'downloads', label: 'Download settings', icon: Download, badge: downloads.adaptiveDataSaver ? 'Saver On' : '' }
               ].map(tab => {
@@ -812,7 +812,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <span className="w-3 h-3 bg-black rounded-full" />
                     </button>
                   </div>
-                  <p className="text-[9px] text-zinc-500 mt-1.5 leading-tight">Uses less data by waiting to load photos and videos until needed.</p>
+                  <p className="text-[9px] text-zinc-500 mt-1.5 leading-tight">Save data by loading photos and videos only when you open them.</p>
                 </div>
               </div>
             </div>
@@ -826,7 +826,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
                     <div className="flex items-center gap-2">
                       <HardDrive className="h-5 w-5 text-violet-400" />
-                      <h4 className="text-sm font-bold text-white">Storage on this device</h4>
+                      <h4 className="text-sm font-bold text-white">Storage used</h4>
                     </div>
                     <p className="mt-2 text-xs leading-relaxed text-zinc-400">
                       This page only shows files saved on this device. It does not show cloud storage, online backups, phone memory, battery or connection details.
@@ -846,7 +846,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       </div>
                     </div>
                     <div className="mt-4 rounded-xl border border-dashed border-white/10 p-3 text-[11px] text-zinc-400">
-                      <span className="font-semibold text-zinc-300">Cloud storage:</span> Not available
+                      <span className="font-semibold text-zinc-300">Online storage:</span> Not available
                       <span className="mx-2 text-zinc-700">•</span>
                       <span className="font-semibold text-zinc-300">Online backup:</span> Not available
                     </div>
@@ -880,7 +880,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
                         <Check className="w-6 h-6 animate-pulse" />
                       </div>
-                      <h4 className="text-sm font-black text-emerald-400 uppercase tracking-widest">Your storage looks good</h4>
+                      <h4 className="text-sm font-black text-emerald-400 uppercase tracking-widest">You're not running low on storage</h4>
                       <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">No duplicate or old files were found.</p>
                       <button onClick={() => setRecommendations([
                         { id: 'rec-1', title: 'Duplicate files found', desc: '4 copies of the Nexora whitepaper draft and 2 identical high-res banners.', size: '412 MB', risk: 'Safe to remove', itemsCount: 6, type: 'duplicate' },
@@ -934,7 +934,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl space-y-4">
                     <div>
                       <h4 className="text-xs font-black text-zinc-300 uppercase tracking-wider font-mono">Granular Purge Templates</h4>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">Quickly clear isolated elements based on storage size profiles.</p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">Clear temporary files to free up space.</p>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -977,14 +977,14 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         <h4 className="text-sm font-bold text-white flex items-center gap-2">
                           <Database className="w-4 h-4 text-violet-400" /> Conversation Storage Ledger
                         </h4>
-                        <p className="text-[11px] text-zinc-400 mt-1">List of chat communication bridges sorted by absolute disk storage allocation. Click any conversation card to open the complete media browser.</p>
+                        <p className="text-[11px] text-zinc-400 mt-1">Your chats, sorted by how much storage they use. Open a chat to see its photos and files.</p>
                       </div>
 
                       {/* Conversations listing */}
                       {filteredConversations.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 px-5 py-8 text-center">
                           <Database className="mx-auto h-7 w-7 text-zinc-500" />
-                          <p className="mt-3 text-sm font-semibold text-white">No conversation storage data available</p>
+                          <p className="mt-3 text-sm font-semibold text-white">No chat storage details available.</p>
                           <p className="mt-1 text-xs leading-relaxed text-zinc-400">This panel is not connected to a durable chat-media index yet. Your conversations and attachments have not been scanned or changed.</p>
                         </div>
                       ) : (
@@ -1248,7 +1248,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <Download className="w-4 h-4 text-violet-400" /> Granular Download settings
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Dictate which media files are cached automatically depending on active routing transport protocols.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1">Choose which photos and videos are saved on your device.</p>
                   </div>
 
                   {/* Network parameters matrix */}
@@ -1358,7 +1358,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-4">
                     <div>
                       <span className="text-xs font-black text-violet-400 uppercase font-mono block">Intelligent Media Compression Preset</span>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">Control image and video bitrates prior to dispatcher sending on peer routing.</p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">Choose the quality of photos and videos before uploading.</p>
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -1397,7 +1397,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <ShieldCheck className="w-4 h-4 text-amber-400" /> Backup & restore demo — not connected
                     </h4>
-                    <p className="text-[11px] text-zinc-300 mt-1">No production backup provider, encryption, or recovery-key management is connected. Controls below only change local demo settings; they do not back up or restore data.</p>
+                    <p className="text-[11px] text-zinc-300 mt-1">Backup and restore aren't available yet. The settings below only affect this device.</p>
                   </div>
 
                   {/* Backup detail dashboard */}
@@ -1410,8 +1410,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                         <div className="flex items-center justify-between p-2.5 bg-black/40 border border-white/5 rounded-xl">
                           <div>
-                            <span className="font-bold text-zinc-300 block">Demo schedule (local only)</span>
-                            <span className="text-[9px] text-zinc-500 leading-none">No scheduled job is connected</span>
+                            <span className="font-bold text-zinc-300 block">Example schedule</span>
+                            <span className="text-[9px] text-zinc-500 leading-none">Nothing is scheduled yet.</span>
                           </div>
                           <select 
                             value={backups.schedule}
@@ -1497,7 +1497,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl flex flex-col justify-between space-y-3" role="status">
                       <div>
                         <span className="text-xs font-black text-rose-400 font-mono uppercase block">Recovery is not configured</span>
-                        <p className="text-[9px] text-zinc-500 mt-1.5 leading-normal">No recovery key exists here. Do not enter a password or rely on this screen to recover data.</p>
+                        <p className="text-[9px] text-zinc-500 mt-1.5 leading-normal">A recovery key isn't available here. Don't enter your password on this screen.</p>
                       </div>
                     </div>
 
@@ -1507,7 +1507,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl space-y-4">
                     <div>
                       <h4 className="text-xs font-black text-zinc-300 uppercase tracking-wider font-mono">Restoration simulation only</h4>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">Sample snapshots are illustrative. Selecting one does not read or restore database or media data.</p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">These are examples only. Choosing one won't restore your photos, videos or messages.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -2150,15 +2150,15 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         {/* Background Synchronizer */}
                         <div className="p-4 bg-slate-950/60 border border-white/5 rounded-2xl flex flex-col justify-between space-y-3 text-left">
                           <div>
-                            <span className="text-[10px] font-mono text-violet-400 font-black uppercase block">P2P Synchronizer</span>
-                            <h5 className="text-xs font-bold text-white mt-1">Replication Schedule</h5>
+                            <span className="text-[10px] font-mono text-violet-400 font-black uppercase block">Sync settings</span>
+                            <h5 className="text-xs font-bold text-white mt-1">Sync schedule</h5>
                             <p className="text-[8.5px] text-zinc-500 mt-1 leading-relaxed">
                               Select background sync interval algorithm. Incremental delta synchronization minimizes physical radio wake-up cycles.
                             </p>
                           </div>
                           
                           <div className="flex justify-between items-center text-xs">
-                            <span className="text-zinc-400 text-[10px] font-mono">Sync Tier:</span>
+                            <span className="text-zinc-400 text-[10px] font-mono">Sync setting:</span>
                             <select
                               value={syncSchedule}
                               onChange={(e) => {
@@ -2186,7 +2186,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           </div>
 
                           <div className="flex justify-between items-center text-[10px] font-mono">
-                            <span className="text-zinc-500">Current data use:</span>
+                            <span className="text-zinc-500">Data used:</span>
                             <span className="text-pink-400 font-black">{isSimulatedOffline ? '0.0 B/s' : deltaRate}</span>
                           </div>
                         </div>
@@ -2430,7 +2430,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
               <div className="text-center space-y-4">
                 <RefreshCw className="w-12 h-12 text-violet-400 animate-spin mx-auto" />
                 <h4 className="text-sm font-black text-white uppercase tracking-widest font-mono">Calibrating Filesystem Indices</h4>
-                <p className="text-xs text-zinc-500 max-w-xs leading-relaxed">Defragmenting memory pages, reindexing database blocks, and emptying temporary socket queues.</p>
+                <p className="text-xs text-zinc-500 max-w-xs leading-relaxed">Clearing temporary files and making more space.</p>
               </div>
             </div>
           )}
