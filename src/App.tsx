@@ -176,17 +176,17 @@ export default function App() {
 
   const [currentUser, setCurrentUser] = useState<User>(() => getRichUser({
       id: 'guest_visitor_id',
-      username: 'visitor',
-      name: 'Nexora Visitor',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      bio: 'Guest visitor browsing Nexora network.',
-      location: 'Earth Orbit',
-      website: 'https://nexora.app',
+      username: 'explore',
+      name: 'Explore NEXORA',
+      avatar: '/nexora-mark.png',
+      bio: 'Explore public posts. Sign in to create your profile and connect with the NEXORA community.',
+      location: '',
+      website: '',
       followers: 0,
       following: 0,
       sparks: 0,
       isVerified: false,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+      coverImage: '',
       joinedDate: 'Joined 2026',
       reputationPoints: 0,
       reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
@@ -350,11 +350,11 @@ export default function App() {
     localStorage.removeItem('nexora_user');
     localStorage.removeItem('nexora_logged_in');
     setCurrentUser(getRichUser({
-      id: 'guest_visitor_id', username: 'visitor', name: 'Nexora Visitor',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      bio: 'Guest visitor browsing Nexora network.', location: 'Earth Orbit', website: 'https://nexora.app',
+      id: 'guest_visitor_id', username: 'explore', name: 'Explore NEXORA',
+      avatar: '/nexora-mark.png',
+      bio: 'Explore public posts. Sign in to create your profile and connect with the NEXORA community.', location: '', website: '',
       followers: 0, following: 0, sparks: 0, isVerified: false,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+      coverImage: '',
       joinedDate: 'Joined 2026', reputationPoints: 0,
       reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
       interestDNA: {}, skills: []
@@ -1994,6 +1994,10 @@ export default function App() {
     }
 
     if (!finalUserToView) {
+      if (!isLoggedIn) {
+        requireAuth(() => { void handleViewProfile(userIdOrUsername); }, 'Sign in or create your NEXORA account to open this profile.');
+        return;
+      }
       window.dispatchEvent(new CustomEvent('toast', { detail: 'This profile is unavailable or could not be loaded.' }));
       return;
     }
@@ -2026,12 +2030,12 @@ export default function App() {
           name: postWithUser.name,
           avatar: postWithUser.avatar,
           bio: 'Broadcaster Node',
-          location: 'Earth Orbit',
+          location: '',
           website: '',
           followers: 12,
           following: 8,
           isVerified: false,
-          coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+          coverImage: '',
           joinedDate: 'Joined June 2026',
           reputationPoints: 100,
           reputationBreakdown: { contributions: 10, helpfulness: 20, missionsCompleted: 0, skillsVerified: 70 },
