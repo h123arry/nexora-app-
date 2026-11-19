@@ -257,7 +257,7 @@ export default function AdminDashboardView({
       setFoundingFullName('');
       setFoundingUsername('');
       await loadData();
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Founding member account created in Firebase Authentication.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Founding member account created.' }));
     } catch (error) {
       setFoundingError(error instanceof Error ? error.message : 'The founding member account could not be created.');
     } finally {
@@ -297,7 +297,7 @@ export default function AdminDashboardView({
   const handleResetReputation = (user: User) => {
     void runUserAction(
       { action: 'reset_reputation', targetUid: user.id },
-      `Reputation reset for @${user.username}.`,
+      `Account points reset for @${user.username}.`,
     );
   };
 
@@ -306,7 +306,7 @@ export default function AdminDashboardView({
     try {
       await reviewModerationReport(reportId, action, action === 'dismiss' ? 'Insufficient evidence after review.' : 'Policy-backed posting restriction applied.');
       setReports(prev => prev.map(report => report.id === reportId ? { ...report, status: action === 'dismiss' ? 'resolved' : 'resolved' } : report));
-      window.dispatchEvent(new CustomEvent('toast', { detail: action === 'dismiss' ? 'Report dismissed by authorized review.' : 'Posting restriction applied by authorized review.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: action === 'dismiss' ? 'Report dismissed after review.' : 'Posting restriction applied after review.' }));
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Moderation action could not be completed.' }));
     }
@@ -325,7 +325,7 @@ export default function AdminDashboardView({
       setIdentityApplications(previous => previous.filter(application => application.userId !== userId));
       setIdentityReviewNotes(previous => { const next = { ...previous }; delete next[userId]; return next; });
       window.dispatchEvent(new CustomEvent('toast', {
-        detail: decision === 'approved' ? 'Identity verified and public badge issued.' : decision === 'rejected' ? 'Identity application rejected.' : 'More identity evidence requested.',
+        detail: decision === 'approved' ? 'Identity confirmed and verified badge added.' : decision === 'rejected' ? 'Identity application rejected.' : 'Please send more proof of identity.',
       }));
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Identity review could not be completed.' }));
@@ -345,7 +345,7 @@ export default function AdminDashboardView({
       setImpersonationCases(previous => previous.filter(item => item.userId !== userId));
       setImpersonationCaseNotes(previous => { const next = { ...previous }; delete next[userId]; return next; });
       if (decision === 'confirm_impersonation') setIdentityApplications(previous => previous.filter(item => item.userId !== userId));
-      window.dispatchEvent(new CustomEvent('toast', { detail: decision === 'dismiss' ? 'Impersonation case dismissed after review.' : 'Impersonation decision saved.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: decision === 'dismiss' ? 'Fake account report dismissed after review.' : 'Fake account report decision saved.' }));
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Impersonation case review failed.' }));
     }
@@ -361,7 +361,7 @@ export default function AdminDashboardView({
     });
     localStorage.setItem('nexora_crash_logs', JSON.stringify(updated));
     setCrashLogs(updated);
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🔧 Bug report set to resolved status.' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: '🔧 Bug report marked as fixed.' }));
   };
 
   // Filter list of users
@@ -449,7 +449,7 @@ export default function AdminDashboardView({
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'analytics' ? 'bg-violet-600 border border-white/10 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
         >
           <BarChart2 className="w-3.5 h-3.5" />
-          Analytics & Geo Pulse
+          App activity
         </button>
 
         <button
@@ -464,7 +464,7 @@ export default function AdminDashboardView({
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'audit' ? 'bg-violet-600 border border-white/10 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
         >
           <Shield className="w-3.5 h-3.5" />
-          Audit Trail
+          Change history
         </button>
 
         <button 
@@ -472,7 +472,7 @@ export default function AdminDashboardView({
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'health' ? 'bg-cyan-600 border border-cyan-500/30 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
         >
           <Activity className="w-3.5 h-3.5" />
-          App Health & Diagnostics
+          App status
         </button>
       </div>
 
@@ -525,7 +525,7 @@ export default function AdminDashboardView({
                   <input readOnly value={foundingResult.passwordResetLink} className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-xs text-zinc-300" />
                   <button
                     onClick={() => void (navigator.clipboard?.writeText(foundingResult.passwordResetLink) || Promise.reject(new Error('Clipboard unavailable'))).then(
-                      () => window.dispatchEvent(new CustomEvent('toast', { detail: 'One-time password reset link copied.' }))
+                      () => window.dispatchEvent(new CustomEvent('toast', { detail: 'Password reset link copied.' }))
                     ).catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Copy failed. Select and copy the link manually.' })))}
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-500/30 px-4 py-2 text-xs font-bold text-violet-200 hover:bg-violet-500/10"
                   >
@@ -545,7 +545,7 @@ export default function AdminDashboardView({
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
                 <input 
                   type="text" 
-                  placeholder="Query system users by name, handle, or registered email..." 
+                  placeholder="Search accounts by name, username or email..." 
                   value={searchUserQuery}
                   onChange={(e) => setSearchUserQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/5 focus:border-rose-500/50 rounded-xl text-xs focus:outline-hidden text-white placeholder-zinc-500"
@@ -557,11 +557,11 @@ export default function AdminDashboardView({
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-black/50 border-b border-white/5 text-[9.5px] font-mono uppercase text-zinc-400 tracking-wider">
-                    <th className="p-4">User Identity</th>
-                    <th className="p-4">Staff Verification / Role</th>
+                    <th className="p-4">Account</th>
+                    <th className="p-4">Verified status / role</th>
                     <th className="p-4">Account reputation</th>
                     <th className="p-4">Restriction status</th>
-                    <th className="p-4 text-right">System Directives</th>
+                    <th className="p-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-xs font-sans text-white">
@@ -607,7 +607,7 @@ export default function AdminDashboardView({
                             onClick={() => handleResetReputation(user)}
                             disabled={!canManageUsers}
                             className="p-1 hover:bg-zinc-800 rounded text-amber-500 transition-all hover:scale-110 active:scale-95 cursor-pointer"
-                            title="Reset reputation points to 0"
+                            title="Reset account points to zero"
                           >
                             <RotateCcw className="w-3 h-3" />
                           </button>
@@ -788,8 +788,8 @@ export default function AdminDashboardView({
                   <p className="text-xs leading-relaxed text-zinc-300">{application.evidenceSummary}</p>
                   {(application.reviewSignals?.possibleNameCollision || (application.reviewSignals?.duplicateEvidenceLinkCount || 0) > 0 || application.reviewSignals?.evidenceScanMayBeIncomplete) && (
                     <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 text-[10px] leading-relaxed text-amber-100">
-                      <strong>Possible identity overlap.</strong> {application.reviewSignals?.nameCollisionCount || 0} matching active name claim(s), {application.reviewSignals?.duplicateEvidenceLinkCount || 0} shared evidence link(s).
-                      {application.reviewSignals?.evidenceScanMayBeIncomplete ? ' The match scan reached its safety limit; inspect manually.' : ' This is a warning to review, not proof that the account should be rejected.'}
+                      <strong>Possible duplicate identity.</strong> {application.reviewSignals?.nameCollisionCount || 0} matching name(s), {application.reviewSignals?.duplicateEvidenceLinkCount || 0} shared proof link(s).
+                      {application.reviewSignals?.evidenceScanMayBeIncomplete ? ' The check couldn't review everything. Please check it manually.' : ' This is a warning to check, not proof that the account should be rejected.'}
                     </div>
                   )}
                   <div className="space-y-1">
@@ -816,7 +816,7 @@ export default function AdminDashboardView({
             
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-black text-violet-400 uppercase tracking-widest font-mono">
-                REAL-TIME USER & COMMUNITY GROWTH MATRIX
+                Account and community activity
               </h3>
               <div className="flex items-center gap-1 bg-zinc-900 border border-white/5 p-1 rounded-xl text-[10px] font-mono">
                 {(['24h', '7d', '30d'] as const).map(tf => (
@@ -833,44 +833,44 @@ export default function AdminDashboardView({
 
             {analyticsState === 'unavailable' && (
               <div className="p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 text-xs text-amber-200">
-                Platform analytics are unavailable for this account or have not been aggregated yet. No estimates are shown.
+                Activity details aren't available for this account yet. No estimates are shown.
               </div>
             )}
             {analyticsState === 'ready' && analyticsPoints.some(point => point.partial) && (
               <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 text-[10px] text-amber-200 font-mono">
-                Some observation windows are partial because the bounded aggregation limit was reached. Treat totals as lower bounds.
+                Some time periods are incomplete, so the totals shown may be lower than the actual totals.
               </div>
             )}
 
             {/* Bento Grid Analytics Row: client observations, never authoritative business totals */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 shadow-xs">
-                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">OBSERVED ACTOR-DAYS</span>
+                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">DAILY ACCOUNT ACTIVITY</span>
                 <span className="text-2xl font-black font-sans block text-shadow-glow text-sky-400">{analyticsState === 'ready' ? analyticsTotals.actorDays.toLocaleString() : '—'}</span>
-                <span className="text-[10px] text-zinc-500 font-mono block">Client observations; not unique users</span>
+                <span className="text-[10px] text-zinc-500 font-mono block">An account may be counted again on another day</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 shadow-xs">
-                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">OBSERVED EVENTS</span>
+                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">RECORDED ACTIONS</span>
                 <span className="text-2xl font-black font-sans block text-emerald-400">{analyticsState === 'ready' ? analyticsTotals.events.toLocaleString() : '—'}</span>
-                <span className="text-[10px] text-zinc-500 font-mono block">Validated client-observation records</span>
+                <span className="text-[10px] text-zinc-500 font-mono block">Actions recorded by the app</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 shadow-xs">
-                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">QUALIFIED IMPRESSIONS</span>
+                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">POST VIEWS</span>
                 <span className="text-2xl font-black font-sans block text-violet-400">{analyticsState === 'ready' ? analyticsTotals.impressions.toLocaleString() : '—'}</span>
-                <span className="text-[10px] text-violet-300 font-mono block">Only when instrumentation is enabled</span>
+                <span className="text-[10px] text-violet-300 font-mono block">Only counted when tracking is turned on</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 shadow-xs">
-                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">MEANINGFUL INTERACTIONS</span>
+                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">POST INTERACTIONS</span>
                 <span className="text-2xl font-black font-sans block text-pink-400">{analyticsState === 'ready' ? analyticsTotals.engagements.toLocaleString() : '—'}</span>
-                <span className="text-[10px] text-zinc-500 font-mono block">Not likes or revenue outcomes</span>
+                <span className="text-[10px] text-zinc-500 font-mono block">Doesn't include likes or money earned</span>
               </div>
             </div>
 
             <div className="p-4 rounded-2xl bg-[#080612]/60 border border-white/5 text-[10px] text-zinc-400 font-mono">
-              Reporting definition: observed actor-days deduplicate one authenticated actor per UTC day; event totals count accepted, schema-validated client observations; impressions require explicit instrumentation consent. These are not authoritative registrations, revenue, follower totals, or unique reach.
+              These numbers show activity recorded by the app. They are not the same as total sign-ups, earnings, followers or total people reached. Views are counted only when tracking is turned on.
             </div>
 
           </div>
@@ -881,16 +881,16 @@ export default function AdminDashboardView({
           <div className="space-y-5 text-left animate-fade-in">
             <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
               <h3 className="text-sm font-black uppercase tracking-widest text-emerald-300">Finance operations</h3>
-              <p className="mt-2 text-xs leading-relaxed text-zinc-400">This panel reads only trusted backend summaries. It never exposes payment secrets, raw provider payloads, or unrestricted customer records.</p>
+              <p className="mt-2 text-xs leading-relaxed text-zinc-400">This page shows payment details provided by NEXORA. It never shows payment passwords or full customer records.</p>
             </div>
-            {financeState === 'loading' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Loading protected finance summary…</div>}
-            {financeState === 'denied' && <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center text-xs text-amber-200">Finance access requires a dedicated finance administrator claim. Moderator access alone is not sufficient.</div>}
-            {financeState === 'unavailable' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Finance provider or backend summary is unavailable. No financial state was changed.</div>}
+            {financeState === 'loading' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Loading payment summary…</div>}
+            {financeState === 'denied' && <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center text-xs text-amber-200">Only approved finance admins can see this information. Moderator access isn't enough.</div>}
+            {financeState === 'unavailable' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Payment details aren't available right now. No money or payment settings were changed.</div>}
             {financeState === 'ready' && financeSummary && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><span className="text-[10px] uppercase tracking-widest text-zinc-500">Provider</span><p className="mt-2 text-lg font-black text-white">{financeSummary.providerConfigured ? 'Configured' : 'Not configured'}</p></div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><span className="text-[10px] uppercase tracking-widest text-zinc-500">Verified transactions</span><p className="mt-2 text-lg font-black text-white">{financeSummary.transactions.length}</p></div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><span className="text-[10px] uppercase tracking-widest text-zinc-500">Webhook failures</span><p className="mt-2 text-lg font-black text-white">{financeSummary.webhookFailures.length}</p></div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><span className="text-[10px] uppercase tracking-widest text-zinc-500">Confirmed payments</span><p className="mt-2 text-lg font-black text-white">{financeSummary.transactions.length}</p></div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><span className="text-[10px] uppercase tracking-widest text-zinc-500">Payment update errors</span><p className="mt-2 text-lg font-black text-white">{financeSummary.webhookFailures.length}</p></div>
               </div>
             )}
             <GiftEarningsFinancePanel />
@@ -901,12 +901,12 @@ export default function AdminDashboardView({
         {activeSubTab === 'audit' && (
           <div className="space-y-4 text-left animate-fade-in">
             <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
-              <h3 className="text-sm font-black uppercase tracking-widest text-violet-200">Administrator audit trail</h3>
-              <p className="mt-2 text-xs leading-relaxed text-zinc-400">Recent privileged account changes recorded by trusted server actions. Access is limited to administrators.</p>
+              <h3 className="text-sm font-black uppercase tracking-widest text-violet-200">Admin change history</h3>
+              <p className="mt-2 text-xs leading-relaxed text-zinc-400">Recent changes made by admins. Only administrators can view this list.</p>
             </div>
-            {auditState === 'loading' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Loading audit history…</div>}
+            {auditState === 'loading' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Loading change history…</div>}
             {auditState === 'denied' && <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center text-xs text-amber-200">Administrator access is required to view this history.</div>}
-            {auditState === 'unavailable' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Audit history is temporarily unavailable. No records were changed.</div>}
+            {auditState === 'unavailable' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Change history isn't available right now. No records were changed.</div>}
             {auditState === 'ready' && (
               <div className="overflow-x-auto rounded-2xl border border-white/10 bg-black/20">
                 <table className="w-full text-left border-collapse">
