@@ -17,7 +17,8 @@ import {
 } from './types';
 
 import { 
-  getRichUser, 
+  getRichUser,
+  getSafeAvatar,
   followUserDb, 
   unfollowUserDb, 
   createPostDb, 
@@ -590,9 +591,13 @@ export default function App() {
       
       return {
         ...post,
+        avatar: getSafeAvatar(post.avatar, post.name || post.username),
         timestamp: permanentTime,
         createdAt: post.createdAt || permanentTime,
-        comments
+        comments: comments.map((comment: any) => ({
+          ...comment,
+          avatar: getSafeAvatar(comment.avatar, comment.name || comment.username),
+        })),
       };
     });
   };
