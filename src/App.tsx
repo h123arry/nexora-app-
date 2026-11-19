@@ -555,7 +555,7 @@ export default function App() {
 
   const normalizePosts = (rawPosts: any[]): Post[] => {
     if (!Array.isArray(rawPosts)) return [];
-    return rawPosts.filter((post: any) => {
+    const normalizedPosts = rawPosts.filter((post: any) => {
       return !!post.userId;
     }).map((post: any) => {
       let permanentTime = post.createdAt || post.timestamp;
@@ -630,6 +630,11 @@ export default function App() {
         comments
       };
     });
+    const uniquePosts = new Map<string, Post>();
+    normalizedPosts.forEach(post => {
+      if (post?.id && !uniquePosts.has(post.id)) uniquePosts.set(post.id, post);
+    });
+    return [...uniquePosts.values()];
   };
 
   const [posts, setPosts] = useState<Post[]>(() => {
