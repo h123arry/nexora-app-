@@ -229,7 +229,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
                   <Cpu className="w-4 h-4 text-cyan-400" /> Feed preferences
                 </h2>
                 <p className="text-xs text-zinc-400 mt-1">
-                  These options show how posts in this preview are sorted. They don't change your main feed.
+                  These options show how posts in this preview are sorted. They don’t change your main feed.
                 </p>
               </div>
 
@@ -281,7 +281,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
               </div>
 
               <div className="space-y-3">
-                {rankedPosts.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-xs text-zinc-400">There are no posts in this preview yet. Posts will appear here when they're available.</div> : rankedPosts.map((post, idx) => (
+                {rankedPosts.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-xs text-zinc-400">There are no posts in this preview yet. Posts will appear here when they’re available.</div> : rankedPosts.map((post, idx) => (
                   <div 
                     key={post.id}
                     className="bg-zinc-950/40 border border-white/5 hover:border-white/10 p-4 rounded-2xl flex items-start gap-4 transition-all"
@@ -349,7 +349,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 { stage: 1, title: 'Stage 1 — Try posts with a small group', tag: 'Small group test', color: 'border-white/10 text-violet-400', desc: 'When you share a post, it may first be shown to a small group of people who enjoy that topic. Their response helps decide who else may like it.' },
-                { stage: 2, title: 'Stage 2 — Post activity', tag: 'Post activity', color: 'border-pink-500/20 text-pink-400', desc: 'Your post's results can include how long people watch, replays, shares, saves, comments, profile visits and new followers.' },
+                { stage: 2, title: 'Stage 2 — Post activity', tag: 'Post activity', color: 'border-pink-500/20 text-pink-400', desc: 'Your post’s results can include how long people watch, replays, shares, saves, comments, profile visits and new followers.' },
                 { stage: 3, title: 'Stage 3 — What people enjoy', tag: 'What people enjoy', color: 'border-cyan-500/20 text-cyan-400', desc: 'Posts people watch, save or share may be shown to more people. Posts people quickly skip or report may be shown less.' },
                 { stage: 4, title: 'Stage 4 — Understanding posts', tag: 'Image and text checks', color: 'border-emerald-500/20 text-emerald-400', desc: 'NEXORA looks at the topic, text, music and other details in a post to help show it to people who may enjoy it.' },
                 { stage: 5, title: 'Stage 5 — Account standing', tag: 'Account standing', color: 'border-amber-500/20 text-amber-400', desc: 'Account age, following the rules and sharing original posts can help build trust. A large following does not guarantee that every post will be popular.' },
@@ -357,7 +357,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
                 { stage: 7, title: 'Stage 7 — Posts worth finding later', tag: 'Posts people may enjoy later', color: 'border-purple-500/20 text-purple-400', desc: 'Good posts may appear again weeks or months later when people are looking for similar topics.' },
                 { stage: 8, title: 'Stage 8 — Your changing interests', tag: 'Changing interests', color: 'border-rose-500/20 text-rose-400', desc: 'Your feed can change as your interests change. You can also update your interests yourself.' },
                 { stage: 9, title: 'Stage 9 — Keeping spam away', tag: 'Original content checks', color: 'border-teal-500/20 text-teal-400', desc: 'NEXORA works to limit stolen posts, spam, fake giveaways and misleading titles.' },
-                { stage: 10, title: 'Stage 10 — A fair chance for everyone', tag: 'A fair chance for everyone', color: 'border-sky-500/20 text-sky-400', desc: 'You don't need lots of followers to be discovered. A new account can reach people when its posts are interesting and original.' },
+                { stage: 10, title: 'Stage 10 — A fair chance for everyone', tag: 'A fair chance for everyone', color: 'border-sky-500/20 text-sky-400', desc: 'You don’t need lots of followers to be discovered. A new account can reach people when its posts are interesting and original.' },
                 { stage: 11, title: 'Stage 11 — A safer community', tag: 'Keeping the community safe', color: 'border-blue-500/20 text-blue-400', desc: 'Posts linked to repeated harassment, spam or rule-breaking reports may be shown to fewer people.' },
                 { stage: 12, title: 'Stage 12 — Reaching more people', tag: 'How posts reach people', color: 'border-fuchsia-500/20 text-fuchsia-400', desc: 'Posts may reach people nearby first, then a wider audience when people respond well.' },
               ].map(playbook => (
