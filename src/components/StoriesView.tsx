@@ -122,8 +122,8 @@ export default function StoriesView({ currentUser, onRequireAuth }: StoriesViewP
       setIsComposerOpen(false);
       setSelectedStoryId(storyId);
     } catch (error) {
-      console.error('Couldn't share your story', error);
-      setErrorMessage('Couldn't share your story. Check your connection and try again.');
+      console.error('Couldn’t share your story', error);
+      setErrorMessage('Couldn’t share your story. Check your connection and try again.');
     } finally {
       setIsSaving(false);
     }
@@ -136,7 +136,7 @@ export default function StoriesView({ currentUser, onRequireAuth }: StoriesViewP
       setSelectedStoryId(null);
     } catch (error) {
       console.error('Unable to delete Nexora story', error);
-      setErrorMessage('Couldn't delete that story. Try again.');
+      setErrorMessage('Couldn’t delete that story. Try again.');
     }
   };
 
@@ -205,7 +205,7 @@ export default function StoriesView({ currentUser, onRequireAuth }: StoriesViewP
                 <label htmlFor="nexora-story-caption" className="sr-only">Write something</label>
                 <textarea id="nexora-story-caption" autoFocus maxLength={500} value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What’s on your mind?" className="nx-field min-h-36 w-full resize-y px-4 py-3 text-sm" required />
                 <div className="flex items-center justify-between gap-3 text-[11px] text-zinc-500">
-                  <span>Photo and video stories aren't available yet.</span>
+                  <span>Photo and video stories aren’t available yet.</span>
                   <span>{caption.length}/500</span>
                 </div>
                 <button type="submit" disabled={!caption.trim() || isSaving} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-pink-600 px-4 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">
