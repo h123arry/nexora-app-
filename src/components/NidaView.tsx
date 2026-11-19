@@ -236,7 +236,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
               <div className="space-y-5">
                 {[
                   { key: 'interest', label: '1. Your interests', desc: 'Shows more posts about topics you enjoy.', color: 'accent-violet-500' },
-                  { key: 'quality', label: '2. Post engagement', desc: 'Looks at views, comments, saves and shares.', color: 'accent-pink-500' },
+                  { key: 'quality', label: '2. Post activity', desc: 'Looks at views, comments, saves and shares.', color: 'accent-pink-500' },
                   { key: 'verification', label: '3. Verified accounts', desc: 'Shows whether the person who posted has a verified account.', color: 'accent-cyan-500' },
                   { key: 'freshness', label: '4. New and popular posts', desc: 'Includes new posts and posts people are enjoying.', color: 'accent-yellow-500' },
                 ].map(pillar => {
