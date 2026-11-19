@@ -593,7 +593,7 @@ export default function PrivacySettingsModal({
                       { key: 'currentlyActive', label: 'Active Status List', desc: 'Appear in the currently active friends strip.' },
                       { key: 'recentlyActive', label: 'Recently active', desc: 'Show when you were last active.' },
                       { key: 'readMessages', label: 'Reading Messages State', desc: 'Allows users to see if you are actively browsing.' },
-                      { key: 'voiceActivity', label: 'Voice Room State', desc: 'Shows your status within decentralized audio bridges.' }
+                      { key: 'voiceActivity', label: 'Live audio status', desc: 'Shows whether you're in a live audio room.' }
                     ].map(item => {
                       const val = presence[item.key as keyof typeof presence] as VisibilityAudience;
                       return (
