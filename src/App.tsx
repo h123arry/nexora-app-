@@ -239,9 +239,12 @@ export default function App() {
   };
 
   const requireAuth = (action: () => void, _reason?: string) => {
-    if (!isLoggedIn) {
+    // A loaded Firebase profile can become available one render before the
+    // app-level currentUser state catches up. Never open media/create actions
+    // with a stale guest UID during that transition.
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       setPendingAuthAction(() => action);
-      if (!authInitializing) {
+      if (!authInitializing && !isLoggedIn) {
         void retryProfileLoad().catch((error) => {
           setPendingAuthAction(null);
           const code = (error as { code?: string } | null)?.code;
@@ -363,7 +366,7 @@ export default function App() {
   }, [authInitializing, isLoggedIn, firebaseUser?.uid, firebaseProfile]);
 
   useEffect(() => {
-    if (!isLoggedIn || !pendingAuthAction) return;
+    if (!isLoggedIn || !pendingAuthAction || !firebaseUser || currentUser.id !== firebaseUser.uid) return;
     if (requiresPublicAccountSetup) {
       setShowPublicAccountSetup(true);
       return;
@@ -372,7 +375,7 @@ export default function App() {
     setPendingAuthAction(null);
     action();
     window.dispatchEvent(new CustomEvent('toast', { detail: 'You’re ready to participate on NEXORA.' }));
-  }, [isLoggedIn, pendingAuthAction, requiresPublicAccountSetup]);
+  }, [isLoggedIn, pendingAuthAction, requiresPublicAccountSetup, firebaseUser?.uid, currentUser.id]);
 
   const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
   // Do not place a blocking onboarding modal over the public feed on first open.
