@@ -724,7 +724,7 @@ export default function NotificationsView({
             { id: 'communities', label: 'Communities' },
             { id: 'creator', label: 'Creator Milestones' },
             { id: 'origin', label: 'Origin & Attribution' },
-            { id: 'system', label: 'Security & Core' }
+            { id: 'system', label: 'Security' }
           ].map((tab) => {
             const isActive = activeCategory === tab.id;
             return (
