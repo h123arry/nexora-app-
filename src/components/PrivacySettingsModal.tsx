@@ -588,8 +588,8 @@ export default function PrivacySettingsModal({
                     {[
                       { key: 'lastSeen', label: 'Last Seen Timestamp', desc: 'When you were last active on the ledger.' },
                       { key: 'onlineStatus', label: 'Show when you're online', desc: 'Show people when you're active.' },
-                      { key: 'typingIndicator', label: 'Typing indicator', desc: 'Let others know when you're typing.' },
-                      { key: 'recordingIndicator', label: 'Recording indicator', desc: 'Show when you're recording a voice message.' },
+                      { key: 'typingIndicator', label: 'Typing indicator', desc: 'Let others know when you type.' },
+                      { key: 'recordingIndicator', label: 'Recording indicator', desc: 'Show when you record a voice message.' },
                       { key: 'currentlyActive', label: 'Active Status List', desc: 'Appear in the currently active friends strip.' },
                       { key: 'recentlyActive', label: 'Recently active', desc: 'Show when you were last active.' },
                       { key: 'readMessages', label: 'Reading Messages State', desc: 'Allows users to see if you are actively browsing.' },
