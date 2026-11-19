@@ -260,7 +260,7 @@ r2MediaRouter.post('/upload-intent', async (req, res) => {
       createdAt: existing.exists ? existing.get('createdAt') : FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
-    const uploadUrl = createR2PresignedUrl(r2Config, 'PUT', objectKey, 900, contentType.split(';')[0].trim().toLowerCase());
+    const uploadUrl = createR2PresignedUrl(r2Config, 'PUT', objectKey, 900, contentType.split(';')[0].trim().toLowerCase(), new Date(), true);
     return res.status(201).json({ mediaId, storagePath: objectKey, uploadUrl, contentType: contentType.split(';')[0].trim().toLowerCase(), size });
   } catch (error) {
     console.error('[R2Media] Could not create upload intent.', error);
