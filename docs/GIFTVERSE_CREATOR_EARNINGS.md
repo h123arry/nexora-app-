@@ -74,3 +74,11 @@ NEX is the internal NEXORA wallet unit. This phase settles creator earnings in N
 - creatorPayoutRequests is owner-readable but server-write-only. The current fail-closed payout endpoint does not create requests until the provider and rate are operational.
 - Firestore composite indexes support sender velocity, creator reporting, active competition attribution and risk review.
 - Callable authorization is checked server-side; UI visibility is not treated as authorization.
+
+
+## NEX reference pricing and top-up bundles
+
+- NEX reference value: **1 NEX = USD 0.02** (two US cents). This is a product reference value, not a guaranteed cash redemption or creator payout rate.
+- Reference bundles: 15 NEX / USD 0.30; 30 NEX / USD 0.60; 50 NEX / USD 1.00; 100 NEX / USD 2.00.
+- Bundle checkout remains disabled while the payment provider checkout adapter is unconfigured. The wallet shows reference prices only and does not accept payment.
+- NGN equivalents must use a current, explicitly disclosed checkout FX quote; do not hardcode a naira conversion. Creator cash withdrawals remain controlled by the separate Paystack payout policy and live-settlement gates.

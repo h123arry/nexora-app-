@@ -1,6 +1,6 @@
 # NEXORA GIFTVERSE artwork
 
-GiftVerse ships 1,000 distinct catalogue gifts: the original 120 NEXORA vector artworks plus 880 individually identified OpenMoji-based adaptations. The 880 source illustrations are embedded as 880 separately addressable SVG symbols across eight optimized sprite files. Every catalogue entry has its own stable image reference, name, description, category, rarity and server-owned NEX price.
+GiftVerse now ships 1,100 distinct catalogue gifts: 120 NEXORA vector artworks, 880 individually identified OpenMoji-based adaptations, and 100 additional NEXORA GiftVerse collection-two SVG artworks across ten new collections. The 880 source illustrations are embedded as 880 separately addressable SVG symbols across eight optimized sprite files. Every catalogue entry has its own stable image reference, name, description, category, rarity and server-owned NEX price. The 100 collection-two gifts each have a dedicated SVG file and a unique gift ID and name; the UI presents one unified shop without source-type labels.
 
 The sprite approach avoids 880 separate network requests while preserving independent vector artwork references. Live deliveries use the shared animation stage; gallery artwork remains static.
 
