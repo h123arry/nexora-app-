@@ -125,3 +125,10 @@ test('public profile links resolve through canonical username claims, not privat
   assert.match(profile, /return this\.getPublicProfile\(uid\)/);
   assert.match(app, /ProfileService\.getPublicProfileByUsername\(cleanIdOrUser\)/);
 });
+
+test('normalizes feed posts into a unique id set before rendering', async () => {
+  const app = await read('../src/App.tsx');
+  assert.match(app, /const uniquePosts = new Map<string, Post>\(\)/);
+  assert.match(app, /if \(post\?\.id && !uniquePosts\.has\(post\.id\)\) uniquePosts\.set\(post\.id, post\)/);
+  assert.match(app, /return \[\.\.\.uniquePosts\.values\(\)\]/);
+});
