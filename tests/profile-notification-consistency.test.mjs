@@ -36,6 +36,8 @@ test('transient notification banners stay disabled while the saved inbox and dev
   assert.match(banner, /return null/);
   assert.match(activity, /collection\(db, 'users', uid, 'notifications'\)/);
   assert.match(push, /registration\.showNotification\(payload\.title, options\)/);
+  const app = await read('../src/App.tsx');
+  assert.doesNotMatch(app, /playNexoraSound\('interface\.confirmation'\)/);
 });
 
 test('media uploads wait for Firebase auth hydration and retain UID ownership checks', async () => {
