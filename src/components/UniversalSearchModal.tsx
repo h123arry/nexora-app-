@@ -375,7 +375,7 @@ export default function UniversalSearchModal({
                     { label: 'View Saved', icon: Bookmark, action: () => { onClose(); onSelectTab('saved'); }, color: 'from-purple-600 to-fuchsia-600' },
                     { label: 'Communities', icon: Users, action: () => { onClose(); onSelectTab('communities'); }, color: 'from-blue-600 to-indigo-600' },
                     { label: 'Circles', icon: Globe, action: () => { onClose(); onSelectTab('matrix'); }, color: 'from-violet-500 to-purple-600' },
-                    { label: 'Creator Hub', icon: Shield, action: () => { onClose(); onSelectTab('creator'); }, color: 'from-rose-500 to-pink-600' },
+                    { label: 'Creator tools', icon: Shield, action: () => { onClose(); onSelectTab('creator'); }, color: 'from-rose-500 to-pink-600' },
                     { label: 'Settings', icon: ArrowRight, action: () => { onClose(); onSelectTab('settings'); }, color: 'from-zinc-700 to-zinc-800' },
                   ].map((act, i) => {
                     const Icon = act.icon;
@@ -443,7 +443,7 @@ export default function UniversalSearchModal({
                 <div className="space-y-1.5 text-left">
                   <h4 className="text-base font-sans font-bold text-white flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-violet-400" />
-                    <span>Nexora Unified Search & Command Center</span>
+                    <span>Search NEXORA</span>
                   </h4>
                   <p className="text-xs text-zinc-300 font-sans leading-relaxed max-w-xl">
                     Searches public people, Pages and Circles through NEXORA's server-backed directory, alongside posts, chats, saved content, opportunities and VOH AI history currently loaded in this browser.
