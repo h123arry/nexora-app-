@@ -1510,7 +1510,7 @@ export default function ProfileView({
                     {profileTab === 'media' && 'Published visual media and videos will appear here.'}
                     {profileTab === 'voice' && 'Recorded voice pulses and audio broadcasts will appear here.'}
                     {profileTab === 'reposts' && 'Content reposted by this creator will appear here.'}
-                    {profileTab === 'sparks' && 'Posts you've sparked will appear here.'}
+                    {profileTab === 'sparks' && "Posts you've sparked will appear here."}
                     {profileTab === 'bookmarks' && 'Saved bookmarks and favorite posts will appear here.'}
                     {profileTab === 'archive' && 'Your archived posts will appear here.'}
                   </p>
