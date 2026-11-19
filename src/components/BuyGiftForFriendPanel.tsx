@@ -16,7 +16,8 @@ export default function BuyGiftForFriendPanel({ gifts, isLoggedIn }: { gifts: Ne
   const [people, setPeople] = useState<GiftFriendPerson[]>([]);
   const [person, setPerson] = useState<GiftFriendPerson | null>(null);
   const [giftId, setGiftId] = useState('');
-  const [busy, setBusy] = useState(false);\n  const [purchaseKey, setPurchaseKey] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [purchaseKey, setPurchaseKey] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const gift = useMemo(() => gifts.find(item => item.id === giftId) || null, [gifts, giftId]);
