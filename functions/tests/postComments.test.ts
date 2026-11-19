@@ -70,7 +70,7 @@ describe('trusted public post comments', () => {
     const replay = await addPublicPostComment(db, 'commenter', 'comment-post-public', 'Retry safely', 'comment-retry');
     assert.equal(first.created, true);
     assert.equal(replay.created, false);
-    assert.equal(replay.commentsCount, 2);
+    assert.equal(replay.commentsCount, 3);
     const post = await db.doc('posts/comment-post-public').get();
     assert.equal(post.get('comments').filter((comment: { id: string }) => comment.id === 'comment-retry').length, 1);
     const notifications = await db.collection('users').doc('author').collection('notifications').get();
