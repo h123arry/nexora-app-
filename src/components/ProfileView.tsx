@@ -18,6 +18,7 @@ import { auth, db } from '../services/firebase/config';
 import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { uploadMediaFile } from '../services/firebase/storageService';
 import { SettingsService } from '../services/firebase/settingsService';
+import { subscribeToFollows } from '../services/dataService';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraLoader from './NexoraLoader';
@@ -213,7 +214,7 @@ interface ProfileViewProps {
   isLoggedIn?: boolean;
   posts: Post[];
   userSparks?: string[];
-  onUpdateProfile: (updatedData: Partial<User>) => void;
+  onUpdateProfile: (updatedData: Partial<User>) => void | Promise<void>;
   onLikePost: (postId: string) => void;
   onAddComment?: (postId: string, text: string) => void;
   onAddPost?: (content: string, imageUrl?: string, tagsString?: string, images?: string[], videoUrl?: string) => string;
@@ -266,6 +267,32 @@ export default function ProfileView({
     } catch { return []; }
   });
   const [receivedSparks, setReceivedSparks] = useState<Array<{ id: string; fromUserId: string; username: string; name: string; avatar: string; postId: string }>>([]);
+  const [profileFollows, setProfileFollows] = useState<Array<{ followerId: string; followingId: string }>>([]);
+  const [relationshipUsers, setRelationshipUsers] = useState<User[]>([]);
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser.id || auth.currentUser?.uid !== currentUser.id) {
+      setProfileFollows([]);
+      setRelationshipUsers([]);
+      return;
+    }
+    let active = true;
+    const unsubscribe = subscribeToFollows(currentUser.id, follows => {
+      if (!active) return;
+      const edges = follows
+        .filter((follow: any) => typeof follow.followerId === 'string' && typeof follow.followingId === 'string')
+        .map((follow: any) => ({ followerId: follow.followerId, followingId: follow.followingId }));
+      setProfileFollows(edges);
+      const relatedIds = [...new Set(edges.map(edge => edge.followerId === currentUser.id ? edge.followingId : edge.followerId))];
+      void Promise.all(relatedIds.map(id => ProfileService.getPublicProfile(id))).then(profiles => {
+        if (active) setRelationshipUsers(profiles.filter((profile): profile is User => !!profile));
+      });
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [currentUser.id, isLoggedIn]);
+
   useEffect(() => {
     if (!isOwnProfile || auth.currentUser?.uid !== currentUser.id) {
       setReceivedSparks([]);
@@ -313,10 +340,7 @@ export default function ProfileView({
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
 
   const profileTabsList = ['media', 'voice', 'reposts', 'sparks', 'gifts', ...(isOwnProfile ? ['bookmarks', 'archive'] : [])];
-
-  useEffect(() => {
-    if (!isOwnProfile && (profileTab === 'bookmarks' || profileTab === 'archive')) setProfileTab('media');
-  }, [isOwnProfile, profileTab]);
+  useEffect(() => { if (!isOwnProfile && (profileTab === 'bookmarks' || profileTab === 'archive')) setProfileTab('media'); }, [isOwnProfile, profileTab]);
 
   const handleContentTouchStart = (e: React.TouchEvent) => {
     touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -979,11 +1003,8 @@ export default function ProfileView({
         bio: editBio,
         location: editLocation,
         website: editWebsite,
-        pronouns: editPronouns.trim(),
-        profileCategory: editCategory,
-        creatorType: editCreatorType,
-        socialTwitter: editSocialTwitter.trim(),
-        socialInstagram: editSocialInsta.trim(),
+        pronouns: editPronouns.trim(), profileCategory: editCategory, creatorType: editCreatorType,
+        socialTwitter: editSocialTwitter.trim(), socialInstagram: editSocialInsta.trim(),
         avatar: persistedAvatar,
         coverImage: persistedCover,
         lastDisplayNameChangeTime: editName !== currentUser.name ? new Date().toISOString() : currentUser.lastDisplayNameChangeTime,
@@ -996,8 +1017,7 @@ export default function ProfileView({
       setIsSavingProfile(false);
       setShowSavedFeedback(true);
 
-      const isOnline = navigator.onLine;
-      const successMsg = isOnline ? '✓ Profile updated successfully' : '⚠️ Profile updated locally and queued for offline sync.';
+      const successMsg = '✓ Profile updated successfully';
       window.dispatchEvent(new CustomEvent('toast', { detail: successMsg }));
 
       // Wait 1.5s for the success message feedback, then transition back smoothly
@@ -1417,7 +1437,6 @@ export default function ProfileView({
             {(currentUser.profileCategory || currentUser.creatorType) && <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-300">{[currentUser.profileCategory, currentUser.creatorType].filter(Boolean).join(' · ')}</p>}
             {(currentUser.socialTwitter || currentUser.socialInstagram) && <div className="flex flex-wrap gap-3 text-[11px]">{currentUser.socialTwitter && <a href={/^https?:\/\//i.test(currentUser.socialTwitter) ? currentUser.socialTwitter : 'https://' + currentUser.socialTwitter.replace(/^@/, '')} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:text-violet-200 hover:underline">X / Twitter</a>}{currentUser.socialInstagram && <a href={/^https?:\/\//i.test(currentUser.socialInstagram) ? currentUser.socialInstagram : 'https://instagram.com/' + currentUser.socialInstagram.replace(/^@/, '')} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:text-violet-200 hover:underline">Instagram</a>}</div>}
             {((currentUser.skills || []).length > 0 || Object.keys(currentUser.interestDNA || {}).length > 0) && <div className="flex flex-wrap gap-1.5 pt-1">{[...(currentUser.skills || []), ...Object.keys(currentUser.interestDNA || {}).sort((a,b) => (currentUser.interestDNA[b] || 0) - (currentUser.interestDNA[a] || 0))].filter((value,index,array) => value && array.indexOf(value) === index).slice(0,6).map(item => <span key={item} className="rounded-full border border-violet-400/15 bg-violet-500/10 px-2.5 py-1 text-[10px] font-medium text-violet-200">{item}</span>)}</div>}
-
             {/* Nexora 6 Statistics Grid */}
             <div className="nx-profile-stats grid grid-cols-3 sm:grid-cols-6 gap-y-1.5 gap-x-1 sm:gap-x-2 text-center mt-2 sm:mt-3">
               {[
@@ -2843,17 +2862,12 @@ export default function ProfileView({
               {/* Relation list render */}
               <div className="space-y-2 text-left">
                 {(() => {
+                  if ((relationsTab === 'followers' || relationsTab === 'following') && (!isOwnProfile || auth.currentUser?.uid !== currentUser.id)) {
+                    return <div className="text-center py-12 text-zinc-500 text-xs">Relationship lists are private for this account.</div>;
+                  }
                   let list: any[] = [];
-                  let allFollows: { followerId: string; followingId: string }[] = [];
-                  try {
-                    allFollows = JSON.parse(localStorage.getItem('nexora_db_follows') || localStorage.getItem('nexora_db_follows_v1') || '[]');
-                  } catch {}
-
-                  let allRegisteredUsers: User[] = [];
-                  try {
-                    const rawUsers = localStorage.getItem('nexora_users_db');
-                    if (rawUsers) allRegisteredUsers = JSON.parse(rawUsers);
-                  } catch {}
+                  const allFollows = profileFollows;
+                  const allRegisteredUsers = relationshipUsers;
 
                   if (relationsTab === 'followers') {
                     const followerIds = allFollows.filter(f => f.followingId === currentUser.id).map(f => f.followerId);
@@ -3279,7 +3293,6 @@ export default function ProfileView({
                     <div className="flex flex-wrap gap-2"><button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => coverInputRef.current?.click()} className="rounded-xl bg-violet-600 px-4 py-2 text-[10px] font-bold uppercase text-white hover:bg-violet-500 disabled:opacity-50"><Camera className="mr-1.5 inline h-3.5 w-3.5" /> {editCover ? 'Change cover' : 'Add cover photo'}</button>{editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => setEditCover('')} className="rounded-xl border border-white/10 px-4 py-2 text-[10px] font-bold uppercase text-zinc-300 hover:bg-white/5 disabled:opacity-50">Remove cover</button>}</div>
                     <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) { window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a JPG, PNG or WebP image under 8 MB.' })); return; } const reader = new FileReader(); reader.onload = () => { if (typeof reader.result === 'string') setEditCover(reader.result); }; reader.onerror = () => window.dispatchEvent(new CustomEvent('toast', { detail: 'The cover photo could not be read. Please try again.' })); reader.readAsDataURL(file); }} />
                   </div>
-
                   {/* Avatar photo editor trigger */}
                   <div className="bg-[#0b081c] p-6 rounded-3xl border border-white/10 space-y-4">
                     <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block border-b border-white/5 pb-2">📸 PROFILE PHOTO</span>
