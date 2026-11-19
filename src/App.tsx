@@ -42,7 +42,11 @@ import {
   removeFollow
 } from './services/dataService';
 import { ProfileService } from './services/firebase/profileService';
-import { shouldShowAnonymousAccountReminder } from './services/firebase/anonymousOnboardingPolicy';
+import {
+  dismissAnonymousAccountPrompt,
+  readAnonymousAccountPromptState,
+  shouldShowAnonymousAccountReminder,
+} from './services/firebase/anonymousOnboardingPolicy';
 import { db } from './lib/firebase';
 import { functions } from './lib/firebase';
 import { mergeRealtimePosts } from './services/posts/postCollection';
@@ -123,6 +127,8 @@ export default function App() {
     };
   }, []);
   const isLoggedIn = !!firebaseUser && firebaseProfile?.id === firebaseUser.uid;
+  // Anonymous Firebase identities can browse, but incomplete account profiles
+  // must open the signup/profile flow before attempting follow or post writes.
   const requiresPublicAccountSetup = isLoggedIn && firebaseUser?.isAnonymous === true && !!firebaseProfile
     && (!firebaseProfile.dateOfBirth || firebaseProfile.name === 'NEXORA Member' || firebaseProfile.username.startsWith('member_'));
   const initialCacheUserId = isLoggedIn && firebaseUser ? firebaseUser.uid : '';
@@ -197,15 +203,30 @@ export default function App() {
   // Public browsing is the first experience. Ask for account details only when
   // the visitor attempts an action that requires a complete public profile.
 
-  // Offer profile setup after ten seconds of public browsing. A dismissal is
-  // remembered for this anonymous UID; restricted actions can still reopen it.
+  const accountPromptKey = firebaseUser?.uid ? `nexora_profile_setup_prompt_${firebaseUser.uid}` : null;
+
+  const dismissPublicAccountSetup = () => {
+    if (accountPromptKey) {
+      const nextState = dismissAnonymousAccountPrompt(
+        Date.now(),
+        readAnonymousAccountPromptState(localStorage.getItem(accountPromptKey)),
+      );
+      localStorage.setItem(accountPromptKey, JSON.stringify(nextState));
+    }
+    setShowPublicAccountSetup(false);
+    setPendingAuthAction(null);
+  };
+
+  // Offer profile setup after ten seconds of public browsing. Every dismissal
+  // schedules the next reminder at 20s, 30s, 1m, 2m, 5m, 10m and then 30m.
   useEffect(() => {
     if (authInitializing || !isLoggedIn || !firebaseUser?.isAnonymous || !requiresPublicAccountSetup) return;
-    const dismissedKey = `nexora_profile_setup_dismissed_${firebaseUser.uid}`;
-    if (localStorage.getItem(dismissedKey) === 'true') return;
-    const timer = window.setTimeout(() => setShowPublicAccountSetup(true), 10_000);
+    if (showPublicAccountSetup) return;
+    const state = readAnonymousAccountPromptState(accountPromptKey ? localStorage.getItem(accountPromptKey) : null);
+    const delay = state.nextPromptAt === null ? 10_000 : Math.max(0, state.nextPromptAt - Date.now());
+    const timer = window.setTimeout(() => setShowPublicAccountSetup(true), delay);
     return () => window.clearTimeout(timer);
-  }, [authInitializing, isLoggedIn, firebaseUser?.uid, firebaseUser?.isAnonymous, requiresPublicAccountSetup]);
+  }, [accountPromptKey, authInitializing, isLoggedIn, firebaseUser?.isAnonymous, requiresPublicAccountSetup, showPublicAccountSetup]);
 
   const requestProfileSetup = () => {
     if (isLoggedIn && requiresPublicAccountSetup) {
@@ -229,9 +250,11 @@ export default function App() {
           setPendingAuthAction(null);
           const code = (error as { code?: string } | null)?.code;
           window.dispatchEvent(new CustomEvent('toast', {
-            detail: code
-              ? `NEXORA session could not start (${code}). Check your connection and try again.`
-              : 'NEXORA could not start your private session. Please try again.',
+            detail: code === 'permission-denied'
+              ? 'NEXORA signed you in, but Firestore denied profile access. Your session is safe; retry after the database rules are corrected.'
+              : code
+                ? `NEXORA session could not start (${code}). Please retry.`
+                : 'NEXORA could not start your private session. Please try again.',
           }));
         });
       }
@@ -931,7 +954,7 @@ export default function App() {
     // 3. Modals & Overlays
     if (isLogoutConfirming) { setIsLogoutConfirming(false); return true; }
     if (verificationModalDetail) { setVerificationModalDetail(null); return true; }
-    if (showPublicAccountSetup) { setShowPublicAccountSetup(false); setPendingAuthAction(null); return true; }
+    if (showPublicAccountSetup) { dismissPublicAccountSetup(); return true; }
     if (isAiCommandCenterOpen) { setIsAiCommandCenterOpen(false); return true; }
     if (isCreatePostModalOpen) { setIsCreatePostModalOpen(false); return true; }
     if (isCreateMenuOpen) { setIsCreateMenuOpen(false); return true; }
@@ -3314,11 +3337,7 @@ export default function App() {
       {showPublicAccountSetup && requiresPublicAccountSetup && firebaseProfile && (
         <PublicAccountSetup
           user={firebaseProfile}
-          onCancel={() => {
-            if (firebaseUser) localStorage.setItem(`nexora_profile_setup_dismissed_${firebaseUser.uid}`, 'true');
-            setShowPublicAccountSetup(false);
-            setPendingAuthAction(null);
-          }}
+          onCancel={dismissPublicAccountSetup}
           onComplete={(updatedUser) => {
             setCurrentUser(getRichUser(updatedUser));
             setShowPublicAccountSetup(false);
