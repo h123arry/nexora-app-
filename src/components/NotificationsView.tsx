@@ -270,7 +270,7 @@ export default function NotificationsView({
     }
 
     // Interactive custom routing checks
-    if (notif.type === 'comment' || notif.type === 'spark' || notif.type === 'like') {
+    if (notif.type === 'comment' || notif.type === 'spark' || notif.type === 'like' || notif.type === 'repost') {
       // Redirect to Feed, look for element
       window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'feed' } }));
       setTimeout(() => {
@@ -314,7 +314,7 @@ export default function NotificationsView({
       if (n.isArchived) return false;
 
       // Filter settings blocks
-      if (n.type === 'like' && !settingsToggles.likes) return false;
+      if ((n.type === 'like' || n.type === 'spark') && !settingsToggles.likes) return false;
       if (n.type === 'comment' && !settingsToggles.comments) return false;
       if (n.type === 'follow' && !settingsToggles.followers) return false;
       if (n.type === 'mention' && !settingsToggles.mentions) return false;
@@ -326,6 +326,7 @@ export default function NotificationsView({
       if (activeCategory === 'mentions') return n.type === 'mention';
       if (activeCategory === 'comments') return n.type === 'comment';
       if (activeCategory === 'likes') return n.type === 'like' || n.type === 'spark';
+      if (activeCategory === 'reposts') return n.type === 'repost';
       if (activeCategory === 'followers') return n.type === 'follow';
       if (activeCategory === 'profile_views') return n.type === 'profile_view';
       if (activeCategory === 'system') return n.type === 'system';
@@ -617,6 +618,7 @@ export default function NotificationsView({
                       { key: 'likes', label: 'Likes & Sparks' },
                       { key: 'comments', label: 'Comments & Replies' },
                       { key: 'followers', label: 'Followers' },
+                      { key: 'reposts', label: 'Quotes & reposts' },
                       { key: 'mentions', label: 'Mentions (@)' },
                       { key: 'communities', label: 'Communities' },
                       { key: 'events', label: 'Events Registration' },
@@ -719,6 +721,7 @@ export default function NotificationsView({
             { id: 'comments', label: 'Comments' },
             { id: 'likes', label: 'Sparks & Likes' },
             { id: 'followers', label: 'Followers' },
+            { id: 'reposts', label: 'Quotes & reposts' },
             { id: 'profile_views', label: 'Profile Views' },
             { id: 'live', label: 'Live Streams' },
             { id: 'communities', label: 'Communities' },
@@ -900,7 +903,7 @@ export default function NotificationsView({
                                       }
                                     }}
                                   >
-                                    @{notif.username}
+                                    {notif.actorName || `@${notif.username}`}
                                   </button>
                                 )}
                                 <span>{notif.content}</span>
