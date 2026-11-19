@@ -502,27 +502,6 @@ export default function App() {
     };
   }, [firebaseUser?.uid, isLoggedIn]);
 
-  // Public directory queries are deliberately bounded. Hydrate authors missing
-  // from that window directly by UID so public posts never fall back to stale
-  // author labels just because a profile is outside the first directory page.
-  useEffect(() => {
-    let active = true;
-    const missingIds = [...new Set(posts.map(post => post.userId).filter(Boolean))]
-      .filter(uid => !globalUsersMap[uid]);
-    if (!missingIds.length) return;
-    void Promise.all(missingIds.slice(0, 40).map(uid => ProfileService.getPublicProfile(uid)))
-      .then(profiles => {
-        if (!active) return;
-        setGlobalUsersMap(previous => {
-          const next = { ...previous };
-          profiles.forEach(profile => { if (profile?.id) next[profile.id] = profile; });
-          return next;
-        });
-      })
-      .catch(error => console.warn('[NEXORA] Public post author hydration failed.', error));
-    return () => { active = false; };
-  }, [posts, globalUsersMap]);
-
   // Real-time notifications synchronization for active logged-in identity
   useEffect(() => {
     if (!isLoggedIn || !firebaseUser?.uid) return;
@@ -628,6 +607,28 @@ export default function App() {
     localStorage.setItem('nexora_posts', JSON.stringify(realPosts));
     return realPosts;
   });
+
+  // Public directory queries are deliberately bounded. Hydrate authors missing
+  // from that window directly by UID so public posts never fall back to stale
+  // author labels just because a profile is outside the first directory page.
+  useEffect(() => {
+    let active = true;
+    const missingIds = [...new Set(posts.map(post => post.userId).filter(Boolean))]
+      .filter(uid => !globalUsersMap[uid]);
+    if (!missingIds.length) return;
+    void Promise.all(missingIds.slice(0, 40).map(uid => ProfileService.getPublicProfile(uid)))
+      .then(profiles => {
+        if (!active) return;
+        setGlobalUsersMap(previous => {
+          const next = { ...previous };
+          profiles.forEach(profile => { if (profile?.id) next[profile.id] = profile; });
+          return next;
+        });
+      })
+      .catch(error => console.warn('[NEXORA] Public post author hydration failed.', error));
+    return () => { active = false; };
+  }, [posts, globalUsersMap]);
+
   const feedCursorRef = useRef<any>(null);
   const feedHasMoreRef = useRef(false);
   const feedLoadingRef = useRef(false);
