@@ -58,6 +58,12 @@ test('public profile onboarding creates a real username/password credential on t
   assert.match(auth, /ProfileService\.reserveUsername\(current\.uid, username\)/);
 });
 
+test('Google signup does not assign a stock-person avatar when Google has no photo', async () => {
+  const auth = await read('../src/services/firebase/authService.ts');
+  assert.match(auth, /avatar: fbUser\.photoURL \|\| ''/);
+  assert.doesNotMatch(auth, /photo-1535713875002-d1d0cf377fde/);
+});
+
 test('profile edits persist the private profile and update its public projection', async () => {
   const profile = await read('../src/services/firebase/profileService.ts');
   assert.match(profile, /await updateDoc\(docRef, \{ \.\.\.updates, updatedAt: serverTimestamp\(\) \}\)/);
