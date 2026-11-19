@@ -390,8 +390,9 @@ app.get('/api/media/:mediaId', async (req, res) => {
       && storyData?.privacy === 'everyone' && storyExpiryIsActive(storyData?.expiresAt);
     const posts = [...byArray.docs, ...bySingle.docs].map(item => item.data());
     const linkedPublicPost = posts.some(post => post.userId === ownerId && post.audience === 'public'
-      && post.deleted !== true && post.isDeleted !== true && post.hidden !== true && post.isDraft !== true
+      && post.deleted !== true && post.isDeleted !== true && post.hidden !== true && post.isDraft !== true && post.isArchived !== true
       && !['deleted', 'hidden', 'removed', 'rejected', 'restricted', 'draft', 'private', 'suspended'].includes(String(post.status || '').toLowerCase())
+      && !['deleted', 'hidden', 'rejected', 'restricted', 'removed', 'suspended'].includes(String(post.moderationStatus || '').toLowerCase())
       && !['private', 'hidden', 'deleted', 'unavailable'].includes(String(post.visibility || '').toLowerCase()));
     const privacy = (ownerSettings.data()?.privacy || {}) as Record<string, unknown>;
     const status = ownerStatus.data() || {};
