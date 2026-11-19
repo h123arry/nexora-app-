@@ -65,3 +65,17 @@ test('includes profile identity fields and creator links in the public projectio
   assert.equal(projection.socialTwitter, 'https://x.com/example');
   assert.equal(projection.socialInstagram, 'https://instagram.com/example');
 });
+
+
+test('persists status text and emoji in the public profile projection', () => {
+  const projection = createPublicProfileProjection({
+    ...profile,
+    statusText: 'Building something new',
+    statusEmoji: '🚀',
+  } as User);
+
+  assert.equal(projection.statusText, 'Building something new');
+  assert.equal(projection.statusEmoji, '🚀');
+  assert.equal('email' in projection, false);
+  assert.equal('interestDNA' in projection, false);
+});
