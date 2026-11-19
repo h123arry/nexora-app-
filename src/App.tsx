@@ -2081,64 +2081,44 @@ export default function App() {
   };
 
   // 8. Studio profile settings update
-  const handleUpdateProfile = (updatedData: Partial<User>) => {
+  const handleUpdateProfile = async (updatedData: Partial<User>) => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
-      requireAuth(() => handleUpdateProfile(updatedData), 'Complete your NEXORA profile to edit your profile.');
+      requireAuth(() => { void handleUpdateProfile(updatedData); }, 'Complete your NEXORA profile to edit your profile.');
       return;
     }
-    setCurrentUser(prev => {
-      const freshUser = {
-        ...prev,
-        ...updatedData
-      };
 
-      // Invalidate profile cache so ProfileView receives fresh data
-      void import('./services/voh/profileEngine').then(({ ProfileEngine }) => {
-        ProfileEngine.invalidateProfile(freshUser.id);
-      }).catch(error => console.warn('Unable to invalidate profile cache.', error));
+    const ownerId = firebaseUser.uid;
+    // Do not report success or update the visible profile until Firestore and
+    // its public projection have both accepted the authenticated profile edit.
+    await ProfileService.updateProfile(ownerId, updatedData);
+    const freshUser = { ...currentUser, ...updatedData };
 
-      // Update global user map so all views pick up the updated profile instantly
-      setGlobalUsersMap(prevMap => ({
-        ...prevMap,
-        [freshUser.id]: freshUser
-      }));
+    void import('./services/voh/profileEngine').then(({ ProfileEngine }) => {
+      ProfileEngine.invalidateProfile(freshUser.id);
+    }).catch(error => console.warn('Unable to invalidate profile cache.', error));
 
-      // Propagate updates in real-time to posts and comments authored by the user
-      setPosts(prevPosts => {
-        return prevPosts.map(post => {
-          let newPost = { ...post };
-
-          if (post.userId === prev.id) {
-            if (updatedData.name !== undefined) newPost.name = updatedData.name;
-            if (updatedData.username !== undefined) newPost.username = updatedData.username;
-            if (updatedData.avatar !== undefined) newPost.avatar = updatedData.avatar;
-            if (updatedData.isVerified !== undefined) newPost.isVerified = updatedData.isVerified;
-          }
-
-          if (post.comments && post.comments.length > 0) {
-            newPost.comments = post.comments.map(comment => {
-              if (comment.userId === prev.id) {
-                const nextComment = { ...comment };
-                if (updatedData.name !== undefined) nextComment.name = updatedData.name;
-                if (updatedData.username !== undefined) nextComment.username = updatedData.username;
-                if (updatedData.avatar !== undefined) nextComment.avatar = updatedData.avatar;
-                return nextComment;
-              }
-              return comment;
-            });
-          }
-
-          return newPost;
-        });
-      });
-
-      // Save to database/sync engine & ProfileService
-      if (isLoggedIn && firebaseUser?.uid === freshUser.id) {
-        ProfileService.updateProfile(freshUser.id, updatedData).catch(err => console.error('Error updating profile in ProfileService:', err));
+    setCurrentUser(prev => ({ ...prev, ...updatedData }));
+    setGlobalUsersMap(prevMap => ({ ...prevMap, [freshUser.id]: freshUser }));
+    setPosts(prevPosts => prevPosts.map(post => {
+      let newPost = { ...post };
+      if (post.userId === ownerId) {
+        if (updatedData.name !== undefined) newPost.name = updatedData.name;
+        if (updatedData.username !== undefined) newPost.username = updatedData.username;
+        if (updatedData.avatar !== undefined) newPost.avatar = updatedData.avatar;
+        if (updatedData.isVerified !== undefined) newPost.isVerified = updatedData.isVerified;
       }
-
-      return freshUser;
-    });
+      if (post.comments?.length) {
+        newPost.comments = post.comments.map(comment => {
+          if (comment.userId !== ownerId) return comment;
+          const nextComment = { ...comment };
+          if (updatedData.name !== undefined) nextComment.name = updatedData.name;
+          if (updatedData.username !== undefined) nextComment.username = updatedData.username;
+          if (updatedData.avatar !== undefined) nextComment.avatar = updatedData.avatar;
+          return nextComment;
+        });
+      }
+      return newPost;
+    }));
   };
 
   // 8.5. Identity Switcher
