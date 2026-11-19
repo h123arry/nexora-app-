@@ -14,7 +14,6 @@ import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
 import OriginAttributionPreviewModal from './OriginAttributionPreviewModal';
 
-
 interface FeedPostCardProps {
   post: Post;
   index: number;
@@ -201,19 +200,13 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               onViewProfile?.(post.userId || post.username);
             }}
           >
-            {post.avatar ? (
-              <img
-                src={post.avatar}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/40"
-              />
-            ) : (
-              <span aria-hidden="true" className="w-10 h-10 rounded-full ring-2 ring-violet-500/40 bg-violet-950/70 text-violet-100 grid place-items-center text-sm font-bold">
-                {(post.name || post.username || 'N').trim().charAt(0).toUpperCase()}
-              </span>
-            )}
+            <img
+              src={post.avatar}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/40"
+            />
           </button>
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
