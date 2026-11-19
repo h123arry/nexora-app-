@@ -25,7 +25,17 @@ export async function assertCallableSessionActive(
 ): Promise<void> {
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in to continue.');
   // A Firestore read error must reject the callable rather than bypass revocation.
-  const snapshot = await db.collection('accountStatus').doc(uid).get();
+  let snapshot;
+  try {
+    snapshot = await db.collection('accountStatus').doc(uid).get();
+  } catch (error) {
+    const code = (error as { code?: unknown } | null)?.code;
+    console.error('[NEXORA] Callable session status lookup failed', {
+      code: typeof code === 'string' ? code : 'unknown',
+    });
+    // Fail closed, but distinguish an unavailable security store from a bad sign-in.
+    throw new HttpsError('unavailable', 'NEXORA could not verify your account security status. Please retry shortly.');
+  }
   if (!callableSessionStatusAllows(snapshot.data(), authTime)) {
     throw new HttpsError('unauthenticated', 'Your session is being secured or has been revoked. Sign in again to continue.');
   }
