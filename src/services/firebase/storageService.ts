@@ -64,7 +64,7 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
   const contentType = file.type.split(';')[0].trim().toLowerCase();
   const mediaId = normalizeMediaId(options.mediaId || crypto.randomUUID());
   const fileName = safeFileName(options.fileName || (file instanceof File ? file.name : 'upload'));
-  const token = await user.getIdToken();
+  // Force-refresh after auth hydration so the API never receives a stale cached ID token.\n  const token = await user.getIdToken(true);
   const intentResponse = await fetch('/api/media/upload-intent', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
