@@ -86,9 +86,17 @@ export const buyNexGiftForFriend = onCall({ maxInstances: 20 }, async request =>
       }
       const senderSettings = senderPreferences.data() || {};
       const recipientSettings = recipientPreferences.data() || {};
-      const senderBlocks = Array.isArray(senderSettings.messaging?.blockedUserIds) ? senderSettings.messaging.blockedUserIds : [];
-      const recipientBlocks = Array.isArray(recipientSettings.messaging?.blockedUserIds) ? recipientSettings.messaging.blockedUserIds : [];
-      if (senderBlocks.includes(recipientId) || recipientBlocks.includes(senderId)) {
+      const senderBlocks = [
+        ...(Array.isArray(senderSettings.messaging?.blockedUserIds) ? senderSettings.messaging.blockedUserIds : []),
+        ...(Array.isArray(senderSettings.privacy?.blockedUserIds) ? senderSettings.privacy.blockedUserIds : []),
+      ];
+      const recipientBlocks = [
+        ...(Array.isArray(recipientSettings.messaging?.blockedUserIds) ? recipientSettings.messaging.blockedUserIds : []),
+        ...(Array.isArray(recipientSettings.privacy?.blockedUserIds) ? recipientSettings.privacy.blockedUserIds : []),
+      ];
+      const follows = await tx.get(db.collection('follows').doc(senderId + '_' + recipientId));
+      if (senderBlocks.includes(recipientId) || recipientBlocks.includes(senderId)
+        || (recipientSettings.privacy?.isPrivate === true && !follows.exists)) {
         throw new HttpsError('permission-denied', 'You cannot buy a gift for this member.');
       }
 
