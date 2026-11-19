@@ -1134,10 +1134,10 @@ export default function CommunitiesHubView({
           >
             <div className="bg-[#090515] border border-white/10 p-5 rounded-3xl space-y-4">
               <h3 className="text-sm font-black font-mono tracking-widest text-violet-400 uppercase flex items-center gap-1.5">
-                <Settings className="w-4 h-4" /> Your Managed Entity Hub
+                <Settings className="w-4 h-4" /> Your Pages
               </h3>
               <p className="text-xs text-current/60 leading-relaxed font-sans">
-                Establish professional pages to represent business entities, schools, entertainment portfolios, or sports rosters. Seamless switching allows you to build, publish, and interact natively as your organization.
+                Create a Page for your business, school, sports team or creative work. Switch between your personal account and your Page whenever you like.
               </p>
 
               <div className="space-y-3">
