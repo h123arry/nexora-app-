@@ -124,35 +124,34 @@ export class ProfileService {
     if (updates.username) {
       await this.reserveUsername(uid, updates.username);
     }
-    const docRef = doc(db, 'users', uid);
-    await updateDoc(docRef, { ...updates, updatedAt: serverTimestamp() });
-    const existing = await this.getProfile(uid);
-    if (existing) {
-      const updatedProfile = { ...existing, ...updates };
-      await setDoc(doc(db, 'publicProfiles', uid), {
-        ...this.toPublicProfile(updatedProfile),
-        location: deleteField(),
+
+    // Commit the private profile and its public projection together. A split
+    // write could leave other users seeing an old name or avatar after the
+    // private profile had already accepted the edit.
+    const privateProfileRef = doc(db, 'users', uid);
+    const publicProfileRef = doc(db, 'publicProfiles', uid);
+    const settingsRef = doc(db, 'users', uid, 'settings', 'preferences');
+    await runTransaction(db, async transaction => {
+      const [privateSnapshot, settingsSnapshot] = await Promise.all([
+        transaction.get(privateProfileRef),
+        transaction.get(settingsRef),
+      ]);
+      if (!privateSnapshot.exists()) {
+        throw new Error('Your profile could not be found. Please sign in again.');
+      }
+
+      const updatedProfile = { ...(privateSnapshot.data() as User), ...updates, id: uid };
+      const locationAudience = settingsSnapshot.get('privacy.profileVisibility.location');
+      const publicProjection = this.toPublicProfile(updatedProfile);
+      transaction.update(privateProfileRef, { ...updates, updatedAt: serverTimestamp() });
+      transaction.set(publicProfileRef, {
+        ...publicProjection,
+        location: locationAudience === 'everyone' && typeof updatedProfile.location === 'string' && updatedProfile.location.trim()
+          ? updatedProfile.location.trim()
+          : deleteField(),
         interestDNA: deleteField(),
       }, { merge: true });
-      // Resolve the location policy and private value together so concurrent
-      // profile edits and privacy changes cannot publish a stale location.
-      const settingsRef = doc(db, 'users', uid, 'settings', 'preferences');
-      const privateProfileRef = doc(db, 'users', uid);
-      const publicProfileRef = doc(db, 'publicProfiles', uid);
-      await runTransaction(db, async transaction => {
-        const [settingsSnapshot, privateProfileSnapshot] = await Promise.all([
-          transaction.get(settingsRef),
-          transaction.get(privateProfileRef),
-        ]);
-        const locationAudience = settingsSnapshot.get('privacy.profileVisibility.location');
-        const location = privateProfileSnapshot.get('location');
-        transaction.set(publicProfileRef, {
-          location: locationAudience === 'everyone' && typeof location === 'string' && location.trim()
-            ? location.trim()
-            : deleteField(),
-        }, { merge: true });
-      });
-    }
+    });
   }
 
   static async getOrCreateProfile(firebaseUser: FirebaseUser, additionalData?: Partial<User>): Promise<User> {
