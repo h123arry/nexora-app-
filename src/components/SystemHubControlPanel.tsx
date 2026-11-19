@@ -184,13 +184,13 @@ export default function SystemHubControlPanel({
     const nextVal = !isOffline;
     setIsOffline(nextVal);
     playHapticHum(nextVal ? 110 : 280, 0.15);
-    speakAnnouncement(nextVal ? "Offline mode is on. Changes will wait until you're connected." : "You're back online. Waiting changes have been sent.");
+    speakAnnouncement(nextVal ? "Offline mode is on. Changes will wait until you’re connected." : "You’re back online. Waiting changes have been sent.");
     
     // Dispatch custom event to App to show the toast
     window.dispatchEvent(new CustomEvent('toast', { 
       detail: nextVal 
         ? '🔌 Offline mode is on. Drafts will be saved on this device.' 
-        : '📶 You're back online. Your drafts have been sent.' 
+        : '📶 You’re back online. Your drafts have been sent.' 
     }));
   };
 
@@ -708,7 +708,7 @@ export default function SystemHubControlPanel({
                     </div>
                     <p className="text-[10px] text-zinc-400 leading-normal font-sans">
                       {isOffline 
-                        ? 'Offline mode is on. New posts and drafts will be saved on this device until you're connected again.' 
+                        ? 'Offline mode is on. New posts and drafts will be saved on this device until you’re connected again.' 
                         : 'Online. Interfacing live client with blockchain consensus and AI mesh servers.'}
                     </p>
                   </div>
