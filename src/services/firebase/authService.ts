@@ -349,10 +349,11 @@ export class AuthService {
           EmailAuthProvider.credential(cleanEmail, password)
         );
         fbUser = linked.user;
-      } else if (!existingUser) {
-        fbUser = (await createUserWithEmailAndPassword(auth, cleanEmail, password)).user;
       } else {
-        throw new Error('You are already signed in. Add an email from account settings or sign out before creating another account.');
+        // Preserve the established standalone signup behaviour when there is
+        // no anonymous session to upgrade. Firebase returns email-already-in-use
+        // for duplicates, rather than silently reusing another account.
+        fbUser = (await createUserWithEmailAndPassword(auth, cleanEmail, password)).user;
       }
     } catch (error) {
       throw this.publicAuthError(error);
