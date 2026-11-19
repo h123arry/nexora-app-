@@ -44,8 +44,11 @@ if (!(await exists(generatedIcon))) {
   throw new Error('Expected generated PWA asset public/icons/icon-512.png was not found.');
 }
 
-// Keep one stable logo URL for UI, share cards, and legacy notification payloads.
-await copyFile(generatedIcon, join(publicDir, 'nexora-mark.png'));
+// Keep the UI brand mark sourced from the original approved PNG so its
+// transparent canvas is preserved. Generated app icons intentionally receive
+// platform backgrounds and must not be reused as the in-app logo.
+const approvedLogo = join(root, 'assets', 'logo.png');
+await copyFile(approvedLogo, join(publicDir, 'nexora-mark.png'));
 await copyFile(generatedIcon, join(publicDir, 'logo.png'));
 await rm(join(publicDir, 'nexora-mark.svg'), { force: true });
 await rm(join(publicDir, 'logo.svg'), { force: true });
