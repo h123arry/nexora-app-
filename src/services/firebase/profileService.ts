@@ -118,11 +118,18 @@ export class ProfileService {
     if (!auth.currentUser || auth.currentUser.uid !== uid) {
       throw new Error('Only the signed-in account owner can update this profile.');
     }
-    if (Object.prototype.hasOwnProperty.call(updates, 'isVerified')) {
+    // Firestore rejects undefined values. Optional profile fields are absent
+    // on older/anonymous accounts, so omit them instead of writing undefined.
+    // This prevents an unrelated edit from failing when a legacy account has
+    // no display-name or username change timestamp yet.
+    const safeUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([, value]) => value !== undefined),
+    ) as Partial<User>;
+    if (Object.prototype.hasOwnProperty.call(safeUpdates, 'isVerified')) {
       throw new Error('Contact verification status is managed by Firebase Authentication and cannot be changed from profile settings.');
     }
-    if (updates.username) {
-      await this.reserveUsername(uid, updates.username);
+    if (safeUpdates.username) {
+      await this.reserveUsername(uid, safeUpdates.username);
     }
 
     // Commit the private profile and its public projection together. A split
@@ -140,10 +147,12 @@ export class ProfileService {
         throw new Error('Your profile could not be found. Please sign in again.');
       }
 
-      const updatedProfile = { ...(privateSnapshot.data() as User), ...updates, id: uid };
+      const updatedProfile = { ...(privateSnapshot.data() as User), ...safeUpdates, id: uid };
       const locationAudience = settingsSnapshot.get('privacy.profileVisibility.location');
-      const publicProjection = this.toPublicProfile(updatedProfile);
-      transaction.update(privateProfileRef, { ...updates, updatedAt: serverTimestamp() });
+      const publicProjection = Object.fromEntries(
+        Object.entries(this.toPublicProfile(updatedProfile)).filter(([, value]) => value !== undefined),
+      );
+      transaction.update(privateProfileRef, { ...safeUpdates, updatedAt: serverTimestamp() });
       transaction.set(publicProfileRef, {
         ...publicProjection,
         location: locationAudience === 'everyone' && typeof updatedProfile.location === 'string' && updatedProfile.location.trim()

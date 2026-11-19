@@ -61,8 +61,15 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let inFlightHydration: { key: string; promise: Promise<User | null> } | null = null;
     let anonymousBootstrapStarted = false;
     const persistenceReady = setPersistence(auth, browserLocalPersistence);
+    let active = true;
+    let unsubscribe: (() => void) | null = null;
 
-    const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
+    // Do not observe the initial auth state until Firebase has restored the
+    // persisted session. Otherwise a transient pre-hydration null can trigger
+    // anonymous bootstrap and race the returning member's real identity.
+    void persistenceReady.then(() => {
+      if (!active) return;
+      unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
       const currentSequence = ++sequence;
       const nextUid = fbUser?.uid ?? null;
 
@@ -136,11 +143,19 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           inFlightHydration = null;
         }
       }
+      });
+    }).catch((persistenceError) => {
+      const code = (persistenceError as { code?: string } | null)?.code || 'auth-persistence-unavailable';
+      if (active) {
+        setError(`Unable to restore your NEXORA sign-in session (${code}). Please retry.`);
+        setInitializing(false);
+      }
     });
 
     return () => {
+      active = false;
       sequence++;
-      unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 
