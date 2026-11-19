@@ -39,6 +39,21 @@ export class ProfileService {
     }
   }
 
+  /** Resolve a public profile by its canonical username claim without exposing private user documents. */
+  static async getPublicProfileByUsername(username: string): Promise<User | null> {
+    if (!db) return null;
+    const clean = normalizeUsername(username);
+    if (!clean) return null;
+    try {
+      const claim = await getDoc(doc(db, 'usernames', clean));
+      const uid = claim.exists() ? claim.data().userId : null;
+      if (typeof uid !== 'string' || !uid) return null;
+      return this.getPublicProfile(uid);
+    } catch {
+      return null;
+    }
+  }
+
   /** Public identity is exposed only after a server-authorized review approves the claim. */
   static async getPublicIdentityVerification(uid: string): Promise<{ identityType: 'individual' | 'creator' | 'public_figure' | 'organization'; displayName: string } | null> {
     if (!db || !uid) return null;
@@ -157,6 +172,15 @@ export class ProfileService {
 
   private static async loadOrCreateProfile(firebaseUser: FirebaseUser, additionalData?: Partial<User>): Promise<User> {
     let profile = await this.getProfile(firebaseUser.uid);
+    if (profile) {
+      // Firebase Auth is authoritative for email and verification state; do not
+      // write these protected fields from the client into the private profile.
+      profile = {
+        ...profile,
+        ...(firebaseUser.email ? { email: firebaseUser.email } : {}),
+        isVerified: firebaseUser.emailVerified,
+      };
+    }
     if (!profile) {
       // Approved anonymous beta members receive a complete, durable profile
       // immediately. Reserve the deterministic handle first so overlapping

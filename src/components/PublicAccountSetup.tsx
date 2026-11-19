@@ -10,9 +10,10 @@ interface PublicAccountSetupProps {
   onComplete: (user: User) => void;
   onCancel?: () => void;
   onSwitchToLogin?: () => void;
+  onSwitchToEmailSignup?: () => void;
 }
 
-export default function PublicAccountSetup({ user, onComplete, onCancel, onSwitchToLogin }: PublicAccountSetupProps) {
+export default function PublicAccountSetup({ user, onComplete, onCancel, onSwitchToLogin, onSwitchToEmailSignup }: PublicAccountSetupProps) {
   const [name, setName] = useState(user.name === 'NEXORA Member' ? '' : user.name);
   const [username, setUsername] = useState(user.username.startsWith('member_') ? '' : user.username);
   const [password, setPassword] = useState('');
@@ -74,6 +75,7 @@ export default function PublicAccountSetup({ user, onComplete, onCancel, onSwitc
         {error && <p role="alert" className="mb-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-xs text-red-200">{error}</p>}
         <button disabled={busy} type="submit" className="w-full rounded-xl bg-violet-600 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60">{busy ? 'Creating your account…' : 'Enter NEXORA'}</button>
         <p className="mt-4 text-center text-[11px] text-slate-500">Your username is public. Keep your password safe so you can sign in again.</p>
+        {onSwitchToEmailSignup && <button type="button" onClick={onSwitchToEmailSignup} className="mt-3 w-full rounded-xl px-4 py-2 text-xs font-semibold text-violet-300 hover:bg-white/5">Prefer email and password? Sign up with email</button>}
         {onSwitchToLogin && <button type="button" onClick={onSwitchToLogin} className="mt-3 w-full rounded-xl px-4 py-2 text-xs font-semibold text-violet-300 hover:bg-white/5">Already have an account? Log in</button>}
         {onCancel && <button type="button" onClick={onCancel} className="mt-1 w-full rounded-xl px-4 py-2 text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white">Not now, keep browsing</button>}
       </form>

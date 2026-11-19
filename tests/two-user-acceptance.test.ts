@@ -28,6 +28,7 @@ const testPassword = 'Nexora-Two-User-Test-42!';
 const createdAccounts: Array<{ email: string; uid: string }> = [];
 
 async function registerAccount(label: 'alice' | 'bob') {
+  await signOut(auth);
   const nonce = `${Date.now()}${Math.random().toString(36).slice(2, 7)}`;
   const email = `nexora-${label}-${nonce}@example.test`;
   const username = `${label.slice(0, 2)}${nonce.slice(-10)}`.toLowerCase();

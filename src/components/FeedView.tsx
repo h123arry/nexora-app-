@@ -335,7 +335,7 @@ export default function FeedView({
 
   useEffect(() => {
     setVotedPolls({});
-    if (!currentUser?.id || currentUser.id === 'guest_visitor_id') return;
+    if (!currentUser?.id || currentUser.id === 'public_explore_session') return;
     const postIds = posts.filter(post => !!post.interactivePoll).slice(0, 60).map(post => post.id);
     if (!postIds.length) return;
     let active = true;
@@ -347,7 +347,7 @@ export default function FeedView({
   }, [currentUser.id, posts]);
 
   const handleVotePoll = async (postId: string, optionId: string) => {
-    if (!currentUser?.id || currentUser.id === 'guest_visitor_id') {
+    if (!currentUser?.id || currentUser.id === 'public_explore_session') {
       onRequireAuth?.();
       return;
     }
@@ -513,7 +513,7 @@ export default function FeedView({
   const [notInterestedTags, setNotInterestedTags] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_not_interested_tags', currentUser.id, []));
   const feedPreferencesHydratedRef = useRef(false);
   const impressedPostIdsRef = useRef<Set<string>>(new Set());
-  const [recommendationsPersonalizationEnabled, setRecommendationsPersonalizationEnabled] = useState(() => currentUser.id === 'guest_visitor_id');
+  const [recommendationsPersonalizationEnabled, setRecommendationsPersonalizationEnabled] = useState(() => currentUser.id === 'public_explore_session');
   const recommendationSyncTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -535,7 +535,7 @@ export default function FeedView({
   // authoritative feed controls from owner-scoped Firestore settings.
   useEffect(() => {
     feedPreferencesHydratedRef.current = false;
-    if (!currentUser.id || currentUser.id === 'guest_visitor_id' || auth.currentUser?.uid !== currentUser.id) return;
+    if (!currentUser.id || currentUser.id === 'public_explore_session' || auth.currentUser?.uid !== currentUser.id) return;
     let cancelled = false;
     SettingsService.getSettings(currentUser.id).then(settings => {
       if (cancelled) return;
@@ -564,7 +564,7 @@ export default function FeedView({
     payload: Parameters<typeof recordRecommendationEvent>[1],
   ) => {
     if (!recommendationsPersonalizationEnabled) return;
-    if (currentUser.id !== 'guest_visitor_id' && !feedPreferencesHydratedRef.current) return;
+    if (currentUser.id !== 'public_explore_session' && !feedPreferencesHydratedRef.current) return;
     recordRecommendationEvent(type, payload);
     if (auth.currentUser?.uid !== currentUser.id) return;
     if (recommendationSyncTimerRef.current) window.clearTimeout(recommendationSyncTimerRef.current);
@@ -714,7 +714,7 @@ export default function FeedView({
     writeUserScopedJson(localStorage, 'nexora_not_interested_tags', feedCacheOwnerId, notInterestedTags);
   }, [notInterestedTags, feedCacheOwnerId]);
   useEffect(() => {
-    if (!feedPreferencesHydratedRef.current || currentUser.id === 'guest_visitor_id' || auth.currentUser?.uid !== currentUser.id) return;
+    if (!feedPreferencesHydratedRef.current || currentUser.id === 'public_explore_session' || auth.currentUser?.uid !== currentUser.id) return;
     const timer = window.setTimeout(() => {
       void SettingsService.updateFeed(currentUser.id, {
         tab: feedTab,
@@ -1821,7 +1821,7 @@ export default function FeedView({
                 <span className="mt-0.5 sm:mt-1 block truncate text-[11px] font-medium text-slate-500">The World&apos;s Living Social Network</span>
               </div>
             </div>
-            <span className={`hidden items-center gap-1.5 text-[10px] font-semibold sm:flex ${isOffline ? 'text-amber-300/80' : 'text-emerald-300/80'}`}><span className={`h-1.5 w-1.5 rounded-full ${isOffline ? 'bg-amber-400' : 'bg-emerald-400'}`} />{isOffline ? 'Offline' : currentUser.id === 'guest_visitor_id' || currentUser.username === 'visitor' ? 'Preview feed' : 'Online'}</span>
+            <span className={`hidden items-center gap-1.5 text-[10px] font-semibold sm:flex ${isOffline ? 'text-amber-300/80' : 'text-emerald-300/80'}`}><span className={`h-1.5 w-1.5 rounded-full ${isOffline ? 'bg-amber-400' : 'bg-emerald-400'}`} />{isOffline ? 'Offline' : currentUser.id === 'public_explore_session' || currentUser.id === 'public_explore_session' ? 'Preview feed' : 'Online'}</span>
           </div>
           {/* Categories + utilities row */}
           <div className="flex items-center justify-between gap-1.5 px-3 sm:px-6 py-1 sm:gap-2 sm:py-2">
@@ -3202,7 +3202,7 @@ export default function FeedView({
                 {/* Report post */}
                 <button
                   onClick={() => {
-                    if (currentUser.id === 'guest_visitor_id' || currentUser.username === 'visitor') {
+                    if (currentUser.id === 'public_explore_session' || currentUser.id === 'public_explore_session') {
                       setContextualMenuPost(null);
                       onRequireAuth?.();
                       return;

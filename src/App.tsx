@@ -1,6 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { getDevicePerformanceProfile } from './utils/devicePerformance';
-import { playNexoraSound } from './services/soundExperience';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, HelpCircle, X, ShieldCheck, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward, Compass } from 'lucide-react';
 import VohIcon from './components/VohIcon';
@@ -18,6 +17,7 @@ import {
 
 import { 
   getRichUser, 
+  getSafeAvatar,
   followUserDb, 
   unfollowUserDb, 
   createPostDb, 
@@ -73,6 +73,7 @@ import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
 const FeedView = lazy(() => import('./components/FeedView'));
 const ProfileView = lazy(() => import('./components/ProfileView'));
+const AuthView = lazy(() => import('./components/AuthView'));
 const NotificationsView = lazy(() => import('./components/NotificationsView'));
 const WorldPulseView = lazy(() => import('./components/WorldPulseView'));
 const MatrixView = lazy(() => import('./components/MatrixView'));
@@ -174,18 +175,18 @@ export default function App() {
   }, [firebaseUser, isLoggedIn]);
 
   const [currentUser, setCurrentUser] = useState<User>(() => getRichUser({
-      id: 'guest_visitor_id',
-      username: 'visitor',
-      name: 'Nexora Visitor',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      bio: 'Guest visitor browsing Nexora network.',
-      location: 'Earth Orbit',
-      website: 'https://nexora.app',
+      id: 'public_explore_session',
+      username: 'explore',
+      name: 'Explore NEXORA',
+      avatar: '/nexora-mark.png',
+      bio: 'Explore public posts. Sign in to create your profile and connect with the NEXORA community.',
+      location: '',
+      website: '',
       followers: 0,
       following: 0,
       sparks: 0,
       isVerified: false,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+      coverImage: '',
       joinedDate: 'Joined 2026',
       reputationPoints: 0,
       reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
@@ -214,12 +215,13 @@ export default function App() {
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
 
   const [showPublicAccountSetup, setShowPublicAccountSetup] = useState(false);
+  const [showEmailAuth, setShowEmailAuth] = useState(false);
   const [showUsernameLogin, setShowUsernameLogin] = useState(false);
   const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
 
   // Public browsing is the first experience. Ask for account details only when
-  // the visitor attempts an action that requires a complete public profile.
+  // an unauthenticated user attempts an action that requires a complete public profile.
 
   const accountPromptKey = firebaseUser?.uid ? `nexora_profile_setup_prompt_${firebaseUser.uid}` : null;
 
@@ -252,9 +254,12 @@ export default function App() {
   };
 
   const requireAuth = (action: () => void, _reason?: string) => {
-    if (!isLoggedIn) {
+    // A loaded Firebase profile can become available one render before the
+    // app-level currentUser state catches up. Never open media/create actions
+    // with a stale guest UID during that transition.
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       setPendingAuthAction(() => action);
-      if (!authInitializing) {
+      if (!authInitializing && !isLoggedIn) {
         void retryProfileLoad().catch((error) => {
           setPendingAuthAction(null);
           const code = (error as { code?: string } | null)?.code;
@@ -364,11 +369,11 @@ export default function App() {
     localStorage.removeItem('nexora_user');
     localStorage.removeItem('nexora_logged_in');
     setCurrentUser(getRichUser({
-      id: 'guest_visitor_id', username: 'visitor', name: 'Nexora Visitor',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      bio: 'Guest visitor browsing Nexora network.', location: 'Earth Orbit', website: 'https://nexora.app',
+      id: 'public_explore_session', username: 'explore', name: 'Explore NEXORA',
+      avatar: '/nexora-mark.png',
+      bio: 'Explore public posts. Sign in to create your profile and connect with the NEXORA community.', location: '', website: '',
       followers: 0, following: 0, sparks: 0, isVerified: false,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+      coverImage: '',
       joinedDate: 'Joined 2026', reputationPoints: 0,
       reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
       interestDNA: {}, skills: []
@@ -376,7 +381,7 @@ export default function App() {
   }, [authInitializing, isLoggedIn, firebaseUser?.uid, firebaseProfile]);
 
   useEffect(() => {
-    if (!isLoggedIn || !pendingAuthAction) return;
+    if (!isLoggedIn || !pendingAuthAction || !firebaseUser || currentUser.id !== firebaseUser.uid) return;
     if (requiresPublicAccountSetup) {
       setShowPublicAccountSetup(true);
       return;
@@ -385,11 +390,11 @@ export default function App() {
     setPendingAuthAction(null);
     action();
     window.dispatchEvent(new CustomEvent('toast', { detail: 'You’re ready to participate on NEXORA.' }));
-  }, [isLoggedIn, pendingAuthAction, requiresPublicAccountSetup]);
+  }, [isLoggedIn, pendingAuthAction, requiresPublicAccountSetup, firebaseUser?.uid, currentUser.id]);
 
   const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
   // Do not place a blocking onboarding modal over the public feed on first open.
-  // Visitors can explore immediately; participation prompts provide contextual setup.
+  // Public users can explore immediately; participation prompts provide contextual setup.
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const completeOnboarding = () => {
@@ -494,7 +499,12 @@ export default function App() {
       if (dbUsers) {
         setGlobalUsersMap(prev => {
           const newMap = { ...prev };
-          dbUsers.forEach(u => newMap[u.id] = u);
+          dbUsers.forEach(u => {
+            newMap[u.id] = {
+              ...u,
+              avatar: getSafeAvatar(u.avatar, u.name || u.username),
+            };
+          });
           return newMap;
         });
       }
@@ -605,11 +615,16 @@ export default function App() {
         } else {
           cTime = new Date(cParsed).toISOString();
         }
-        return { ...c, timestamp: cTime };
+        return {
+          ...c,
+          avatar: getSafeAvatar(c.avatar, c.name || c.username),
+          timestamp: cTime,
+        };
       });
       
       return {
         ...post,
+        avatar: getSafeAvatar(post.avatar, post.name || post.username),
         timestamp: permanentTime,
         createdAt: post.createdAt || permanentTime,
         comments
@@ -1310,7 +1325,6 @@ export default function App() {
       const customEvent = e as CustomEvent;
       const message = customEvent.detail;
       if (!message) return;
-      playNexoraSound('interface.confirmation');
       
       const id = crypto.randomUUID();
       setToasts(prev => [...prev, { id, message }]);
@@ -1794,7 +1808,10 @@ export default function App() {
     communityName?: string,
     postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string; mediaAssetIds?: string[]; publicationId?: string; signal?: AbortSignal }
   ): Promise<string> => {
-    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+    const publisher = firebaseProfile && firebaseUser && firebaseProfile.id === firebaseUser.uid
+      ? getRichUser(firebaseProfile)
+      : currentUser;
+    if (!isLoggedIn || !firebaseUser || publisher.id !== firebaseUser.uid) {
       throw new Error('Please finish signing in before sharing your post.');
     }
     if (isOffline || !navigator.onLine) {
@@ -1807,11 +1824,11 @@ export default function App() {
     const postId = `post-${postDetails?.publicationId || crypto.randomUUID()}`;
     const newPost: Post = {
       id: postId,
-      userId: currentUser.id,
-      username: currentUser.username,
-      name: currentUser.name,
-      avatar: currentUser.avatar,
-      isVerified: currentUser.isVerified || false,
+      userId: publisher.id,
+      username: publisher.username,
+      name: publisher.name,
+      avatar: publisher.avatar,
+      isVerified: publisher.isVerified || false,
       content,
       image: imageUrl,
       imageFilter,
@@ -1856,7 +1873,7 @@ export default function App() {
     else if (imageUrl || (images && images.length > 0)) postType = 'media_upload';
     else if (isVoice || voiceAudioUrl) postType = 'voice_publish';
     else if (opportunityType) postType = 'pulse_create';
-    createPostDb(currentUser.id, postId, postType);
+    createPostDb(publisher.id, postId, postType);
     return postId;
   };
 
@@ -1866,15 +1883,18 @@ export default function App() {
     onProgress?: (progress: number) => void,
     signal?: AbortSignal,
   ): Promise<string> => {
-    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+    const publisher = firebaseProfile && firebaseUser && firebaseProfile.id === firebaseUser.uid
+      ? getRichUser(firebaseProfile)
+      : currentUser;
+    if (!isLoggedIn || !firebaseUser || publisher.id !== firebaseUser.uid) {
       throw new Error('Please finish signing in before sharing your story.');
     }
     if (isOffline || !navigator.onLine) {
       throw new Error('You are offline. Reconnect before sharing your story.');
     }
     return file
-      ? createMediaStory(currentUser, file, caption, onProgress, signal)
-      : createTextStory(currentUser, caption);
+      ? createMediaStory(publisher, file, caption, onProgress, signal)
+      : createTextStory(publisher, caption);
   };
 
   const handleRemovePost = (postId: string) => {
@@ -2013,7 +2033,40 @@ export default function App() {
       }
     }
 
+    // Resolve direct public links from the canonical username claim when the
+    // profile is not already present in the local creator/post cache.
     if (!finalUserToView) {
+      const looksLikeFirebaseUid = /^[A-Za-z0-9_-]{21,}$/.test(userIdOrUsername);
+      finalUserToView = looksLikeFirebaseUid
+        ? await ProfileService.getPublicProfile(userIdOrUsername)
+        : await ProfileService.getPublicProfileByUsername(cleanIdOrUser);
+    }
+
+    if (!finalUserToView) {
+      if (!isLoggedIn || requiresPublicAccountSetup) {
+        requireAuth(() => {
+          void (async () => {
+            const looksLikeFirebaseUid = /^[A-Za-z0-9_-]{21,}$/.test(userIdOrUsername);
+            const requestedProfile = looksLikeFirebaseUid
+              ? await ProfileService.getPublicProfile(userIdOrUsername)
+              : await ProfileService.getPublicProfileByUsername(cleanIdOrUser);
+            if (!requestedProfile) {
+              // The link does not belong to an existing member. After signup,
+              // open the new member's own empty profile instead of retrying a
+              // nonexistent profile.
+              navigateTo('profile', null);
+              return;
+            }
+            const { ProfileEngine } = await import('./services/voh/profileEngine');
+            const instantUser = ProfileEngine.getProfileInstantly(requestedProfile, freshUser => setViewedUser(freshUser));
+            navigateTo('profile', instantUser);
+          })().catch(error => {
+            console.warn('Unable to resume profile navigation after account setup.', error);
+            navigateTo('profile', null);
+          });
+        }, 'Create your NEXORA account to open this profile.');
+        return;
+      }
       window.dispatchEvent(new CustomEvent('toast', { detail: 'This profile is unavailable or could not be loaded.' }));
       return;
     }
@@ -2046,12 +2099,12 @@ export default function App() {
           name: postWithUser.name,
           avatar: postWithUser.avatar,
           bio: 'Broadcaster Node',
-          location: 'Earth Orbit',
+          location: '',
           website: '',
           followers: 12,
           following: 8,
           isVerified: false,
-          coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+          coverImage: '',
           joinedDate: 'Joined June 2026',
           reputationPoints: 100,
           reputationBreakdown: { contributions: 10, helpfulness: 20, missionsCompleted: 0, skillsVerified: 70 },
@@ -2256,7 +2309,7 @@ export default function App() {
 
   // Public browsing must not wait for Firebase's silent anonymous bootstrap.
   // Only hide a stale signed-in profile while the identity is being switched.
-  const staleAccountVisible = currentUser.id !== 'guest_visitor_id' && currentUser.id !== firebaseUser?.uid;
+  const staleAccountVisible = currentUser.id !== 'public_explore_session' && currentUser.id !== firebaseUser?.uid;
   if (staleAccountVisible) {
     return <div className="min-h-screen flex items-center justify-center bg-[#07060b]"><NexoraLoader center label="Restoring your NEXORA profile…" /></div>;
   }
@@ -2478,13 +2531,13 @@ export default function App() {
                         <UserIcon className="h-7 w-7 text-violet-300" />
                       </div>
                       <h2 className="text-lg font-bold">Your profile starts with you</h2>
-                      <p className="max-w-md text-sm text-zinc-400">Sign in or complete your NEXORA account setup to open your profile. There is no visitor profile to display.</p>
+                      <p className="max-w-md text-sm text-zinc-400">Your profile is not set up yet. Create your NEXORA account to start building it.</p>
                       <button
                         type="button"
                         className="rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-violet-500"
                         onClick={() => requireAuth(() => navigateTo('profile', null), 'Sign in or complete your NEXORA account setup to open your profile.')}
                       >
-                        Continue
+                        Create account
                       </button>
                     </div>
                   ) : activeTab === 'profile' && (
@@ -2702,7 +2755,8 @@ export default function App() {
         {isCreatePostModalOpen && (
           <Suspense fallback={null}>
           <MediaCreationEngine
-            currentUser={currentUser}
+            currentUser={isLoggedIn && firebaseProfile && firebaseUser?.uid === firebaseProfile.id ? getRichUser(firebaseProfile) : currentUser}
+            authenticatedUserId={firebaseUser?.uid || ''}
             onClose={handleCloseCreateModal}
             onAddPost={handleAddPost}
             onPublishPost={handlePublishPost}
@@ -3519,6 +3573,7 @@ export default function App() {
           user={firebaseProfile}
           onCancel={dismissPublicAccountSetup}
           onSwitchToLogin={() => { setShowPublicAccountSetup(false); setShowUsernameLogin(true); }}
+          onSwitchToEmailSignup={() => { setShowPublicAccountSetup(false); setShowEmailAuth(true); }}
           onComplete={(updatedUser) => {
             setCurrentUser(getRichUser(updatedUser));
             setShowPublicAccountSetup(false);
@@ -3527,6 +3582,32 @@ export default function App() {
             });
           }}
         />
+      )}
+
+      {showEmailAuth && (
+        <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#04020a]">
+          <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-violet-200">Preparing secure signup…</div>}>
+            <AuthView
+              initialMode="signup"
+              promptReason="Create your NEXORA account to continue."
+              onLoginSuccess={(user) => {
+                setCurrentUser(getRichUser(user));
+                setShowEmailAuth(false);
+                setShowPublicAccountSetup(false);
+                void retryProfileLoad().catch(() => {
+                  window.dispatchEvent(new CustomEvent('toast', { detail: 'Your account was created, but profile sync is still finishing. Please retry.' }));
+                });
+              }}
+            />
+          </Suspense>
+          <button
+            type="button"
+            onClick={() => { setShowEmailAuth(false); setShowPublicAccountSetup(true); }}
+            className="fixed right-4 top-4 z-[110] rounded-xl border border-white/15 bg-[#0B1424]/95 px-3 py-2 text-xs font-semibold text-violet-200 shadow-lg backdrop-blur"
+          >
+            Back to username signup
+          </button>
+        </div>
       )}
 
       {showUsernameLogin && (

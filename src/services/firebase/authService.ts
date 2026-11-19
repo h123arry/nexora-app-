@@ -338,14 +338,27 @@ export class AuthService {
     const cleanEmail = email.toLowerCase().trim();
     const cleanUsername = username.toLowerCase().trim();
 
-    let credential;
+    let fbUser: FirebaseUser;
     try {
-      credential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+      const existingUser = auth.currentUser;
+      if (existingUser?.isAnonymous) {
+        // Upgrade the existing anonymous NEXORA session instead of creating a
+        // second UID and abandoning the member's existing profile and activity.
+        const linked = await linkWithCredential(
+          existingUser,
+          EmailAuthProvider.credential(cleanEmail, password)
+        );
+        fbUser = linked.user;
+      } else {
+        // Preserve the established standalone signup behaviour when there is
+        // no anonymous session to upgrade. Firebase returns email-already-in-use
+        // for duplicates, rather than silently reusing another account.
+        fbUser = (await createUserWithEmailAndPassword(auth, cleanEmail, password)).user;
+      }
     } catch (error) {
       throw this.publicAuthError(error);
     }
 
-    const fbUser = credential.user;
     try {
       try {
         await sendEmailVerification(fbUser);
@@ -353,11 +366,28 @@ export class AuthService {
         console.warn('Email verification could not be sent; check Firebase email action configuration.');
       }
 
-      const userProfile = await ProfileService.createProfile(fbUser.uid, {
-        name: fullName.trim(),
-        username: cleanUsername,
-        isVerified: fbUser.emailVerified
-      }, cleanEmail);
+      const existingProfile = await ProfileService.getProfile(fbUser.uid);
+      let userProfile: User;
+      if (existingProfile) {
+        // Firebase Authentication owns the verified email. Firestore rules
+        // intentionally prevent clients from mutating the private email field.
+        // Persist only profile-editable fields and expose the auth email in memory.
+        await ProfileService.updateProfile(fbUser.uid, {
+          name: fullName.trim(),
+        });
+        userProfile = {
+          ...existingProfile,
+          name: fullName.trim(),
+          email: cleanEmail,
+        };
+      } else {
+        userProfile = await ProfileService.createProfile(fbUser.uid, {
+          name: fullName.trim(),
+          username: cleanUsername,
+          email: cleanEmail,
+          isVerified: fbUser.emailVerified
+        }, cleanEmail);
+      }
 
       EmailService.sendTransactionalEmail('WELCOME', {
         toEmail: cleanEmail,
@@ -382,7 +412,7 @@ export class AuthService {
       const code = source?.code || 'profile-setup-failed';
       console.error('[NEXORA] Profile setup failed after Firebase account creation', { code });
       const wrapped = new Error(
-        `Your Firebase account was created, but NEXORA could not finish setting up your profile (${code}). Your account is safe. Please try signing in again shortly.`
+        `Your Firebase account is ready, but NEXORA could not finish setting up your profile (${code}). Your account is safe. Please retry shortly.`
       ) as Error & { code?: string };
       wrapped.code = code;
       throw wrapped;
@@ -409,7 +439,7 @@ export class AuthService {
         isNewUser = true;
         userProfile = await ProfileService.createProfile(fbUser.uid, {
           name: fbUser.displayName || 'Google User',
-          avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
+          avatar: fbUser.photoURL || '',
           isVerified: fbUser.emailVerified
         }, fbUser.email || '');
       }

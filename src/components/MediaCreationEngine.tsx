@@ -180,6 +180,8 @@ async function optimizePhotoUpload(source: Blob): Promise<Blob> {
 
 interface MediaCreationEngineProps {
   currentUser: User;
+  /** Firebase's authenticated UID is the source of truth for media ownership. */
+  authenticatedUserId?: string;
   onClose: () => void;
   onAddPost: (
     content: string, 
@@ -297,6 +299,7 @@ const RECORDING_DURATIONS = [
 
 export default function MediaCreationEngine({
   currentUser,
+  authenticatedUserId,
   onClose,
   onAddPost,
   onPublishPost,
@@ -310,8 +313,9 @@ export default function MediaCreationEngine({
   initialCaption = '',
   onOpenStudio
 }: MediaCreationEngineProps) {
-  const autosaveKey = `nexora_creation_autosave_v1_${currentUser.id || 'visitor'}`;
-  const draftsKey = `nexora_post_drafts_v1_${currentUser.id || 'visitor'}`;
+  const uploadOwnerId = authenticatedUserId || currentUser.id;
+  const autosaveKey = `nexora_creation_autosave_v1_${currentUser.id || 'public'}`;
+  const draftsKey = `nexora_post_drafts_v1_${currentUser.id || 'public'}`;
   const initialAutosave = readLocalAutosave(autosaveKey);
 
   // Navigation & Wizard Core
@@ -562,7 +566,7 @@ export default function MediaCreationEngine({
   // Restore account-owned text drafts across devices. Media bytes and browser object URLs
   // intentionally remain on the originating device unless they have a durable HTTPS URL.
   useEffect(() => {
-    if (!currentUser.id || currentUser.id === 'guest_visitor_id') return;
+    if (!currentUser.id || currentUser.id === 'public_explore_session') return;
     let active = true;
     getDrafts(currentUser.id, 50).then(records => {
       if (!active || !Array.isArray(records)) return;
@@ -1216,7 +1220,7 @@ export default function MediaCreationEngine({
       commentsAllowed
     };
     let cloudSynced = false;
-    if (currentUser.id && currentUser.id !== 'guest_visitor_id' && navigator.onLine) {
+    if (currentUser.id && currentUser.id !== 'public_explore_session' && navigator.onLine) {
       try {
         const durableVideoUrl = [videoFileUrl, recordedVideoUrl, voiceFileUrl].find(value => typeof value === 'string' && /^https:\/\//i.test(value)) || '';
         const saved = await saveDraft(currentUser.id, caption, durableVideoUrl, activeMode === 'video' || activeMode === 'reel' ? 'video' : activeMode === 'photo' || activeMode === 'carousel' ? 'image' : 'text', topics.split(/[ ,]+/).filter(Boolean));
@@ -1266,7 +1270,7 @@ export default function MediaCreationEngine({
       setVoiceFileUrl(draft.voiceUrl);
       setVoiceTranscript(draft.transcript || '');
     }
-    if (draft.cloudSynced && currentUser.id !== 'guest_visitor_id') {
+    if (draft.cloudSynced && currentUser.id !== 'public_explore_session') {
       deleteDraft(draft.id, currentUser.id).catch(error => console.warn('[Composer] Restored draft could not be removed from cloud.', error));
     }
     setDraftsList(prev => prev.filter(d => d.id !== draft.id));
@@ -1445,7 +1449,7 @@ export default function MediaCreationEngine({
           const uploadExtension = publishBlob.type === 'image/webp' ? 'webp' : publishBlob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
           const uploaded = await uploadMediaFile({
             file: publishBlob,
-            userId: currentUser.id,
+            userId: uploadOwnerId,
             fileName: `photo-${index + 1}-${Date.now()}.${uploadExtension}`,
             signal: uploadController.signal,
             onProgress: progress => setUploadProgress(progress),
@@ -1470,7 +1474,7 @@ export default function MediaCreationEngine({
           if (isOffline) throw new Error('Connect to publish this video. Keep it as a draft and retry when online.');
           const uploaded = await uploadMediaFile({
             file: uploadVideoBlob,
-            userId: currentUser.id,
+            userId: uploadOwnerId,
             fileName: `video-${Date.now()}.${videoFileExtension(uploadVideoBlob.type) || 'video'}`,
             signal: uploadController.signal,
             onProgress: progress => setUploadProgress(progress),
@@ -1479,7 +1483,7 @@ export default function MediaCreationEngine({
           uploadedOriginAssetIds.push(uploaded.mediaId);
           if (mainImg?.startsWith('blob:') || mainImg?.startsWith('data:')) {
             const thumbnail = videoCoverBlob || await (await fetch(mainImg)).blob();
-            const uploadedThumbnail = await uploadMediaFile({ file: thumbnail, userId: currentUser.id, fileName: `video-thumbnail-${Date.now()}.jpg`, signal: uploadController.signal });
+            const uploadedThumbnail = await uploadMediaFile({ file: thumbnail, userId: uploadOwnerId, fileName: `video-thumbnail-${Date.now()}.jpg`, signal: uploadController.signal });
             mainImg = uploadedThumbnail.downloadUrl;
           }
         } catch (e) {
@@ -1500,7 +1504,7 @@ export default function MediaCreationEngine({
       if (uploadVoiceBlob && activeMode === 'voice') {
         const uploadedVoice = await uploadMediaFile({
           file: uploadVoiceBlob,
-          userId: currentUser.id,
+          userId: uploadOwnerId,
           fileName: `voice-${Date.now()}.webm`,
           signal: uploadController.signal,
           onProgress: progress => setUploadProgress(progress),
@@ -1832,7 +1836,7 @@ export default function MediaCreationEngine({
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-[9px] font-mono text-violet-400 uppercase bg-violet-950/25 px-2 py-0.5 rounded border border-violet-800/20">{d.type}</span>
                         <button 
-                          onClick={(e) => { e.stopPropagation(); if (d.cloudSynced && currentUser.id !== 'guest_visitor_id') deleteDraft(d.id, currentUser.id).catch(error => console.warn('[Composer] Draft delete failed.', error)); setDraftsList(prev => prev.filter(item => item.id !== d.id)); }}
+                          onClick={(e) => { e.stopPropagation(); if (d.cloudSynced && currentUser.id !== 'public_explore_session') deleteDraft(d.id, currentUser.id).catch(error => console.warn('[Composer] Draft delete failed.', error)); setDraftsList(prev => prev.filter(item => item.id !== d.id)); }}
                           className="p-1 hover:bg-rose-900/10 text-rose-400 rounded transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

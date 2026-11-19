@@ -36,7 +36,7 @@ export function showWebPushNotification(title: string, options?: NotificationOpt
   if (window.Notification.permission !== 'granted') return;
 
   try {
-    const defaultIcon = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=192&auto=format&fit=crop&q=80';
+    const defaultIcon = '/nexora-mark.png';
     const notif = new window.Notification(title, {
       ...options,
       icon: options?.icon || defaultIcon,
