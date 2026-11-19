@@ -6,7 +6,7 @@ import {
   X, HardDrive, ShieldCheck, Cpu, Battery, Activity, Info, AlertTriangle, 
   Trash2, RefreshCw, Sparkles, Search, Sliders, Check, Download, ChevronRight, 
   Image, Video, Mic, FileText, Globe, Share2, Archive, Star, Play, Pause, 
-  Smartphone, Wifi, Eye, Radio, Key, Cloud, Database, BarChart2, Zap, 
+  Smartphone, Wifi, Eye, Radio, Key, Cloud, Saved data, BarChart2, Zap, 
   Settings, Lock, Unlock, HelpCircle, FileSpreadsheet, ArrowDownCircle, AlertCircle
 } from 'lucide-react';
 
@@ -223,7 +223,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     level: 28,
   });
 
-  // 11. Database Optimization Index Check
+  // 11. Saved data Optimization Index Check
   const [dbOptimizations, setDbOptimizations] = useState({
     indexHealth: '100%',
     queryCaching: 'Enabled',
@@ -757,7 +757,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
             <div className="w-full md:w-64 border-r border-white/5 bg-black/20 overflow-y-auto p-3 space-y-1 shrink-0">
               {[
                 { id: 'dashboard', label: 'Storage on this device', icon: HardDrive, badge: `${totalNexoraSpaceGB} GB` },
-                { id: 'conversations', label: 'Chat storage', icon: Database, count: conversationsList.length },
+                { id: 'conversations', label: 'Chat storage', icon: Saved data, count: conversationsList.length },
                 { id: 'downloads', label: 'Download settings', icon: Download, badge: downloads.adaptiveDataSaver ? 'Saver On' : '' }
               ].map(tab => {
                 const Icon = tab.icon;
@@ -975,7 +975,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     <>
                       <div>
                         <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                          <Database className="w-4 h-4 text-violet-400" /> Conversation Storage Ledger
+                          <Saved data className="w-4 h-4 text-violet-400" /> Conversation Storage Ledger
                         </h4>
                         <p className="text-[11px] text-zinc-400 mt-1">List of chat communication bridges sorted by absolute disk storage allocation. Click any conversation card to open the complete media browser.</p>
                       </div>
@@ -983,7 +983,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       {/* Conversations listing */}
                       {filteredConversations.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 px-5 py-8 text-center">
-                          <Database className="mx-auto h-7 w-7 text-zinc-500" />
+                          <Saved data className="mx-auto h-7 w-7 text-zinc-500" />
                           <p className="mt-3 text-sm font-semibold text-white">No conversation storage data available</p>
                           <p className="mt-1 text-xs leading-relaxed text-zinc-400">This panel is not connected to a durable chat-media index yet. Your conversations and attachments have not been scanned or changed.</p>
                         </div>
@@ -1113,7 +1113,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       {/* Explorer Media Filters */}
                       <div className="flex flex-wrap gap-1 bg-black/40 p-1 rounded-xl border border-white/5">
                         {[
-                          { id: 'all', label: 'All Files', icon: Database },
+                          { id: 'all', label: 'All Files', icon: Saved data },
                           { id: 'photo', label: 'Photos', icon: Image },
                           { id: 'video', label: 'Videos', icon: Video },
                           { id: 'voice', label: 'Voice Notes', icon: Mic },
@@ -1442,7 +1442,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             { key: 'googleDrive', label: 'Google Drive' },
                             { key: 'iCloud', label: 'Apple iCloud' },
                             { key: 'localDevice', label: 'Local Disk' },
-                            { key: 'nas', label: 'Private NAS Hub' }
+                            { key: 'nas', label: 'Private backup drive' }
                           ].map(dest => {
                             const val = backups.destinations[dest.key as keyof typeof backups.destinations];
                             return (
@@ -1567,12 +1567,12 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     {[
                       { label: 'Conversations (E2EE)', sent: '41,240 pkts', rec: '110,845 pkts', data: '1.24 GB' },
                       { label: 'Media upload / down', sent: '14.5 GB', rec: '41.2 GB', data: '55.7 GB' },
-                      { label: 'Dynamic Stories preloading', sent: '112 MB', rec: '1.45 GB', data: '1.56 GB' },
-                      { label: 'Voice / Video calls', sent: '42.5 hrs', rec: '31.2 hrs', data: '22.8 GB' },
-                      { label: 'AI Assistance Requests', sent: '150 msgs', rec: '150 msgs', data: '14.5 MB' },
-                      { label: 'Cloud Replication cycles', sent: '410 MB', rec: '2.4 GB', data: '2.81 GB' },
-                      { label: 'Active Group Communities', sent: '4,100 pkts', rec: '98,000 pkts', data: '4.85 GB' },
-                      { label: 'Live Streams metadata', sent: '0 B', rec: '5.12 GB', data: '5.12 GB' }
+                      { label: 'Stories', sent: '112 MB', rec: '1.45 GB', data: '1.56 GB' },
+                      { label: 'Voice and video calls', sent: '42.5 hrs', rec: '31.2 hrs', data: '22.8 GB' },
+                      { label: 'VOH AI messages', sent: '150 msgs', rec: '150 msgs', data: '14.5 MB' },
+                      { label: 'Backup uploads', sent: '410 MB', rec: '2.4 GB', data: '2.81 GB' },
+                      { label: 'Community activity', sent: '4,100 pkts', rec: '98,000 pkts', data: '4.85 GB' },
+                      { label: 'Live video data', sent: '0 B', rec: '5.12 GB', data: '5.12 GB' }
                     ].map((stat, i) => (
                       <div key={i} className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl text-left space-y-2">
                         <span className="text-[10.5px] font-bold text-zinc-300 block truncate leading-tight">{stat.label}</span>
@@ -1580,7 +1580,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         
                         <div className="pt-1 flex justify-between text-[8px] font-mono text-zinc-500 leading-none border-t border-white/5 pt-2">
                           <span>Sent: {stat.sent}</span>
-                          <span>Recv: {stat.rec}</span>
+                          <span>Received: {stat.rec}</span>
                         </div>
                       </div>
                     ))}
@@ -1710,7 +1710,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             />
                           </div>
                           <div className="flex justify-between text-[8px] font-mono text-zinc-600">
-                            <span>Indexing Tunnels</span>
+                            <span>Search updates</span>
                             <span>Scale-to-Zero</span>
                           </div>
                         </div>
@@ -1743,7 +1743,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         <div className="p-4 bg-slate-950/60 border border-white/5 rounded-2xl space-y-2.5 text-left">
                           <div className="flex justify-between items-center">
                             <span className="text-[10px] font-mono text-zinc-400 flex items-center gap-1">
-                              <Database className="w-3.5 h-3.5 text-pink-400" /> Smart loading
+                              <Saved data className="w-3.5 h-3.5 text-pink-400" /> Smart loading
                             </span>
                             <span className="font-mono text-xs text-pink-400 font-bold">1.25M Rows</span>
                           </div>
@@ -1756,7 +1756,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             />
                           </div>
                           <div className="flex justify-between items-center text-[8px] font-mono text-zinc-600">
-                            <span>DOM nodes: <b>{visibleVirtualRecords} active</b></span>
+                            <span>Items on screen: <b>{visibleVirtualRecords}</b></span>
                             <span className="text-pink-500 font-black">100% Recycled ({recycledComponents})</span>
                           </div>
                         </div>
@@ -1804,12 +1804,12 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           {[
-                            { title: 'Memory Exhaustion Guard', status: safeguards.memoryExhaustion, desc: 'Auto-purges old cache rows before heap boundary hit.' },
+                            { title: 'Help when memory is low', status: safeguards.memoryExhaustion, desc: 'Clears old temporary files when memory gets low.' },
                             { title: 'Storage protection', status: safeguards.storageExhaustion, desc: 'Stops preloads dynamically if disk drops below 50MB.' },
                             { title: 'Anti-Infinite Loop Watcher', status: safeguards.infiniteLoops, desc: 'Intercepts state loop iterations and safely releases execution.' },
-                            { title: 'UI Freeze Guard (WebWorker)', status: safeguards.uiFreezes, desc: 'Offloads complex cryptography pipelines to secondary threads.' },
-                            { title: 'Slow DB Index Interceptor', status: safeguards.slowDbQueries, desc: 'Pre-compiles index keys for SQLite/ReadyDB lookup shortcuts.' },
-                            { title: 'Corrupted Cache Auto-Sanitizer', status: safeguards.corruptedCache, desc: 'Validates integrity hashes and auto-rebuilds broken assets.' }
+                            { title: 'Help prevent app freezes', status: safeguards.uiFreezes, desc: 'Moves heavy tasks out of the way to help keep the app responsive.' },
+                            { title: 'Faster search', status: safeguards.slowDbQueries, desc: 'Prepares search data so older posts and messages are easier to find.' },
+                            { title: 'Fix damaged saved files', status: safeguards.corruptedCache, desc: 'Checks saved files and replaces damaged ones.' }
                           ].map((safe, idx) => (
                             <div key={idx} className="p-3 bg-black/40 border border-white/5 rounded-xl flex flex-col justify-between text-left space-y-1.5">
                               <div className="flex items-center justify-between gap-1">
