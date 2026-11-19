@@ -56,7 +56,7 @@ if (webConfig) {
   for (const [name, value] of Object.entries(webConfig)) {
     if (typeof value === 'string' && value.includes('<owner-')) failures.push(`firebase-applet-config.json: ${name} still requires owner-provided configuration`);
   }
-  const workerValue = (name) => messagingWorker.match(new RegExp(`${name}:\\\\s*["']([^"']+)["']`))?.[1];
+  const workerValue = (name) => messagingWorker.match(new RegExp(`${name}:\\s*["']([^"']+)["']`))?.[1];
   for (const name of ['projectId', 'appId', 'apiKey', 'messagingSenderId']) {
     if (workerValue(name) !== webConfig[name]) failures.push(`public/firebase-messaging-sw.js: ${name} must match firebase-applet-config.json`);
   }
