@@ -6,7 +6,7 @@ import {
   X, Shield, ShieldCheck, Eye, EyeOff, Check, AlertCircle, HardDrive, Sparkles, 
   Search, ChevronRight, ChevronDown, User, ShieldAlert, Monitor, Info, Trash2, 
   Key, HelpCircle, LogOut, ArrowRight, CheckCircle, RefreshCw, Radio, Settings, 
-  Lock, Unlock, Phone, Video, AlertTriangle, Moon, EyeOff, Ban, List, ShieldBan, 
+  Lock, Unlock, Phone, Video, AlertTriangle, Moon, Ban, List, ShieldBan, 
   Maximize2, EyeIcon, UserCheck, Smartphone, MoreHorizontal, Download, Play, 
   CornerUpLeft, CheckSquare, Clock
 } from 'lucide-react';
