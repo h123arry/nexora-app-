@@ -90,14 +90,14 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
             <div className="flex items-center gap-2">
               <span className="px-3 py-1 rounded-full bg-violet-500/15 border border-white/10 text-xs font-mono font-extrabold text-violet-300 uppercase tracking-widest flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-pink-400" />
-                NIDA Platform Core
+                Your feed
               </span>
               <span className="px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs font-mono font-bold text-cyan-300">
-                v3.2 Active
+                Your settings
               </span>
             </div>
             <h1 className="text-2xl md:text-3xl font-black font-sans tracking-tight bg-clip-text text-transparent bg-linear-to-r from-violet-300 via-pink-300 to-cyan-300">
-              NEXORA INTELLIGENT DISCOVERY ALGORITHM
+              How your feed works
             </h1>
             <p className="text-xs text-zinc-400 max-w-2xl font-sans">
               This view exposes saved interest preferences and a transparent ranking inspection of posts currently loaded by NEXORA. It does not simulate seed audiences, guarantee reach, or replace the production feed delivery service.
@@ -159,7 +159,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
                     <Sliders className="w-4 h-4" /> Your interests
                   </h2>
                   <p className="text-xs text-zinc-400">
-                    Your interest DNA is an evolving profile tracked as you watch or interact. You can manually align your current matching tags below.
+                    Your interests change as you watch and interact with posts. You can also choose the topics you want to see more often.
                   </p>
                 </div>
                 
@@ -167,7 +167,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
                   onClick={resetInterestDNA}
                   className="px-3.5 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 font-mono text-[10px] uppercase font-bold rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" /> Reset Defaults
+                  <RefreshCw className="w-3.5 h-3.5" /> Reset interests
                 </button>
               </div>
 
@@ -179,7 +179,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
                         <span className="w-2 h-2 rounded-full bg-violet-400" />
                         {interest}
                       </span>
-                      <span className="text-pink-400">{weight}% affinity</span>
+                      <span className="text-pink-400">{weight}% interest</span>
                     </div>
 
                     <input
@@ -206,7 +206,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
               <div className="space-y-1">
                 <h4 className="text-xs font-mono font-black text-cyan-300 uppercase tracking-wider">How your feed works</h4>
                 <p className="text-xs text-zinc-400 leading-relaxed">
-                  Every recommendation query matches posts tagged with corresponding categories. As you complete video watch loops (<strong>+12 weight</strong>), bookmark articles (<strong>+15 weight</strong>), or skip/swipe instantly (<strong>-15 weight</strong>), NIDA dynamically alters these vectors in real-time. This ensures high-affinity matching without lock-in biases.
+                  Your feed learns from what you watch and save. Watching videos, saving posts and skipping posts help NEXORA understand what you enjoy. You can change your interests whenever you like. (<strong>+12 weight</strong>), bookmark articles (<strong>+15 weight</strong>), or skip posts (<strong>-15 weight</strong>), NIDA dynamically alters these vectors in real-time. This ensures high-interest matching without lock-in biases.
                 </p>
               </div>
             </div>
@@ -229,7 +229,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
                   <Cpu className="w-4 h-4 text-cyan-400" /> Feed preferences
                 </h2>
                 <p className="text-xs text-zinc-400 mt-1">
-                  These options show how posts in this preview are sorted. They do not change the main feed.
+                  These options show how posts in this preview are sorted. They don't change your main feed.
                 </p>
               </div>
 
@@ -237,7 +237,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
                 {[
                   { key: 'interest', label: '1. Your interests', desc: 'Prioritizes content matched perfectly with the user\'s interest profile vectors.', color: 'accent-violet-500' },
                   { key: 'quality', label: '2. Post engagement', desc: 'Looks at views, comments, saves and shares.', color: 'accent-pink-500' },
-                  { key: 'verification', label: '3. Creator Verification', desc: 'Shows whether the person who posted has a verified account.', color: 'accent-cyan-500' },
+                  { key: 'verification', label: '3. Verified accounts', desc: 'Shows whether the person who posted has a verified account.', color: 'accent-cyan-500' },
                   { key: 'freshness', label: '4. New and popular posts', desc: 'Includes new posts and posts people are enjoying.', color: 'accent-yellow-500' },
                 ].map(pillar => {
                   const val = (pillarWeights as any)[pillar.key];
