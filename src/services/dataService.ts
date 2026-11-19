@@ -20,7 +20,7 @@ import { PrivacySettings, User, Post, Comment, Circle as Community, Page, Notifi
 import { functions } from '../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { cacheManager } from './cache/cacheService';
-import { mergePendingActions, PendingAction } from './syncQueue';
+import { mergePendingActions, PendingAction, retainFailedAction } from './syncQueue';
 
 // ... (rest of the file content)
 
@@ -124,8 +124,7 @@ class BackgroundSyncEngine {
         console.error(`[Sync Engine] Error executing pending action: ${item.action}; details redacted.`);
         // Keep failed work until Firestore confirms it. A temporary outage or
         // expired session must never silently erase a user's pending action.
-        item.retryCount = Math.min(Number.MAX_SAFE_INTEGER, item.retryCount + 1);
-        failedActions.push(item);
+        failedActions.push(retainFailedAction(item));
       }
     }
 
