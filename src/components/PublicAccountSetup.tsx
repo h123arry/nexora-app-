@@ -9,11 +9,11 @@ interface PublicAccountSetupProps {
   user: User;
   onComplete: (user: User) => void;
   onCancel?: () => void;
+  onSwitchToLogin?: () => void;
 }
 
-export default function PublicAccountSetup({ user, onComplete, onCancel }: PublicAccountSetupProps) {
+export default function PublicAccountSetup({ user, onComplete, onCancel, onSwitchToLogin }: PublicAccountSetupProps) {
   const [name, setName] = useState(user.name === 'NEXORA Member' ? '' : user.name);
-  const [dateOfBirth, setDateOfBirth] = useState(user.dateOfBirth || '');
   const [username, setUsername] = useState(user.username.startsWith('member_') ? '' : user.username);
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -33,20 +33,8 @@ export default function PublicAccountSetup({ user, onComplete, onCancel }: Publi
       setError(usernameStatus.message);
       return;
     }
-    if (!dateOfBirth) {
-      setError('Please enter your date of birth.');
-      return;
-    }
-    const birthDate = new Date(dateOfBirth + 'T00:00:00');
-    const age = new Date().getFullYear() - birthDate.getFullYear()
-      - (new Date() < new Date(new Date().getFullYear(), birthDate.getMonth(), birthDate.getDate()) ? 1 : 0);
-    if (!Number.isFinite(birthDate.getTime()) || birthDate > new Date() || age < 13 || age > 120) {
-      setError('You must be at least 13 years old and enter a valid date of birth.');
-      return;
-    }
-
-    if (password.length > 0 && password.length < 8) {
-      setError('If you add a password, it must contain at least 8 characters.');
+    if (password.length < 8) {
+      setError('Choose a password with at least 8 characters.');
       return;
     }
 
@@ -54,11 +42,10 @@ export default function PublicAccountSetup({ user, onComplete, onCancel }: Publi
     try {
       const result = await AuthService.completeUsernameRegistration({
         username: cleanUsername,
-        password: password || undefined,
+        password,
         preferredName: cleanName,
-        dateOfBirth,
       });
-      onComplete({ ...result.user, name: cleanName, username: cleanUsername, dateOfBirth });
+      onComplete({ ...result.user, name: cleanName, username: cleanUsername });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'We could not save your profile. Please try again.');
     } finally {
@@ -73,24 +60,22 @@ export default function PublicAccountSetup({ user, onComplete, onCancel }: Publi
         <div className="mb-6 text-center">
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.25em] text-violet-300">Welcome to NEXORA</p>
           <h1 className="text-2xl font-black text-white">Make it yours.</h1>
-          <p className="mt-2 text-sm text-slate-300">Set up your public profile with a preferred name, date of birth and unique username. You can add account security now or later.</p>
+          <p className="mt-2 text-sm text-slate-300">Choose a name people will know you by, a unique username and a password for your account.</p>
         </div>
         <label className="mb-2 block text-xs font-semibold text-slate-200">Preferred name</label>
         <input value={name} onChange={event => setName(event.target.value)} maxLength={80} autoComplete="name" required placeholder="What should people call you?" className="mb-4 w-full rounded-xl border border-white/10 bg-[#101B2E] px-4 py-3 text-sm text-white outline-none focus:border-violet-500" />
-        <label className="mb-2 block text-xs font-semibold text-slate-200">Date of birth</label>
-        <input type="date" value={dateOfBirth} onChange={event => setDateOfBirth(event.target.value)} max={new Date().toISOString().slice(0, 10)} required className="mb-1 w-full rounded-xl border border-white/10 bg-[#101B2E] px-4 py-3 text-sm text-white outline-none focus:border-violet-500" />
-        <p className="mb-4 text-[11px] text-slate-400">Your date of birth is private and will not appear on your profile.</p>
         <label className="mb-2 block text-xs font-semibold text-slate-200">Username</label>
         <div className="mb-5 flex items-center rounded-xl border border-white/10 bg-[#101B2E] px-4 focus-within:border-violet-500">
           <span className="text-violet-300">@</span>
           <input value={username} onChange={event => setUsername(event.target.value.toLowerCase().replace(/\s/g, ''))} maxLength={20} autoComplete="username" required placeholder="yourusername" className="w-full bg-transparent px-2 py-3 text-sm text-white outline-none" />
         </div>
-        <label className="mb-2 block text-xs font-semibold text-slate-200" >Password <span className="font-normal text-slate-400">(optional)</span></label>
-        <input type="password" value={password} onChange={event => setPassword(event.target.value)} minLength={8} autoComplete="new-password" placeholder="Add a password to secure sign-in (optional)" className="mb-5 w-full rounded-xl border border-white/10 bg-[#101B2E] px-4 py-3 text-sm text-white outline-none focus:border-violet-500" />
+        <label className="mb-2 block text-xs font-semibold text-slate-200" >Password</label>
+        <input type="password" value={password} onChange={event => setPassword(event.target.value)} minLength={8} required autoComplete="new-password" placeholder="Create a password" className="mb-5 w-full rounded-xl border border-white/10 bg-[#101B2E] px-4 py-3 text-sm text-white outline-none focus:border-violet-500" />
         {error && <p role="alert" className="mb-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-xs text-red-200">{error}</p>}
         <button disabled={busy} type="submit" className="w-full rounded-xl bg-violet-600 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60">{busy ? 'Creating your account…' : 'Enter NEXORA'}</button>
-        <p className="mt-4 text-center text-[11px] text-slate-500">Your username is public. You can connect email, Google, phone or a password later in Account Settings.</p>
-        {onCancel && <button type="button" onClick={onCancel} className="mt-3 w-full rounded-xl px-4 py-2 text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white">Not now, keep browsing</button>}
+        <p className="mt-4 text-center text-[11px] text-slate-500">Your username is public. Keep your password safe so you can sign in again.</p>
+        {onSwitchToLogin && <button type="button" onClick={onSwitchToLogin} className="mt-3 w-full rounded-xl px-4 py-2 text-xs font-semibold text-violet-300 hover:bg-white/5">Already have an account? Log in</button>}
+        {onCancel && <button type="button" onClick={onCancel} className="mt-1 w-full rounded-xl px-4 py-2 text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white">Not now, keep browsing</button>}
       </form>
     </div>
   );

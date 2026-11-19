@@ -15,6 +15,7 @@ const aliases = readJson('.firebaserc');
 const webConfig = readJson('firebase-applet-config.json');
 const expectedProjectId = 'nexora-prod-voiceharrison';
 const expectedProjectNumber = '128918144717';
+const expectedStorageBucket = `${expectedProjectId}.firebasestorage.app`;
 const messagingWorker = existsSync('public/firebase-messaging-sw.js')
   ? readFileSync('public/firebase-messaging-sw.js', 'utf8')
   : '';
@@ -49,8 +50,8 @@ if (webConfig) {
   if (webConfig.authDomain !== `${expectedProjectId}.firebaseapp.com`) {
     failures.push('firebase-applet-config.json: authDomain must match the owner-provided Firebase project');
   }
-  if (webConfig.storageBucket !== `${expectedProjectId}.appspot.com`) {
-    failures.push('firebase-applet-config.json: storageBucket must match the owner-provided bucket');
+  if (webConfig.storageBucket !== expectedStorageBucket) {
+    failures.push('firebase-applet-config.json: storageBucket must match the owner-provided Firebase Storage bucket');
   }
   for (const [name, value] of Object.entries(webConfig)) {
     if (typeof value === 'string' && value.includes('<owner-')) failures.push(`firebase-applet-config.json: ${name} still requires owner-provided configuration`);

@@ -109,6 +109,40 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
   }
 }
 
+
+/**
+ * Reduce large still-image uploads on-device without touching animated formats.
+ * WebP keeps transparency and is only used when the encoded result is smaller.
+ */
+async function optimizePhotoUpload(source: Blob): Promise<Blob> {
+  const type = source.type.toLowerCase();
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(type)) return source;
+  if (source.size < 700 * 1024) return source;
+
+  const objectUrl = URL.createObjectURL(source);
+  try {
+    const image = new Image();
+    image.src = objectUrl;
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error('This photo could not be prepared for upload.'));
+    });
+    const maxEdge = 2560;
+    const scale = Math.min(1, maxEdge / Math.max(image.naturalWidth, image.naturalHeight));
+    if (scale === 1 && source.size < 1.5 * 1024 * 1024) return source;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext('2d');
+    if (!context) return source;
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const optimized = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/webp', 0.86));
+    return optimized && optimized.size > 0 && optimized.size < source.size ? optimized : source;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 interface MediaCreationEngineProps {
   currentUser: User;
   onClose: () => void;
@@ -1254,11 +1288,6 @@ export default function MediaCreationEngine({
     }
     const uploadController = new AbortController();
     uploadAbortControllerRef.current = uploadController;
-    let publishTimedOut = false;
-    const publishTimeout = window.setTimeout(() => {
-      publishTimedOut = true;
-      uploadController.abort();
-    }, 5 * 60 * 1000);
     setErrorMessage('');
     setPublishStage('Getting your post ready…');
     setPostingStatus('publishing');
@@ -1344,7 +1373,7 @@ export default function MediaCreationEngine({
       const durableImages: string[] = [];
       const uploadedOriginAssetIds: string[] = [];
       for (let index = 0; index < selectedImages.length; index += 1) {
-        setPublishStage(selectedImages.length > 1 ? 'Uploading your photos…' : 'Uploading your photo…');
+        setPublishStage(selectedImages.length > 1 ? `Uploading photo ${index + 1} of ${selectedImages.length}…` : 'Uploading your photo…');
         const selectedImage = selectedImages[index];
         const imageUrl = selectedImage.url;
         const hasEdits = selectedImage.rotation !== 0
@@ -1364,7 +1393,7 @@ export default function MediaCreationEngine({
             ? await getMediaBlob(imageUrl.slice('db-media://'.length))
             : await (await fetch(imageUrl)).blob();
           if (!imageBlob) throw new Error('A saved photo could not be recovered. Please choose it again.');
-          const publishBlob = hasEdits ? await renderEditedPhotoBlob(imageBlob, {
+          const renderedBlob = hasEdits ? await renderEditedPhotoBlob(imageBlob, {
             rotation: selectedImage.rotation,
             zoom: selectedImage.zoom,
             filterStyle: selectedImage.filterStyle,
@@ -1376,10 +1405,13 @@ export default function MediaCreationEngine({
             text: textOverlay,
             textColor: textOverlayColor,
           }) : imageBlob;
+          setPublishStage('Optimising your photo…');
+          const publishBlob = await optimizePhotoUpload(renderedBlob);
+          const uploadExtension = publishBlob.type === 'image/webp' ? 'webp' : publishBlob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg';
           const uploaded = await uploadMediaFile({
             file: publishBlob,
             userId: currentUser.id,
-            fileName: `photo-${index + 1}-${Date.now()}.${hasEdits ? 'jpg' : (imageBlob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg')}`,
+            fileName: `photo-${index + 1}-${Date.now()}.${uploadExtension}`,
             signal: uploadController.signal,
             onProgress: progress => setUploadProgress(progress),
           });
@@ -1507,9 +1539,7 @@ export default function MediaCreationEngine({
       if (uploadController.signal.aborted) {
         setPostingStatus('failed');
         setUploadProgress(0);
-        setErrorMessage(publishTimedOut
-          ? 'This is taking longer than expected. Check your connection and try again. Your draft is still safe.'
-          : 'Sharing was canceled. Your draft is still safe.');
+        setErrorMessage('Sharing was canceled. Your draft is still safe.');
       } else {
         const code = (err as { code?: string })?.code || '';
         const rawMessage = err instanceof Error ? err.message : '';
@@ -1523,7 +1553,6 @@ export default function MediaCreationEngine({
         setErrorMessage(friendlyMessage);
       }
     } finally {
-      window.clearTimeout(publishTimeout);
       if (uploadAbortControllerRef.current === uploadController) uploadAbortControllerRef.current = null;
     }
   };
@@ -2542,9 +2571,25 @@ export default function MediaCreationEngine({
                           <X className="w-9 h-9" />
                         </div>
                       ) : (
-                        <div className="relative w-16 h-16 flex items-center justify-center flex-col">
-                          <NexoraLoader size="md" />
-                          <span className="text-[10px] font-mono text-violet-400 mt-4 font-black">{uploadProgress}%</span>
+                        <div className="w-full max-w-xs space-y-3">
+                          <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+                            <NexoraLoader size="md" />
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] font-mono">
+                            <span className="text-violet-300">{publishStage}</span>
+                            <span className="text-violet-200 font-black tabular-nums">{uploadProgress}%</span>
+                          </div>
+                          <div
+                            className="h-2 w-full overflow-hidden rounded-full bg-[#19143A]"
+                            role="progressbar"
+                            aria-label="Actual media upload progress"
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-valuenow={uploadProgress}
+                          >
+                            <div className="h-full rounded-full bg-violet-500 transition-[width] duration-200" style={{ width: `${uploadProgress}%` }} />
+                          </div>
+                          <p className="text-[10px] text-[#8E88A7]">Progress is based on the file transfer. Large videos and slower connections can take longer.</p>
                         </div>
                       )}
 
