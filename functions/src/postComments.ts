@@ -69,7 +69,7 @@ export async function addPublicPostComment(
     const recipientProfileRef = authorId && authorId !== uid
       ? db.collection('publicProfiles').doc(authorId) : null;
     const recipientProfile = recipientProfileRef ? await transaction.get(recipientProfileRef) : null;
-    const mentionedUsernames = [...new Set([...content.matchAll(/(?:^|[\s([{])@([a-zA-Z0-9_.]{1,40})\b/g)].map(match => match[1].toLowerCase()))].slice(0, 10);
+    const mentionedUsernames = [...new Set([...content.matchAll(/(?:^|\s)@([a-zA-Z0-9_.]{1,40})\b/g)].map(match => match[1].toLowerCase()))].slice(0, 10);
     const mentionedProfiles = mentionedUsernames.length
       ? await transaction.get(db.collection('publicProfiles').where('username', 'in', mentionedUsernames))
       : null;
