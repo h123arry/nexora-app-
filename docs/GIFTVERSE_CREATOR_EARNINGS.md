@@ -82,3 +82,5 @@ NEX is the internal NEXORA wallet unit. This phase settles creator earnings in N
 - Reference bundles: 15 NEX / USD 0.30; 30 NEX / USD 0.60; 50 NEX / USD 1.00; 100 NEX / USD 2.00.
 - Bundle checkout remains disabled while the payment provider checkout adapter is unconfigured. The wallet shows reference prices only and does not accept payment.
 - NGN equivalents must use a current, explicitly disclosed checkout FX quote; do not hardcode a naira conversion. Creator cash withdrawals remain controlled by the separate Paystack payout policy and live-settlement gates.
+
+- A user's purchase for their own collection credits `platform_treasury` and persists private inventory; it does not create a creator earning. Sending a gift to a creator is a separate delivery transaction that credits `gift_escrow` and enters the existing review/settlement lifecycle.
