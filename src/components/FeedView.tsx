@@ -774,7 +774,24 @@ export default function FeedView({
       const updatedLocalPosts = currentLocalPosts.map(existingPost => {
         const matchingIncoming = normalizedPosts.find(p => p.id === existingPost.id);
         if (matchingIncoming) {
-          const hasChanged = 
+          // Keep the complete post payload in sync. Media URLs can arrive or be
+          // refreshed after the initial post snapshot, so checking engagement and
+          // profile fields alone can leave a stale text-only card in the feed.
+          const hasChanged =
+            existingPost.content !== matchingIncoming.content ||
+            existingPost.image !== matchingIncoming.image ||
+            JSON.stringify(existingPost.images || []) !== JSON.stringify(matchingIncoming.images || []) ||
+            existingPost.videoUrl !== matchingIncoming.videoUrl ||
+            existingPost.mediaAssetId !== matchingIncoming.mediaAssetId ||
+            JSON.stringify(existingPost.mediaAssetIds || []) !== JSON.stringify(matchingIncoming.mediaAssetIds || []) ||
+            existingPost.imageFilter !== matchingIncoming.imageFilter ||
+            JSON.stringify(existingPost.imageFilters || []) !== JSON.stringify(matchingIncoming.imageFilters || []) ||
+            JSON.stringify(existingPost.tags || []) !== JSON.stringify(matchingIncoming.tags || []) ||
+            existingPost.isVoice !== matchingIncoming.isVoice ||
+            existingPost.voiceAudioUrl !== matchingIncoming.voiceAudioUrl ||
+            existingPost.voiceTranscript !== matchingIncoming.voiceTranscript ||
+            existingPost.timestamp !== matchingIncoming.timestamp ||
+            existingPost.audience !== matchingIncoming.audience ||
             existingPost.likes !== matchingIncoming.likes ||
             JSON.stringify(existingPost.comments) !== JSON.stringify(matchingIncoming.comments) ||
             existingPost.isLikedByUser !== matchingIncoming.isLikedByUser ||
