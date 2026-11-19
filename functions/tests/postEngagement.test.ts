@@ -32,7 +32,7 @@ after(async () => {
   await Promise.all([
     ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
     ...fixtureUsers.map(id => db.recursiveDelete(db.doc(`users/${id}`))),
-    ...fixtureUsers.filter(id => id !== 'author').map(id => db.doc(`publicProfiles/${id}`).delete()),
+    ...fixtureUsers.map(id => db.doc(`publicProfiles/${id}`).delete()),
   ]);
   await deleteApp(app);
 });
