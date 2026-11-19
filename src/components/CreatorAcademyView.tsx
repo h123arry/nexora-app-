@@ -38,12 +38,12 @@ const BASE_COURSES: Course[] = [
     { id: 'hosting', title: 'Host guests and audience participation', minutes: 10, summary: 'Make guests feel welcome while keeping the conversation focused.' },
     { id: 'safety', title: 'Moderate live sessions responsibly', minutes: 9, summary: 'Prepare moderator roles and escalation steps before going live.' },
   ]},
-  { id: 'creator-analytics', title: 'Creator Analytics and Improvement', level: 'Intermediate', category: 'Analytics', description: 'Read performance signals carefully and turn them into experiments.', lessons: [
-    { id: 'metrics', title: 'Choose metrics that matter', minutes: 9, summary: 'Separate reach, retention, meaningful engagement and audience growth.' },
+  { id: 'creator-analytics', title: 'Understand your post results', level: 'Intermediate', category: 'Analytics', description: 'Read performance signals carefully and turn them into experiments.', lessons: [
+    { id: 'metrics', title: 'Choose metrics that matter', minutes: 9, summary: 'Learn about views, watch time, comments, shares, and followers.' },
     { id: 'retention', title: 'Understand audience retention', minutes: 10, summary: 'Find where attention changes and form testable explanations.' },
     { id: 'experiments', title: 'Run a useful content experiment', minutes: 8, summary: 'Change one variable at a time and compare results over a fair period.' },
   ]},
-  { id: 'personal-brand', title: 'Personal Branding and Reputation', level: 'Advanced', category: 'Brand', description: 'Develop a consistent public identity, portfolio and professional reputation.', lessons: [
+  { id: 'personal-brand', title: 'Build your personal brand', level: 'Advanced', category: 'Brand', description: 'Build a clear profile, share your work, and grow your reputation.', lessons: [
     { id: 'positioning', title: 'Position your public identity', minutes: 9, summary: 'Make your profile, work and audience promise tell a consistent story.' },
     { id: 'portfolio', title: 'Build a creator portfolio', minutes: 10, summary: 'Present selected work and outcomes honestly and clearly.' },
     { id: 'reputation', title: 'Protect your reputation', minutes: 8, summary: 'Respond to criticism thoughtfully and correct mistakes transparently.' },
@@ -53,25 +53,25 @@ const BASE_COURSES: Course[] = [
     { id: 'rights', title: 'Respect copyright and permissions', minutes: 10, summary: 'Understand ownership, licences, consent and responsible reuse.' },
     { id: 'wellbeing', title: 'Create sustainably', minutes: 8, summary: 'Set boundaries, manage pressure and build a healthy publishing rhythm.' },
   ]},
-  { id: 'video-production', title: 'Video Production and Visual Storytelling', level: 'Beginner', category: 'Production', description: 'Plan, capture and edit clear video stories with accessible sound, intentional framing and a repeatable production workflow.', lessons: [
-    { id: 'shot-planning', title: 'Plan a visual sequence', minutes: 9, summary: 'Plan a visual sequence through practical creator workflows and repeatable quality checks.' },
-    { id: 'sound-lighting', title: 'Record clean sound and usable light', minutes: 11, summary: 'Record clean sound and usable light through practical creator workflows and repeatable quality checks.' },
-    { id: 'editing-workflow', title: 'Edit for clarity and rhythm', minutes: 9, summary: 'Edit for clarity and rhythm through practical creator workflows and repeatable quality checks.' },
+  { id: 'video-production', title: 'Make better videos', level: 'Beginner', category: 'Production', description: 'Plan, capture and edit clear video stories with accessible sound, intentional framing and a repeatable production workflow.', lessons: [
+    { id: 'shot-planning', title: 'Plan a visual sequence', minutes: 9, summary: 'Plan a visual sequence through simple editing steps and checks.' },
+    { id: 'sound-lighting', title: 'Record clean sound and usable light', minutes: 11, summary: 'Record clean sound and usable light through simple editing steps and checks.' },
+    { id: 'editing-workflow', title: 'Edit for clarity and rhythm', minutes: 9, summary: 'Edit for clarity and rhythm through simple editing steps and checks.' },
   ]},
   { id: 'creator-finance', title: 'Creator Finance and Business Operations', level: 'Intermediate', category: 'Finance', description: 'Build a responsible operating model for creator income, costs, records, cash flow and tax preparation.', lessons: [
-    { id: 'income-costs', title: 'Understand creator income and costs', minutes: 9, summary: 'Understand creator income and costs through practical creator workflows and repeatable quality checks.' },
-    { id: 'cash-flow', title: 'Manage cash flow and reserves', minutes: 11, summary: 'Manage cash flow and reserves through practical creator workflows and repeatable quality checks.' },
-    { id: 'records-tax', title: 'Keep useful financial records', minutes: 9, summary: 'Keep useful financial records through practical creator workflows and repeatable quality checks.' },
+    { id: 'income-costs', title: 'Understand creator income and costs', minutes: 9, summary: 'Understand creator income and costs through simple editing steps and checks.' },
+    { id: 'cash-flow', title: 'Manage cash flow and reserves', minutes: 11, summary: 'Manage cash flow and reserves through simple editing steps and checks.' },
+    { id: 'records-tax', title: 'Keep useful financial records', minutes: 9, summary: 'Keep useful financial records through simple editing steps and checks.' },
   ]},
   { id: 'creative-rights', title: 'Creative Rights, Licensing and Contracts', level: 'All levels', category: 'Professional practice', description: 'Protect original work, obtain permissions and understand the practical terms behind collaborations and licensing.', lessons: [
-    { id: 'ownership-permissions', title: 'Understand ownership and permissions', minutes: 9, summary: 'Understand ownership and permissions through practical creator workflows and repeatable quality checks.' },
-    { id: 'music-image-licensing', title: 'Use music, images and footage responsibly', minutes: 11, summary: 'Use music, images and footage responsibly through practical creator workflows and repeatable quality checks.' },
-    { id: 'contracts-deliverables', title: 'Read contracts and define deliverables', minutes: 9, summary: 'Read contracts and define deliverables through practical creator workflows and repeatable quality checks.' },
+    { id: 'ownership-permissions', title: 'Understand ownership and permissions', minutes: 9, summary: 'Understand ownership and permissions through simple editing steps and checks.' },
+    { id: 'music-image-licensing', title: 'Use music, images and footage responsibly', minutes: 11, summary: 'Use music, images and footage responsibly through simple editing steps and checks.' },
+    { id: 'contracts-deliverables', title: 'Read contracts and define deliverables', minutes: 9, summary: 'Read contracts and define deliverables through simple editing steps and checks.' },
   ]},
   { id: 'inclusive-creation', title: 'Accessible and Inclusive Content', level: 'All levels', category: 'Accessibility', description: 'Make content easier to understand and participate in through captions, descriptions, inclusive language and thoughtful design.', lessons: [
-    { id: 'captions-transcripts', title: 'Create accurate captions and transcripts', minutes: 9, summary: 'Create accurate captions and transcripts through practical creator workflows and repeatable quality checks.' },
-    { id: 'visual-accessibility', title: 'Improve visual and audio accessibility', minutes: 11, summary: 'Improve visual and audio accessibility through practical creator workflows and repeatable quality checks.' },
-    { id: 'inclusive-community', title: 'Build inclusive participation', minutes: 9, summary: 'Build inclusive participation through practical creator workflows and repeatable quality checks.' },
+    { id: 'captions-transcripts', title: 'Create accurate captions and transcripts', minutes: 9, summary: 'Create accurate captions and transcripts through simple editing steps and checks.' },
+    { id: 'visual-accessibility', title: 'Improve visual and audio accessibility', minutes: 11, summary: 'Improve visual and audio accessibility through simple editing steps and checks.' },
+    { id: 'inclusive-community', title: 'Build inclusive participation', minutes: 9, summary: 'Build inclusive participation through simple editing steps and checks.' },
   ]},
 ];
 
