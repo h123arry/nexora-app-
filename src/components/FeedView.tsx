@@ -174,7 +174,7 @@ interface FeedViewProps {
   friendIds?: string[];
   onLikePost: (postId: string) => void;
   onBookmarkPost: (postId: string) => void;
-  onAddComment: (postId: string, content: string) => void;
+  onAddComment: (postId: string, content: string) => Promise<boolean> | boolean | void;
   onAddPost: (content: string, imageUrl?: string, tagsString?: string) => string;
   onOpenCreate?: (initialMode?: 'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null, initialCaption?: string) => void;
   selectedTag: string | null;
@@ -453,6 +453,7 @@ export default function FeedView({
 
   // New Comments and Replies drafting state
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [submittingComments, setSubmittingComments] = useState<Record<string, boolean>>({});
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [activeReplyFieldId, setActiveReplyFieldId] = useState<string | null>(null);
   const [quoteTargetPost, setQuoteTargetPost] = useState<Post | null>(null);
@@ -1079,20 +1080,23 @@ export default function FeedView({
   };
 
   // Adding comment handler
-  const handleAddCommentSubmit = (postId: string) => {
+  const handleAddCommentSubmit = async (postId: string) => {
     const content = commentInputs[postId]?.trim();
-    if (!content) return;
-    
-    // Parent Sync
-    onAddComment(postId, content);
-    trackClientObservation({ eventType: 'meaningful_interaction', entityType: 'post', entityId: postId, properties: { interaction: 'comment_observed' } });
+    if (!content || submittingComments[postId]) return;
 
-    const post = localPosts.find(p => p.id === postId);
-    if (post) {
-      recordAndPersistRecommendationEvent('comment', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
+    setSubmittingComments(prev => ({ ...prev, [postId]: true }));
+    try {
+      const saved = await onAddComment(postId, content);
+      if (saved === false) return;
+      trackClientObservation({ eventType: 'meaningful_interaction', entityType: 'post', entityId: postId, properties: { interaction: 'comment_observed' } });
+      const post = localPosts.find(p => p.id === postId);
+      if (post) {
+        recordAndPersistRecommendationEvent('comment', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
+      }
+      setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+    } finally {
+      setSubmittingComments(prev => ({ ...prev, [postId]: false }));
     }
-
-    setCommentInputs(prev => ({ ...prev, [postId]: '' }));
   };
 
   // Thread reply submission
@@ -2422,13 +2426,14 @@ export default function FeedView({
                           aria-label={`Write a comment on @${post.username}'s post`}
                           value={commentInputs[post.id] || ''}
                           onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
-                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCommentSubmit(post.id); } }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleAddCommentSubmit(post.id); } }}
                           className="flex-1 bg-slate-950/60 border border-white/5 focus:border-white/10 text-xs text-white placeholder:text-violet-400/40 py-2.5 px-4 rounded-xl focus:outline-hidden"
                         />
                         <button 
                           type="button"
-                          onClick={() => handleAddCommentSubmit(post.id)}
+                          onClick={() => { void handleAddCommentSubmit(post.id); }}
                           aria-label={`Send comment on @${post.username}'s post`}
+                          disabled={Boolean(submittingComments[post.id]) || !commentInputs[post.id]?.trim()}
                           className="p-2.5 bg-violet-600 hover:bg-violet-550 rounded-xl text-white transition-colors cursor-pointer"
                         >
                           <Send className="w-4 h-4" />
