@@ -73,7 +73,7 @@ async function inspectStudioExport(blob: Blob): Promise<{ durationSeconds: numbe
       };
       timeout = window.setTimeout(() => {
         cleanup();
-        reject(new Error('The exported video metadata could not be read. Your Studio draft is safe; try rendering again.'));
+        reject(new Error('We couldn't read the video details. Your draft is safe. Please try again.'));
       }, 12_000);
       video.onloadedmetadata = () => {
         const metadata = { durationSeconds: video.duration, width: video.videoWidth, height: video.videoHeight };
@@ -1100,7 +1100,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
         ...metadata,
       }, { durationSeconds: expectedDuration, ...dimensions });
       if (validationError) throw new Error(validationError);
-      setMessage(`Export verified · ${(blob.size / (1024 * 1024)).toFixed(1)} MB · ${dimensions.width}×${dimensions.height} · WebM`);
+      setMessage(`Video ready · ${(blob.size / (1024 * 1024)).toFixed(1)} MB · ${dimensions.width}×${dimensions.height} · WebM`);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
@@ -1156,7 +1156,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
     publishAbortRef.current = controller;
     setPublishing(true);
     setUploadProgress(0);
-    setMessage('Uploading your verified Studio export…');
+    setMessage('Uploading your video…');
     try {
       await onPublish(
         exportBlob,
@@ -1169,7 +1169,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
       setMessage('Your Studio video has been published.');
     } catch (error) {
       setMessage(controller.signal.aborted
-        ? 'Upload cancelled. Your verified export and Studio draft are still available.'
+        ? 'Upload cancelled. Your video and draft are still here.'
         : error instanceof Error ? error.message : 'Publishing failed. Your draft remains saved. You can retry.');
     } finally {
       if (publishAbortRef.current === controller) publishAbortRef.current = null;
