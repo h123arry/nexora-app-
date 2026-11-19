@@ -132,29 +132,50 @@ const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(
 const r2Config = resolveR2Config();
 
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const match = req.headers.authorization?.match(/^Bearer ([^\s]+)$/);
-  if (!match) return res.status(401).json({ error: 'Sign in to access this resource.' });
+  const match = req.headers.authorization?.match(/^Bearer ([^\\s]+)$/);
+  if (!match) {
+    console.warn('[Auth] Protected request did not include a bearer token.', { path: req.path });
+    return res.status(401).json({ error: 'Sign in to access this resource.' });
+  }
+
+  let decoded: Awaited<ReturnType<ReturnType<typeof getAuth>['verifyIdToken']>>;
   try {
-    const decoded = await getAuth(firebaseAdminApp).verifyIdToken(match[1], true);
-    const accountStatus = (await serverDb.collection('accountStatus').doc(decoded.uid).get()).data() || {};
-    if (accountStatus.sessionRevocationPending === true) {
-      return res.status(401).json({ error: 'Your sessions are being secured. Sign in again and retry shortly.' });
-    }
-    if (Object.prototype.hasOwnProperty.call(accountStatus, 'sessionsRevokedAfter')) {
-      const cutoff = accountStatus.sessionsRevokedAfter;
-      if (!cutoff || typeof (cutoff as { toMillis?: unknown }).toMillis !== 'function') {
-        return res.status(401).json({ error: 'Your session security state is invalid. Sign in again to continue.' });
-      }
-      const cutoffSeconds = (cutoff as { toMillis: () => number }).toMillis() / 1000;
-      if (!Number.isSafeInteger(decoded.auth_time) || decoded.auth_time <= cutoffSeconds) {
-        return res.status(401).json({ error: 'Your session has been revoked. Sign in again to continue.' });
-      }
-    }
-    res.locals.userId = decoded.uid;
-    return next();
-  } catch {
+    decoded = await getAuth(firebaseAdminApp).verifyIdToken(match[1], true);
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error
+      ? String((error as { code?: unknown }).code || 'unknown')
+      : 'unknown';
+    console.warn('[Auth] Firebase ID token verification failed.', { code, path: req.path });
     return res.status(401).json({ error: 'Your sign-in could not be verified. Please sign in again.' });
   }
+
+  let accountStatus: Record<string, unknown>;
+  try {
+    accountStatus = (await serverDb.collection('accountStatus').doc(decoded.uid).get()).data() || {};
+  } catch (error) {
+    const code = error && typeof error === 'object' && 'code' in error
+      ? String((error as { code?: unknown }).code || 'unknown')
+      : 'unknown';
+    console.error('[Auth] Account security state lookup failed.', { code, path: req.path });
+    return res.status(503).json({ error: 'NEXORA could not verify your account security right now. Please retry.' });
+  }
+
+  if (accountStatus.sessionRevocationPending === true) {
+    return res.status(401).json({ error: 'Your sessions are being secured. Sign in again and retry shortly.' });
+  }
+  if (Object.prototype.hasOwnProperty.call(accountStatus, 'sessionsRevokedAfter')) {
+    const cutoff = accountStatus.sessionsRevokedAfter;
+    if (!cutoff || typeof (cutoff as { toMillis?: unknown }).toMillis !== 'function') {
+      return res.status(401).json({ error: 'Your session security state is invalid. Sign in again to continue.' });
+    }
+    const cutoffSeconds = (cutoff as { toMillis: () => number }).toMillis() / 1000;
+    if (!Number.isSafeInteger(decoded.auth_time) || decoded.auth_time <= cutoffSeconds) {
+      return res.status(401).json({ error: 'Your session has been revoked. Sign in again to continue.' });
+    }
+  }
+
+  res.locals.userId = decoded.uid;
+  return next();
 }
 
 async function allowChatMediaUpload(uid: string): Promise<boolean> {
@@ -267,7 +288,7 @@ r2MediaRouter.post('/upload-intent', async (req, res) => {
   if (typeof mediaId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) {
     return res.status(400).json({ error: 'A valid media asset ID is required.' });
   }
-  const purpose = metadata && typeof metadata.purpose === 'string' && ['post', 'story', 'studio-export'].includes(metadata.purpose)
+  const purpose = metadata && typeof metadata.purpose === 'string' && ['post', 'story', 'studio-export', 'profile-avatar'].includes(metadata.purpose)
     ? metadata.purpose : 'post';
   const objectKey = createR2ObjectKey(uid, mediaId);
   try {
@@ -438,13 +459,14 @@ app.get('/api/media/:mediaId', async (req, res) => {
     if (!assetSnapshot.exists || asset?.storageProvider !== 'r2' || asset?.status !== 'uploaded'
       || typeof asset.ownerId !== 'string' || typeof asset.storagePath !== 'string') return res.status(404).end();
     const ownerId = asset.ownerId;
-    const [story, byArray, bySingle, ownerProfile, ownerSettings, ownerStatus] = await Promise.all([
+    const [story, byArray, bySingle, ownerProfile, ownerSettings, ownerStatus, publicProfileSnapshot] = await Promise.all([
       serverDb.collection('stories').doc(mediaId).get(),
       serverDb.collection('posts').where('mediaAssetIds', 'array-contains', mediaId).limit(5).get(),
       serverDb.collection('posts').where('mediaAssetId', '==', mediaId).limit(5).get(),
       serverDb.collection('users').doc(ownerId).get(),
       serverDb.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
       serverDb.collection('accountStatus').doc(ownerId).get(),
+      serverDb.collection('publicProfiles').doc(ownerId).get(),
     ]);
     const storyData = story.data();
     const storyIsPublic = story.exists && storyData?.userId === ownerId && storyData?.mediaId === mediaId
@@ -458,7 +480,10 @@ app.get('/api/media/:mediaId', async (req, res) => {
     const privacy = (ownerSettings.data()?.privacy || {}) as Record<string, unknown>;
     const status = ownerStatus.data() || {};
     const profile = ownerProfile.data() || {};
-    if ((!storyIsPublic && !linkedPublicPost) || privacy.isPrivate === true || privacy.isPrivateAccount === true
+    const publicProfile = publicProfileSnapshot.data() || {};
+    const isPublicAvatar = asset.purpose === 'profile-avatar'
+      && publicProfile.avatar === r2MediaGatewayUrl(mediaId);
+    if ((!storyIsPublic && !linkedPublicPost && !isPublicAvatar) || privacy.isPrivate === true || privacy.isPrivateAccount === true
       || profile.isSeedProfile === true || profile.isBanned === true || profile.isSuspended === true
       || status.banned === true || status.suspended === true) return res.status(404).end();
     const url = createR2PresignedUrl(r2Config, 'GET', asset.storagePath, 60);

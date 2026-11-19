@@ -148,7 +148,7 @@ export class PushNotificationService {
       badge: '/icons/icon-48.png',
       tag: data.notificationId || ('nexora-' + (data.type || 'general') + '-' + (data.targetId || 'update')),
       data,
-      silent: false,
+      silent: true,
     };
 
     // Mobile browsers and installed Android PWAs should display through the service worker.

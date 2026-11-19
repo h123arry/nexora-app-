@@ -92,7 +92,7 @@ export function createNotificationPushDelivery(db: Firestore, app: App) {
           data,
           webpush: {
             fcmOptions: { link: data.url },
-            notification: { icon: '/nexora-mark.png', badge: '/icons/icon-48.png' },
+            notification: { icon: '/nexora-mark.png', badge: '/icons/icon-48.png', silent: true },
           },
         });
         const staleTokenIds: string[] = [];

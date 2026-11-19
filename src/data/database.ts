@@ -1,4 +1,5 @@
 import { User, Post, SocialMission, Circle, Chat, Message, Notification } from '../types';
+import { getRenderableAvatarUrl } from '../utils/avatarUrl';
 import { ActivityService } from '../services/activityService';
 import { userScopedStorageKey, writeUserScopedJson } from '../utils/userScopedStorage';
 
@@ -338,24 +339,13 @@ export function isUserVerified(username: string): boolean {
   return lower === 'nexoraofficial' || lower === 'voh' || lower === 'voh_ai' || lower === 'nexora_ai' || lower === 'lunash';
 }
 
-// Generate an ultra-modern high-contrast deterministic gradient monogram default avatar
-export function getDefaultAvatar(name: string): string {
-  const initial = (name || 'N').trim().charAt(0).toUpperCase();
-  const charCodeSum = (name || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) || 12;
-  const hue1 = charCodeSum % 360;
-  const hue2 = (hue1 + 140) % 360;
-  
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><defs><linearGradient id="grad-${charCodeSum}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(${hue1}, 75%, 60%)" /><stop offset="100%" stop-color="hsl(${hue2}, 85%, 45%)" /></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(#grad-${charCodeSum})" /><text x="50%" y="54%" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="900" font-size="42" text-anchor="middle" dominant-baseline="middle" style="letter-spacing:-0.05em">${initial}</text></svg>`;
-  
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+// Missing and legacy stock portraits use a neutral, non-person placeholder.
+export function getDefaultAvatar(_name?: string): string {
+  return '/avatar-placeholder.svg';
 }
 
-// Automatically maps old Unsplash male portraits or missing avatars to the beautiful default monogram
-export function getSafeAvatar(avatar: string | undefined, name: string): string {
-  if (!avatar || avatar.includes('photo-1535713875002-d1d0cf377fde') || avatar.trim() === '') {
-    return getDefaultAvatar(name);
-  }
-  return avatar;
+export function getSafeAvatar(avatar?: string, _name?: string): string {
+  return getRenderableAvatarUrl(avatar) || getDefaultAvatar();
 }
 
 // Return authentic user with true persistent reputation & contributions metrics
