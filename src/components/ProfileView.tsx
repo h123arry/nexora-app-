@@ -599,7 +599,7 @@ export default function ProfileView({
   const [editCategory, setEditCategory] = useState(currentUser.profileCategory || 'Digital Creator');
   const [editCreatorType, setEditCreatorType] = useState(currentUser.creatorType || 'Premium creator');
   const [editAvatar, setEditAvatar] = useState(currentUser.avatar);
-  const [editCover, setEditCover] = useState(currentUser.coverImage);
+  const [editCover, setEditCover] = useState(currentUser.coverImage || '');
   const [editSocialTwitter, setEditSocialTwitter] = useState(currentUser.socialTwitter || '');
   const [editSocialInsta, setEditSocialInsta] = useState(currentUser.socialInstagram || '');
   const coverInputRef = useRef<HTMLInputElement | null>(null);
@@ -829,8 +829,13 @@ export default function ProfileView({
     setEditBio(currentUser.bio);
     setEditLocation(currentUser.location || '');
     setEditWebsite(currentUser.website || '');
+    setEditPronouns(currentUser.pronouns || '');
+    setEditCategory(currentUser.profileCategory || 'Digital Creator');
+    setEditCreatorType(currentUser.creatorType || 'Premium creator');
+    setEditSocialTwitter(currentUser.socialTwitter || '');
+    setEditSocialInsta(currentUser.socialInstagram || '');
     setEditAvatar(currentUser.avatar);
-    setEditCover(currentUser.coverImage);
+    setEditCover(currentUser.coverImage || '');
   }, [currentUser.id]);
 
   // Web camera activation
@@ -1019,7 +1024,7 @@ export default function ProfileView({
     editSocialTwitter !== (currentUser.socialTwitter || '') ||
     editSocialInsta !== (currentUser.socialInstagram || '') ||
     editAvatar !== currentUser.avatar ||
-    editCover !== currentUser.coverImage;
+    editCover !== (currentUser.coverImage || '');
   const handleCancelEditProfile = () => {
     if (hasUnsavedProfileChanges && !window.confirm('Discard your unsaved profile changes?')) return;
     stopWebcam();
@@ -3304,7 +3309,8 @@ export default function ProfileView({
                     <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest pl-2">🔴 LIVE PREVIEW</span>
                     
                     {/* Simplified Profile Header simulation */}
-                    <div className="bg-[#0b0922] border border-white/10 rounded-2xl p-6 text-center space-y-4">
+                    <div className="bg-[#0b0922] border border-white/10 rounded-2xl p-4 text-center space-y-4">
+                      <div className="relative h-24 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]">{editCover ? <img src={editCover} alt="Cover photo preview" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-[10px] text-zinc-500">Optional cover photo</div>}</div>
                       <div className="relative w-20 h-20 rounded-full bg-black overflow-hidden mx-auto border-2 border-white/10">
                         <img src={editAvatar} className="w-full h-full object-cover" alt="live preview avatar" />
                       </div>
