@@ -15,7 +15,7 @@ const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 export const transferOwnedNexGift = onCall({ maxInstances: 20 }, async request => {
   const senderId = request.auth?.uid;
   if (!senderId) throw new HttpsError('unauthenticated', 'Sign in before sending a gift.');
-  await assertCallableSessionActive(db, senderId, request.auth.token?.auth_time);
+  await assertCallableSessionActive(db, senderId, request.auth?.token?.auth_time);
 
   let input;
   try { input = validateGiftDeliveryInput(request.data); }
