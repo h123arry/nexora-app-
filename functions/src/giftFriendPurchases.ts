@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { assertCallableSessionActive } from './callableSession.js';
@@ -75,7 +75,7 @@ export const buyNexGiftForFriend = onCall({ maxInstances: 20 }, async request =>
       if (!senderProfile.exists || !recipientProfile.exists) {
         throw new HttpsError('not-found', 'We could not find that NEXORA member.');
       }
-      const restricted = (snapshot: FirebaseFirestore.DocumentSnapshot) => {
+      const restricted = (snapshot: DocumentSnapshot) => {
         const state = snapshot.data() || {};
         return state.suspended === true || state.giftingRestricted === true;
       };
