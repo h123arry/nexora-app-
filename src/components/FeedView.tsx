@@ -276,11 +276,11 @@ export default function FeedView({
   useEffect(() => {
     const handleOnline = () => {
       setIsOffline(false);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '💚 You're back online.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '💚 You are back online.' }));
     };
     const handleOffline = () => {
       setIsOffline(true);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Connection lost. Some changes may not save until you're back online.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Connection lost. Some changes may not save until you are back online.' }));
     };
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -399,7 +399,7 @@ export default function FeedView({
         setFullscreenVideoMuted(syncData.isMuted);
         setFullscreenPlaying(syncData.isPlaying);
         
-        // Let's stop the inline video element so there's no dual playback
+        // Let us stop the inline video element so there's no dual playback
         if (syncData.videoElement) {
           syncData.videoElement.pause();
         }
@@ -488,7 +488,7 @@ export default function FeedView({
     setPinnedPostIds(next);
     if (auth.currentUser?.uid === currentUser.id) {
       void ProfileService.updateProfile(currentUser.id, { pinnedPosts: next }).catch(() => {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Pinned posts couldn't be updated. Please try again.' }));
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Pinned posts could not be updated. Please try again.' }));
       });
     }
   };
@@ -1156,12 +1156,12 @@ export default function FeedView({
       });
       
       if (maxTagScore > 3) {
-        reasons.push(`You've shown interest in #${maxTag}.`);
+        reasons.push(`You have shown interest in #${maxTag}.`);
       }
       
       const creatorScore = (profile.creators && (profile.creators[postItem.userId] || profile.creators[postItem.username])) || 0;
       if (creatorScore > 3) {
-        reasons.push(`You've interacted with @${postItem.username} before.`);
+        reasons.push(`You have interacted with @${postItem.username} before.`);
       }
       
       if (reasons.length === 0) {
@@ -2455,7 +2455,7 @@ export default function FeedView({
           <div className="py-8 text-center space-y-1.5 opacity-80">
             <div className="w-2 h-2 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full mx-auto animate-pulse" />
             <p className="text-[11px] font-mono font-extrabold text-violet-300 uppercase tracking-widest">
-              You're all caught up on Nexora
+              You are all caught up on Nexora
             </p>
             <p className="text-[10px] font-sans text-zinc-500">
               Check back soon for new updates or share your own post.
@@ -3186,7 +3186,7 @@ export default function FeedView({
                     setMutedCreatorIds(prev => [...prev, contextualMenuPost.userId]);
                     setLastAction({ type: 'mute_creator', postId: contextualMenuPost.id, data: { creatorId: contextualMenuPost.userId } });
                     setContextualMenuPost(null);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: `🔇 You won't see posts from @${contextualMenuPost.username} in your feed.` }));
+                    window.dispatchEvent(new CustomEvent('toast', { detail: `🔇 You will not see posts from @${contextualMenuPost.username} in your feed.` }));
                   }}
                   className="w-full flex items-center gap-3 p-3 bg-white/3 hover:bg-white/10 rounded-xl text-left text-xs font-sans font-bold text-violet-100 transition-colors"
                 >
@@ -3251,7 +3251,7 @@ export default function FeedView({
                 </p>
 
                 <div className="p-3 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-2">
-                  <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest block font-black">Why you're seeing this post</span>
+                  <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest block font-black">Why you are seeing this post</span>
                   {getRecommendationExplanation(contextualMenuPost).map((reason, idx) => (
                     <div key={idx} className="flex gap-2 text-xs font-sans text-violet-200 leading-normal">
                       <span className="text-pink-500 font-mono">▸</span>
