@@ -109,11 +109,12 @@ test('public profile signup offers both username/password and email/password pat
   assert.match(authService, /sendEmailVerification\(fbUser\)/);
 });
 
-test('profile edits persist the private profile and update its public projection', async () => {
+test('profile edits omit undefined optional fields while persisting the private profile and public projection', async () => {
   const profile = await read('../src/services/firebase/profileService.ts');
-  assert.match(profile, /await runTransaction\(db, async transaction =>/);
-  assert.match(profile, /transaction.update\(privateProfileRef, \{ \.\.\.updates, updatedAt: serverTimestamp\(\) \}\)/);
-  assert.match(profile, /transaction.set\(publicProfileRef/);
+  assert.match(profile, /const safeUpdates = Object\.fromEntries\(/);
+  assert.match(profile, /Object\.entries\(updates\)\.filter\(\(\[, value\]\) => value !== undefined\)/);
+  assert.match(profile, /transaction\.update\(privateProfileRef, \{ \.\.\.safeUpdates, updatedAt: serverTimestamp\(\) \}\)/);
+  assert.match(profile, /transaction\.set\(publicProfileRef/);
   assert.match(profile, /doc\(db, 'publicProfiles', uid\)/);
 });
 
