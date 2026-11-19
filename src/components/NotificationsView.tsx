@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, BookmarkCheck, Eye, ArrowRight, Sparkle, History, VolumeX, AlertTriangle, Layers, Trash, Star, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, CheckSquare, Square, Check, Scale } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
-import { addFollow, deleteOwnNotification, deleteOwnNotifications, setNotificationReadState, setNotificationsReadState } from '../services/dataService';
+import { addFollow, deleteOwnNotification, deleteOwnNotifications, getNotificationPreferences, saveNotificationPreferences, setNotificationReadState, setNotificationsReadState } from '../services/dataService';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { getNotificationTimeSection } from '../utils/notificationTime';
@@ -74,6 +74,7 @@ export default function NotificationsView({
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   // Notification configuration preferences
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [settingsToggles, setSettingsToggles] = useState({
     likes: true,
     comments: true,
@@ -159,6 +160,27 @@ export default function NotificationsView({
     hydrateNotifications();
 
   }, [propNotifications]);
+
+  useEffect(() => {
+    let active = true;
+    setPreferencesLoaded(false);
+    getNotificationPreferences(currentUser.id)
+      .then(saved => {
+        if (!active) return;
+        setSettingsToggles(previous => ({ ...previous, ...saved }));
+      })
+      .catch(() => {
+        if (active) addToast("Couldn't load your notification preferences. Using the current settings.");
+      })
+      .finally(() => { if (active) setPreferencesLoaded(true); });
+    return () => { active = false; };
+  }, [currentUser.id]);
+
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+    void saveNotificationPreferences(currentUser.id, settingsToggles)
+      .catch(() => addToast("Couldn't save your notification preferences. Please try again."));
+  }, [currentUser.id, preferencesLoaded, settingsToggles]);
 
   // ---------------------------------------------------------------------------
   // INTERACTIVE ACTION HANDLERS
@@ -333,7 +355,7 @@ export default function NotificationsView({
 
       // Filter settings blocks
       if ((n.type === 'like' || n.type === 'spark') && !settingsToggles.likes) return false;
-      if (n.type === 'comment' && !settingsToggles.comments) return false;
+      if ((n.type === 'comment' || n.type === 'comment_reply') && !settingsToggles.comments) return false;
       if (n.type === 'follow' && !settingsToggles.followers) return false;
       if (n.type === 'mention' && !settingsToggles.mentions) return false;
       if (n.type === 'community' && !settingsToggles.communities) return false;
@@ -342,7 +364,7 @@ export default function NotificationsView({
       // Match categories
       if (activeCategory === 'all') return true;
       if (activeCategory === 'mentions') return n.type === 'mention';
-      if (activeCategory === 'comments') return n.type === 'comment';
+      if (activeCategory === 'comments') return n.type === 'comment' || n.type === 'comment_reply';
       if (activeCategory === 'likes') return n.type === 'like' || n.type === 'spark';
       if (activeCategory === 'reposts') return n.type === 'repost';
       if (activeCategory === 'followers') return n.type === 'follow';
