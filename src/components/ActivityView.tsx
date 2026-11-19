@@ -81,7 +81,10 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
     const target = notifications.find(notification => notification.id === notificationId);
     if (target) {
       setExpandedNotificationId(notificationId);
-      if (!target.isRead) void markAsRead(notificationId);
+      if (!target.isRead && db && auth.currentUser?.uid === currentUser.id) {
+        void updateDoc(doc(db, 'users', currentUser.id, 'notifications', notificationId), { isRead: true })
+          .catch(() => console.warn('[ActivityView] Push-opened notification could not be marked read.'));
+      }
     }
     params.delete('nxPushNotification');
     const remaining = params.toString();
