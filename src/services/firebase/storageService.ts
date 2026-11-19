@@ -54,7 +54,7 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
   const contentType = file.type.split(';')[0].trim().toLowerCase();
   const mediaId = normalizeMediaId(options.mediaId || crypto.randomUUID());
   const fileName = safeFileName(options.fileName || (file instanceof File ? file.name : 'upload'));
-  const token = await user.getIdToken();
+  const token = await user.getIdToken(true);
   const intentResponse = await fetch('/api/media/upload-intent', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -78,7 +78,7 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
 
   const abortR2Intent = async () => {
     try {
-      const cleanupToken = await user.getIdToken();
+      const cleanupToken = await user.getIdToken(true);
       await fetch(`/api/media/${encodeURIComponent(mediaId)}/abort`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${cleanupToken}` },
@@ -125,7 +125,7 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
   }
 
   try {
-  const completeToken = await user.getIdToken();
+  const completeToken = await user.getIdToken(true);
   const completeResponse = await fetch(`/api/media/${encodeURIComponent(mediaId)}/complete`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${completeToken}`, 'Content-Type': 'application/json' },
