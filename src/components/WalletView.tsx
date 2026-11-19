@@ -69,7 +69,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-[.14em] text-[var(--nx-muted)]">Your account</p>
           <h1 id="wallet-title" className="text-xl font-bold text-white">Nexora Wallet</h1>
-          <p className="mt-1 text-sm text-[var(--nx-muted)]">Your NEX balance is loaded from the trusted wallet ledger, not from editable profile data.</p>
+          <p className="mt-1 text-sm text-[var(--nx-muted)]">Your NEX balance comes from your wallet.</p>
         </div>
         <button type="button" onClick={() => void refreshWallet()} disabled={loading} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[var(--nx-edge)] px-3 text-sm font-semibold text-white transition hover:bg-[var(--nx-surface-2)] disabled:opacity-50" aria-label="Refresh wallet">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />Refresh
@@ -80,12 +80,12 @@ export default function WalletView({ currentUser }: WalletViewProps) {
         <article className="rounded-2xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-5 text-left">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--nx-muted)]"><Coins className="h-4 w-4 text-[var(--nx-violet-bright)]" aria-hidden="true" />Nex Coin balance</h2>
           <p className="mt-5 text-3xl font-bold tracking-tight text-white">{loading ? '…' : visibleSnapshot ? formatUnits(visibleSnapshot.availableBalance) : '—'}<span className="ml-2 text-base text-[var(--nx-muted)]">NEX</span></p>
-          <p className="mt-2 text-xs text-[var(--nx-muted)]">Server-confirmed available balance</p>
+          <p className="mt-2 text-xs text-[var(--nx-muted)]">Available to spend</p>
         </article>
         <article className="rounded-2xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-5 text-left">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--nx-muted)]"><Zap className="h-4 w-4 text-[var(--nx-violet-bright)]" aria-hidden="true" />Sparks</h2>
           <p className="mt-5 text-3xl font-bold tracking-tight text-white">{sparks}<span className="ml-2 text-base text-[var(--nx-muted)]">Sparks</span></p>
-          <p className="mt-2 text-xs text-[var(--nx-muted)]">Separate from Nex Coin</p>
+          <p className="mt-2 text-xs text-[var(--nx-muted)]">Kept separate from Nex Coin</p>
         </article>
       </section>
 
@@ -99,11 +99,11 @@ export default function WalletView({ currentUser }: WalletViewProps) {
       {visibleSnapshot && (
         <section className="grid gap-3 sm:grid-cols-2" aria-label="Wallet totals">
           <div className="rounded-xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-4 text-left">
-            <p className="text-xs text-[var(--nx-muted)]">Lifetime credited</p>
+            <p className="text-xs text-[var(--nx-muted)]">Total received</p>
             <p className="mt-1 text-lg font-semibold text-white">{formatUnits(visibleSnapshot.lifetimeCredited)} NEX</p>
           </div>
           <div className="rounded-xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-4 text-left">
-            <p className="text-xs text-[var(--nx-muted)]">Lifetime debited</p>
+            <p className="text-xs text-[var(--nx-muted)]">Total spent</p>
             <p className="mt-1 text-lg font-semibold text-white">{formatUnits(visibleSnapshot.lifetimeDebited)} NEX</p>
           </div>
         </section>
@@ -112,10 +112,10 @@ export default function WalletView({ currentUser }: WalletViewProps) {
       <section className="rounded-2xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-5 text-left" aria-labelledby="ledger-title">
         <div className="flex items-center justify-between gap-3">
           <h2 id="ledger-title" className="flex items-center gap-2 text-sm font-semibold text-white"><History className="h-4 w-4 text-[var(--nx-violet-bright)]" aria-hidden="true" />Transaction history</h2>
-          <span className="text-xs text-[var(--nx-muted)]">Latest 25</span>
+          <span className="text-xs text-[var(--nx-muted)]">Last 25 transactions</span>
         </div>
         {loading ? (
-          <p className="mt-4 text-sm text-[var(--nx-muted)]">Loading verified wallet activity…</p>
+          <p className="mt-4 text-sm text-[var(--nx-muted)]">Loading your wallet history…</p>
         ) : visibleSnapshot?.transactions.length ? (
           <ul className="mt-3 divide-y divide-[var(--nx-edge)]">
             {visibleSnapshot.transactions.map((entry) => (
@@ -124,7 +124,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
                   {entry.direction === 'credit' ? <ArrowDownLeft className="h-4 w-4" aria-hidden="true" /> : <ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">{entry.description || 'Nex Coin activity'}</p>
+                  <p className="truncate text-sm font-medium text-white">{entry.description || 'Wallet activity'}</p>
                   <p className="mt-0.5 text-xs text-[var(--nx-muted)]">{formatDate(entry.createdAt)}</p>
                 </div>
                 <p className={`shrink-0 text-sm font-semibold ${entry.direction === 'credit' ? 'text-emerald-400' : 'text-white'}`}>
@@ -136,7 +136,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
         ) : (
           <div className="mt-4 rounded-xl border border-[var(--nx-edge)] bg-[var(--nx-surface-2)] p-4">
             <div className="flex items-center gap-2 text-sm font-medium text-white"><ShieldCheck className="h-4 w-4 text-[var(--nx-violet-bright)]" aria-hidden="true" />Your wallet is ready</div>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--nx-muted)]">Your verified ledger starts at zero. Coin purchases and gifting will be enabled in later Phase 5 stages after their payment and transaction flows are connected.</p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--nx-muted)]">Your wallet starts at zero. Buying coins and sending gifts will be available when those features are ready.</p>
           </div>
         )}
       </section>
