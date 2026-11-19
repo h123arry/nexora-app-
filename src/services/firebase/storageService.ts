@@ -105,6 +105,11 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
         updateDoc(assetRef, { status: 'failed', failureCategory: signal?.aborted ? 'upload_cancelled' : 'upload_failed', failureMessage: reason.slice(0, 240), updatedAt: serverTimestamp() }),
       ]);
     };
+    let intentTimedOut = false;
+    const intentTimeout = window.setTimeout(() => {
+      intentTimedOut = true;
+      reject(new Error('NEXORA could not prepare this upload. Check your connection and try again. Your file has not started uploading.'));
+    }, 30000);
     void setDoc(assetRef, {
       id: mediaId,
       ownerId: userId,
@@ -117,6 +122,10 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }).then(() => {
+      clearTimeout(intentTimeout);
+      // A late Firestore response must not start a surprise upload after the
+      // user has already received a preparation timeout.
+      if (intentTimedOut) return;
       const task = uploadBytesResumable(ref(storage, storagePath), file, uploadMetadata);
       const abortUpload = () => task.cancel();
       if (signal?.aborted) task.cancel();
@@ -148,7 +157,10 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
           }
         },
       );
-    }).catch(reject);
+    }).catch(error => {
+      clearTimeout(intentTimeout);
+      if (!intentTimedOut) reject(error);
+    });
   });
 }
 
