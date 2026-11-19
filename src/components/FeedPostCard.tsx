@@ -13,8 +13,8 @@ import NexoraImagePlayer from './NexoraImagePlayer';
 import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
 import OriginAttributionPreviewModal from './OriginAttributionPreviewModal';
+import { getRenderableAvatarUrl } from '../utils/avatarUrl';
 
-const hasCustomAvatar = (avatar?: string) => Boolean(avatar && !avatar.includes('photo-1535713875002-d1d0cf377fde'));
 const avatarInitial = (name?: string) => (name?.trim().charAt(0) || 'N').toUpperCase();
 
 interface FeedPostCardProps {
@@ -117,6 +117,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   expandedPostIds,
   setExpandedPostIds
 }) => {
+  const avatarUrl = getRenderableAvatarUrl(post.avatar);
   const reduceMotion = useReducedMotion();
   const isCommentsOpen = activeCommentsPostId === post.id;
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
@@ -203,9 +204,9 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               onViewProfile?.(post.userId || post.username);
             }}
           >
-            {hasCustomAvatar(post.avatar) ? (
+            {avatarUrl ? (
               <img
-                src={post.avatar}
+                src={avatarUrl}
                 alt=""
                 loading="lazy"
                 decoding="async"
