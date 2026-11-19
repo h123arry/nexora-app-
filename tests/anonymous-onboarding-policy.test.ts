@@ -1,8 +1,32 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getAnonymousMemberUsername, shouldShowAnonymousAccountReminder } from '../src/services/firebase/anonymousOnboardingPolicy.ts';
+import {
+  dismissAnonymousAccountPrompt,
+  getAnonymousAccountPromptDelayMs,
+  getAnonymousMemberUsername,
+  readAnonymousAccountPromptState,
+  shouldShowAnonymousAccountReminder,
+} from '../src/services/firebase/anonymousOnboardingPolicy.ts';
 
 const joinedAt = new Date(2026, 10, 17, 9, 0, 0).getTime();
+
+test('anonymous account prompts escalate from ten seconds after each dismissal', () => {
+  assert.equal(getAnonymousAccountPromptDelayMs(0), 10_000);
+  assert.equal(getAnonymousAccountPromptDelayMs(1), 20_000);
+  assert.equal(getAnonymousAccountPromptDelayMs(2), 30_000);
+  assert.equal(getAnonymousAccountPromptDelayMs(3), 60_000);
+  assert.equal(getAnonymousAccountPromptDelayMs(99), 1_800_000);
+  const first = dismissAnonymousAccountPrompt(1_000, { dismissals: 0, nextPromptAt: null });
+  assert.deepEqual(first, { dismissals: 1, nextPromptAt: 21_000 });
+  const second = dismissAnonymousAccountPrompt(first.nextPromptAt!, first);
+  assert.deepEqual(second, { dismissals: 2, nextPromptAt: 51_000 });
+});
+
+test('anonymous account prompt state fails closed to the initial ten-second reminder', () => {
+  assert.deepEqual(readAnonymousAccountPromptState(null), { dismissals: 0, nextPromptAt: null });
+  assert.deepEqual(readAnonymousAccountPromptState('{not-json'), { dismissals: 0, nextPromptAt: null });
+  assert.deepEqual(readAnonymousAccountPromptState('{"dismissals":2,"nextPromptAt":123}'), { dismissals: 2, nextPromptAt: 123 });
+});
 
 test('anonymous beta handles are deterministic for the same Firebase UID', () => {
   assert.equal(getAnonymousMemberUsername('AbCdEf123456789'), 'member_abcdef1234');
