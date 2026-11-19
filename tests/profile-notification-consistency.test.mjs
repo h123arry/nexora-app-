@@ -10,6 +10,7 @@ test('guest exploration never impersonates a person or uses stock-person avatars
   assert.match(app, /avatar: '\/nexora-mark\.png'/);
   assert.doesNotMatch(app, /Nexora Visitor|Guest visitor browsing Nexora network|photo-1535713875002-d1d0cf377fde/);
   assert.match(app, /requireAuth\(\(\) => \{ void handleViewProfile\(userIdOrUsername\); \}/);
+  assert.match(app, /!isLoggedIn \|\| requiresPublicAccountSetup/);
   assert.match(app, /getSafeAvatar\(post\.avatar, post\.name \|\| post\.username\)/);
   assert.match(app, /getSafeAvatar\(c\.avatar, c\.name \|\| c\.username\)/);
   assert.match(app, /getSafeAvatar\(u\.avatar, u\.name \|\| u\.username\)/);
