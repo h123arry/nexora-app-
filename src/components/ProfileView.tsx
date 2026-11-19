@@ -270,7 +270,7 @@ export default function ProfileView({
   const [profileFollows, setProfileFollows] = useState<Array<{ followerId: string; followingId: string }>>([]);
   const [relationshipUsers, setRelationshipUsers] = useState<User[]>([]);
   useEffect(() => {
-    if (!isLoggedIn || !currentUser.id) {
+    if (!isLoggedIn || !currentUser.id || auth.currentUser?.uid !== currentUser.id) {
       setProfileFollows([]);
       setRelationshipUsers([]);
       return;
