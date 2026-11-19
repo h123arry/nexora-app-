@@ -1276,32 +1276,30 @@ export default function ProfileView({
             </div>
           )}
 
+          {/* Profile cover with compact avatar anchored over its lower edge. */}
+          <div className="nx-profile-cover relative h-28 sm:h-36 overflow-visible rounded-2xl border border-white/10 bg-[#100B25]">
+            {currentUser.coverImage ? (
+              <img src={currentUser.coverImage} alt="" className="h-full w-full rounded-2xl object-cover" />
+            ) : (
+              <div className="h-full w-full rounded-2xl bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]" />
+            )}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/35 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute left-4 -bottom-6">
+              <div className="relative">
+                {currentUser.hasStory && <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 blur-[2px] opacity-80" />}
+                <button type="button" onClick={() => setProfilePicExpanded(true)} aria-label="View profile photo" className="relative z-10 h-14 w-14 sm:h-16 sm:w-16 rounded-full border-[3px] border-[#080617] bg-black overflow-visible shadow-lg cursor-zoom-in focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4">
+                  <img src={currentUser.avatar} className="h-full w-full rounded-full object-cover" alt="" referrerPolicy="no-referrer" />
+                  {profileFrameAsset && <img src={profileFrameAsset.path} alt="" aria-hidden="true" className="pointer-events-none absolute -inset-[6px] z-20 h-[calc(100%+12px)] w-[calc(100%+12px)] object-contain" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
           {/* Profile Identity Header (Stage 2 Redesign) */}
-          <div className="nx-profile-identity flex flex-col space-y-1.5 sm:space-y-2 text-left mb-1">
+          <div className="nx-profile-identity flex flex-col space-y-1.5 sm:space-y-2 text-left mb-1 pt-7">
             {/* Identity & Action Bar */}
             <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="relative shrink-0">
-                  {currentUser.hasStory && (
-                    <div className="absolute -inset-1 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-full blur-[2px] opacity-80" />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setProfilePicExpanded(true)}
-                    aria-label="View profile photo"
-                    className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-black overflow-visible relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-md focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4"
-                  >
-                    <img
-                      src={currentUser.avatar}
-                      className="w-full h-full rounded-full object-cover"
-                      alt=""
-                      referrerPolicy="no-referrer"
-                    />
-                    {profileFrameAsset && <img src={profileFrameAsset.path} alt="" aria-hidden="true" className="pointer-events-none absolute -inset-[7px] z-20 h-[calc(100%+14px)] w-[calc(100%+14px)] object-contain" />}
-                  </button>
-                </div>
-
-                <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <h1 className={`text-xl sm:text-2xl font-black leading-tight tracking-tight ${!currentUser.name ? 'text-violet-400/70 italic text-base' : 'text-white'}`}>
                       {currentUser.name || (isOwnProfile ? 'Set your display name' : 'Member')}
