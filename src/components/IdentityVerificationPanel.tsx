@@ -96,8 +96,8 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
 
       {!loading && application?.status === 'approved' ? (
         <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-3">
-          <div className="flex items-center gap-2 text-sm font-bold text-emerald-300"><CheckCircle2 className="h-4 w-4" /> Identity verified</div>
-          <p className="mt-1 text-xs text-zinc-300">{application.displayName} is verified as {application.identityType.replace('_', ' ')}.</p>
+          <div className="flex items-center gap-2 text-sm font-bold text-emerald-300"><CheckCircle2 className="h-4 w-4" /> Identity confirmed</div>
+          <p className="mt-1 text-xs text-zinc-300">{application.displayName} has been confirmed as {application.identityType.replace('_', ' ')}.</p>
         </div>
       ) : null}
 
@@ -140,7 +140,7 @@ export default function IdentityVerificationPanel({ initialDisplayName, userId }
             <input value={displayName} onChange={event => setDisplayName(event.target.value)} minLength={2} maxLength={120} required className="w-full rounded-xl border border-white/10 bg-[#121027] px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400/60" />
           </label>
           <label className="block space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Why should this identity be verified?</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Why should we confirm this identity?</span>
             <textarea value={evidenceSummary} onChange={event => setEvidenceSummary(event.target.value)} minLength={20} maxLength={1000} rows={3} required placeholder="Explain who this account represents and how the evidence connects it to the identity." className="w-full resize-y rounded-xl border border-white/10 bg-[#121027] px-3 py-2.5 text-xs text-white outline-none focus:border-violet-400/60" />
           </label>
           <label className="block space-y-1">
