@@ -134,27 +134,44 @@ const r2Config = resolveR2Config();
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
   const match = req.headers.authorization?.match(/^Bearer ([^\s]+)$/);
   if (!match) return res.status(401).json({ error: 'Sign in to access this resource.' });
+  let decoded: Awaited<ReturnType<ReturnType<typeof getAuth>['verifyIdToken']>>;
   try {
-    const decoded = await getAuth(firebaseAdminApp).verifyIdToken(match[1], true);
-    const accountStatus = (await serverDb.collection('accountStatus').doc(decoded.uid).get()).data() || {};
-    if (accountStatus.sessionRevocationPending === true) {
-      return res.status(401).json({ error: 'Your sessions are being secured. Sign in again and retry shortly.' });
-    }
-    if (Object.prototype.hasOwnProperty.call(accountStatus, 'sessionsRevokedAfter')) {
-      const cutoff = accountStatus.sessionsRevokedAfter;
-      if (!cutoff || typeof (cutoff as { toMillis?: unknown }).toMillis !== 'function') {
-        return res.status(401).json({ error: 'Your session security state is invalid. Sign in again to continue.' });
-      }
-      const cutoffSeconds = (cutoff as { toMillis: () => number }).toMillis() / 1000;
-      if (!Number.isSafeInteger(decoded.auth_time) || decoded.auth_time <= cutoffSeconds) {
-        return res.status(401).json({ error: 'Your session has been revoked. Sign in again to continue.' });
-      }
-    }
-    res.locals.userId = decoded.uid;
-    return next();
-  } catch {
+    decoded = await getAuth(firebaseAdminApp).verifyIdToken(match[1], true);
+  } catch (error) {
+    const code = (error as { code?: unknown } | null)?.code;
+    console.error('[NEXORA] Firebase ID token verification failed', {
+      code: typeof code === 'string' ? code : 'unknown',
+    });
     return res.status(401).json({ error: 'Your sign-in could not be verified. Please sign in again.' });
   }
+
+  let accountStatus: Record<string, unknown>;
+  try {
+    accountStatus = (await serverDb.collection('accountStatus').doc(decoded.uid).get()).data() || {};
+  } catch (error) {
+    const code = (error as { code?: unknown } | null)?.code;
+    console.error('[NEXORA] Account session status lookup failed', {
+      code: typeof code === 'string' ? code : 'unknown',
+    });
+    // Do not misreport a database outage as an invalid Firebase sign-in.
+    return res.status(503).json({ error: 'NEXORA could not verify your account security status. Please retry shortly.' });
+  }
+
+  if (accountStatus.sessionRevocationPending === true) {
+    return res.status(401).json({ error: 'Your sessions are being secured. Sign in again and retry shortly.' });
+  }
+  if (Object.prototype.hasOwnProperty.call(accountStatus, 'sessionsRevokedAfter')) {
+    const cutoff = accountStatus.sessionsRevokedAfter;
+    if (!cutoff || typeof (cutoff as { toMillis?: unknown }).toMillis !== 'function') {
+      return res.status(401).json({ error: 'Your session security state is invalid. Sign in again to continue.' });
+    }
+    const cutoffSeconds = (cutoff as { toMillis: () => number }).toMillis() / 1000;
+    if (!Number.isSafeInteger(decoded.auth_time) || decoded.auth_time <= cutoffSeconds) {
+      return res.status(401).json({ error: 'Your session has been revoked. Sign in again to continue.' });
+    }
+  }
+  res.locals.userId = decoded.uid;
+  return next();
 }
 
 async function allowChatMediaUpload(uid: string): Promise<boolean> {
