@@ -169,11 +169,11 @@ export default function NotificationsView({
       .then(saved => {
         if (!active) return;
         setSettingsToggles(previous => ({ ...previous, ...saved }));
+        setPreferencesLoaded(true);
       })
       .catch(() => {
-        if (active) addToast("Couldn't load your notification preferences. Using the current settings.");
-      })
-      .finally(() => { if (active) setPreferencesLoaded(true); });
+        if (active) addToast("Couldn't load your notification preferences. Your saved settings were left unchanged.");
+      });
     return () => { active = false; };
   }, [currentUser.id]);
 
