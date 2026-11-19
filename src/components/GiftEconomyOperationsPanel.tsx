@@ -48,20 +48,20 @@ export default function GiftEconomyOperationsPanel(){
   if(riskResult.status==='rejected'||queueResult.status==='rejected'||policyResult.status==='rejected'||otpResult.status==='rejected'){
    const reason=[riskResult,queueResult,policyResult,otpResult].find(x=>x.status==='rejected');
    const code=reason?.status==='rejected'?(reason.reason as {code?:string})?.code||'':'';
-   setError(code.includes('permission-denied')?'Only finance admins can do this.':'Some gift or payout details couldn't load. Check the payment settings and try again.');
+   setError(code.includes('permission-denied')?'Only finance admins can do this.':'Some gift or payout details couldn’t load. Check the payment settings and try again.');
   }
   setLoading(false);
  },[]);
  useEffect(()=>{void refresh();},[refresh]);
- const review=async(id:string,outcome:'cleared'|'escalated')=>{const note=reviewNotes[id]||'';try{await resolveGiftRiskSignal(id,outcome,note);setNotice('Gift review saved. A permanent record was kept.');setReviewNotes(prev=>({...prev,[id]:''}));await refresh();}catch{setError('This review couldn't be saved. Add a note and try again.');}};
+ const review=async(id:string,outcome:'cleared'|'escalated')=>{const note=reviewNotes[id]||'';try{await resolveGiftRiskSignal(id,outcome,note);setNotice('Gift review saved. A permanent record was kept.');setReviewNotes(prev=>({...prev,[id]:''}));await refresh();}catch{setError('This review couldn’t be saved. Add a note and try again.');}};
  const reviewBeneficiary=async(row:CreatorPayoutComplianceRecord,decision:'approved'|'rejected')=>{
   const evidenceReference=evidenceRefs[row.creatorId]||'';
   const bankAccountNameMatched=nameMatches[row.creatorId]===true;
-  if(evidenceReference.trim().length<4||(decision==='approved'&&!bankAccountNameMatched)){setError('Add the review reference and confirm that the bank account name matches the creator's verified name.');return;}
+  if(evidenceReference.trim().length<4||(decision==='approved'&&!bankAccountNameMatched)){setError('Add the review reference and confirm that the bank account name matches the creator’s verified name.');return;}
   setSaving(true);setError('');setNotice('');
   try{await reviewCreatorPayoutCompliance({creatorId:row.creatorId,beneficiaryRef:row.beneficiaryRef,decision,evidenceReference:evidenceReference.trim(),bankAccountNameMatched});
    setNotice('Creator payout details reviewed. The decision was saved.');await refresh();}
-  catch{setError('The creator's payout details couldn't be reviewed.');}
+  catch{setError('The creator’s payout details couldn’t be reviewed.');}
   finally{setSaving(false);}
  };
  const finalizeOtp=async(reference:string)=>{
@@ -69,7 +69,7 @@ export default function GiftEconomyOperationsPanel(){
   if(!/^\d{4,8}$/.test(otp)){setError('Enter the code sent by the payment provider.');return;}
   setSaving(true);setError('');setNotice('');
   try{const result=await finalizeNgnPayoutTransfer(reference,otp);setNotice('Transfer approval sent: '+result.status+'.');setOtpValues(prev=>({...prev,[reference]:''}));await refresh();}
-  catch{setError('Paystack didn't accept this code. The NEX balance is still safe.');}
+  catch{setError('Paystack didn’t accept this code. The NEX balance is still safe.');}
   finally{setSaving(false);}
  };
  const savePayoutPolicy=async()=>{
@@ -81,7 +81,7 @@ export default function GiftEconomyOperationsPanel(){
    providerBusinessVerified:liveApprovals.providerBusinessVerified,settlementFundingVerified:liveApprovals.settlementFundingVerified,
    complianceApproved:liveApprovals.complianceApproved,webhookVerified:liveApprovals.webhookVerified,liveTestTransferVerified:liveApprovals.liveTestTransferVerified});
    setNotice('Paystack '+result.mode+' payout policy saved.');await refresh();}
-  catch{setError('These payout settings couldn't be saved. Live payouts need all approvals, enough money for fees and a review reference.');}
+  catch{setError('These payout settings couldn’t be saved. Live payouts need all approvals, enough money for fees and a review reference.');}
   finally{setSaving(false);}
  };
  const publish=async()=>{
@@ -97,11 +97,11 @@ export default function GiftEconomyOperationsPanel(){
   <div className="rounded-xl border border-white/10 p-4">
    <div className="flex items-center justify-between gap-2"><h4 className="flex items-center gap-2 text-sm font-bold text-white"><AlertTriangle size={15} className="text-amber-300"/> Gift activity to review</h4><button type="button" onClick={()=>void refresh()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-white"><RefreshCw size={12} className={loading?'animate-spin':''}/> Refresh</button></div>
    {loading?<p className="py-4 text-xs text-slate-500">Checking gift activity…</p>:records.length===0?<p className="py-4 text-xs text-slate-500">No unusual gift activity needs review.</p>:<div className="mt-3 space-y-2">{records.map(row=><article key={row.id} className="rounded-xl bg-white/[.03] p-3"><div className="flex items-center justify-between"><span className="text-xs font-bold text-white">{row.tier.toUpperCase()} · score {row.score}/100</span><span className="text-xs text-amber-200">{row.grossNex.toLocaleString()} NEX</span></div><p className="mt-1 break-all text-[10px] text-slate-500">Sender {row.senderId} · Creator {row.creatorId}</p><p className="mt-1 text-[10px] text-slate-400">{row.reasons.join(' · ')}</p><textarea value={reviewNotes[row.id]||''} onChange={e=>setReviewNotes(prev=>({...prev,[row.id]:e.target.value}))} placeholder="Required review note (8–500 characters)" className="mt-2 min-h-16 w-full rounded-lg border border-white/10 bg-[#15102a] p-2 text-[10px] text-white"/><div className="mt-2 flex gap-2"><button type="button" disabled={(reviewNotes[row.id]||'').trim().length<8} onClick={()=>void review(row.id,'cleared')} className="rounded-lg border border-emerald-300/20 px-3 py-2 text-[10px] font-bold text-emerald-200 disabled:opacity-40">Clear signal</button><button type="button" disabled={(reviewNotes[row.id]||'').trim().length<8} onClick={()=>void review(row.id,'escalated')} className="rounded-lg border border-amber-300/20 px-3 py-2 text-[10px] font-bold text-amber-200 disabled:opacity-40">Escalate</button></div></article>)}</div>}
-   <p className="mt-3 flex items-start gap-2 text-[10px] leading-5 text-slate-500"><ShieldCheck size={13} className="mt-0.5 shrink-0"/> These checks help the team spot unusual activity. They don't automatically blame anyone, take back gifts or remove coins.</p>
+   <p className="mt-3 flex items-start gap-2 text-[10px] leading-5 text-slate-500"><ShieldCheck size={13} className="mt-0.5 shrink-0"/> These checks help the team spot unusual activity. They don’t automatically blame anyone, take back gifts or remove coins.</p>
   </div>
   <div className="rounded-xl border border-white/10 p-4">
    <h4 className="text-sm font-bold text-white">Paystack transfer confirmation</h4>
-   <p className="mt-1 text-[10px] leading-5 text-slate-500">If Paystack asks for a confirmation code, it will send it to the business owner's registered contact. Enter the code here. Codes are not saved.</p>
+   <p className="mt-1 text-[10px] leading-5 text-slate-500">If Paystack asks for a confirmation code, it will send it to the business owner’s registered contact. Enter the code here. Codes are not saved.</p>
    {otpRecords.length===0?<p className="mt-3 text-xs text-slate-500">No transfers are waiting for a confirmation code.</p>:<div className="mt-3 space-y-3">{otpRecords.map(row=><article key={row.reference} className="rounded-xl bg-white/[.03] p-3">
     <p className="text-xs font-bold text-white">₦{(row.amountKobo/100).toLocaleString('en-NG',{minimumFractionDigits:2})} · {row.amountNex.toLocaleString()} NEX</p>
     <p className="mt-1 break-all text-[10px] text-slate-500">{row.reference} · Creator {row.creatorId}</p>
@@ -127,11 +127,11 @@ export default function GiftEconomyOperationsPanel(){
   </div>
   <div className="rounded-xl border border-white/10 p-4">
    <h4 className="text-sm font-bold text-white">Creator payout details review</h4>
-   <p className="mt-1 text-[10px] leading-5 text-slate-500">Check the bank account name against the creator's verified identity outside NEXORA. Save only a review reference. Never upload identity papers or full bank details here.</p>
+   <p className="mt-1 text-[10px] leading-5 text-slate-500">Check the bank account name against the creator’s verified identity outside NEXORA. Save only a review reference. Never upload identity papers or full bank details here.</p>
    {complianceRecords.length===0?<p className="mt-3 text-xs text-slate-500">No creator bank accounts are waiting for review.</p>:<div className="mt-3 space-y-3">{complianceRecords.map(row=><article key={row.creatorId} className="rounded-xl bg-white/[.03] p-3">
     <p className="text-xs font-bold text-white">{row.accountName} · {row.bankName} •••• {row.accountNumberLast4}</p><p className="mt-1 break-all text-[10px] text-slate-500">Creator {row.creatorId} · {row.complianceStatus}</p>
     <input value={evidenceRefs[row.creatorId]||''} onChange={e=>setEvidenceRefs(prev=>({...prev,[row.creatorId]:e.target.value}))} placeholder="Identity check reference" className="mt-2 min-h-10 w-full rounded-lg border border-white/10 bg-[#15102a] px-3 text-xs text-white"/>
-    <label className="mt-2 flex items-start gap-2 text-[10px] text-slate-300"><input type="checkbox" checked={nameMatches[row.creatorId]===true} onChange={e=>setNameMatches(prev=>({...prev,[row.creatorId]:e.target.checked}))}/> The bank account name matches the creator's verified name</label>
+    <label className="mt-2 flex items-start gap-2 text-[10px] text-slate-300"><input type="checkbox" checked={nameMatches[row.creatorId]===true} onChange={e=>setNameMatches(prev=>({...prev,[row.creatorId]:e.target.checked}))}/> The bank account name matches the creator’s verified name</label>
     <div className="mt-2 flex gap-2"><button type="button" disabled={saving||!evidenceRefs[row.creatorId]?.trim()||!nameMatches[row.creatorId]} onClick={()=>void reviewBeneficiary(row,'approved')} className="rounded-lg border border-emerald-300/20 px-3 py-2 text-[10px] font-bold text-emerald-200 disabled:opacity-40">Approve beneficiary</button><button type="button" disabled={saving||!evidenceRefs[row.creatorId]?.trim()} onClick={()=>void reviewBeneficiary(row,'rejected')} className="rounded-lg border border-rose-300/20 px-3 py-2 text-[10px] font-bold text-rose-200 disabled:opacity-40">Reject</button></div>
    </article>)}</div>}
   </div>
