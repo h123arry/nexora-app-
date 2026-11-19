@@ -53,3 +53,28 @@ export async function quoteNexGift(giftId: string): Promise<GiftQuote> {
   const call = httpsCallable<{ giftId: string }, GiftQuote>(functions, 'quoteNexGift');
   return (await call({ giftId })).data;
 }
+
+export interface GiftInventoryItem {
+  id: string;
+  giftId: string;
+  giftName: string;
+  image: string;
+  rarity: NexoraGift['rarity'];
+  animation: NexoraGift['animation'];
+  category: string;
+  priceNex: number;
+  quantity: number;
+  updatedAt?: unknown;
+}
+
+export async function purchaseNexGift(giftId: string, idempotencyKey: string) {
+  const call = httpsCallable<{ giftId: string; idempotencyKey: string }, {
+    giftId: string; quantity: number; replayed: boolean; status: 'owned';
+  }>(functions, 'purchaseNexGift');
+  return (await call({ giftId, idempotencyKey })).data;
+}
+
+export async function getMyGiftInventory(): Promise<GiftInventoryItem[]> {
+  const call = httpsCallable<void, { items: GiftInventoryItem[] }>(functions, 'getMyGiftInventory');
+  return (await call()).data.items;
+}
