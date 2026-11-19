@@ -13,6 +13,7 @@ import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
 import { shapeAuthenticatedVohAccountContext } from './server/vohAccountContext';
+import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, buildR2OriginUploadRecords } from './server/r2Storage';
 import { runVohContextTool, VOH_CONTEXT_TOOL_DECLARATIONS } from './server/vohTools';
 
 const isProduction = process.env.NEXORA_ENV === 'production' || process.env.NODE_ENV === 'production';
@@ -128,6 +129,7 @@ const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-
     : initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api'));
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
 const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(firebaseStorageBucket) : null;
+const r2Config = resolveR2Config();
 
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
   const match = req.headers.authorization?.match(/^Bearer ([^\s]+)$/);
@@ -187,6 +189,287 @@ async function allowChatMediaPlayback(uid: string): Promise<boolean> {
     return true;
   });
 }
+
+
+function storyExpiryIsActive(value: unknown): boolean {
+  if (value && typeof value === 'object' && 'toMillis' in value && typeof (value as { toMillis?: unknown }).toMillis === 'function') {
+    return (value as { toMillis: () => number }).toMillis() > Date.now();
+  }
+  const timestamp = value instanceof Date ? value.getTime() : typeof value === 'number' ? value : 0;
+  return timestamp > Date.now();
+}
+
+async function hashR2Object(objectKey: string): Promise<{ digest: string; size: number }> {
+  if (!r2Config) throw new Error('R2 storage is not configured.');
+  const url = createR2PresignedUrl(r2Config, 'GET', objectKey, 900);
+  const response = await fetch(url);
+  if (!response.ok || !response.body) throw new Error('R2 object verification download failed.');
+  const digest = createHash('sha256');
+  let size = 0;
+  const reader = response.body.getReader();
+  try {
+    while (true) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      size += chunk.value.byteLength;
+      digest.update(Buffer.from(chunk.value));
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return { digest: digest.digest('hex'), size };
+}
+
+const r2MediaRouter = express.Router();
+r2MediaRouter.use(requireFirebaseUser);
+
+// Per-account abuse protection for upload authorisation, completion and deletion.
+// Keep the map bounded; this process-local guard is an additional layer to edge-level limits.
+const r2MediaRateBuckets = new Map<string, { windowStartedAt: number; count: number }>();
+const R2_MEDIA_RATE_WINDOW_MS = 60_000;
+const R2_MEDIA_RATE_MAX_REQUESTS = 30;
+const R2_MEDIA_RATE_MAX_BUCKETS = 10_000;
+
+function rateLimitR2Media(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const uid = String(res.locals.userId || '');
+  if (!uid) return res.status(401).json({ error: 'Authentication is required.' });
+  const now = Date.now();
+  let bucket = r2MediaRateBuckets.get(uid);
+  if (!bucket || now - bucket.windowStartedAt >= R2_MEDIA_RATE_WINDOW_MS) {
+    bucket = { windowStartedAt: now, count: 0 };
+    r2MediaRateBuckets.set(uid, bucket);
+  }
+  bucket.count += 1;
+  if (bucket.count > R2_MEDIA_RATE_MAX_REQUESTS) {
+    res.setHeader('Retry-After', String(Math.ceil((R2_MEDIA_RATE_WINDOW_MS - (now - bucket.windowStartedAt)) / 1000)));
+    return res.status(429).json({ code: 'media_rate_limited', error: 'Too many media requests. Please wait before trying again.' });
+  }
+  if (r2MediaRateBuckets.size > R2_MEDIA_RATE_MAX_BUCKETS) {
+    for (const [key, value] of r2MediaRateBuckets) {
+      if (now - value.windowStartedAt >= R2_MEDIA_RATE_WINDOW_MS) r2MediaRateBuckets.delete(key);
+      if (r2MediaRateBuckets.size <= R2_MEDIA_RATE_MAX_BUCKETS) break;
+    }
+  }
+  return next();
+}
+r2MediaRouter.use(rateLimitR2Media);
+
+r2MediaRouter.post('/upload-intent', async (req, res) => {
+  if (!r2Config) return res.status(503).json({ code: 'r2_not_configured', error: 'R2 media storage is not configured for this environment.' });
+  const uid = res.locals.userId as string;
+  const { mediaId, contentType, size, fileName, metadata } = req.body || {};
+  let policy: ReturnType<typeof validateR2Upload>;
+  try {
+    policy = validateR2Upload(contentType, size);
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid media upload.' });
+  }
+  if (typeof mediaId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) {
+    return res.status(400).json({ error: 'A valid media asset ID is required.' });
+  }
+  const purpose = metadata && typeof metadata.purpose === 'string' && ['post', 'story', 'studio-export'].includes(metadata.purpose)
+    ? metadata.purpose : 'post';
+  const objectKey = createR2ObjectKey(uid, mediaId);
+  try {
+    const assetRef = serverDb.collection('mediaAssets').doc(mediaId);
+    const existing = await assetRef.get();
+    if (existing.exists && existing.get('ownerId') !== uid) return res.status(409).json({ error: 'This media asset ID is already in use.' });
+    if (existing.exists && existing.get('status') === 'uploaded') return res.status(409).json({ error: 'This media asset has already been uploaded.' });
+    await assetRef.set({
+      id: mediaId,
+      ownerId: uid,
+      storagePath: objectKey,
+      storageProvider: 'r2',
+      kind: policy.kind,
+      contentType: contentType.split(';')[0].trim().toLowerCase(),
+      size,
+      fileName: typeof fileName === 'string' ? fileName.slice(0, 180) : 'upload',
+      purpose,
+      ...(metadata && typeof metadata.storyId === 'string' && purpose === 'story' ? { storyId: metadata.storyId.slice(0, 128) } : {}),
+      status: 'pending_upload',
+      createdAt: existing.exists ? existing.get('createdAt') : FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    const uploadUrl = createR2PresignedUrl(r2Config, 'PUT', objectKey, 900, contentType.split(';')[0].trim().toLowerCase(), new Date(), true);
+    return res.status(201).json({ mediaId, storagePath: objectKey, uploadUrl, contentType: contentType.split(';')[0].trim().toLowerCase(), size });
+  } catch (error) {
+    console.error('[R2Media] Could not create upload intent.', error);
+    return res.status(503).json({ error: 'NEXORA could not prepare this media upload. Please retry.' });
+  }
+});
+
+r2MediaRouter.post('/:mediaId/complete', async (req, res) => {
+  if (!r2Config) return res.status(503).json({ code: 'r2_not_configured', error: 'R2 media storage is not configured for this environment.' });
+  const uid = res.locals.userId as string;
+  const mediaId = req.params.mediaId;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) return res.status(400).json({ error: 'Invalid media asset ID.' });
+  const assetRef = serverDb.collection('mediaAssets').doc(mediaId);
+  try {
+    const assetSnapshot = await assetRef.get();
+    const asset = assetSnapshot.data();
+    if (!assetSnapshot.exists || asset?.ownerId !== uid || asset?.storageProvider !== 'r2') {
+      return res.status(404).json({ error: 'The media upload could not be found.' });
+    }
+    if (asset.status === 'uploaded') {
+      return res.status(200).json({ mediaId, storagePath: asset.storagePath, downloadUrl: r2MediaGatewayUrl(mediaId), contentType: asset.contentType, size: asset.size });
+    }
+    if (asset.status !== 'pending_upload' || typeof asset.storagePath !== 'string') {
+      return res.status(409).json({ error: 'This media upload is not awaiting completion.' });
+    }
+    const headUrl = createR2PresignedUrl(r2Config, 'HEAD', asset.storagePath, 900);
+    const head = await fetch(headUrl, { method: 'HEAD' });
+    if (!head.ok) return res.status(409).json({ error: 'The uploaded file is not yet available in R2. Retry completion.' });
+    const actualSize = Number(head.headers.get('content-length') || 0);
+    const actualType = (head.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (actualSize !== asset.size || actualType !== asset.contentType) {
+      return res.status(400).json({ error: 'The uploaded file size or content type does not match its authorized upload.' });
+    }
+    const verified = await hashR2Object(asset.storagePath);
+    if (verified.size !== asset.size) return res.status(400).json({ error: 'The uploaded file failed integrity verification.' });
+    const generation = String(Date.now());
+    const records = buildR2OriginUploadRecords({
+      assetId: mediaId,
+      ownerUid: uid,
+      mediaGeneration: generation,
+      contentDigest: verified.digest,
+      contentType: actualType,
+      byteSize: actualSize,
+      studioExport: asset.purpose === 'studio-export',
+    });
+    const originRef = serverDb.collection('mediaOrigins').doc(mediaId);
+    const eventRef = originRef.collection('events').doc(records.event.eventId);
+    await serverDb.runTransaction(async transaction => {
+      const [freshAsset, origin, event] = await Promise.all([
+        transaction.get(assetRef), transaction.get(originRef), transaction.get(eventRef),
+      ]);
+      const fresh = freshAsset.data();
+      if (!freshAsset.exists || fresh?.ownerId !== uid || fresh?.storageProvider !== 'r2'
+        || fresh?.storagePath !== asset.storagePath || !['pending_upload', 'uploaded'].includes(String(fresh.status))) {
+        throw new Error('The media upload changed while it was being verified.');
+      }
+      if (origin.exists) {
+        const prior = origin.data();
+        if (prior?.ownerUid !== uid || prior?.contentDigest !== verified.digest || prior?.mediaGeneration !== generation) {
+          throw new Error('The media origin record conflicts with the verified R2 object.');
+        }
+      } else {
+        transaction.create(originRef, { ...records.origin, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      }
+      if (!event.exists) transaction.create(eventRef, { ...records.event, createdAt: FieldValue.serverTimestamp() });
+      transaction.set(assetRef, {
+        status: 'uploaded',
+        storageProvider: 'r2',
+        generation,
+        sha256: verified.digest,
+        etag: head.headers.get('etag') || null,
+        uploadedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    });
+    return res.status(200).json({
+      mediaId,
+      storagePath: asset.storagePath,
+      downloadUrl: r2MediaGatewayUrl(mediaId),
+      contentType: actualType,
+      size: actualSize,
+    });
+  } catch (error) {
+    console.error('[R2Media] Upload completion failed.', error);
+    return res.status(503).json({ error: 'NEXORA could not verify this upload. Please retry.' });
+  }
+});
+
+
+r2MediaRouter.post('/:mediaId/abort', async (req, res) => {
+  if (!r2Config) return res.status(503).json({ code: 'r2_not_configured' });
+  const uid = res.locals.userId as string;
+  const mediaId = req.params.mediaId;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) return res.status(400).json({ error: 'Invalid media asset ID.' });
+  try {
+    const assetRef = serverDb.collection('mediaAssets').doc(mediaId);
+    const asset = await assetRef.get();
+    if (!asset.exists || asset.get('storageProvider') !== 'r2' || asset.get('ownerId') !== uid) return res.status(404).end();
+    if (asset.get('status') === 'uploaded') return res.status(409).json({ error: 'A completed upload cannot be aborted.' });
+    if (asset.get('status') !== 'pending_upload') return res.status(204).end();
+    const objectKey = asset.get('storagePath');
+    if (typeof objectKey === 'string') {
+      const deleteUrl = createR2PresignedUrl(r2Config, 'DELETE', objectKey, 900);
+      const deleted = await fetch(deleteUrl, { method: 'DELETE' });
+      if (!deleted.ok && deleted.status !== 404) return res.status(503).json({ error: 'The incomplete R2 upload could not be cleaned up.' });
+    }
+    await assetRef.set({
+      status: 'failed',
+      failureCategory: 'upload_cancelled',
+      failureMessage: 'Upload cancelled before verification.',
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return res.status(204).end();
+  } catch {
+    return res.status(503).json({ error: 'The incomplete R2 upload could not be cleaned up.' });
+  }
+});
+
+r2MediaRouter.delete('/:mediaId', async (req, res) => {
+  if (!r2Config) return res.status(503).json({ code: 'r2_not_configured', error: 'R2 media storage is not configured.' });
+  const uid = res.locals.userId as string;
+  const mediaId = req.params.mediaId;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) return res.status(400).json({ error: 'Invalid media asset ID.' });
+  try {
+    const assetRef = serverDb.collection('mediaAssets').doc(mediaId);
+    const asset = await assetRef.get();
+    if (!asset.exists || asset.get('storageProvider') !== 'r2') return res.status(409).json({ code: 'not_r2_asset' });
+    if (asset.get('ownerId') !== uid) return res.status(404).end();
+    const deleteUrl = createR2PresignedUrl(r2Config, 'DELETE', String(asset.get('storagePath')), 900);
+    const deleted = await fetch(deleteUrl, { method: 'DELETE' });
+    if (!deleted.ok && deleted.status !== 404) return res.status(503).json({ error: 'The media object could not be deleted from R2.' });
+    return res.status(204).end();
+  } catch {
+    return res.status(503).json({ error: 'The media object could not be deleted from R2.' });
+  }
+});
+
+app.get('/api/media/:mediaId', async (req, res) => {
+  if (!r2Config) return res.status(404).end();
+  const mediaId = req.params.mediaId;
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) return res.status(404).end();
+  try {
+    const assetSnapshot = await serverDb.collection('mediaAssets').doc(mediaId).get();
+    const asset = assetSnapshot.data();
+    if (!assetSnapshot.exists || asset?.storageProvider !== 'r2' || asset?.status !== 'uploaded'
+      || typeof asset.ownerId !== 'string' || typeof asset.storagePath !== 'string') return res.status(404).end();
+    const ownerId = asset.ownerId;
+    const [story, byArray, bySingle, ownerProfile, ownerSettings, ownerStatus] = await Promise.all([
+      serverDb.collection('stories').doc(mediaId).get(),
+      serverDb.collection('posts').where('mediaAssetIds', 'array-contains', mediaId).limit(5).get(),
+      serverDb.collection('posts').where('mediaAssetId', '==', mediaId).limit(5).get(),
+      serverDb.collection('users').doc(ownerId).get(),
+      serverDb.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
+      serverDb.collection('accountStatus').doc(ownerId).get(),
+    ]);
+    const storyData = story.data();
+    const storyIsPublic = story.exists && storyData?.userId === ownerId && storyData?.mediaId === mediaId
+      && storyData?.privacy === 'everyone' && storyExpiryIsActive(storyData?.expiresAt);
+    const posts = [...byArray.docs, ...bySingle.docs].map(item => item.data());
+    const linkedPublicPost = posts.some(post => post.userId === ownerId && post.audience === 'public'
+      && post.deleted !== true && post.isDeleted !== true && post.hidden !== true && post.isDraft !== true && post.isArchived !== true
+      && !['deleted', 'hidden', 'removed', 'rejected', 'restricted', 'draft', 'private', 'suspended'].includes(String(post.status || '').toLowerCase())
+      && !['deleted', 'hidden', 'rejected', 'restricted', 'removed', 'suspended'].includes(String(post.moderationStatus || '').toLowerCase())
+      && !['private', 'hidden', 'deleted', 'unavailable'].includes(String(post.visibility || '').toLowerCase()));
+    const privacy = (ownerSettings.data()?.privacy || {}) as Record<string, unknown>;
+    const status = ownerStatus.data() || {};
+    const profile = ownerProfile.data() || {};
+    if ((!storyIsPublic && !linkedPublicPost) || privacy.isPrivate === true || privacy.isPrivateAccount === true
+      || profile.isSeedProfile === true || profile.isBanned === true || profile.isSuspended === true
+      || status.banned === true || status.suspended === true) return res.status(404).end();
+    const url = createR2PresignedUrl(r2Config, 'GET', asset.storagePath, 60);
+    return res.redirect(302, url);
+  } catch (error) {
+    console.error('[R2Media] Public media resolution failed.', error);
+    return res.status(404).end();
+  }
+});
+
+app.use('/api/media', r2MediaRouter);
 
 const privateChatMediaRouter = express.Router();
 privateChatMediaRouter.use(requireFirebaseUser);

@@ -40,7 +40,123 @@ function safeFileName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'upload';
 }
 
+
+class R2NotConfiguredError extends Error {
+  code = 'r2_not_configured';
+}
+
+async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaUploadResult> {
+  const { file, userId, onProgress, signal } = options;
+  const user = auth.currentUser;
+  if (!user || user.uid !== userId) throw new Error('Sign in to the same account before uploading media.');
+  if (!file || file.size <= 0) throw new Error('The selected file is empty.');
+  if (signal?.aborted) throw new DOMException('Upload cancelled.', 'AbortError');
+  const contentType = file.type.split(';')[0].trim().toLowerCase();
+  const mediaId = normalizeMediaId(options.mediaId || crypto.randomUUID());
+  const fileName = safeFileName(options.fileName || (file instanceof File ? file.name : 'upload'));
+  const token = await user.getIdToken();
+  const intentResponse = await fetch('/api/media/upload-intent', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      mediaId,
+      contentType,
+      size: file.size,
+      fileName,
+      metadata: options.metadata || {},
+    }),
+    signal,
+  });
+  const intent = await intentResponse.json().catch(() => ({}));
+  if (!intentResponse.ok) {
+    if (intentResponse.status === 503 && intent.code === 'r2_not_configured') throw new R2NotConfiguredError('R2 storage is not configured.');
+    throw new Error(typeof intent.error === 'string' ? intent.error : 'NEXORA could not prepare this upload.');
+  }
+  if (typeof intent.uploadUrl !== 'string' || typeof intent.storagePath !== 'string' || intent.mediaId !== mediaId) {
+    throw new Error('NEXORA returned an invalid upload authorization.');
+  }
+
+  const abortR2Intent = async () => {
+    try {
+      const cleanupToken = await user.getIdToken();
+      await fetch(`/api/media/${encodeURIComponent(mediaId)}/abort`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${cleanupToken}` },
+      });
+    } catch {
+      // The server's pending-upload cleanup is best-effort; no credential is exposed.
+    }
+  };
+
+  try {
+  await new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    let settled = false;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      signal?.removeEventListener('abort', abort);
+      if (error) reject(error);
+      else resolve();
+    };
+    const abort = () => xhr.abort();
+    xhr.open('PUT', intent.uploadUrl, true);
+    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.setRequestHeader('If-None-Match', '*');
+    xhr.upload.onprogress = event => {
+      if (event.lengthComputable && event.total > 0) onProgress?.(Math.round((event.loaded / event.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        onProgress?.(100);
+        finish();
+      } else finish(new Error('R2 rejected the media upload. Check the bucket CORS configuration and retry.'));
+    };
+    xhr.onerror = () => finish(new Error('The media upload connection failed. Please retry.'));
+    xhr.onabort = () => finish(new DOMException('Upload cancelled.', 'AbortError'));
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) return abort();
+    xhr.send(file);
+  });
+
+  } catch (error) {
+    await abortR2Intent();
+    throw error;
+  }
+
+  try {
+  const completeToken = await user.getIdToken();
+  const completeResponse = await fetch(`/api/media/${encodeURIComponent(mediaId)}/complete`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${completeToken}`, 'Content-Type': 'application/json' },
+    signal,
+  });
+  const completed = await completeResponse.json().catch(() => ({}));
+  if (!completeResponse.ok || typeof completed.downloadUrl !== 'string') {
+    throw new Error(typeof completed.error === 'string' ? completed.error : 'NEXORA could not verify the uploaded media.');
+  }
+  return {
+    mediaId,
+    downloadUrl: completed.downloadUrl,
+    storagePath: completed.storagePath,
+    contentType: completed.contentType,
+    size: completed.size,
+  };
+  } catch (error) {
+    await abortR2Intent();
+    throw error;
+  }
+}
+
 export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploadResult> {
+  if (options.chatId || options.metadata?.purpose === 'worldweave') return uploadMediaFileWithFirebase(options);
+  return uploadMediaFileViaR2(options).catch(error => {
+    if (error instanceof R2NotConfiguredError && import.meta.env.DEV) return uploadMediaFileWithFirebase(options);
+    throw error;
+  });
+}
+
+function uploadMediaFileWithFirebase(options: MediaUploadOptions): Promise<MediaUploadResult> {
   const { file, userId, onProgress, signal } = options;
   if (!userId) return Promise.reject(new Error('A signed-in user is required to upload media.'));
   if (!options.chatId && (!auth.currentUser || auth.currentUser.uid !== userId)) {
@@ -166,6 +282,21 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
 
 export async function deleteMediaFile(storagePath: string): Promise<void> {
   if (!storagePath) return;
+  const match = storagePath.match(/^users\/([A-Za-z0-9_-]{1,128})\/media\/([A-Za-z0-9_-]{1,128})$/);
+  if (match && auth.currentUser?.uid === match[1]) {
+    const token = await auth.currentUser.getIdToken();
+    const response = await fetch(`/api/media/${encodeURIComponent(match[2])}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) return;
+    const result = await response.json().catch(() => ({}));
+    const isLegacyFirebaseAsset = response.status === 409 && result.code === 'not_r2_asset';
+    const isR2Unavailable = response.status === 503 && result.code === 'r2_not_configured';
+    if (!isLegacyFirebaseAsset && !isR2Unavailable) {
+      throw new Error(typeof result.error === 'string' ? result.error : 'The media object could not be deleted.');
+    }
+  }
   await deleteObject(ref(storage, storagePath));
 }
 
