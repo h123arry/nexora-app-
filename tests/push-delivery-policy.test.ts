@@ -4,18 +4,21 @@ import { buildNotificationPushData, chunkPushTokens } from '../functions/src/pus
 
 describe('trusted notification push delivery policy', () => {
   it('creates bounded, string-only deep-link payload data', () => {
-    const data = buildNotificationPushData({ type: 'message', targetId: 'chat/with?bad' }, 'notification-1');
+    const data = buildNotificationPushData({ type: 'message', targetId: 'chat/with?bad', username: 'harry', actorName: 'Harry', userId: 'user-1' }, 'notification-1');
     assert.deepEqual(data, {
       type: 'message',
       targetId: 'chat/with?bad',
       notificationId: 'notification-1',
-      url: '/inbox?chatId=chat%2Fwith%3Fbad',
+      username: 'harry',
+      actorName: 'Harry',
+      userId: 'user-1',
+      url: '/#inbox',
     });
     assert.ok(Object.values(data).every((value) => typeof value === 'string'));
   });
 
   it('uses a safe default route for unknown notification types', () => {
-    assert.equal(buildNotificationPushData({}, 'n1').url, '/pulse');
+    assert.equal(buildNotificationPushData({}, 'n1').url, '/#activity');
   });
 
   it('chunks device tokens into provider-safe batches', () => {

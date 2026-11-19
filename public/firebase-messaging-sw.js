@@ -14,14 +14,38 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  const notificationTitle = payload.notification?.title || 'Nexora Alert';
+  // FCM automatically displays notification-payload messages in the background.
+  // Only create a notification here for data-only messages to avoid duplicates.
+  if (payload.notification) return;
+  const data = payload.data || {};
+  const notificationTitle = data.title || (data.username ? `@${data.username}` : 'NEXORA');
   const notificationOptions = {
-    body: payload.notification?.body || '',
-    icon: payload.notification?.icon || '/logo.png',
+    body: data.body || data.content || 'You have a new NEXORA update.',
+    icon: '/nexora-mark.png',
     badge: '/icons/icon-48.png',
-    data: payload.data
+    tag: data.notificationId || `nexora-${data.type || 'update'}-${data.targetId || 'general'}`,
+    data
   };
-
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const target = new URL(data.url || '/', self.location.origin);
+  target.searchParams.set('nxPushType', data.type || 'system');
+  if (data.userId) target.searchParams.set('nxPushUser', data.userId);
+  if (data.targetId) target.searchParams.set('nxPushTarget', data.targetId);
+  const targetUrl = target.toString();
+  event.waitUntil((async () => {
+    const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of windows) {
+      if ('focus' in client) {
+        await client.focus();
+        client.postMessage({ type: 'NEXORA_PUSH_OPEN', data });
+        return;
+      }
+    }
+    await clients.openWindow(targetUrl);
+  })());
 });

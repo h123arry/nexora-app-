@@ -1,20 +1,12 @@
 import { Notification, User, Post } from '../types';
-import { playNexoraSound } from './soundExperience';
 
 // ============================================================================
 // 1. CENTRALIZED SOUND EXPERIENCE
 // ============================================================================
-export function playNotificationSound(type: 'spark' | 'comment' | 'follow' | 'profile_view' | 'sync' | 'default' = 'default') {
-  const soundType = type === 'spark' ? 'notification.spark'
-    : type === 'comment' ? 'notification.comment'
-    : type === 'follow' ? 'notification.follow'
-    : type === 'sync' ? 'interface.confirmation'
-    : type === 'profile_view' ? 'notification.profile'
-    : 'notification.default';
-  playNexoraSound(soundType);
-  if (type !== 'sync' && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-    try { navigator.vibrate([25, 20, 35]); } catch { /* Haptics are optional. */ }
-  }
+// Notification delivery is intentionally silent. Refreshes and background
+// synchronization must never produce repeated alert sounds or vibration.
+export function playNotificationSound(_type: 'spark' | 'comment' | 'follow' | 'profile_view' | 'sync' | 'default' = 'default') {
+  return;
 }
 
 // ============================================================================
@@ -136,48 +128,13 @@ const COMMENT_PRESETS = [
 // ============================================================================
 // 4. REAL-TIME NOTIFICATION DISPATCH ENGINE
 // ============================================================================
-export function dispatchRealTimeNotification(notif: Notification, options: { playSound?: boolean; showWebPush?: boolean; showPop?: boolean } = {}) {
-  const { playSound = true, showWebPush = true, showPop = true } = options;
-
-  // 1. Play synthesized audio feedback
-  if (playSound) {
-    const soundType = notif.type === 'spark' || notif.type === 'like' ? 'spark'
-      : notif.type === 'comment' ? 'comment'
-      : notif.type === 'follow' ? 'follow'
-      : notif.type === 'profile_view' ? 'profile_view'
-      : 'default';
-    playNotificationSound(soundType);
-  }
-
-  // 2. Dispatch custom event for the in-app Pop banner & notifications store
+export function dispatchRealTimeNotification(notif: Notification, _options: { playSound?: boolean; showWebPush?: boolean; showPop?: boolean } = {}) {
+  // Persisted notification subscriptions update the inbox. This event is kept
+  // for existing inbox consumers, but never requests a floating banner.
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('nexora-realtime-notification', {
-      detail: {
-        notification: notif,
-        showPop
-      }
+      detail: { notification: notif, showPop: false }
     }));
-  }
-
-  // 3. Fire native Web Push notification if allowed & user is in background
-  if (showWebPush && isPushPermissionGranted()) {
-    const titleMap: Record<string, string> = {
-      spark: `⚡ ${notif.actorName || notif.username} sparked your post!`,
-      like: `⚡ ${notif.actorName || notif.username} sparked your post!`,
-      comment: `💬 ${notif.actorName || notif.username} commented on your post`,
-      follow: `👤 ${notif.actorName || notif.username} started following you`,
-      profile_view: `👁️ ${notif.actorName || notif.username} viewed your profile`,
-      mention: `🏷️ ${notif.actorName || notif.username} mentioned you`,
-      message: `✉️ New message from ${notif.actorName || notif.username}`,
-      system: `🔔 NEXORA Network Notification`
-    };
-
-    const pushTitle = titleMap[notif.type] || `🔔 NEXORA: ${notif.actorName || notif.username}`;
-    showWebPushNotification(pushTitle, {
-      body: notif.content,
-      icon: notif.avatar,
-      tag: `nexora-notif-${notif.type}-${Date.now()}`
-    });
   }
 }
 
