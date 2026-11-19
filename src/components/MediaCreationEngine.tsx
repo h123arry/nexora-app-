@@ -30,16 +30,37 @@ type PhotoExportOptions = {
   textColor?: string;
 };
 
+/** Load a local image safely, attaching handlers before src to avoid cached-load races. */
+function loadComposerImage(url: string, timeoutMs = 12000): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    let settled = false;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      image.onload = null;
+      image.onerror = null;
+      if (error) reject(error);
+      else resolve(image);
+    };
+    const timeout = window.setTimeout(
+      () => finish(new Error('Photo preparation took too long. Please try again or choose a smaller photo.')),
+      timeoutMs,
+    );
+    image.onload = () => finish();
+    image.onerror = () => finish(new Error('This photo could not be prepared. Please choose it again.'));
+    image.src = url;
+    // Cached object URLs can already be complete by the time src is assigned.
+    if (image.complete && image.naturalWidth > 0) finish();
+  });
+}
+
 /** Bake the adjustments shown in the composer into the image that is uploaded. */
 async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions): Promise<Blob> {
   const objectUrl = URL.createObjectURL(source);
   try {
-    const image = new Image();
-    image.src = objectUrl;
-    await new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve();
-      image.onerror = () => reject(new Error('This photo could not be prepared. Please choose it again.'));
-    });
+    const image = await loadComposerImage(objectUrl);
 
     const rotated = Math.abs(options.rotation % 180) === 90;
     // Keep the export lightweight enough for mid-range phones while retaining 4K detail.
@@ -121,12 +142,15 @@ async function optimizePhotoUpload(source: Blob): Promise<Blob> {
 
   const objectUrl = URL.createObjectURL(source);
   try {
-    const image = new Image();
-    image.src = objectUrl;
-    await new Promise<void>((resolve, reject) => {
-      image.onload = () => resolve();
-      image.onerror = () => reject(new Error('This photo could not be prepared for upload.'));
-    });
+    let image: HTMLImageElement;
+    try {
+      image = await loadComposerImage(objectUrl);
+    } catch (error) {
+      // Optimization is optional. Never hold up a valid original photo because
+      // a device's decoder is slow or unavailable.
+      console.warn('[MediaCreation] Photo optimization skipped; uploading original.', error);
+      return source;
+    }
     const maxEdge = 2560;
     const scale = Math.min(1, maxEdge / Math.max(image.naturalWidth, image.naturalHeight));
     if (scale === 1 && source.size < 1.5 * 1024 * 1024) return source;
