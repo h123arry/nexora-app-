@@ -99,7 +99,7 @@ export class ProfileService {
   }
 
   static async updateProfile(uid: string, updates: Partial<User>): Promise<void> {
-    if (!db) return;
+    if (!db) throw new Error('Profile storage is unavailable. Please try again.');
     if (!auth.currentUser || auth.currentUser.uid !== uid) {
       throw new Error('Only the signed-in account owner can update this profile.');
     }
@@ -112,6 +112,7 @@ export class ProfileService {
     const docRef = doc(db, 'users', uid);
     await updateDoc(docRef, { ...updates, updatedAt: serverTimestamp() });
     const existing = await this.getProfile(uid);
+    if (!existing) throw new Error('NEXORA could not confirm your profile after saving. Please refresh and retry.');
     if (existing) {
       const updatedProfile = { ...existing, ...updates };
       await setDoc(doc(db, 'publicProfiles', uid), {
