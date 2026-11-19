@@ -6,6 +6,8 @@ import type { App } from 'firebase-admin/app';
 export interface NotificationRecord {
   type?: string;
   content?: string;
+  username?: string;
+  actorName?: string;
   targetId?: string;
   isRead?: boolean;
 }
@@ -16,11 +18,15 @@ export function buildNotificationPushData(
 ): Record<string, string> {
   const type = typeof notification.type === 'string' ? notification.type.slice(0, 40) : 'system';
   const targetId = typeof notification.targetId === 'string' ? notification.targetId.slice(0, 160) : '';
+  const username = typeof notification.username === 'string' ? notification.username.replace(/^@+/, '').slice(0, 40) : '';
+  const actorName = typeof notification.actorName === 'string' ? notification.actorName.slice(0, 80) : '';
   return {
     type,
     targetId,
     notificationId,
-    url: type === 'message' && targetId ? `/inbox?chatId=${encodeURIComponent(targetId)}` : '/pulse',
+    username,
+    actorName,
+    url: type === 'message' && targetId ? '/#inbox' : type === 'follow' && targetId ? '/#profile' : '/#activity',
   };
 }
 
@@ -70,7 +76,9 @@ export function createNotificationPushDelivery(db: Firestore, app: App) {
       if (!tokenValues.length) return;
 
       const type = typeof notification.type === 'string' ? notification.type : 'system';
-      const body = typeof notification.content === 'string' ? notification.content.slice(0, 300) : 'You have a new update.';
+      const detail = typeof notification.content === 'string' ? notification.content.slice(0, 260) : 'You have a new update.';
+      const username = typeof notification.username === 'string' ? notification.username.replace(/^@+/, '').slice(0, 40) : '';
+      const body = [username ? `@${username}` : '', detail].filter(Boolean).join(' · ').slice(0, 300);
       const data = buildNotificationPushData(notification, snapshot.id);
       const messaging = getMessaging(app);
 
@@ -81,7 +89,7 @@ export function createNotificationPushDelivery(db: Firestore, app: App) {
           data,
           webpush: {
             fcmOptions: { link: data.url },
-            notification: { icon: '/logo.png', badge: '/icons/icon-48.png' },
+            notification: { icon: '/nexora-mark.png', badge: '/icons/icon-48.png' },
           },
         });
         const staleTokenIds: string[] = [];
