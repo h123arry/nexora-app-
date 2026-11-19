@@ -102,7 +102,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
                     />
                   )}
                   <div className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md rounded-full z-20">
-                    <Film className="w-3.5 h-3.5 text-pink-400" />
+                    <Film className="w-3.5 h-3.5 text-violet-400" />
                   </div>
                   {/* Consistent Bottom overlays for video count and duration */}
                   <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[9px] font-mono font-bold z-20 flex items-center gap-1">
@@ -133,7 +133,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
               ) : isVoice ? (
                 <div className="w-full h-full bg-gradient-to-tr from-pink-950/75 via-[#1d1242] to-[#040212] flex flex-col justify-between p-3">
                   <div className="flex justify-between items-center">
-                    <Mic className="w-4 h-4 text-pink-400 group-hover:scale-110 transition-transform" />
+                    <Mic className="w-4 h-4 text-violet-400 group-hover:scale-110 transition-transform" />
                     <span className="text-[8px] font-mono text-purple-300 font-extrabold uppercase bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/15">Voice</span>
                   </div>
                   
@@ -312,7 +312,11 @@ export default function ProfileView({
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
 
-  const profileTabsList = ['media', 'voice', 'reposts', 'sparks', 'gifts', 'bookmarks', 'archive'];
+  const profileTabsList = ['media', 'voice', 'reposts', 'sparks', 'gifts', ...(isOwnProfile ? ['bookmarks', 'archive'] : [])];
+
+  useEffect(() => {
+    if (!isOwnProfile && (profileTab === 'bookmarks' || profileTab === 'archive')) setProfileTab('media');
+  }, [isOwnProfile, profileTab]);
 
   const handleContentTouchStart = (e: React.TouchEvent) => {
     touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -997,11 +1001,11 @@ export default function ProfileView({
     editBio !== currentUser.bio ||
     editLocation !== (currentUser.location || '') ||
     editWebsite !== (currentUser.website || '') ||
-    editPronouns !== '' ||
-    editCategory !== 'Digital Creator' ||
-    editCreatorType !== 'Premium creator' ||
-    editSocialTwitter !== '' ||
-    editSocialInsta !== '' ||
+    editPronouns !== (currentUser.pronouns || '') ||
+    editCategory !== (currentUser.profileCategory || 'Digital Creator') ||
+    editCreatorType !== (currentUser.creatorType || 'Premium creator') ||
+    editSocialTwitter !== (currentUser.socialTwitter || '') ||
+    editSocialInsta !== (currentUser.socialInstagram || '') ||
     editAvatar !== currentUser.avatar ||
     editCover !== currentUser.coverImage;
   const handleCancelEditProfile = () => {
@@ -1012,8 +1016,13 @@ export default function ProfileView({
     setEditBio(currentUser.bio);
     setEditLocation(currentUser.location || '');
     setEditWebsite(currentUser.website || '');
+    setEditPronouns(currentUser.pronouns || '');
+    setEditCategory(currentUser.profileCategory || 'Digital Creator');
+    setEditCreatorType(currentUser.creatorType || 'Premium creator');
+    setEditSocialTwitter(currentUser.socialTwitter || '');
+    setEditSocialInsta(currentUser.socialInstagram || '');
     setEditAvatar(currentUser.avatar);
-    setEditCover(currentUser.coverImage);
+    setEditCover(currentUser.coverImage || '');
     setActivePanel('profile');
     window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Changes cancelled. Nothing was saved.' }));
   };
@@ -1048,7 +1057,7 @@ export default function ProfileView({
 
   // Tab filtered items (Media, Voice, Reposts, Sparks, Bookmarks, Archive)
   const getTabContent = () => {
-    const allActive = posts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const allActive = [...posts].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     const userMyPosts = allActive.filter(p => p.username === currentUser.username || p.userId === currentUser.id);
 
     switch (profileTab) {
@@ -1061,9 +1070,9 @@ export default function ProfileView({
       case 'sparks':
         return allActive.filter(p => !p.isArchived && (userSparks.includes(p.id) || (p as any).isSparkedByMe));
       case 'bookmarks':
-        return allActive.filter(p => !p.isArchived && userBookmarks.includes(p.id));
+        return isOwnProfile ? allActive.filter(p => !p.isArchived && userBookmarks.includes(p.id)) : [];
       case 'archive':
-        return userMyPosts.filter(p => p.isArchived);
+        return isOwnProfile ? userMyPosts.filter(p => p.isArchived) : [];
       default:
         return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.videoUrl));
     }
@@ -1308,7 +1317,7 @@ export default function ProfileView({
           )}
 
           {/* Profile cover with compact avatar anchored over its lower edge. */}
-          <div className="nx-profile-cover relative h-28 sm:h-36 overflow-visible rounded-2xl border border-white/10 bg-[#100B25]">
+          <div className="nx-profile-cover relative h-36 sm:h-48 overflow-visible rounded-2xl border border-white/10 bg-[#100B25]">
             {currentUser.coverImage ? (
               <img src={currentUser.coverImage} alt="" className="h-full w-full rounded-2xl object-cover" />
             ) : (
@@ -1778,7 +1787,7 @@ export default function ProfileView({
                             className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold transition-all text-zinc-300 hover:text-white"
                           >
                             <span className="flex items-center gap-2.5">
-                              <Shield className="w-4 h-4 text-cyan-400" />
+                              <Shield className="w-4 h-4 text-violet-300" />
                               <div className="text-left">
                                 <p className="leading-tight text-xs font-bold">Privacy settings</p>
                                 <p className="text-[9px] text-zinc-500 font-normal">Choose who can see your profile and manage blocked accounts</p>
@@ -1812,7 +1821,7 @@ export default function ProfileView({
                             className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold transition-all text-zinc-300 hover:text-white"
                           >
                             <span className="flex items-center gap-2.5">
-                              <Bell className="w-4 h-4 text-pink-400" />
+                              <Bell className="w-4 h-4 text-violet-400" />
                               <div className="text-left">
                                 <p className="leading-tight text-xs font-bold">Notifications Control</p>
                                 <p className="text-[9px] text-zinc-500 font-normal">Sieve likes, comments, DM alert triggers</p>
@@ -1998,7 +2007,7 @@ export default function ProfileView({
                           {/* Save parameters */}
                           <button
                             onClick={handleSaveProfile}
-                            className="w-full py-2.5 bg-linear-to-r from-violet-600 to-pink-500 text-white rounded-xl text-[10px] font-mono font-black uppercase tracking-widest"
+                            className="w-full py-2.5 bg-linear-to-r from-violet-600 to-violet-500 text-white rounded-xl text-[10px] font-mono font-black uppercase tracking-widest"
                           >
                             Save Changes
                           </button>
@@ -2006,7 +2015,7 @@ export default function ProfileView({
 
                         {/* Camera Setup block */}
                         <div className="bg-[#0e0c24] p-4 rounded-2xl border border-white/10 space-y-3">
-                          <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">📸 PROFILE PHOTO</span>
+                          <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">📸 PROFILE PHOTO</span>
                           {isWebcamActive ? (
                             <div className="space-y-2 text-center">
                               <video ref={videoRef} autoPlay playsInline className="w-40 h-40 object-cover mx-auto rounded-xl border border-pink-500/20 scale-x-[-1]" />
@@ -2035,7 +2044,7 @@ export default function ProfileView({
                     {settingsActiveSubPanel === 'privacy' && (
                       <div className="space-y-4">
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-4">
-                          <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">🔒 PRIVACY SETTINGS</span>
+                          <span className="text-[9px] font-mono text-violet-300 font-extrabold uppercase tracking-widest block">🔒 PRIVACY SETTINGS</span>
                           
                           {/* Private account is deliberately unavailable until follower-request and
                               private-post reads are enforced together by trusted rules and services. */}
@@ -2206,7 +2215,7 @@ export default function ProfileView({
                         </div>
 
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-2" role="status">
-                          <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">Advanced sign-in protections</span>
+                          <span className="text-[9px] font-mono text-violet-300 font-extrabold uppercase tracking-widest block">Advanced sign-in protections</span>
                           <p className="text-[10px] text-zinc-400 leading-relaxed">Passkey and app-managed TOTP enrollment are not implemented in Nexora. No passkey or second factor is enabled by these settings. Check Firebase Authentication for provider-supported MFA options.</p>
                         </div>
 
@@ -2221,7 +2230,7 @@ export default function ProfileView({
                     {settingsActiveSubPanel === 'notifications' && (
                       <div className="space-y-4 text-left">
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3.5">
-                          <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">🔔 PUSH PREFERENCES</span>
+                          <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">🔔 PUSH PREFERENCES</span>
                           <p className="text-[10px] text-zinc-400 leading-normal font-sans">Manage how you receive notifications on this device.</p>
                           
                           <div className="space-y-3">
@@ -2324,7 +2333,7 @@ export default function ProfileView({
 
                         {/* Typography customizer */}
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
-                          <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">✍️ TYPOGRAPHY SCALES</span>
+                          <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">✍️ TYPOGRAPHY SCALES</span>
                           
                           {/* Text size selector */}
                           <div className="space-y-1">
@@ -2402,7 +2411,7 @@ export default function ProfileView({
                         </div>
 
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3.5">
-                          <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">Clear saved app data</span>
+                          <span className="text-[9px] font-mono text-violet-300 font-extrabold uppercase tracking-widest block">Clear saved app data</span>
                           
                           {/* Cache size meter */}
                           <div className="bg-black/30 p-3.5 rounded-xl border border-white/5 space-y-2">
@@ -2413,7 +2422,7 @@ export default function ProfileView({
                             
                             {/* Visual SVG Progress loader bar */}
                             <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                              <div className="h-full bg-linear-to-r from-violet-600 to-pink-500 rounded-full" style={{ width: cacheSize === '0.0 B' ? '0%' : '65%' }} />
+                              <div className="h-full bg-linear-to-r from-violet-600 to-violet-500 rounded-full" style={{ width: cacheSize === '0.0 B' ? '0%' : '65%' }} />
                             </div>
                             <p className="text-[9px] text-zinc-500 font-sans leading-normal">This includes saved profile photos, video previews and other temporary files.</p>
                           </div>
@@ -2498,7 +2507,7 @@ export default function ProfileView({
                     {settingsActiveSubPanel === 'support' && (
                       <div className="space-y-4 text-left">
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
-                          <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">💬 Lagos Technical Grid Support</span>
+                          <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">💬 Lagos Technical Grid Support</span>
                           
                           {supportSubmitted ? (
                             <div className="p-6 text-center space-y-3 bg-black/20 rounded-xl border border-emerald-500/20">
@@ -2867,7 +2876,7 @@ export default function ProfileView({
                       {/* Right actions context */}
                       <div className="flex items-center gap-1.5">
                         {relationsTab === 'following' && (
-                          <label className="flex items-center gap-1 text-[10px] font-mono text-pink-400 bg-pink-500/5 px-2 py-1 rounded-lg border border-pink-500/10 cursor-pointer">
+                          <label className="flex items-center gap-1 text-[10px] font-mono text-violet-400 bg-pink-500/5 px-2 py-1 rounded-lg border border-pink-500/10 cursor-pointer">
                             <input 
                               type="checkbox" 
                               checked={closeFriends.includes(item.id)}
@@ -3253,7 +3262,7 @@ export default function ProfileView({
                         <button
                           disabled={isSavingProfile || showSavedFeedback}
                           onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
-                          className="px-4 py-2 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-4 py-2 bg-linear-to-r from-violet-600 to-violet-500 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Edit3 className="w-3.5 h-3.5" /> Configure Avatar
                         </button>
@@ -3284,7 +3293,7 @@ export default function ProfileView({
                       </p>
                       <div className="flex flex-wrap items-center justify-center gap-x-3 text-[10px] font-mono text-zinc-400">
                         {editLocation && <span>📍 {editLocation}</span>}
-                        {editWebsite && <span className="text-cyan-400">🔗 {editWebsite}</span>}
+                        {editWebsite && <span className="text-violet-300">🔗 {editWebsite}</span>}
                         {editPronouns && <span>👥 {editPronouns}</span>}
                       </div>
                     </div>
@@ -3303,7 +3312,7 @@ export default function ProfileView({
                         className={`flex-1 py-3.5 rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 ${
                           showSavedFeedback 
                             ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30' 
-                            : 'bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white shadow-violet-500/15 disabled:opacity-50 disabled:cursor-not-allowed'
+                            : 'bg-linear-to-r from-violet-600 to-violet-500 hover:brightness-110 text-white shadow-violet-500/15 disabled:opacity-50 disabled:cursor-not-allowed'
                         }`}
                       >
                         {isSavingProfile && (
@@ -3342,7 +3351,7 @@ export default function ProfileView({
               className="bg-[#0b0821] border border-white/10 rounded-2xl max-w-sm w-full overflow-hidden p-6 space-y-5 text-left"
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                <span className="text-[10px] font-mono text-pink-400 font-extrabold uppercase tracking-widest">
+                <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest">
                   Avatar Configuration
                 </span>
                 <button
@@ -3486,7 +3495,7 @@ export default function ProfileView({
                       onClick={() => setAvatarRotation(prev => (prev + 90) % 360)}
                       className="px-3 py-1.5 bg-white/5 border border-white/10 text-white font-mono text-[9px] uppercase font-bold rounded-lg hover:bg-white/10 cursor-pointer flex items-center gap-1"
                     >
-                      <RefreshCw className="w-3 h-3 text-pink-400 animate-spin" /> Rotate 90°
+                      <RefreshCw className="w-3 h-3 text-violet-400 animate-spin" /> Rotate 90°
                     </button>
                   </div>
 
@@ -3503,7 +3512,7 @@ export default function ProfileView({
                     </button>
                     <button
                       onClick={handleSaveCroppedAvatar}
-                      className="flex-1 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white font-mono text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer"
+                      className="flex-1 py-2.5 bg-linear-to-r from-violet-600 to-violet-500 hover:brightness-110 text-white font-mono text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer"
                     >
                       Save Photo
                     </button>
@@ -3573,7 +3582,7 @@ export default function ProfileView({
                   <span className="text-emerald-400 font-bold flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Invariant: Rep ≤ Contrib
                   </span>
-                  <span className="text-cyan-400 font-bold flex items-center gap-1">
+                  <span className="text-violet-300 font-bold flex items-center gap-1">
                     <Lock className="w-3.5 h-3.5" /> Integrity protections
                   </span>
                 </div>
@@ -3635,7 +3644,7 @@ export default function ProfileView({
                     <span className="text-[9px] text-zinc-400 block mt-0.5">Trust Multiplier</span>
                   </div>
                   <div className="bg-white/5 p-2 rounded-xl">
-                    <span className="text-xs font-mono font-bold text-cyan-400 block">
+                    <span className="text-xs font-mono font-bold text-violet-300 block">
                       {currentUser.reputationBreakdown?.antiGamingStatus?.uniqueEngagerRatio == null ? 'N/A' : Math.round(currentUser.reputationBreakdown.antiGamingStatus.uniqueEngagerRatio * 100) + '%'}
                     </span>
                     <span className="text-[9px] text-zinc-400 block mt-0.5">Unique Engagers</span>
