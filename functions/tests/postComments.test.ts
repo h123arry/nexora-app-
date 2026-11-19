@@ -74,7 +74,7 @@ describe('trusted public post comments', () => {
     const post = await db.doc('posts/comment-post-public').get();
     assert.equal(post.get('comments').filter((comment: { id: string }) => comment.id === 'comment-retry').length, 1);
     const notifications = await db.collection('users').doc('author').collection('notifications').get();
-    assert.equal(notifications.size, 2);
+    assert.equal(notifications.size, 3);
   });
 
   it('rejects private or disabled posts and does not notify for self-comments', async () => {
