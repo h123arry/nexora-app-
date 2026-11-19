@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   createR2ObjectKey,
   createR2PresignedUrl,
+  buildR2OriginUploadRecords,
   resolveR2Config,
   validateR2Upload,
 } from '../server/r2Storage';
@@ -51,4 +52,25 @@ test('R2 presigned PUT binds the content type and has a bounded expiry', () => {
   assert.equal(url.searchParams.get('X-Amz-Expires'), '900');
   assert.match(url.searchParams.get('X-Amz-Signature') || '', /^[a-f0-9]{64}$/);
   assert.throws(() => createR2PresignedUrl(config, 'GET', 'users/user_123/media/asset-456', 604801), /between 1 second and 7 days/);
+});
+
+test('R2 completion produces the same verified Origin record shape as Firebase ingestion', () => {
+  const records = buildR2OriginUploadRecords({
+    assetId: 'asset-456',
+    ownerUid: 'user_123',
+    mediaGeneration: '1795090000000',
+    contentDigest: 'a'.repeat(64),
+    contentType: 'image/webp',
+    byteSize: 2048,
+    studioExport: false,
+  });
+  assert.equal(records.origin.ownerUid, 'user_123');
+  assert.equal(records.origin.digestAlgorithm, 'sha256');
+  assert.equal(records.origin.lineageState, 'unlinked');
+  assert.equal(records.event.eventType, 'uploaded_to_nexora');
+  assert.equal(records.event.eventId, 'generation_1795090000000');
+  assert.throws(() => buildR2OriginUploadRecords({
+    assetId: 'asset-456', ownerUid: 'user_123', mediaGeneration: 'not-a-generation',
+    contentDigest: 'a'.repeat(64), contentType: 'image/webp', byteSize: 2048, studioExport: false,
+  }), /immutable media generation/);
 });
