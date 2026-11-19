@@ -40,11 +40,11 @@ const PRESET_MEMBERS = [
 ];
 
 const THEMES = [
-  { id: 'violet', name: 'Cyber Violet', accent: '#8B5CF6', text: 'text-violet-400', bg: 'bg-violet-600', ring: 'ring-violet-500/30' },
-  { id: 'pink', name: 'Stellar Pink', accent: '#EC4899', text: 'text-pink-400', bg: 'bg-pink-600', ring: 'ring-pink-500/30' },
-  { id: 'cyan', name: 'Matrix Cyan', accent: '#06B6D4', text: 'text-cyan-400', bg: 'bg-cyan-600', ring: 'ring-cyan-500/30' },
-  { id: 'emerald', name: 'Neon Emerald', accent: '#10B981', text: 'text-emerald-400', bg: 'bg-emerald-600', ring: 'ring-emerald-500/30' },
-  { id: 'amber', name: 'Vortex Amber', accent: '#F59E0B', text: 'text-amber-400', bg: 'bg-amber-600', ring: 'ring-amber-500/30' }
+  { id: 'violet', name: 'Violet', accent: '#8B5CF6', text: 'text-violet-400', bg: 'bg-violet-600', ring: 'ring-violet-500/30' },
+  { id: 'pink', name: 'Pink', accent: '#EC4899', text: 'text-pink-400', bg: 'bg-pink-600', ring: 'ring-pink-500/30' },
+  { id: 'cyan', name: 'Cyan', accent: '#06B6D4', text: 'text-cyan-400', bg: 'bg-cyan-600', ring: 'ring-cyan-500/30' },
+  { id: 'emerald', name: 'Green', accent: '#10B981', text: 'text-emerald-400', bg: 'bg-emerald-600', ring: 'ring-emerald-500/30' },
+  { id: 'amber', name: 'Gold', accent: '#F59E0B', text: 'text-amber-400', bg: 'bg-amber-600', ring: 'ring-amber-500/30' }
 ];
 
 export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGroupModalProps) {
@@ -62,9 +62,9 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
   const [customBanner, setCustomBanner] = useState('');
 
   const [rules, setRules] = useState([
-    'Respect other members in this secure community',
-    'Keep discussions relevant to the core topic',
-    'No spam or unauthorized solicitation'
+    'Respect everyone in this group',
+    'Keep conversations on the main topic',
+    'No spam or unwanted adverts'
   ]);
   const [newRule, setNewRule] = useState('');
   const [welcomeMessage, setWelcomeMessage] = useState('Welcome to our newly instantiated Nexora private node! Let\'s build the future together.');
@@ -106,7 +106,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
       partnerAvatar: finalAvatar,
       partnerBio: description.trim() || 'Welcome to our premium secure community space.',
       isPartnerOnline: true,
-      lastMessage: `System: Created the group "${name.trim()}"`,
+      lastMessage: `Group created "${name.trim()}"`,
       lastTimestamp: 'Just now',
       unreadCount: 0,
       isGroup: true,
@@ -256,7 +256,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">Identity Accent Color</label>
+                    <label className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">Group colour</label>
                     <div className="flex gap-2 py-1 items-center">
                       {THEMES.map(t => (
                         <button
@@ -280,9 +280,9 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
 
                 {/* Description */}
                 <div className="space-y-1">
-                  <label className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">About / Description</label>
+                  <label className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">About this group</label>
                   <textarea
-                    placeholder="Provide a modern brief regarding your private node coordinates..."
+                    placeholder="Tell people what your group is about..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={2}
@@ -293,8 +293,8 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
                 {/* Avatar Presets Selection */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <label className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">Avatar cover icon</label>
-                    <span className="text-[8px] font-mono text-zinc-600">Preset or custom URL</span>
+                    <label className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">Group picture</label>
+                    <span className="text-[8px] font-mono text-zinc-600">Choose a picture or add your own link</span>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {PRESET_AVATARS.map((url, i) => (
@@ -325,7 +325,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <label className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">Banner backdrop</label>
-                    <span className="text-[8px] font-mono text-zinc-600">Preset or custom URL</span>
+                    <span className="text-[8px] font-mono text-zinc-600">Choose a picture or add your own link</span>
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     {PRESET_BANNERS.map((url, i) => (
@@ -360,7 +360,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
                     disabled={!name.trim()}
                     className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-pink-500 hover:brightness-110 disabled:opacity-50 text-white rounded-xl font-mono text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
                   >
-                    <span>Configure Access & Rules</span>
+                    <span>Set privacy and rules</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -369,12 +369,12 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
               <div className="space-y-4">
                 {/* Privacy select cards */}
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">Node Privacy & Permissions</label>
+                  <label className="text-[9px] font-mono uppercase tracking-widest text-zinc-400">Group privacy</label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
                       { id: 'public', label: 'Public', icon: Globe, desc: 'Anyone can join' },
-                      { id: 'private', label: 'Private', icon: Shield, desc: 'Requires request' },
-                      { id: 'invite', label: 'Invite Only', icon: Lock, desc: 'Admins invite only' }
+                      { id: 'private', label: 'Private', icon: Shield, desc: 'People request to join' },
+                      { id: 'invite', label: 'Invite Only', icon: Lock, desc: 'Only invited people can join' }
                     ].map((pOpt) => {
                       const Icon = pOpt.icon;
                       const isSel = privacy === pOpt.id;
