@@ -233,7 +233,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   // 12. AI Performance Assistant Messages
   const [aiAssistantMessages, setAiAssistantMessages] = useState<any[]>([
-    { id: 'm-1', sender: 'assistant', text: "Hello! I'm your NEXORA helper. I can help you check storage, connection and app speed. Here's what I found:", timestamp: 'Just now' },
+    { id: 'm-1', sender: 'assistant', text: "Hello! I’m your NEXORA helper. I can help you check storage, connection and app speed. Here’s what I found:", timestamp: 'Just now' },
     { id: 'm-2', sender: 'assistant', text: "⚡ Recommendations:\n• You have 854 MB of old videos. Making them smaller could free up space.\n• Turn on Battery Saver to help your battery last longer.\n• Clear old photo and video previews to free up more space.", timestamp: 'Just now', suggestions: true }
   ]);
   const [aiInput, setAiInput] = useState('');
@@ -440,7 +440,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     setAiInput('');
 
     setTimeout(() => {
-      let replyText = "I've checked how NEXORA is running on your device. Everything looks smooth.";
+      let replyText = "I’ve checked how NEXORA is running on your device. Everything looks smooth.";
       const query = currentInput.toLowerCase();
       
       if (query.includes('battery') || query.includes('power') || query.includes('drain')) {
@@ -1050,7 +1050,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       )}
                     </>
                   ) : (
-                    // Conversation's Interactive Media Explorer Screen!
+                    // Conversation’s Interactive Media Explorer Screen!
                     <div className="space-y-5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/5 pb-4">
                         <div className="flex items-center gap-2.5">
