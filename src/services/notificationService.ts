@@ -38,10 +38,10 @@ export function showWebPushNotification(title: string, options?: NotificationOpt
   try {
     const defaultIcon = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=192&auto=format&fit=crop&q=80';
     const notif = new window.Notification(title, {
-      icon: defaultIcon,
-      badge: defaultIcon,
-      silent: true, // We play our custom Web Audio sound
-      ...options
+      ...options,
+      icon: options?.icon || defaultIcon,
+      badge: options?.badge || defaultIcon,
+      silent: true,
     });
 
     notif.onclick = () => {
