@@ -18,6 +18,7 @@ import {
 
 import { 
   getRichUser, 
+  getSafeAvatar,
   followUserDb, 
   unfollowUserDb, 
   createPostDb, 
@@ -476,7 +477,12 @@ export default function App() {
       if (dbUsers) {
         setGlobalUsersMap(prev => {
           const newMap = { ...prev };
-          dbUsers.forEach(u => newMap[u.id] = u);
+          dbUsers.forEach(u => {
+            newMap[u.id] = {
+              ...u,
+              avatar: getSafeAvatar(u.avatar, u.name || u.username),
+            };
+          });
           return newMap;
         });
       }
@@ -587,11 +593,16 @@ export default function App() {
         } else {
           cTime = new Date(cParsed).toISOString();
         }
-        return { ...c, timestamp: cTime };
+        return {
+          ...c,
+          avatar: getSafeAvatar(c.avatar, c.name || c.username),
+          timestamp: cTime,
+        };
       });
       
       return {
         ...post,
+        avatar: getSafeAvatar(post.avatar, post.name || post.username),
         timestamp: permanentTime,
         createdAt: post.createdAt || permanentTime,
         comments
