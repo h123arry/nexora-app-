@@ -38,7 +38,7 @@ const BASE_COURSES: Course[] = [
     { id: 'hosting', title: 'Host guests and audience participation', minutes: 10, summary: 'Make guests feel welcome while keeping the conversation focused.' },
     { id: 'safety', title: 'Moderate live sessions responsibly', minutes: 9, summary: 'Prepare moderator roles and escalation steps before going live.' },
   ]},
-  { id: 'creator-analytics', title: 'Understand your post results', level: 'Intermediate', category: 'Analytics', description: 'Understand your results and use them to improve your posts.', lessons: [
+  { id: 'creator-analytics', title: 'Understand your post results', level: 'Intermediate', category: 'Results', description: 'Understand your results and use them to improve your posts.', lessons: [
     { id: 'metrics', title: 'Choose metrics that matter', minutes: 9, summary: 'Learn about views, watch time, comments, shares, and followers.' },
     { id: 'retention', title: 'See how long people watch your videos', minutes: 10, summary: 'See when viewers stop watching and learn what you can improve.' },
     { id: 'experiments', title: 'Run a useful content experiment', minutes: 8, summary: 'Change one variable at a time and compare results over a fair period.' },
@@ -58,7 +58,7 @@ const BASE_COURSES: Course[] = [
     { id: 'sound-lighting', title: 'Record clean sound and usable light', minutes: 11, summary: 'Record clean sound and usable light through simple editing steps and checks.' },
     { id: 'editing-workflow', title: 'Edit for clarity and rhythm', minutes: 9, summary: 'Make your videos clear and enjoyable with a few simple editing steps.' },
   ]},
-  { id: 'creator-finance', title: 'Creator Finance and Business Operations', level: 'Intermediate', category: 'Finance', description: 'Build a responsible operating model for creator income, costs, records, cash flow and tax preparation.', lessons: [
+  { id: 'creator-finance', title: 'Creator money and business', level: 'Intermediate', category: 'Finance', description: 'Learn to manage your creator income, costs, records, savings and taxes.', lessons: [
     { id: 'income-costs', title: 'Understand creator income and costs', minutes: 9, summary: 'Understand creator income and costs through simple editing steps and checks.' },
     { id: 'cash-flow', title: 'Manage cash flow and reserves', minutes: 11, summary: 'Manage cash flow and reserves through simple editing steps and checks.' },
     { id: 'records-tax', title: 'Keep useful financial records', minutes: 9, summary: 'Keep useful financial records through simple editing steps and checks.' },
