@@ -45,8 +45,8 @@ export default function PublicAccountSetup({ user, onComplete, onCancel }: Publi
       return;
     }
 
-    if (password.length < 8) {
-      setError('Your password must contain at least 8 characters.');
+    if (password.length > 0 && password.length < 8) {
+      setError('If you add a password, it must contain at least 8 characters.');
       return;
     }
 
@@ -54,7 +54,7 @@ export default function PublicAccountSetup({ user, onComplete, onCancel }: Publi
     try {
       const result = await AuthService.completeUsernameRegistration({
         username: cleanUsername,
-        password,
+        password: password || undefined,
         preferredName: cleanName,
         dateOfBirth,
       });
@@ -73,7 +73,7 @@ export default function PublicAccountSetup({ user, onComplete, onCancel }: Publi
         <div className="mb-6 text-center">
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.25em] text-violet-300">Welcome to NEXORA</p>
           <h1 className="text-2xl font-black text-white">Make it yours.</h1>
-          <p className="mt-2 text-sm text-slate-300">Create your NEXORA account with your preferred name, date of birth, a unique username and password.</p>
+          <p className="mt-2 text-sm text-slate-300">Set up your public profile with a preferred name, date of birth and unique username. You can add account security now or later.</p>
         </div>
         <label className="mb-2 block text-xs font-semibold text-slate-200">Preferred name</label>
         <input value={name} onChange={event => setName(event.target.value)} maxLength={80} autoComplete="name" required placeholder="What should people call you?" className="mb-4 w-full rounded-xl border border-white/10 bg-[#101B2E] px-4 py-3 text-sm text-white outline-none focus:border-violet-500" />
@@ -85,11 +85,11 @@ export default function PublicAccountSetup({ user, onComplete, onCancel }: Publi
           <span className="text-violet-300">@</span>
           <input value={username} onChange={event => setUsername(event.target.value.toLowerCase().replace(/\s/g, ''))} maxLength={20} autoComplete="username" required placeholder="yourusername" className="w-full bg-transparent px-2 py-3 text-sm text-white outline-none" />
         </div>
-        <label className="mb-2 block text-xs font-semibold text-slate-200">Password</label>
-        <input type="password" value={password} onChange={event => setPassword(event.target.value)} minLength={8} autoComplete="new-password" required placeholder="Create a password (at least 8 characters)" className="mb-5 w-full rounded-xl border border-white/10 bg-[#101B2E] px-4 py-3 text-sm text-white outline-none focus:border-violet-500" />
+        <label className="mb-2 block text-xs font-semibold text-slate-200" >Password <span className="font-normal text-slate-400">(optional)</span></label>
+        <input type="password" value={password} onChange={event => setPassword(event.target.value)} minLength={8} autoComplete="new-password" placeholder="Add a password to secure sign-in (optional)" className="mb-5 w-full rounded-xl border border-white/10 bg-[#101B2E] px-4 py-3 text-sm text-white outline-none focus:border-violet-500" />
         {error && <p role="alert" className="mb-4 rounded-xl border border-red-400/20 bg-red-500/10 p-3 text-xs text-red-200">{error}</p>}
         <button disabled={busy} type="submit" className="w-full rounded-xl bg-violet-600 px-4 py-3.5 text-sm font-bold text-white transition hover:bg-violet-500 disabled:cursor-wait disabled:opacity-60">{busy ? 'Creating your account…' : 'Enter NEXORA'}</button>
-        <p className="mt-4 text-center text-[11px] text-slate-500">Your username is your sign-in ID. Keep your password private.</p>
+        <p className="mt-4 text-center text-[11px] text-slate-500">Your username is public. You can connect email, Google, phone or a password later in Account Settings.</p>
         {onCancel && <button type="button" onClick={onCancel} className="mt-3 w-full rounded-xl px-4 py-2 text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white">Not now, keep browsing</button>}
       </form>
     </div>
