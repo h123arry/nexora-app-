@@ -994,3 +994,29 @@ export async function updateMessageReadReceipt(
   // Preserve the established direct-message receipt contract.
   await updateDoc(messageRef, { status });
 }
+
+
+export type NotificationPreferenceMap = {
+  likes: boolean; comments: boolean; followers: boolean; mentions: boolean;
+  communities: boolean; events: boolean; verification: boolean;
+  creatorUploads: boolean; friendRequests: boolean; securityAlerts: boolean;
+};
+
+export async function getNotificationPreferences(userId: string): Promise<Partial<NotificationPreferenceMap>> {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) throw new Error('Only the signed-in account can read its notification preferences.');
+  const snapshot = await getDoc(doc(db, 'users', userId, 'settings', 'preferences'));
+  const value = snapshot.data()?.notifications;
+  if (!value || typeof value !== 'object') return {};
+  const allowed: (keyof NotificationPreferenceMap)[] = ['likes','comments','followers','mentions','communities','events','verification','creatorUploads','friendRequests','securityAlerts'];
+  return Object.fromEntries(allowed.filter(key => typeof value[key] === 'boolean').map(key => [key, value[key]])) as Partial<NotificationPreferenceMap>;
+}
+
+export async function saveNotificationPreferences(userId: string, preferences: NotificationPreferenceMap): Promise<void> {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) throw new Error('Only the signed-in account can change its notification preferences.');
+  const allowed: (keyof NotificationPreferenceMap)[] = ['likes','comments','followers','mentions','communities','events','verification','creatorUploads','friendRequests','securityAlerts'];
+  const clean = Object.fromEntries(allowed.map(key => [key, preferences[key] === true])) as NotificationPreferenceMap;
+  await setDoc(doc(db, 'users', userId, 'settings', 'preferences'), {
+    notifications: clean,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+}
