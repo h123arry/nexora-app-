@@ -971,7 +971,7 @@ export default function FeedView({
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTo({ top: 0, behavior: 'auto' });
         }
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Feed refreshed.' }));
+        // A successful refresh is intentionally quiet; the refreshed feed is the feedback.
       } catch {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not refresh the feed. Your current posts are still here. Please retry.' }));
       } finally {
