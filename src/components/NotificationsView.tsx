@@ -6,9 +6,6 @@ import { deleteOwnNotification, deleteOwnNotifications, setNotificationReadState
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { getNotificationTimeSection } from '../utils/notificationTime';
-import { getRenderableAvatarUrl } from '../utils/avatarUrl';
-
-const avatarInitial = (name?: string) => (name?.trim().charAt(0) || 'N').toUpperCase();
 import {
   requestPushPermission,
   isPushPermissionGranted,
@@ -864,22 +861,16 @@ export default function NotificationsView({
                                   }
                                 }}
                               >
-                                {getRenderableAvatarUrl(notif.avatar) ? (
-                                  <img
-                                    src={getRenderableAvatarUrl(notif.avatar) || undefined}
-                                    alt=""
-                                    className={`w-11 h-11 rounded-2xl object-cover border border-white/10 ${
-                                      notif.type === 'pulse_alert' && notif.content.includes('LIVE')
-                                        ? 'ring-2 ring-red-500 animate-pulse'
-                                        : ''
-                                    }`}
-                                    referrerPolicy="no-referrer"
-                                  />
-                                ) : (
-                                  <span aria-hidden="true" className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-violet-950/70 text-sm font-bold text-violet-100">
-                                    {avatarInitial(notif.actorName || notif.username)}
-                                  </span>
-                                )}
+                                <img 
+                                  src={notif.avatar} 
+                                  alt="" 
+                                  className={`w-11 h-11 rounded-2xl object-cover border border-white/10 ${
+                                    notif.type === 'pulse_alert' && notif.content.includes('LIVE')
+                                      ? 'ring-2 ring-red-500 animate-pulse'
+                                      : ''
+                                  }`} 
+                                  referrerPolicy="no-referrer"
+                                />
                                 {/* Verification small overlay */}
                                 {notif.userId !== 'multiple' && (
                                   <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-violet-600 border border-slate-900 flex items-center justify-center text-[8px] text-white">
@@ -997,7 +988,7 @@ export default function NotificationsView({
                                   {notif.subActivities.map(user => (
                                     <div key={user.userId} className="flex items-center justify-between py-2 first:pt-0 last:pb-0">
                                       <div className="flex items-center gap-2">
-                                        {getRenderableAvatarUrl(user.avatar) ? <img src={getRenderableAvatarUrl(user.avatar) || undefined} alt="" className="w-7 h-7 rounded-lg object-cover" /> : <span aria-hidden="true" className="grid h-7 w-7 place-items-center rounded-lg bg-violet-950/70 text-[9px] font-bold text-violet-100">{avatarInitial(user.username)}</span>}
+                                        <img src={user.avatar} alt="" className="w-7 h-7 rounded-lg object-cover" />
                                         <div className="text-left leading-none">
                                           <span className="text-xs text-white font-bold block">@{user.username}</span>
                                           <span className="text-[8.5px] font-mono text-zinc-500 block mt-0.5">{user.timestamp}</span>
