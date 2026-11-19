@@ -263,7 +263,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     setBusy(true); setError(''); setNotice('');
     try {
       const joined = await joinPublicWorldWeave(selected.id);
-      setSelected(joined); setNotice('You're now a member. Add your moment to the story.');
+      setSelected(joined); setNotice('You are now a member. Add your moment to the story.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not join this shared story.'); }
     finally { setBusy(false); }
   };
