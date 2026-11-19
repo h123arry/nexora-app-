@@ -138,13 +138,13 @@ export default function SystemHubControlPanel({
   const handleFlushCache = () => {
     playHapticHum(240, 0.2);
     setIsFlushingCache(true);
-    speakAnnouncement("Flushing active media blobs and cleaning IndexedDB caches.");
+    speakAnnouncement("Clearing saved photos, videos and other app data.");
     
     setTimeout(() => {
       setIsFlushingCache(false);
       setCacheFlushed(true);
       setCacheSize('0.0 KB');
-      speakAnnouncement("Cache clean operation successfully completed.");
+      speakAnnouncement("Saved app data cleared.");
       setTimeout(() => setCacheFlushed(false), 3000);
     }, 1800);
   };
@@ -154,21 +154,21 @@ export default function SystemHubControlPanel({
     const nextVal = !isHighContrast;
     setIsHighContrast(nextVal);
     playHapticHum(180, 0.1);
-    speakAnnouncement(nextVal ? "High contrast display mode enabled." : "High contrast disabled.");
+    speakAnnouncement(nextVal ? "High contrast is on." : "High contrast disabled.");
   };
 
   const toggleReducedMotion = () => {
     const nextVal = !reducedMotion;
     setReducedMotion(nextVal);
     playHapticHum(180, 0.1);
-    speakAnnouncement(nextVal ? "Reduced motion enabled. Frame rates adjusted." : "Reduced motion disabled.");
+    speakAnnouncement(nextVal ? "Reduced motion is on." : "Reduced motion disabled.");
   };
 
   const toggleColorblindLabels = () => {
     const nextVal = !colorblindLabels;
     setColorblindLabels(nextVal);
     playHapticHum(180, 0.1);
-    speakAnnouncement(nextVal ? "Color assistance text tags activated." : "Color assistance deactivated.");
+    speakAnnouncement(nextVal ? "Extra colour labels are on." : "Extra colour labels are off.");
   };
 
   const toggleScreenReaderVoice = () => {
@@ -176,7 +176,7 @@ export default function SystemHubControlPanel({
     setScreenReaderVoice(nextVal);
     playHapticHum(200, 0.15);
     if (nextVal) {
-      setTimeout(() => speakAnnouncement("Nexora Voice Over screen reader simulator activated. Hover elements to hear spoken feedback."), 100);
+      setTimeout(() => speakAnnouncement("Screen reader is on. Move through the app to hear spoken descriptions."), 100);
     }
   };
 
@@ -184,13 +184,13 @@ export default function SystemHubControlPanel({
     const nextVal = !isOffline;
     setIsOffline(nextVal);
     playHapticHum(nextVal ? 110 : 280, 0.15);
-    speakAnnouncement(nextVal ? "Simulating offline state. Transactions will be queued locally." : "Simulating online state. Synced queue.");
+    speakAnnouncement(nextVal ? "Offline mode is on. Changes will wait until you're connected." : "You're back online. Waiting changes have been sent.");
     
     // Dispatch custom event to App to show the toast
     window.dispatchEvent(new CustomEvent('toast', { 
       detail: nextVal 
-        ? '🔌 Nexora Offline Mode simulated! Drafts will write locally.' 
-        : '📶 Connected back to Nexora! Local drafts synced.' 
+        ? '🔌 Offline mode is on. Drafts will be saved on this device.' 
+        : '📶 You're back online. Your drafts have been sent.' 
     }));
   };
 
@@ -201,7 +201,7 @@ export default function SystemHubControlPanel({
     // Auto toggle RTL for Arabic
     if (lang === 'ar') {
       setLayoutDirection('rtl');
-      speakAnnouncement("Language changed to Arabic. Right to left layout direction activated.");
+      speakAnnouncement("Language changed to Arabic.");
     } else {
       setLayoutDirection('ltr');
       speakAnnouncement(`Language changed to ${lang === 'fr' ? 'French' : lang === 'pt' ? 'Portuguese' : 'English'}.`);
@@ -251,7 +251,7 @@ export default function SystemHubControlPanel({
               <div>
                 <h2 className={`text-xs font-mono font-black uppercase tracking-wider ${
                   isHighContrast ? 'text-white' : 'text-violet-400'
-                }`}>SYSTEM HUB</h2>
+                }`}>APP SETTINGS</h2>
                 <h1 className="text-base font-black tracking-tight text-white uppercase leading-none mt-0.5">NEXORA settings</h1>
               </div>
             </div>
@@ -259,10 +259,10 @@ export default function SystemHubControlPanel({
             {/* Sub Nav Menu */}
             <nav className="space-y-1.5">
               {[
-                { id: 'ux', label: 'UX & Motion', icon: Sparkles, desc: 'Themes & hum tactile feedback' },
+                { id: 'ux', label: 'Look and feel', icon: Sparkles, desc: 'Themes and sound' },
                 { id: 'accessibility', label: 'Accessibility', icon: Eye, desc: 'Legibility, voice & contrast' },
-                { id: 'performance', label: 'Performance', icon: Activity, desc: 'FPS ticker & DB caches' },
-                { id: 'trust', label: 'Privacy & Ledger', icon: Shield, desc: 'Crypto tokens & permissions' }
+                { id: 'performance', label: 'Performance', icon: Activity, desc: 'App speed and storage' },
+                { id: 'trust', label: 'Privacy and safety', icon: Shield, desc: 'Your privacy settings' }
               ].map((tab) => {
                 const Icon = tab.icon;
                 const isSelected = activeTab === tab.id;
@@ -300,7 +300,7 @@ export default function SystemHubControlPanel({
             isHighContrast ? 'border border-white bg-black' : 'bg-black/35 border border-white/5'
           } hidden md:block`}>
             <div className="flex items-center justify-between text-[9px] font-mono text-zinc-500">
-              <span>LOCAL DEVICE STATUS</span>
+              <span>PHONE STATUS</span>
               <span className={`flex items-center gap-1 ${isOffline ? 'text-red-400' : 'text-emerald-400 font-bold'}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-red-400' : 'bg-emerald-400 animate-ping'}`} />
                 {isOffline ? 'OFFLINE' : 'ONLINE'}
@@ -309,11 +309,11 @@ export default function SystemHubControlPanel({
             
             <div className="grid grid-cols-2 gap-1 mt-2.5 pt-2 border-t border-white/5 font-mono text-[10px]">
               <div>
-                <span className="block text-zinc-600 text-[8px] uppercase">Local frame sample</span>
+                <span className="block text-zinc-600 text-[8px] uppercase">App speed</span>
                 <span className="font-bold text-white text-xs">{fps} FPS</span>
               </div>
               <div>
-                <span className="block text-zinc-600 text-[8px] uppercase">Local timing sample</span>
+                <span className="block text-zinc-600 text-[8px] uppercase">Connection delay</span>
                 <span className="font-bold text-violet-400 text-xs">{latency}ms</span>
               </div>
             </div>
@@ -331,10 +331,10 @@ export default function SystemHubControlPanel({
               <div>
                 <h3 className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">App settings</h3>
                 <h2 className="text-lg font-black text-white uppercase tracking-tight font-sans">
-                  {activeTab === 'ux' && '🎨 UX, Themes & Tactile Motion'}
-                  {activeTab === 'accessibility' && '👁️ Accessibility & Legibility Suite'}
-                  {activeTab === 'performance' && '⚡ Performance Benchmarks & Caches'}
-                  {activeTab === 'trust' && '🛡️ Privacy, Trust & Permission Ledger'}
+                  {activeTab === 'ux' && '🎨 Look and feel'}
+                  {activeTab === 'accessibility' && '👁️ Accessibility'}
+                  {activeTab === 'performance' && '⚡ App speed and storage'}
+                  {activeTab === 'trust' && '🛡️ Privacy and safety'}
                 </h2>
               </div>
               
@@ -361,9 +361,9 @@ export default function SystemHubControlPanel({
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { id: 'neon-cyber', label: 'Violet', color: 'bg-[#0c0a15] text-purple-400 border-white/10', style: 'border-[#8B5CF6]/40 text-[#8B5CF6]' },
-                      { id: 'stealth-dark', label: 'Stealth Slate', color: 'bg-zinc-900 text-zinc-400 border-zinc-700', style: 'border-zinc-500 text-zinc-300' },
+                      { id: 'stealth-dark', label: 'Dark', color: 'bg-zinc-900 text-zinc-400 border-zinc-700', style: 'border-zinc-500 text-zinc-300' },
                       { id: 'emerald-glass', label: 'Emerald', color: 'bg-[#040e09] text-emerald-400 border-emerald-950', style: 'border-emerald-500 text-emerald-400' },
-                      { id: 'platinum-light', label: 'Ivory Platinum', color: 'bg-white text-slate-900 border-slate-200', style: 'border-slate-400 text-slate-800' }
+                      { id: 'platinum-light', label: 'Light', color: 'bg-white text-slate-900 border-slate-200', style: 'border-slate-400 text-slate-800' }
                     ].map((t) => (
                       <button
                         key={t.id}
@@ -431,7 +431,7 @@ export default function SystemHubControlPanel({
                   {audioFeedbackEnabled && (
                     <div className="space-y-1.5 pt-2 border-t border-white/5">
                       <div className="flex justify-between text-[9px] font-mono text-zinc-500">
-                        <span>HUM OSCILLATOR STRENGTH</span>
+                        <span>SOUND LEVEL</span>
                         <span className="text-white font-bold">{(hapticHumVolume * 100).toFixed(0)}%</span>
                       </div>
                       <input
@@ -447,8 +447,8 @@ export default function SystemHubControlPanel({
                         className="w-full accent-cyan-400 bg-white/5 rounded-lg h-1.5 outline-hidden cursor-pointer"
                       />
                       <div className="flex justify-between text-[8px] font-mono text-zinc-600">
-                        <span>0.0 SUB-PHYSICAL</span>
-                        <span>1.0 CYBER SHOCKWAVE</span>
+                        <span>0.0 LOW</span>
+                        <span>1.0 HIGH</span>
                       </div>
                     </div>
                   )}
@@ -596,12 +596,12 @@ export default function SystemHubControlPanel({
                     }`}
                   >
                     <div className="flex justify-between items-start w-full">
-                      <span className="text-[11px] font-sans font-black uppercase tracking-wide">Colorblind Assist Tags</span>
+                      <span className="text-[11px] font-sans font-black uppercase tracking-wide">Extra labels for colours</span>
                       <div className={`w-3.5 h-3.5 rounded-full border ${colorblindLabels ? 'bg-emerald-500 border-emerald-500' : 'border-current'}`} />
                     </div>
                     <div>
                       <p className="text-[10px] leading-relaxed text-current/75 font-sans">
-                        Appends text descriptions (e.g. "[Verified]") next to status colors to ensure full clarity.
+                        Adds words such as "Verified" beside status colours to make them easier to understand.
                       </p>
                     </div>
                   </button>
@@ -747,11 +747,11 @@ export default function SystemHubControlPanel({
                     }`}
                   >
                     <div className="flex justify-between items-start w-full">
-                      <span className="text-[11px] font-sans font-black uppercase tracking-wide">Image Lazy-Loading</span>
+                      <span className="text-[11px] font-sans font-black uppercase tracking-wide">Load images as you scroll</span>
                       <div className={`w-3.5 h-3.5 rounded-full border ${lazyLoadImages ? 'bg-violet-400 border-violet-400' : 'border-current'}`} />
                     </div>
                     <p className="text-[10px] leading-relaxed text-current/75 font-sans">
-                      Delays media loading of off-screen items. Highly optimizes layout render costs.
+                      Loads photos and videos as you scroll to help the app run smoothly.
                     </p>
                   </button>
 
@@ -759,12 +759,12 @@ export default function SystemHubControlPanel({
                     isHighContrast ? 'border-white' : 'bg-white/[0.02] border-white/5'
                   } text-left flex flex-col justify-between h-28`}>
                     <div className="flex items-center justify-between text-[11px] font-sans font-black uppercase">
-                      <span>IndexedDB Media Cache</span>
+                      <span>Saved media data</span>
                       <span className="font-mono text-cyan-400">{cacheSize}</span>
                     </div>
                     
                     <p className="text-[10px] text-zinc-500 font-sans mt-1">
-                      Stores local audio voice drafts, logs, and video indexes inside browser database space.
+                      Stores voice drafts and information about photos and videos on this device.
                     </p>
 
                     <button
@@ -781,17 +781,17 @@ export default function SystemHubControlPanel({
                       {isFlushingCache ? (
                         <>
                           <Activity className="w-3 h-3 animate-spin text-violet-400" />
-                          CLEANING MEMORY INDEX...
+                          Cleaning saved data...
                         </>
                       ) : cacheFlushed ? (
                         <>
                           <Check className="w-3 h-3 text-emerald-400" />
-                          CACHES FULLY FLUSHED
+                          Saved data cleared
                         </>
                       ) : (
                         <>
                           <Trash2 className="w-3 h-3" />
-                          FLUSH MEDIA BLOB CACHE
+                          Clear saved media data
                         </>
                       )}
                     </button>
@@ -804,13 +804,13 @@ export default function SystemHubControlPanel({
                   isHighContrast ? 'border border-white' : 'bg-black/35 border border-white/5'
                 } space-y-2`}>
                   <div className="flex items-center justify-between text-[11px] font-sans font-black text-white uppercase">
-                    <span>Client Render Health</span>
-                    <span className="text-[9px] font-mono text-[#8B5CF6]">SYSTEM RE-RENDERS OPTIMIZED</span>
+                    <span>App performance</span>
+                    <span className="text-[9px] font-mono text-[#8B5CF6]">App is running smoothly</span>
                   </div>
                   
                   <div className="space-y-1 text-[10px] font-mono text-zinc-400">
                     <p className="flex justify-between">
-                      <span>Browser Canvas Thread (60Hz limit)</span>
+                      <span>Screen refresh rate</span>
                       <span className="text-emerald-400 font-bold">Stable 60 FPS</span>
                     </p>
                     <p className="flex justify-between">
@@ -946,8 +946,8 @@ export default function SystemHubControlPanel({
 
           {/* Footer controls status */}
           <div className="pt-4 mt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[9px] font-mono text-zinc-500">
-            <span>Linked via Nexora-Core Orchestrator v3.5</span>
-            <span className="uppercase text-[#8B5CF6]">Strict security validation: active</span>
+            <span>NEXORA app settings</span>
+            <span className="uppercase text-[#8B5CF6]">Security checks are on</span>
           </div>
 
         </div>
