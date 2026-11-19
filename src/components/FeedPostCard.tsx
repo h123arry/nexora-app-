@@ -13,9 +13,7 @@ import NexoraImagePlayer from './NexoraImagePlayer';
 import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
 import OriginAttributionPreviewModal from './OriginAttributionPreviewModal';
-import { getRenderableAvatarUrl } from '../utils/avatarUrl';
 
-const avatarInitial = (name?: string) => (name?.trim().charAt(0) || 'N').toUpperCase();
 
 interface FeedPostCardProps {
   post: Post;
@@ -117,7 +115,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   expandedPostIds,
   setExpandedPostIds
 }) => {
-  const avatarUrl = getRenderableAvatarUrl(post.avatar);
   const reduceMotion = useReducedMotion();
   const isCommentsOpen = activeCommentsPostId === post.id;
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
@@ -204,19 +201,13 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               onViewProfile?.(post.userId || post.username);
             }}
           >
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/40"
-              />
-            ) : (
-              <span aria-hidden="true" className="w-10 h-10 rounded-full ring-2 ring-violet-500/40 bg-violet-950/70 text-violet-100 grid place-items-center text-sm font-bold">
-                {avatarInitial(post.name || post.username)}
-              </span>
-            )}
+            <img
+              src={post.avatar}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/40"
+            />
           </button>
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
