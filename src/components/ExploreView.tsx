@@ -13,7 +13,6 @@ import { getNexoraTrendingTopics, searchNexora, type NexoraSearchResult } from '
 import { getTranslations } from '../utils/translations';
 import { readUserScopedJson } from '../utils/userScopedStorage';
 
-
 function readExploreRecentSearches(userId: string): string[] {
   if (!userId) return [];
   try { const saved = localStorage.getItem('nexora_recent_searches_' + userId); const parsed = saved ? JSON.parse(saved) : []; return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string').slice(0, 8) : []; } catch { return []; }
@@ -491,7 +490,7 @@ export default function ExploreView({
                           }}
                           className="min-w-0 flex flex-1 items-center gap-3 overflow-hidden rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300"
                         >
-                          {user.avatar ? <img src={user.avatar} alt="" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" /> : <span aria-hidden="true" className="grid h-12 w-12 place-items-center rounded-xl bg-violet-950/70 text-sm font-bold text-violet-100 ring-2 ring-violet-500/30">{(user.name || user.username || 'N').trim().charAt(0).toUpperCase()}</span>}
+                          <img src={user.avatar} alt="" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" />
                           <div className="overflow-hidden">
                             <div className="flex items-center gap-1.5">
                               <h4 className="text-xs font-bold text-white truncate">{user.name}</h4>
@@ -531,7 +530,7 @@ export default function ExploreView({
                       <div key={post.id} className="p-4 rounded-2xl nx-surface space-y-2.5 shadow-sm">
                         <div className="flex items-center justify-between">
                           <button type="button" onClick={() => onViewProfile?.(post.userId || post.username)} aria-label={`View @${post.username}'s profile`} className="flex min-h-11 items-center gap-2.5 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
-                            {post.avatar ? <img src={post.avatar} alt="" className="w-8 h-8 rounded-lg object-cover" /> : <span aria-hidden="true" className="grid h-8 w-8 place-items-center rounded-lg bg-violet-950/70 text-[10px] font-bold text-violet-100">{(post.name || post.username || 'N').trim().charAt(0).toUpperCase()}</span>}
+                            <img src={post.avatar} alt="" className="w-8 h-8 rounded-lg object-cover" />
                             <span>
                               <span className="flex items-center gap-1">
                                 <span className="text-xs font-bold text-white">{post.name}</span>
