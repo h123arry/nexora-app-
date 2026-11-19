@@ -1310,7 +1310,6 @@ export default function ProfileView({
                   <p className={`text-xs sm:text-sm font-bold font-mono tracking-wider mt-0.5 ${!currentUser.username ? 'text-violet-400/60 italic' : 'text-violet-400/90'}`}>
                     @{currentUser.username || (isOwnProfile ? 'add-username' : 'member')}
                   </p>
-                </div>
               </div>
 
               {/* Profile Actions */}
