@@ -41,8 +41,10 @@ self.addEventListener('notificationclick', (event) => {
     const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of windows) {
       if ('focus' in client) {
+        // Navigate the existing app window as well as newly opened windows so
+        // the app's push deep-link handler receives the same destination.
+        if ('navigate' in client) await client.navigate(targetUrl);
         await client.focus();
-        client.postMessage({ type: 'NEXORA_PUSH_OPEN', data });
         return;
       }
     }
