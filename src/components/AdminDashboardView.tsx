@@ -647,7 +647,7 @@ export default function AdminDashboardView({
                   {filteredUsers.length === 0 && (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-zinc-500 font-mono text-[10.5px]">
-                        {userDirectoryUnavailable ? 'Can't load the user list. You may not have permission.' : 'No accounts match your search.'}
+                        {userDirectoryUnavailable ? 'Unable to load the user list. You may not have permission.' : 'No accounts match your search.'}
                       </td>
                     </tr>
                   )}
