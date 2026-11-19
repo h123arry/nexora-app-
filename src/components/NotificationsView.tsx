@@ -863,7 +863,7 @@ export default function NotificationsView({
                                 }}
                               >
                                 <img 
-                                  src={getSafeAvatar(notif.avatar, notif.actorName || notif.username)} 
+                                  src={getSafeAvatar(notif.avatar, notif.actorName || notif.username || 'N')} 
                                   alt="" 
                                   className={`w-11 h-11 rounded-2xl object-cover border border-white/10 ${
                                     notif.type === 'pulse_alert' && notif.content.includes('LIVE')
