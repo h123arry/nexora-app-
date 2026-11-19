@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { setCircleMemberRole, moderateCircleMember, listCircleBans } from '../src/communityGovernance.js';
+import { setCircleMemberRole, moderateCircleMember, listCircleBans, listCircleMutes, isCircleMuteActive } from '../src/communityGovernance.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-engagement';
 const app = initializeApp({ projectId }, 'community-governance-tests');
@@ -20,6 +20,7 @@ before(async () => {
 
 after(async () => {
   await db.recursiveDelete(circle);
+  await db.collection('publicProfiles').doc('mute-test-dave').delete();
   await deleteApp(app);
 });
 
@@ -115,5 +116,49 @@ describe('trusted Circle member enforcement', () => {
       /not banned/,
     );
     assert.equal((await circle.collection('members').doc('carol').get()).get('status'), 'active');
+  });
+});
+
+
+describe('trusted time-limited Circle mutes', () => {
+  it('mutes a member for a bounded duration and exposes the active list only to managers', async () => {
+    await circle.collection('members').doc('mute-test-dave').set({ userId: 'mute-test-dave', role: 'member', status: 'active' });
+    await db.collection('publicProfiles').doc('mute-test-dave').set({ name: 'Mute Test Member', username: 'mute-test-dave' });
+    const result = await moderateCircleMember(db, 'alice', 'governance-circle', 'mute-test-dave', 'mute', 'Repeated disruption in Circle chat', 120);
+    assert.deepEqual(result, { userId: 'mute-test-dave', action: 'mute', status: 'muted' });
+    const record = await circle.collection('mutes').doc('mute-test-dave').get();
+    assert.equal(record.exists, true);
+    assert.equal(isCircleMuteActive(record.data()), true);
+    assert.equal((await circle.collection('members').doc('mute-test-dave').get()).exists, true);
+    const muteList = await listCircleMutes(db, 'alice', 'governance-circle');
+    assert.equal(muteList.length, 1);
+    assert.equal(muteList[0].userId, 'mute-test-dave');
+    assert.equal(muteList[0].name, 'Mute Test Member');
+    await assert.rejects(listCircleMutes(db, 'bob', 'governance-circle'), /Only active Circle managers/);
+    await assert.rejects(
+      moderateCircleMember(db, 'carol', 'governance-circle', 'alice', 'mute', 'Moderator cannot mute owner', 60),
+      /equal or higher role/,
+    );
+    await assert.rejects(
+      moderateCircleMember(db, 'alice', 'governance-circle', 'mute-test-dave', 'mute', 'Invalid duration', 10081),
+      /mute duration/,
+    );
+  });
+
+  it('unmutes members, expires restrictions by time, and clears a mute when a member is banned', async () => {
+    const unmuted = await moderateCircleMember(db, 'alice', 'governance-circle', 'mute-test-dave', 'unmute', 'Restriction review completed');
+    assert.deepEqual(unmuted, { userId: 'mute-test-dave', action: 'unmute', status: 'unmuted' });
+    assert.equal((await circle.collection('mutes').doc('mute-test-dave').get()).exists, false);
+    assert.equal((await listCircleMutes(db, 'alice', 'governance-circle')).length, 0);
+
+    await circle.collection('mutes').doc('mute-test-dave').set({
+      userId: 'mute-test-dave', reason: 'Expired mute', createdAt: new Date(Date.now() - 120000),
+      expiresAt: new Date(Date.now() - 60000),
+    });
+    assert.equal(isCircleMuteActive((await circle.collection('mutes').doc('mute-test-dave').get()).data()), false);
+    await moderateCircleMember(db, 'alice', 'governance-circle', 'mute-test-dave', 'mute', 'New restriction after expiry', 30);
+    await moderateCircleMember(db, 'alice', 'governance-circle', 'mute-test-dave', 'ban', 'Repeated severe disruption');
+    assert.equal((await circle.collection('mutes').doc('mute-test-dave').get()).exists, false);
+    assert.equal((await circle.collection('bans').doc('mute-test-dave').get()).exists, true);
   });
 });

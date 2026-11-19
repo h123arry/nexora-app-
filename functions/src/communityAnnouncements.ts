@@ -1,5 +1,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { randomUUID } from 'node:crypto';
+import { isCircleMuteActive } from './communityGovernance.js';
 
 const ID_LIMIT = 150;
 const TITLE_LIMIT = 120;
@@ -37,14 +38,17 @@ export async function createCircleAnnouncement(
   }
   const communityRef = db.collection('communities').doc(communityId);
   const memberRef = communityRef.collection('members').doc(uid);
+  const muteRef = communityRef.collection('mutes').doc(uid);
   const announcementId = randomUUID();
   const announcementRef = communityRef.collection('announcements').doc(announcementId);
   await db.runTransaction(async transaction => {
-    const [community, member] = await Promise.all([
+    const [community, member, mute] = await Promise.all([
       transaction.get(communityRef),
       transaction.get(memberRef),
+      transaction.get(muteRef),
     ]);
     requireAnnouncementManager(community, member, uid);
+    if (isCircleMuteActive(mute.data())) throw new Error('Your Circle posting access is temporarily muted.');
     transaction.create(announcementRef, {
       id: announcementId,
       communityId,

@@ -36,6 +36,18 @@ describe('trusted Circle announcements', () => {
     await assert.rejects(createCircleAnnouncement(db, 'alice', 'announcement-circle', 'Too long', 'x'.repeat(2001)), /character limits/);
   });
 
+  it('blocks muted managers from publishing announcements until their mute expires', async () => {
+    const muteRef = db.doc('communities/announcement-circle/mutes/carol');
+    await muteRef.set({ userId: 'carol', reason: 'Temporary manager mute', createdAt: new Date(), expiresAt: new Date(Date.now() + 60 * 60 * 1000) });
+    await assert.rejects(
+      createCircleAnnouncement(db, 'carol', 'announcement-circle', 'Muted notice', 'This should be blocked.'),
+      /temporarily muted/,
+    );
+    await muteRef.update({ expiresAt: new Date(Date.now() - 1000) });
+    const created = await createCircleAnnouncement(db, 'carol', 'announcement-circle', 'After expiry', 'Publishing is restored.');
+    assert.equal((await db.doc(`communities/announcement-circle/announcements/${created.announcementId}`).get()).exists, true);
+  });
+
   it('allows active Circle managers to pin or unpin an existing announcement', async () => {
     const created = await createCircleAnnouncement(db, 'alice', 'announcement-circle', 'Pinned notice', 'Important update.');
     assert.deepEqual(await setCircleAnnouncementPinned(db, 'alice', 'announcement-circle', created.announcementId, true), { pinned: true });

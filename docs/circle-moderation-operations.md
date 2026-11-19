@@ -23,6 +23,10 @@ Each successful action creates an append-only `auditEvents` record containing th
 
 Active Circle members can submit one private report per target with a reason between 10 and 1,000 characters. Self-reports are rejected. Reports are stored in a server-only `reports` subcollection; clients cannot read, forge, or edit them. Managers can review up to 50 open reports from a bounded recent-record scan, then dismiss a report, remove the reported post/message, or ban the reported member through the same role-safe moderation path. Every content removal and member ban writes its own moderation audit event. Report decisions require a review reason.
 
+## Time-limited member mutes
+
+Managers can apply a 1-hour, 24-hour, or 7-day mute to a lower-ranked active member, with a required reason and an exact server-calculated expiry. The member remains in the Circle and can continue reading, voting, and RSVPing, but cannot send Circle chat messages, publish posts, create polls or events, or publish manager announcements while the mute is active. The private `mutes` subcollection is server-managed and unreadable to clients. Expiry is checked in Firestore Rules for direct chat writes and inside the same Firestore transaction as server-managed content creation. Managers can review active mutes and revoke them early. Ban/removal clears any active mute marker.
+
 ## Limits and release checks
 
 - Ban-list retrieval is capped at 100 most recent records.

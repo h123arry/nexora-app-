@@ -20,6 +20,7 @@ before(async () => {
     db.doc('communities/hub-circle/members/hub-owner').set({ userId: 'hub-owner', role: 'owner', status: 'active', joinedAt: now }),
     db.doc('communities/hub-circle/members/hub-member').set({ userId: 'hub-member', role: 'member', status: 'active', joinedAt: now }),
     db.doc('communities/hub-circle/members/hub-restricted').set({ userId: 'hub-restricted', role: 'member', status: 'active', joinedAt: now }),
+    db.doc('communities/hub-circle/members/hub-muted').set({ userId: 'hub-muted', role: 'member', status: 'active', joinedAt: now }),
     db.doc('communities/hub-circle/events/event-1').set({ id: 'event-1', title: 'Creator meetup', status: 'scheduled', createdAt: now, startsAt: new Date(now.getTime() + 86400000), attendeeCount: 4 }),
     db.doc('communities/hub-circle/polls/poll-1').set({ id: 'poll-1', createdAt: now, options: [{ id: 'a', text: 'A', votes: 2 }, { id: 'b', text: 'B', votes: 3 }] }),
     db.doc('communities/hub-circle/announcements/announcement-1').set({ id: 'announcement-1', createdAt: now, title: 'Welcome' }),
@@ -46,17 +47,29 @@ describe('Circle community feed and trusted insights', () => {
     await assert.rejects(createCirclePostForUser(db, 'hub-owner', 'hub-circle', ' '.repeat(2), now), /1 and 3,000/);
   });
 
+  it('blocks muted Circle post creation until the server-side expiry has passed', async () => {
+    const muteRef = db.doc('communities/hub-circle/mutes/hub-muted');
+    await muteRef.set({ userId: 'hub-muted', reason: 'Temporary test mute', createdAt: now, expiresAt: new Date(now.getTime() + 60 * 60 * 1000) });
+    await assert.rejects(
+      createCirclePostForUser(db, 'hub-muted', 'hub-circle', 'Muted attempt', now),
+      /temporarily muted/,
+    );
+    await muteRef.update({ expiresAt: new Date(now.getTime() - 1000) });
+    const result = await createCirclePostForUser(db, 'hub-muted', 'hub-circle', 'Post after mute expiry', now);
+    assert.equal((await db.doc(`communities/hub-circle/posts/${result.postId}`).get()).get('authorId'), 'hub-muted');
+  });
+
   it('returns bounded 30-day activity to active Circle managers only', async () => {
     const insights = await getCommunityInsightsForUser(db, 'hub-owner', 'hub-circle', now);
-    assert.equal(insights.activeMembers, 3);
-    assert.equal(insights.recentJoins, 3);
+    assert.equal(insights.activeMembers, 4);
+    assert.equal(insights.recentJoins, 4);
     assert.equal(insights.eventsCreated, 1);
     assert.equal(insights.upcomingEvents, 1);
     assert.equal(insights.eventRsvps, 4);
     assert.equal(insights.pollsCreated, 1);
     assert.equal(insights.pollVotes, 5);
     assert.equal(insights.announcementsPublished, 1);
-    assert.equal(insights.postsPublished, 1);
+    assert.equal(insights.postsPublished, 2);
     await assert.rejects(getCommunityInsightsForUser(db, 'hub-member', 'hub-circle', now), error => error?.code === 'permission-denied');
     await assert.rejects(getCommunityInsightsForUser(db, 'hub-owner', 'missing-circle', now), error => error?.code === 'permission-denied');
   });

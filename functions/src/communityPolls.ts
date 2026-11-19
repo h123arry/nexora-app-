@@ -1,5 +1,6 @@
 import type { Firestore } from 'firebase-admin/firestore';
 import { randomUUID } from 'node:crypto';
+import { isCircleMuteActive } from './communityGovernance.js';
 
 const QUESTION_LIMIT = 240;
 const OPTION_LIMIT = 80;
@@ -25,15 +26,7 @@ function validId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 150 && !value.includes('/');
 }
 
-async function requireActiveMember(db: Firestore, communityId: string, uid: string): Promise<void> {
-  const [community, membership] = await Promise.all([
-    db.collection('communities').doc(communityId).get(),
-    db.collection('communities').doc(communityId).collection('members').doc(uid).get(),
-  ]);
-  if (!community.exists || !membership.exists || membership.get('status') !== 'active') {
-    throw new Error('Join this Circle to participate in its polls.');
-  }
-}
+
 
 export async function createCirclePoll(
   db: Firestore,
@@ -54,17 +47,28 @@ export async function createCirclePoll(
     throw new Error('Add a question and 2 to 5 distinct options within the character limits.');
   }
 
-  await requireActiveMember(db, communityId, uid);
+  const communityRef = db.collection('communities').doc(communityId);
+  const memberRef = communityRef.collection('members').doc(uid);
+  const muteRef = communityRef.collection('mutes').doc(uid);
   const pollId = randomUUID();
-  const pollRef = db.collection('communities').doc(communityId).collection('polls').doc(pollId);
-  await pollRef.create({
-    id: pollId,
-    communityId,
-    question: cleanQuestion,
-    options: options.map((text) => ({ id: randomUUID(), text, votes: 0 })),
-    createdBy: uid,
-    createdAt: new Date(),
-    status: 'open',
+  const pollRef = communityRef.collection('polls').doc(pollId);
+  await db.runTransaction(async transaction => {
+    const [community, member, mute] = await Promise.all([
+      transaction.get(communityRef), transaction.get(memberRef), transaction.get(muteRef),
+    ]);
+    if (!community.exists || !member.exists || member.get('status') !== 'active') {
+      throw new Error('Join this Circle to participate in its polls.');
+    }
+    if (isCircleMuteActive(mute.data())) throw new Error('Your Circle posting access is temporarily muted.');
+    transaction.create(pollRef, {
+      id: pollId,
+      communityId,
+      question: cleanQuestion,
+      options: options.map((text) => ({ id: randomUUID(), text, votes: 0 })),
+      createdBy: uid,
+      createdAt: new Date(),
+      status: 'open',
+    });
   });
   return { pollId };
 }
