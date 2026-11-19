@@ -233,7 +233,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   // 12. AI Performance Assistant Messages
   const [aiAssistantMessages, setAiAssistantMessages] = useState<any[]>([
-    { id: 'm-1', sender: 'assistant', text: "Hello! I am Nida's specialized performance subsystem. I monitor memory pages, network tunnels, and filesystem pipelines. Here are your custom diagnostic insights:", timestamp: 'Just now' },
+    { id: 'm-1', sender: 'assistant', text: "Hello! I am I'm Nida. I can help you check storage, connection, and app speed. Here's what I found:", timestamp: 'Just now' },
     { id: 'm-2', sender: 'assistant', text: "⚡ Recommendations:\n• Your virtualized RAM is extremely clean, but 854 MB of old video downloads could be compressed to reclaim disk space.\n• Toggle 'Battery Saver Mode' to immediately pause complex viewport canvas shaders.\n• Rebuild your thumbnail index to recover 12 MB of cache leaks.", timestamp: 'Just now', suggestions: true }
   ]);
   const [aiInput, setAiInput] = useState('');
@@ -380,7 +380,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const handleQueueSimulatedMessage = () => {
     const types = ['Message', 'Reaction', 'Comment', 'AI Request', 'Poll Vote'];
     const payloads = [
-      'Encrypted message payload transmitted over node...',
+      'Encrypted message sent securely...',
       'Added Fire reaction to community thread',
       'Comment payload #812 indexed local-side',
       'VOH Request: summarize global network parameters',
@@ -440,15 +440,15 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     setAiInput('');
 
     setTimeout(() => {
-      let replyText = "I've analyzed Nexora's active memory pages. Your device pipeline is operating smoothly at 60 FPS.";
+      let replyText = "I've checked how NEXORA is running on your device. Everything looks smooth.";
       const query = currentInput.toLowerCase();
       
       if (query.includes('battery') || query.includes('power') || query.includes('drain')) {
         replyText = "🔋 Power Management: Nexora is currently running at normal frequency. Activating 'Battery Saver Mode' will throttle non-critical database sync cycles and pause floating canvas particles, reducing battery consumption by 35%.";
       } else if (query.includes('cache') || query.includes('clean') || query.includes('purge')) {
-        replyText = "🧹 Cache Engine Scan: Found 12 MB of stale thumbnail assets. Click the 'Rebuild' button next to the Tiny Blur Thumbnails cache block to reclaim memory leakage.";
+        replyText = "🧹 Storage check: Found 12 MB of stale thumbnail assets. Click the 'Rebuild' button next to the Tiny Blur Thumbnails cache block to reclaim memory leakage.";
       } else if (query.includes('slow') || query.includes('lag') || query.includes('speed')) {
-        replyText = "⚡ Telemetry Audit: Low-end devices are fully protected via virtual list rendering (reducing active DOM nodes to only 15 components for 1.25M rows) and asset lazy-loading. Make sure 'Intelligent Lazy Loading' is checked.";
+        replyText = "⚡ Device check: Low-end devices are fully protected via loading only what you can see (reducing active DOM nodes to only 15 components for 1.25M rows) and asset lazy-loading. Make sure 'Intelligent Lazy Loading' is checked.";
       } else if (query.includes('database') || query.includes('db') || query.includes('indexing')) {
         replyText = "🗄️ Database Optimizations: All tables are properly keyed. Running 'Background Indexing' in the Database Integrity panel will speed up keyword searches on historical channels.";
       } else if (query.includes('offline') || query.includes('sync') || query.includes('queue')) {
@@ -466,7 +466,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   // Backup restoration records
   const availableBackupsList = [
-    { id: 'bak-1', deviceName: 'Nexora Core Node Alpha', date: 'Jul 09, 2026 04:00', size: '2.4 GB', includeItems: 'Messages, Media, Settings', secure: true },
+    { id: 'bak-1', deviceName: 'NEXORA backup', date: 'Jul 09, 2026 04:00', size: '2.4 GB', includeItems: 'Messages, Media, Settings', secure: true },
     { id: 'bak-2', deviceName: 'Nexora Mobile Client (iOS)', date: 'Jul 02, 2026 12:15', size: '1.1 GB', includeItems: 'Messages, Bookmarks, AI Memory', secure: true },
     { id: 'bak-3', deviceName: 'London Ledger Hub NAS', date: 'Jun 28, 2026 23:59', size: '14.8 GB', includeItems: 'All Media, Broadcast Archives, Settings', secure: true }
   ];
@@ -664,7 +664,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
         integrityVerified: true
       }));
       window.dispatchEvent(new CustomEvent('toast', { 
-        detail: "⚡ Nexora Engine Calibrated! Battery draw reduced and file structures defragmented." 
+        detail: "⚡ NEXORA is running better. Storage has been cleaned up." 
       }));
     }, 2000);
   };
@@ -861,7 +861,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <h4 className="text-sm font-bold text-white flex items-center gap-2">
                         <VohIcon size={16} animated variant="brand" /> AI-Powered Storage Analyzer & Optimizer
                       </h4>
-                      <p className="text-[11px] text-zinc-400 mt-1">Smart algorithms index your node database to identify heavy, duplicate, or stale media blocks safely.</p>
+                      <p className="text-[11px] text-zinc-400 mt-1">NEXORA checks your files to find large, duplicate, or old media safely.</p>
                     </div>
 
                     {recommendations.length > 0 && (
@@ -1063,7 +1063,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           <img src={selectedChatForMedia.avatar} alt="" className="w-8 h-8 rounded-lg object-cover" />
                           <div className="text-left">
                             <h5 className="text-xs font-bold text-white">{selectedChatForMedia.name}</h5>
-                            <p className="text-[9px] font-mono text-zinc-500 mt-0.5">Media vault size: <b className="text-pink-400">{selectedChatForMedia.totalSize}</b></p>
+                            <p className="text-[9px] font-mono text-zinc-500 mt-0.5">Media storage: <b className="text-pink-400">{selectedChatForMedia.totalSize}</b></p>
                           </div>
                         </div>
 
@@ -1549,9 +1549,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                        <BarChart2 className="w-4 h-4 text-violet-400" /> Decentralized Network Telemetry
+                        <BarChart2 className="w-4 h-4 text-violet-400" /> Connection activity
                       </h4>
-                      <p className="text-[11px] text-zinc-400 mt-1">Live analytics monitoring data payloads traversing peer-to-peer tunnels since resetting counter ledger records.</p>
+                      <p className="text-[11px] text-zinc-400 mt-1">Connection activity since you last reset the counter.</p>
                     </div>
 
                     <button 
@@ -1599,7 +1599,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/5 pb-4">
                     <div>
                       <h4 className="text-sm font-black text-white flex items-center gap-2">
-                        <Cpu className="w-4 h-4 text-cyan-400 animate-pulse" /> Next-Gen Performance Optimization Engine
+                        <Cpu className="w-4 h-4 text-cyan-400 animate-pulse" /> App performance
                       </h4>
                       <p className="text-[11px] text-zinc-400 mt-1">
                         Active pipeline: calibrate memory, toggle viewport virtualization multipliers, sync peer nodes, and consult AI Performance Subsystems.
@@ -1608,7 +1608,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
                     <div className="flex flex-wrap items-center gap-1 bg-black/40 border border-white/5 rounded-xl p-1 shrink-0">
                       {[
-                        { id: 'dashboard', label: 'Engine Dashboard', icon: Cpu },
+                        { id: 'dashboard', label: 'Overview', icon: Cpu },
                         { id: 'subsystems', label: 'Subsystems', icon: Sliders },
                         { id: 'queues', label: 'Offline Queue', icon: Radio },
                         { id: 'ai', label: 'AI Advisor', icon: Sparkles },
@@ -1651,7 +1651,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             </div>
                           </div>
                           <div className="text-left">
-                            <span className="text-[9px] font-mono uppercase text-cyan-500 font-bold block">Engine Rating</span>
+                            <span className="text-[9px] font-mono uppercase text-cyan-500 font-bold block">Performance score</span>
                             <h4 className="text-sm font-black text-white mt-0.5">Absolute Peak</h4>
                             <span className="text-[8.5px] font-mono text-zinc-500 block">System performance: 100% stable</span>
                           </div>
@@ -1743,7 +1743,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         <div className="p-4 bg-slate-950/60 border border-white/5 rounded-2xl space-y-2.5 text-left">
                           <div className="flex justify-between items-center">
                             <span className="text-[10px] font-mono text-zinc-400 flex items-center gap-1">
-                              <Database className="w-3.5 h-3.5 text-pink-400" /> Virtualized Engine
+                              <Database className="w-3.5 h-3.5 text-pink-400" /> Smart loading
                             </span>
                             <span className="font-mono text-xs text-pink-400 font-bold">1.25M Rows</span>
                           </div>
@@ -1805,7 +1805,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                           {[
                             { title: 'Memory Exhaustion Guard', status: safeguards.memoryExhaustion, desc: 'Auto-purges old cache rows before heap boundary hit.' },
-                            { title: 'Storage Safekeeper Engine', status: safeguards.storageExhaustion, desc: 'Stops preloads dynamically if disk drops below 50MB.' },
+                            { title: 'Storage protection', status: safeguards.storageExhaustion, desc: 'Stops preloads dynamically if disk drops below 50MB.' },
                             { title: 'Anti-Infinite Loop Watcher', status: safeguards.infiniteLoops, desc: 'Intercepts state loop iterations and safely releases execution.' },
                             { title: 'UI Freeze Guard (WebWorker)', status: safeguards.uiFreezes, desc: 'Offloads complex cryptography pipelines to secondary threads.' },
                             { title: 'Slow DB Index Interceptor', status: safeguards.slowDbQueries, desc: 'Pre-compiles index keys for SQLite/IndexedDB lookup shortcuts.' },
@@ -1828,15 +1828,15 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl">
                         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
                           <div>
-                            <h5 className="text-xs font-black text-zinc-300 font-mono uppercase tracking-wider">Dynamic CPU / RAM Telemetry Sparkline</h5>
-                            <p className="text-[9px] text-zinc-500 mt-0.5">Real-time graphing of core threads. Updates every 2.5 seconds.</p>
+                            <h5 className="text-xs font-black text-zinc-300 font-mono uppercase tracking-wider">CPU and memory use</h5>
+                            <p className="text-[9px] text-zinc-500 mt-0.5">This chart shows how much CPU and memory the app is using.</p>
                           </div>
                           <div className="flex items-center gap-3 text-[9px] font-mono">
                             <span className="flex items-center gap-1 text-cyan-400">
-                              <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block animate-pulse" /> CPU Threads
+                              <span className="w-2 h-2 rounded-full bg-cyan-400 inline-block animate-pulse" /> CPU use
                             </span>
                             <span className="flex items-center gap-1 text-violet-400">
-                              <span className="w-2 h-2 rounded-full bg-violet-400 inline-block animate-pulse" /> RAM Pages
+                              <span className="w-2 h-2 rounded-full bg-violet-400 inline-block animate-pulse" /> Memory use
                             </span>
                           </div>
                         </div>
@@ -2132,7 +2132,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                                 localStorage.setItem('nx_is_simulated_offline', nextVal.toString());
                                 window.dispatchEvent(new CustomEvent('toast', { 
                                   detail: nextVal 
-                                    ? '🔌 Node disconnected. All outgoing payloads will be buffered in offline queue.' 
+                                    ? '🔌 You're offline. Your pending changes will be sent when you reconnect.' 
                                     : '🔌 Resumed connectivity. Initiating batch sync of local queue...' 
                                 }));
                               }}
@@ -2228,7 +2228,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           {offlineQueue.length === 0 ? (
                             <div className="p-8 text-center bg-black/40 border border-white/5 rounded-xl space-y-1.5">
                               <span className="text-xs font-bold text-zinc-400 block">Queue Empty</span>
-                              <p className="text-[10px] text-zinc-600 max-w-sm mx-auto">No pending local actions waiting to sync. All transactions are fully synchronized with core nodes!</p>
+                              <p className="text-[10px] text-zinc-600 max-w-sm mx-auto">Nothing is waiting to sync. Your changes are up to date.</p>
                             </div>
                           ) : (
                             offlineQueue.map(item => (
@@ -2295,7 +2295,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                                     {msg.text}
                                   </div>
                                   <span className="text-[8px] font-mono text-zinc-600 mt-1 uppercase">
-                                    {msg.sender === 'user' ? 'User node' : 'Nida Subsystem'} • {msg.timestamp}
+                                    {msg.sender === 'user' ? 'You' : 'Nida'} • {msg.timestamp}
                                   </span>
                                 </div>
                               ))}
