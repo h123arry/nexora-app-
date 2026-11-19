@@ -44,10 +44,10 @@ test('R2 media policy enforces MIME allowlists and size limits', () => {
 
 test('R2 presigned PUT binds the content type and has a bounded expiry', () => {
   const config = resolveR2Config(env as NodeJS.ProcessEnv)!;
-  const url = new URL(createR2PresignedUrl(config, 'PUT', 'users/user_123/media/asset-456', 900, 'image/webp', new Date('2026-11-19T12:00:00.000Z')));
+  const url = new URL(createR2PresignedUrl(config, 'PUT', 'users/user_123/media/asset-456', 900, 'image/webp', new Date('2026-11-19T12:00:00.000Z'), true));
   assert.equal(url.hostname, 'a169d97ea553f4ff19622a3e3932d0d7.r2.cloudflarestorage.com');
   assert.equal(url.pathname, '/nexora-media/users/user_123/media/asset-456');
-  assert.equal(url.searchParams.get('X-Amz-SignedHeaders'), 'content-type;host');
+  assert.equal(url.searchParams.get('X-Amz-SignedHeaders'), 'content-type;host;if-none-match');
   assert.equal(url.searchParams.get('X-Amz-Expires'), '900');
   assert.match(url.searchParams.get('X-Amz-Signature') || '', /^[a-f0-9]{64}$/);
   assert.throws(() => createR2PresignedUrl(config, 'GET', 'users/user_123/media/asset-456', 604801), /between 1 second and 7 days/);
