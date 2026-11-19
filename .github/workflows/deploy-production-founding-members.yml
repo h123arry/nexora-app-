@@ -8,6 +8,18 @@ on:
         required: true
         type: boolean
         default: false
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-production-founding-members.yml'
+      - 'firestore.rules'
+      - 'functions/src/index.ts'
+      - 'functions/src/giftCatalog.ts'
+      - 'functions/src/giftCatalogPolicy.ts'
+      - 'functions/src/giftPurchases.ts'
+      - 'functions/src/giftDelivery.ts'
+      - 'functions/src/giftInventoryTransfers.ts'
+      - 'functions/src/giftFriendPurchases.ts'
 
 permissions:
   contents: read
