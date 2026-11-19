@@ -223,6 +223,37 @@ async function hashR2Object(objectKey: string): Promise<{ digest: string; size: 
 const r2MediaRouter = express.Router();
 r2MediaRouter.use(requireFirebaseUser);
 
+// Per-account abuse protection for upload authorisation, completion and deletion.
+// Keep the map bounded; this process-local guard is an additional layer to edge-level limits.
+const r2MediaRateBuckets = new Map<string, { windowStartedAt: number; count: number }>();
+const R2_MEDIA_RATE_WINDOW_MS = 60_000;
+const R2_MEDIA_RATE_MAX_REQUESTS = 30;
+const R2_MEDIA_RATE_MAX_BUCKETS = 10_000;
+
+function rateLimitR2Media(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const uid = String(res.locals.userId || '');
+  if (!uid) return res.status(401).json({ error: 'Authentication is required.' });
+  const now = Date.now();
+  let bucket = r2MediaRateBuckets.get(uid);
+  if (!bucket || now - bucket.windowStartedAt >= R2_MEDIA_RATE_WINDOW_MS) {
+    bucket = { windowStartedAt: now, count: 0 };
+    r2MediaRateBuckets.set(uid, bucket);
+  }
+  bucket.count += 1;
+  if (bucket.count > R2_MEDIA_RATE_MAX_REQUESTS) {
+    res.setHeader('Retry-After', String(Math.ceil((R2_MEDIA_RATE_WINDOW_MS - (now - bucket.windowStartedAt)) / 1000)));
+    return res.status(429).json({ code: 'media_rate_limited', error: 'Too many media requests. Please wait before trying again.' });
+  }
+  if (r2MediaRateBuckets.size > R2_MEDIA_RATE_MAX_BUCKETS) {
+    for (const [key, value] of r2MediaRateBuckets) {
+      if (now - value.windowStartedAt >= R2_MEDIA_RATE_WINDOW_MS) r2MediaRateBuckets.delete(key);
+      if (r2MediaRateBuckets.size <= R2_MEDIA_RATE_MAX_BUCKETS) break;
+    }
+  }
+  return next();
+}
+r2MediaRouter.use(rateLimitR2Media);
+
 r2MediaRouter.post('/upload-intent', async (req, res) => {
   if (!r2Config) return res.status(503).json({ code: 'r2_not_configured', error: 'R2 media storage is not configured for this environment.' });
   const uid = res.locals.userId as string;
