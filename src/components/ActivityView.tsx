@@ -72,6 +72,25 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
     return filtered;
   }, [notifications, activeTab]);
 
+  // A device push can deep-link directly to the saved inbox item.
+  useEffect(() => {
+    if (isLoading || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const notificationId = params.get('nxPushNotification');
+    if (!notificationId) return;
+    const target = notifications.find(notification => notification.id === notificationId);
+    if (target) {
+      setExpandedNotificationId(notificationId);
+      if (!target.isRead && db && auth.currentUser?.uid === currentUser.id) {
+        void updateDoc(doc(db, 'users', currentUser.id, 'notifications', notificationId), { isRead: true })
+          .catch(() => console.warn('[ActivityView] Push-opened notification could not be marked read.'));
+      }
+    }
+    params.delete('nxPushNotification');
+    const remaining = params.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${remaining ? `?${remaining}` : ''}${window.location.hash}`);
+  }, [notifications, isLoading, currentUser.id]);
+
   const unreadCount = notifications.filter(notification => !notification.isRead).length;
 
   const markAllAsRead = async () => {
