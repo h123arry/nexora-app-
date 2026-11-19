@@ -2008,8 +2008,8 @@ export default function App() {
     }
 
     if (!finalUserToView) {
-      if (!isLoggedIn) {
-        requireAuth(() => { void handleViewProfile(userIdOrUsername); }, 'Sign in or create your NEXORA account to open this profile.');
+      if (!isLoggedIn || requiresPublicAccountSetup) {
+        requireAuth(() => { void handleViewProfile(userIdOrUsername); }, 'Sign in or complete your NEXORA account setup to open this profile.');
         return;
       }
       window.dispatchEvent(new CustomEvent('toast', { detail: 'This profile is unavailable or could not be loaded.' }));
