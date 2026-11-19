@@ -97,6 +97,10 @@ test('public profile signup offers both username/password and email/password pat
   assert.match(app, /<AuthView[\s\S]*initialMode="signup"/);
   assert.match(authView, /handleEmailSignupSubmit/);
   assert.match(authService, /createUserWithEmailAndPassword\(auth, cleanEmail, password\)/);
+  assert.match(authService, /if \(existingUser\?\.isAnonymous\)/);
+  assert.match(authService, /linkWithCredential\(\s*existingUser,\s*EmailAuthProvider\.credential\(cleanEmail, password\)/);
+  assert.match(authService, /ProfileService\.updateProfile\(fbUser\.uid, \{\s*name: fullName\.trim\(\),\s*email: cleanEmail/);
+
   assert.match(authService, /sendEmailVerification\(fbUser\)/);
 });
 
