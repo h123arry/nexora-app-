@@ -24,7 +24,7 @@ export default function OriginCreatorInsightsPanel() {
     try {
       const result = await httpsCallable(functions, 'getMyOriginCreatorInsights')({});
       setInsights(result.data as Insights);
-    } catch { setError('Your creator results couldn't load. Please try again.'); }
+    } catch { setError('Your creator results couldn’t load. Please try again.'); }
     finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
@@ -46,7 +46,7 @@ export default function OriginCreatorInsightsPanel() {
         <div className="rounded-xl border border-white/10 p-3"><p className="text-[10px] text-zinc-500">Times you reused your own posts</p><p className="mt-1 text-lg font-bold text-white">{insights.selfRemixUses}</p></div>
         <div className="rounded-xl border border-white/10 p-3"><p className="text-[10px] text-zinc-500">Times your work was reused by others</p><p className="mt-1 text-lg font-bold text-white">{insights.deepLineageUses}</p></div>
       </div>
-      {(insights.repeatedSourceUsePatterns > 0 || insights.deepLineageUses > 0) && <p className="flex items-start gap-2 text-[11px] leading-relaxed text-amber-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />Some posts have been reused several times. This doesn't mean anyone copied work or broke the rules.</p>}
+      {(insights.repeatedSourceUsePatterns > 0 || insights.deepLineageUses > 0) && <p className="flex items-start gap-2 text-[11px] leading-relaxed text-amber-200"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />Some posts have been reused several times. This doesn’t mean anyone copied work or broke the rules.</p>}
       <p className="text-[10px] leading-relaxed text-zinc-500">{insights.methodology} Some older activity may not include all details. Sample: {insights.sampleSize}/{insights.sampleLimit}{insights.sampleCapped ? '+' : ''} events. No financial rewards are calculated from these counts.</p>
     </>}
   </section>;
