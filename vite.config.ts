@@ -20,19 +20,16 @@ export default defineConfig(() => {
           // Keep long-lived third-party code cacheable independently from the
           // application shell and route chunks. This does not claim fewer
           // total bytes; it avoids invalidating vendor code on app changes.
-          manualChunks: {
-            // Keep Firebase services independently cacheable. Messaging is
-            // loaded only after an authenticated user enables notifications;
-            // it should not be part of the initial mobile shell.
-            'firebase-app': ['firebase/app'],
-            'firebase-auth': ['firebase/auth'],
-            'firebase-firestore': ['firebase/firestore'],
-            'firebase-functions': ['firebase/functions'],
-            'firebase-messaging': ['firebase/messaging'],
-            'firebase-storage': ['firebase/storage'],
-            'firebase-app-check': ['firebase/app-check'],
-            motion: ['motion'],
-            icons: ['lucide-react'],
+          manualChunks(id) {
+            if (id.includes('node_modules/firebase/app/') || id.includes('node_modules/@firebase/app/')) return 'firebase-app';
+            if (id.includes('node_modules/firebase/auth/') || id.includes('node_modules/@firebase/auth/')) return 'firebase-auth';
+            if (id.includes('node_modules/firebase/firestore/') || id.includes('node_modules/@firebase/firestore/')) return 'firebase-firestore';
+            if (id.includes('node_modules/firebase/functions/') || id.includes('node_modules/@firebase/functions/')) return 'firebase-functions';
+            if (id.includes('node_modules/firebase/messaging/') || id.includes('node_modules/@firebase/messaging/')) return 'firebase-messaging';
+            if (id.includes('node_modules/firebase/storage/') || id.includes('node_modules/@firebase/storage/')) return 'firebase-storage';
+            if (id.includes('node_modules/firebase/app-check/') || id.includes('node_modules/@firebase/app-check/')) return 'firebase-app-check';
+            if (id.includes('node_modules/motion/') || id.includes('node_modules/framer-motion/')) return 'motion';
+            if (id.includes('node_modules/lucide-react/')) return 'icons';
           },
         },
       },

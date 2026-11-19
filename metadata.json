@@ -1,6 +1,12 @@
 {
-  "name": "Nexora",
-  "description": "The world's living social network.",
-  "requestFramePermissions": ["camera", "microphone", "geolocation"],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "name": "NEXORA — The World's Living Social Network",
+  "description": "Autonomous production-hardened social network with real-time Firestore persistence, anonymous and permanent authentication, and secure multi-user isolation.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
