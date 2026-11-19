@@ -1324,13 +1324,7 @@ export default function ProfileView({
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
-                    <button 
-                      onClick={() => setActivePanel('menu')} 
-                      className="p-2.5 bg-white/5 hover:bg-white/10 active:scale-95 rounded-xl text-zinc-300 hover:text-white transition-all border border-white/10 cursor-pointer shadow-sm"
-                      title="More Options"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
+
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
