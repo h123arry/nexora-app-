@@ -44,3 +44,8 @@ This tranche improves lifecycle and accessibility behaviour in existing product 
 ## Shared motion presets
 
 The interaction layer now exposes a small typed preset library for menus, panels, toast notifications and celebrations. Components consume the same reduced-motion-aware configuration rather than independently recreating entrance and exit values. Keep high-frequency or long-running effects out of generic presets; those require component-specific lifecycle controls and must pause when hidden.
+
+
+## Collection Two choreography
+
+The ten new GiftVerse collection prefixes now resolve to their own animation profiles and CSS choreography: Oceanic drift, Elemental surge, Skyline rise, Gemstone prism turn, Explorer swoop, Couture descent, Spirit float, Arena victory, Timekeeper turn and Dreamscape float. These effects reuse the shared GiftAnimationStage lifecycle, rarity budgets, visibility pause and reduced-motion safeguards; the static collection artwork remains unchanged in galleries.
