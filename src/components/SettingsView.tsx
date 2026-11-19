@@ -240,7 +240,7 @@ export default function SettingsView({
     { id: 'notifications', label: 'Notifications', icon: Bell, desc: 'Push alerts & email summaries' },
     { id: 'appearance', label: 'Appearance', icon: Palette, desc: 'Theme, contrast & font sizing' },
     { id: 'security', label: 'Security', icon: ShieldCheck, desc: 'Two-factor & active sessions' },
-    { id: 'connected', label: 'Connected Accounts', icon: Link2, desc: 'OAuth & Workspace integrations' },
+    { id: 'connected', label: 'Connected Accounts', icon: Link2, desc: 'Connected apps' },
     { id: 'about', label: 'About Nexora', icon: Info, desc: 'Platform version & legal info' },
     { id: 'beta', label: 'Beta feedback', icon: Bug, desc: 'Report issues with useful context' },
     { id: 'origin', label: 'NEXORA Origin', icon: Scale, desc: 'Attribution, corrections & disputes' }
@@ -395,9 +395,9 @@ export default function SettingsView({
               <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Theme & Atmosphere</h3>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { id: 'neon-cyber', label: 'Cyber Void', color: 'bg-violet-600' },
+                  { id: 'neon-cyber', label: 'Violet', color: 'bg-violet-600' },
                   { id: 'stealth-dark', label: 'Stealth Slate', color: 'bg-zinc-800' },
-                  { id: 'emerald-glass', label: 'Matrix Emerald', color: 'bg-emerald-600' },
+                  { id: 'emerald-glass', label: 'Emerald', color: 'bg-emerald-600' },
                   { id: 'platinum-light', label: 'Ivory Platinum', color: 'bg-slate-200' }
                 ].map(t => (
                   <button
