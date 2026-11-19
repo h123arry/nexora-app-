@@ -2013,9 +2013,38 @@ export default function App() {
       }
     }
 
+    // Resolve direct public links from the canonical username claim when the
+    // profile is not already present in the local creator/post cache.
+    if (!finalUserToView) {
+      const looksLikeFirebaseUid = /^[A-Za-z0-9_-]{20,}$/.test(userIdOrUsername);
+      finalUserToView = looksLikeFirebaseUid
+        ? await ProfileService.getPublicProfile(userIdOrUsername)
+        : await ProfileService.getPublicProfileByUsername(cleanIdOrUser);
+    }
+
     if (!finalUserToView) {
       if (!isLoggedIn || requiresPublicAccountSetup) {
-        requireAuth(() => { void handleViewProfile(userIdOrUsername); }, 'Sign in or complete your NEXORA account setup to open this profile.');
+        requireAuth(() => {
+          void (async () => {
+            const looksLikeFirebaseUid = /^[A-Za-z0-9_-]{20,}$/.test(userIdOrUsername);
+            const requestedProfile = looksLikeFirebaseUid
+              ? await ProfileService.getPublicProfile(userIdOrUsername)
+              : await ProfileService.getPublicProfileByUsername(cleanIdOrUser);
+            if (!requestedProfile) {
+              // The link does not belong to an existing member. After signup,
+              // open the new member's own empty profile instead of retrying a
+              // nonexistent visitor profile.
+              navigateTo('profile', null);
+              return;
+            }
+            const { ProfileEngine } = await import('./services/voh/profileEngine');
+            const instantUser = ProfileEngine.getProfileInstantly(requestedProfile, freshUser => setViewedUser(freshUser));
+            navigateTo('profile', instantUser);
+          })().catch(error => {
+            console.warn('Unable to resume profile navigation after account setup.', error);
+            navigateTo('profile', null);
+          });
+        }, 'Create your NEXORA account to open this profile.');
         return;
       }
       window.dispatchEvent(new CustomEvent('toast', { detail: 'This profile is unavailable or could not be loaded.' }));
