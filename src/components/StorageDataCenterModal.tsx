@@ -116,9 +116,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     cpu: 18, // %
     memory: 42, // %
     battery: 89, // %
-    storageHealth: 'Excellent (Green Status)',
+    storageHealth: 'Excellent',
     tasksCount: 6,
-    indexHealth: '100% Calibrated',
+    indexHealth: 'Working properly',
     integrityVerified: true
   });
 
@@ -163,15 +163,15 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   // 4. Intelligent Cache Engine
   const [cacheTable, setCacheTable] = useState([
-    { id: 'memory', name: 'Virtual RAM Cache', size: '28 MB', items: 230, status: 'Active' },
-    { id: 'disk', name: 'Persistent IndexedDB Store', size: '899 MB', items: 4120, status: 'Active' },
-    { id: 'thumbnail', name: 'Tiny Blur Thumbnails', size: '45 MB', items: 1240, status: 'Optimized' },
-    { id: 'media', name: 'Media Cache (Video/Images)', size: '854 MB', items: 820, status: 'Managed' },
-    { id: 'ai', name: 'AI Models & Embeddings Cache', size: '120 MB', items: 15, status: 'Active' },
-    { id: 'search', name: 'Search Ledger Index', size: '3 MB', items: 450, status: 'Indexed' },
-    { id: 'emoji', name: 'Emoji Sprites Cache', size: '5 MB', items: 1400, status: 'Active' },
+    { id: 'memory', name: 'Memory used by NEXORA', size: '28 MB', items: 230, status: 'Active' },
+    { id: 'disk', name: 'Saved app data', size: '899 MB', items: 4120, status: 'Active' },
+    { id: 'thumbnail', name: 'Post and video previews', size: '45 MB', items: 1240, status: 'Optimized' },
+    { id: 'media', name: 'Photos and videos', size: '854 MB', items: 820, status: 'Managed' },
+    { id: 'ai', name: 'AI files', size: '120 MB', items: 15, status: 'Active' },
+    { id: 'search', name: 'Search data', size: '3 MB', items: 450, status: 'Indexed' },
+    { id: 'emoji', name: 'Emoji images', size: '5 MB', items: 1400, status: 'Active' },
     { id: 'sticker', name: 'Custom Stickers Cache', size: '12 MB', items: 110, status: 'Optimized' },
-    { id: 'story', name: 'Stories Ephemeral Buffer', size: '88 MB', items: 65, status: 'Active' },
+    { id: 'story', name: 'Stories data', size: '88 MB', items: 65, status: 'Active' },
   ]);
   const [cacheMaintenanceActive, setCacheMaintenanceActive] = useState(true);
   const [rebuildingCacheId, setRebuildingCacheId] = useState<string | null>(null);
@@ -185,11 +185,11 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const [offlineQueue, setOfflineQueue] = useState<any[]>(() => {
     const saved = localStorage.getItem('nx_offline_queue');
     return saved ? JSON.parse(saved) : [
-      { id: 'q-1', type: 'Message', payload: 'Encrypting and tunnel-transmitting keys...', status: 'completed', timestamp: '10:41 AM' },
+      { id: 'q-1', type: 'Message', payload: 'Sending a secure message...', status: 'completed', timestamp: '10:41 AM' },
       { id: 'q-2', type: 'Reaction', payload: 'Added Heart reaction to @lucas_cyber', status: 'completed', timestamp: '10:42 AM' },
-      { id: 'q-3', type: 'Poll Vote', payload: 'Voted "Option B: Web3 Bridges" in DevCommunity', status: 'pending', timestamp: 'Just now' },
+      { id: 'q-3', type: 'Poll Vote', payload: 'Voted in a community poll', status: 'pending', timestamp: 'Just now' },
       { id: 'q-4', type: 'AI Request', payload: 'VOH Summary on global security indexes', status: 'pending', timestamp: 'Just now' },
-      { id: 'q-5', type: 'Comment', payload: 'Adding commentary block to thread #42', status: 'pending', timestamp: 'Just now' },
+      { id: 'q-5', type: 'Comment', payload: 'Writing a comment', status: 'pending', timestamp: 'Just now' },
     ];
   });
   const [isSimulatedOffline, setIsSimulatedOffline] = useState(() => {
@@ -322,7 +322,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
               const itemIdx = next.findIndex(x => x.id === updated[pendingIdx].id);
               if (itemIdx !== -1) {
                 next[itemIdx] = { ...next[itemIdx], status: 'completed', timestamp: 'Just now' };
-                window.dispatchEvent(new CustomEvent('toast', { detail: `⚡ Offline Queue: ${next[itemIdx].type} successfully synchronized!` }));
+                window.dispatchEvent(new CustomEvent('toast', { detail: `⚡ Saved ${next[itemIdx].type} while offline.` }));
               }
               return next;
             });
@@ -364,7 +364,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
         });
       });
       setRebuildingCacheId(null);
-      window.dispatchEvent(new CustomEvent('toast', { detail: `🧹 Cache Rebuilt: Cleared leaked pages in ${cacheId} cache!` }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: `🧹 Cleared old ${cacheId} files.` }));
     }, 1500);
   };
 
@@ -373,7 +373,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     setDiagnosticsActive(active);
     localStorage.setItem('nx_diagnostics_overlay', active ? 'true' : 'false');
     window.dispatchEvent(new CustomEvent('nx-diagnostics-toggle', { detail: active }));
-    window.dispatchEvent(new CustomEvent('toast', { detail: active ? '🛠️ Floating developer diagnostics overlay enabled!' : '🛠️ Floating overlay disabled.' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: active ? '🛠️ App details are now shown on screen.' : '🛠️ App details hidden.' }));
   };
 
   // Helper: Queue Simulated Offline Message
@@ -382,9 +382,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     const payloads = [
       'Encrypted message sent securely...',
       'Added Fire reaction to community thread',
-      'Comment payload #812 indexed local-side',
-      'VOH Request: summarize global network parameters',
-      'Voted "Option A: Rust microservices" in ledger poll'
+      'Comment saved on this device',
+      'VOH AI: Check my connection',
+      'Voted in a community poll'
     ];
     const randIdx = Math.floor(Math.random() * types.length);
     const newQueueItem = {
@@ -395,7 +395,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       timestamp: 'Just now'
     };
     setOfflineQueue(prev => [...prev, newQueueItem]);
-    window.dispatchEvent(new CustomEvent('toast', { detail: `📥 Local Queue: Added simulated ${types[randIdx]}!` }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: `📥 Added ${types[randIdx]} to the offline list.` }));
   };
 
   // Helper: Execute AI Assistant Action Recommendations
@@ -403,18 +403,18 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     if (actionId === 'battery') {
       setBatterySaverActive(true);
       localStorage.setItem('nx_battery_saver_active', 'true');
-      window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ Smart Battery Saver enabled. Background polling throttled.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ Battery saver is on.' }));
       setAiAssistantMessages(prev => [...prev, {
         id: `action-${Date.now()}`,
         sender: 'assistant',
-        text: "🔋 Smart Battery Saver Mode has been enabled. I have adjusted the polling scheduler, suspended viewport shader threads, and deferred background sync payloads. Savings rate: +2.4h estimated battery life."
+        text: "🔋 Battery saver is on. NEXORA will use less power when running in the background."
       }]);
     } else if (actionId === 'rebuild_thumbnail') {
       triggerRebuildCache('thumbnail');
       setAiAssistantMessages(prev => [...prev, {
         id: `action-${Date.now()}`,
         sender: 'assistant',
-        text: "🧹 Rebuilding tiny thumbnail index cache... Completed! Recovered 41 MB of leaked RAM blocks."
+        text: "🧹 Post and video previews cleaned. More storage is now available."
       }]);
     } else if (actionId === 'compress_media') {
       setCacheLevels(prev => {
@@ -422,11 +422,11 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
         localStorage.setItem('nx_storage_cache', JSON.stringify(next));
         return next;
       });
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📦 Media compressed: Recovered 432 MB of disk space!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '📦 Photos and videos were made smaller. More storage is now available.' }));
       setAiAssistantMessages(prev => [...prev, {
         id: `action-${Date.now()}`,
         sender: 'assistant',
-        text: "📦 Media compression complete! Recompressed older media blocks using high-efficiency WebP/H.265. Recovered 432 MB without visible quality loss."
+        text: "📦 Older photos and videos were made smaller without a noticeable change in quality."
       }]);
     }
   };
@@ -444,15 +444,15 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       const query = currentInput.toLowerCase();
       
       if (query.includes('battery') || query.includes('power') || query.includes('drain')) {
-        replyText = "🔋 Power Management: Nexora is currently running at normal frequency. Activating 'Battery Saver Mode' will throttle non-critical database sync cycles and pause floating canvas particles, reducing battery consumption by 35%.";
+        replyText = "🔋 NEXORA is running normally. Turn on Battery Saver to help your battery last longer.";
       } else if (query.includes('cache') || query.includes('clean') || query.includes('purge')) {
-        replyText = "🧹 Storage check: Found 12 MB of stale thumbnail assets. Click the 'Rebuild' button next to the Tiny Blur Thumbnails cache block to reclaim memory leakage.";
+        replyText = "🧹 Storage check: Found 12 MB of stale thumbnail assets. Click the 'Rebuild' button next to the Post and video previews cache block to reclaim memory leakage.";
       } else if (query.includes('slow') || query.includes('lag') || query.includes('speed')) {
-        replyText = "⚡ Device check: Low-end devices are fully protected via loading only what you can see (reducing active DOM nodes to only 15 components for 1.25M rows) and asset lazy-loading. Make sure 'Intelligent Lazy Loading' is checked.";
+        replyText = "⚡ NEXORA loads content as you need it to help the app run smoothly, even on phones with less memory.";
       } else if (query.includes('database') || query.includes('db') || query.includes('indexing')) {
-        replyText = "🗄️ Database Optimizations: All tables are properly keyed. Running 'Background Indexing' in the Database Integrity panel will speed up keyword searches on historical channels.";
+        replyText = "🗄️ Search is ready to use. Your older messages and posts may take a little longer to appear.";
       } else if (query.includes('offline') || query.includes('sync') || query.includes('queue')) {
-        replyText = "📡 Offline Synchronization: Nexora maintains a local FIFO offline queue. Once connectivity resumes, delta sync packets are batch-processed under conflict resolution rules.";
+        replyText = "📡 When you're offline, some changes wait on your phone. They'll be sent when your connection returns.";
       }
 
       setAiAssistantMessages(prev => [...prev, {
@@ -490,10 +490,10 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   // AI-Assisted Scan Recommendations State
   const [recommendations, setRecommendations] = useState([
-    { id: 'rec-1', title: 'Duplicate Assets Detected', desc: '4 copies of the Nexora whitepaper draft and 2 identical high-res banners.', size: '412 MB', risk: 'Safe to Delete', itemsCount: 6, type: 'duplicate' },
-    { id: 'rec-2', title: 'Large Videos (Older than 30 Days)', desc: 'Large raw videos, screen recordings and test assets not viewed recently.', size: '1.42 GB', risk: 'Medium Risk (Media archived)', itemsCount: 3, type: 'large_files' },
-    { id: 'rec-3', title: 'Old/Expired Temporary Files', desc: 'Unused client update segments, cached sticker sets, and old audio buffers.', size: '680 MB', risk: 'Safe to Delete', itemsCount: 140, type: 'temp' },
-    { id: 'rec-4', title: 'Forwarded Video Spams', desc: 'Media files forwarded multiple times across community channels.', size: '350 MB', risk: 'Review Before Deleting', itemsCount: 18, type: 'forwarded' }
+    { id: 'rec-1', title: 'Duplicate files found', desc: '4 copies of the Nexora whitepaper draft and 2 identical high-res banners.', size: '412 MB', risk: 'Safe to remove', itemsCount: 6, type: 'duplicate' },
+    { id: 'rec-2', title: 'Large older videos', desc: 'Large raw videos, screen recordings and test assets not viewed recently.', size: '1.42 GB', risk: 'Check before removing', itemsCount: 3, type: 'large_files' },
+    { id: 'rec-3', title: 'Old temporary files', desc: 'Unused client update segments, cached sticker sets, and old audio buffers.', size: '680 MB', risk: 'Safe to remove', itemsCount: 140, type: 'temp' },
+    { id: 'rec-4', title: 'Repeated forwarded videos', desc: 'Media files forwarded multiple times across community channels.', size: '350 MB', risk: 'Check before removing', itemsCount: 18, type: 'forwarded' }
   ]);
 
   // Calculations for total Nexora Storage
@@ -513,7 +513,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const handleCleanupRecommendation = (id: string, size: string) => {
     setRecommendations(prev => prev.filter(r => r.id !== id));
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `✨ Cleaned recommendation! Safely recovered ${size} of device storage.` 
+      detail: `✨ Cleaned recommendation! Freed up ${size} of device storage.` 
     }));
   };
 
@@ -521,7 +521,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const handleOneTapCleanup = () => {
     setRecommendations([]);
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `🚀 Intelligent Cleanup: Cleared duplicates & temp files. Safely recovered 2.84 GB!` 
+      detail: `🚀 Intelligent Cleanup: Cleared duplicates & temp files. Freed up 2.84 GB!` 
     }));
   };
 
@@ -624,7 +624,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   // Archive selected
   const handleArchiveSelectedMedia = () => {
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `📦 Archived ${selectedMediaItemIds.length} media items onto encrypted private cloud.` 
+      detail: `📦 Saved ${selectedMediaItemIds.length} media items to your private backup.` 
     }));
     setSelectedMediaItemIds([]);
   };
@@ -646,7 +646,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       return chat;
     }));
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `🧹 Conversation storage cleaned (Mode: ${mode})` 
+      detail: `🧹 Chat storage cleaned.` 
     }));
   };
 
@@ -883,8 +883,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       <h4 className="text-sm font-black text-emerald-400 uppercase tracking-widest">Storage Calibrated & Optimized</h4>
                       <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">No duplicate files, broken buffers or stale media detected. Your Nexora storage is running at absolute peak efficiency parameters.</p>
                       <button onClick={() => setRecommendations([
-                        { id: 'rec-1', title: 'Duplicate Assets Detected', desc: '4 copies of the Nexora whitepaper draft and 2 identical high-res banners.', size: '412 MB', risk: 'Safe to Delete', itemsCount: 6, type: 'duplicate' },
-                        { id: 'rec-2', title: 'Large Videos (Older than 30 Days)', desc: 'Large raw videos, screen recordings and test assets not viewed recently.', size: '1.42 GB', risk: 'Medium Risk (Media archived)', itemsCount: 3, type: 'large_files' }
+                        { id: 'rec-1', title: 'Duplicate files found', desc: '4 copies of the Nexora whitepaper draft and 2 identical high-res banners.', size: '412 MB', risk: 'Safe to remove', itemsCount: 6, type: 'duplicate' },
+                        { id: 'rec-2', title: 'Large older videos', desc: 'Large raw videos, screen recordings and test assets not viewed recently.', size: '1.42 GB', risk: 'Check before removing', itemsCount: 3, type: 'large_files' }
                       ])} className="text-xs text-violet-400 underline font-mono cursor-pointer">Simulate Scanner Refresh</button>
                     </div>
                   ) : (
@@ -902,7 +902,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             <div className="flex items-center gap-2 pt-1 text-[9px] font-mono">
                               <span className="px-2 py-0.5 rounded bg-zinc-900 border border-white/5 text-zinc-500">{rec.itemsCount} elements detected</span>
                               <span className={`px-2 py-0.5 rounded ${
-                                rec.risk === 'Safe to Delete' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                rec.risk === 'Safe to remove' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                               }`}>{rec.risk}</span>
                             </div>
                           </div>
@@ -954,7 +954,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           </div>
                           <button 
                             onClick={() => {
-                              window.dispatchEvent(new CustomEvent('toast', { detail: `🧹 Quick Purge active: Safely recovered ${item.saved}!` }));
+                              window.dispatchEvent(new CustomEvent('toast', { detail: `🧹 Quick Purge active: Freed up ${item.saved}!` }));
                             }}
                             className="w-full py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 rounded-lg text-[9px] text-rose-400 font-mono cursor-pointer"
                           >
