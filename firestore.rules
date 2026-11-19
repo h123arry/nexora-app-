@@ -310,7 +310,7 @@ service cloud.firestore {
         && request.resource.data.size is int
         && request.resource.data.size > 0
         && request.resource.data.status == 'pending_upload'
-        && (!request.resource.data.keys().hasAny(['purpose']) || request.resource.data.purpose == 'studio-export')
+        && (!request.resource.data.keys().hasAny(['purpose']) || request.resource.data.purpose in ['studio-export', 'story'])
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
       allow update: if false;
