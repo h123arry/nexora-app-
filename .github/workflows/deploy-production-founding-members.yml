@@ -30,6 +30,7 @@ jobs:
       GCLOUD_PROJECT: nexora-prod-voiceharrison
       FIRESTORE_DATABASE_ID: default
       FIREBASE_STORAGE_BUCKET: nexora-prod-voiceharrison.appspot.com
+      NPM_CONFIG_PRODUCTION: 'false'
     steps:
       - name: Check out reviewed production release
         uses: actions/checkout@v4
@@ -42,17 +43,27 @@ jobs:
           test "$FIREBASE_STORAGE_BUCKET" = "nexora-prod-voiceharrison.appspot.com"
           test -n "${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}"
           test -n "${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}"
+      - name: Validate the exact production Firebase target and rules manifest
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const firebase = JSON.parse(fs.readFileSync('firebase.json', 'utf8'));
+          const firestore = Array.isArray(firebase.firestore)
+            ? firebase.firestore.find((entry) => entry.database === 'default')
+            : null;
+          if (!firestore || firestore.rules !== 'firestore.rules') {
+            throw new Error('firebase.json must deploy firestore.rules to the default Firestore database.');
+          }
+          if (!fs.existsSync('firestore.rules')) throw new Error('firestore.rules is missing.');
+          if (firebase.storage?.rules !== 'storage.rules') throw new Error('firebase.json must deploy storage.rules.');
+          console.log(`Validated Firebase project ${process.env.NEXORA_PRODUCTION_PROJECT_ID}, Firestore database ${process.env.FIRESTORE_DATABASE_ID}, rules firestore.rules`);
+          NODE
 
       - name: Authenticate to Google Cloud using production Workload Identity Federation
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}
-          project_id: nexora-prod-voiceharrison
-
-      - name: Set up Google Cloud CLI
-        uses: google-github-actions/setup-gcloud@v2
-        with:
           project_id: nexora-prod-voiceharrison
 
       - name: Set up Node.js
@@ -64,8 +75,14 @@ jobs:
 
       - name: Install and build trusted Firebase Functions
         run: |
-          npm ci --include=dev --prefix functions --no-audit --no-fund
-          npm run functions:build
+          NPM_CONFIG_PRODUCTION=false npm ci --include=dev --prefix functions --no-audit --no-fund
+          test -x functions/node_modules/.bin/tsc
+          npm --prefix functions run build
+
+      - name: Validate Firestore rules in the emulator
+        run: |
+          npm ci --include=dev --no-audit --no-fund
+          npm run test:rules
 
       - name: Prepare explicit production Functions runtime configuration
         run: |
@@ -77,6 +94,7 @@ jobs:
         run: |
           npx --yes firebase-tools@15.33.0 deploy \
             --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,firestore:rules,storage \
+            --config firebase.json \
             --project "$NEXORA_PRODUCTION_PROJECT_ID" \
             --non-interactive
 
