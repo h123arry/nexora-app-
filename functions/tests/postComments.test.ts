@@ -13,6 +13,7 @@ before(async () => {
   await Promise.all([
     db.doc('publicProfiles/author').set({ username: 'author', name: 'Post Author', avatar: 'https://cdn.example.com/author.webp' }),
     db.doc('publicProfiles/commenter').set({ username: 'commenter', name: 'Commenter', avatar: 'https://cdn.example.com/commenter.webp' }),
+    db.doc('publicProfiles/mentioned').set({ username: 'mentioned', name: 'Mentioned Person', avatar: 'https://cdn.example.com/mentioned.webp' }),
   ]);
   await db.doc('posts/comment-post-public').set({
     id: 'comment-post-public', userId: 'author', audience: 'public', commentsCount: 0, comments: [],
@@ -27,9 +28,12 @@ before(async () => {
 
 after(async () => {
   const notifications = await db.collection('users').doc('author').collection('notifications').get();
-  await Promise.all(notifications.docs.map(doc => doc.ref.delete()));
+  await Promise.all([
+    ...notifications.docs.map(doc => doc.ref.delete()),
+    db.recursiveDelete(db.collection('users').doc('mentioned').collection('notifications')),
+  ]);
   for (const postId of postIds) await db.doc(`posts/${postId}`).delete();
-  await Promise.all(['author', 'commenter'].map(id => db.doc(`publicProfiles/${id}`).delete()));
+  await Promise.all(['author', 'commenter', 'mentioned'].map(id => db.doc(`publicProfiles/${id}`).delete()));
   await deleteApp(app);
 });
 
@@ -45,7 +49,19 @@ describe('trusted public post comments', () => {
     const notifications = await db.collection('users').doc('author').collection('notifications').get();
     assert.equal(notifications.size, 1);
     assert.equal(notifications.docs[0].get('type'), 'comment');
+    assert.equal(notifications.docs[0].get('actorName'), 'Commenter');
     assert.equal(notifications.docs[0].get('userId'), 'commenter');
+    assert.equal(notifications.docs[0].get('targetId'), 'comment-post-public');
+  });
+
+
+  it('creates one attributed mention notification for each tagged profile', async () => {
+    await addPublicPostComment(db, 'commenter', 'comment-post-public', 'Hello @mentioned, welcome!', 'comment-mention');
+    const notifications = await db.collection('users').doc('mentioned').collection('notifications').get();
+    assert.equal(notifications.size, 1);
+    assert.equal(notifications.docs[0].get('type'), 'mention');
+    assert.equal(notifications.docs[0].get('userId'), 'commenter');
+    assert.equal(notifications.docs[0].get('actorName'), 'Commenter');
     assert.equal(notifications.docs[0].get('targetId'), 'comment-post-public');
   });
 
@@ -54,11 +70,11 @@ describe('trusted public post comments', () => {
     const replay = await addPublicPostComment(db, 'commenter', 'comment-post-public', 'Retry safely', 'comment-retry');
     assert.equal(first.created, true);
     assert.equal(replay.created, false);
-    assert.equal(replay.commentsCount, 2);
+    assert.equal(replay.commentsCount, 3);
     const post = await db.doc('posts/comment-post-public').get();
     assert.equal(post.get('comments').filter((comment: { id: string }) => comment.id === 'comment-retry').length, 1);
     const notifications = await db.collection('users').doc('author').collection('notifications').get();
-    assert.equal(notifications.size, 2);
+    assert.equal(notifications.size, 3);
   });
 
   it('rejects private or disabled posts and does not notify for self-comments', async () => {
@@ -67,6 +83,6 @@ describe('trusted public post comments', () => {
     const self = await addPublicPostComment(db, 'author', 'comment-post-public', 'My own note', 'self-comment');
     assert.equal(self.created, true);
     const notifications = await db.collection('users').doc('author').collection('notifications').get();
-    assert.equal(notifications.size, 2);
+    assert.equal(notifications.size, 3);
   });
 });

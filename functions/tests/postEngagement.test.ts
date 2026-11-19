@@ -52,6 +52,9 @@ describe('trusted post engagement', () => {
     const notifications = await db.collection('users').doc('author').collection('notifications').get();
     assert.equal(notifications.size, 1);
     assert.equal(notifications.docs[0].get('username'), 'alice');
+    assert.equal(notifications.docs[0].get('userId'), 'alice');
+    assert.equal(notifications.docs[0].get('type'), 'spark');
+    assert.equal(notifications.docs[0].get('content'), 'sparked your post.');
   });
 
   it('serializes concurrent users without lost counter updates', async () => {

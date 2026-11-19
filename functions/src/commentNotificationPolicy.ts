@@ -7,6 +7,7 @@ export type CommentNotificationInput = {
   actorId: string;
   recipientId: string;
   username: string;
+  actorName?: string;
   avatar: string;
   content: string;
   timestamp: string;
@@ -26,6 +27,7 @@ export function buildCommentNotification(input: CommentNotificationInput) {
     type: 'comment' as const,
     userId: input.actorId,
     username,
+    actorName: (input.actorName || username).trim().slice(0, 100),
     avatar: input.avatar.startsWith('https://') ? input.avatar.slice(0, 1200) : '',
     targetId: input.postId,
     content: snippet ? `commented on your post: "${snippet}"` : 'commented on your post.',

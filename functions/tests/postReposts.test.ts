@@ -56,7 +56,10 @@ test('creates an attributed public repost and increments the source share count 
   assert.equal(repost.get('sourceAuthorUsername'), authorId);
   assert.equal(repost.get('image'), 'https://example.test/post.png');
   assert.equal((await db.doc(`users/${actorId}/postReposts/${sourcePostId}`).get()).exists, true);
-  assert.equal((await db.collection('users').doc(authorId).collection('notifications').get()).size, 1);
+  const notifications = await db.collection('users').doc(authorId).collection('notifications').get();
+  assert.equal(notifications.size, 1);
+  assert.equal(notifications.docs[0].get('userId'), actorId);
+  assert.equal(notifications.docs[0].get('actorName'), 'Repost Actor');
 });
 
 test('retries are idempotent and do not create duplicate reposts or inflate counters', async () => {
