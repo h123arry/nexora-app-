@@ -60,7 +60,7 @@ export class ProfileService {
       id: uid,
       username: data.username || defaultUsername,
       name: data.name || 'Nexora User',
-      avatar: data.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      avatar: data.avatar || '',
       bio: data.bio || '', location: data.location || 'Global', website: data.website || '',
       followers: data.followers || 0, following: data.following || 0, sparks: data.sparks || 0,
       isVerified: false, coverImage: data.coverImage || '',
@@ -168,7 +168,7 @@ export class ProfileService {
       profile = await this.createProfile(firebaseUser.uid, {
         name: firebaseUser.isAnonymous ? 'NEXORA Member' : (firebaseUser.displayName || 'Nexora User'),
         username: firebaseUser.isAnonymous ? anonymousUsername : undefined,
-        avatar: firebaseUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        avatar: firebaseUser.photoURL || '',
         isVerified: firebaseUser.emailVerified,
         ...additionalData
       }, firebaseUser.email || '');
