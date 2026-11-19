@@ -32,7 +32,7 @@ export default function RightSidebar({
       <div className="nx-pulse-card relative overflow-hidden rounded-3xl border border-violet-300/15 bg-gradient-to-br from-violet-500/18 via-[#171238] to-indigo-950/60 p-5 shadow-[0_18px_40px_rgba(1,4,13,0.24)]">
         <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-violet-400/20 blur-2xl" />
         <div className="relative">
-          <div className="mb-4 flex items-center justify-between"><span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-violet-200"><Sparkles className="h-3.5 w-3.5" /> Nexora pulse</span><ArrowUpRight className="h-4 w-4 text-violet-200/70" /></div>
+          <div className="mb-4 flex items-center justify-between"><span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-violet-200"><Sparkles className="h-3.5 w-3.5" /> Trending on Nexora</span><ArrowUpRight className="h-4 w-4 text-violet-200/70" /></div>
           <p className="max-w-[220px] text-sm font-semibold leading-relaxed text-white">The best conversations are waiting for your perspective.</p>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-300/75">Follow the people and ideas that make your world feel bigger.</p>
         </div>
