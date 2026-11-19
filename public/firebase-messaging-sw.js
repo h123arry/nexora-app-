@@ -36,6 +36,7 @@ self.addEventListener('notificationclick', (event) => {
   target.searchParams.set('nxPushType', data.type || 'system');
   if (data.userId) target.searchParams.set('nxPushUser', data.userId);
   if (data.targetId) target.searchParams.set('nxPushTarget', data.targetId);
+  if (data.notificationId) target.searchParams.set('nxPushNotification', data.notificationId);
   const targetUrl = target.toString();
   event.waitUntil((async () => {
     const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
