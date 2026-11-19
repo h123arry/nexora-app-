@@ -2132,8 +2132,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                                 localStorage.setItem('nx_is_simulated_offline', nextVal.toString());
                                 window.dispatchEvent(new CustomEvent('toast', { 
                                   detail: nextVal 
-                                    ? '🔌 You're offline. Your pending changes will be sent when you reconnect.' 
-                                    : '🔌 Resumed connectivity. Initiating batch sync of local queue...' 
+                                    ? '🔌 You are offline. Your pending changes will be sent when you reconnect.' 
+                                    : '🔌 Connection restored. Sending your pending changes...' 
                                 }));
                               }}
                               className={`px-3 py-1 rounded text-[10px] font-mono font-bold cursor-pointer transition-all ${
