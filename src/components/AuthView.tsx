@@ -29,8 +29,6 @@ interface AuthViewProps {
   promptReason?: string;
 }
 
-const PRESET_AVATARS: string[] = [];
-
 const COUNTRIES = [
   { code: '+1', name: 'United States', flag: '🇺🇸' },
   { code: '+1', name: 'Canada', flag: '🇨🇦' },
@@ -496,12 +494,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     }
   };
 
-  // Onboarding Step 2: Profile Photo Upload / Selection
-  const handleAvatarSelect = (url: string) => {
-    setSelectedAvatar(url);
-    setCustomAvatarUrl('');
-  };
-
   const handleCustomAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -732,23 +724,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                     />
                   </div>
                   <span className="text-xs text-zinc-400 font-mono">@{onboardingUser.username}</span>
-                </div>
-
-                {/* Preset Avatars */}
-                <div>
-                  <span className="text-xs font-bold text-zinc-300 block mb-2">Preset Avatars</span>
-                  <div className="grid grid-cols-6 gap-2">
-                    {PRESET_AVATARS.map((url, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleAvatarSelect(url)}
-                        className={`p-1 rounded-full border-2 transition-all cursor-pointer overflow-hidden ${selectedAvatar === url ? 'border-violet-500 scale-110 shadow-[0_0_12px_rgba(139,92,246,0.5)]' : 'border-transparent opacity-60 hover:opacity-100'}`}
-                      >
-                        <img src={url} alt={`Preset ${idx}`} className="w-10 h-10 rounded-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 <div className="flex gap-3">
