@@ -539,7 +539,7 @@ export default function PrivacySettingsModal({
                 { id: 'discover', label: 'Who can find you', icon: Hidden, badge: discoverability.hiddenAccountMode ? 'Hidden' : '' },
                 { id: 'blocked', label: 'Blocked & Restricted', icon: ShieldBan, count: blockedUsers.length + restrictedUsers.length },
                 { id: 'hidden_chats', label: 'Hidden PIN Chats', icon: Key, badge: 'Locked' },
-                { id: 'safety', label: 'Safety Registry Center', icon: ShieldAlert, badge: 'Alerts' }
+                { id: 'safety', label: 'Safety and sign-ins', icon: ShieldAlert, badge: 'Alerts' }
               ].map(cat => {
                 const Icon = cat.icon;
                 const isSelected = activeTab === cat.id;
@@ -1058,7 +1058,7 @@ export default function PrivacySettingsModal({
                       <div className="max-w-xl text-left">
                         <span className="px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/30 text-[9px] font-mono uppercase tracking-wider text-emerald-400 rounded-md font-black">Hide my account</span>
                         <h5 className="text-sm font-bold text-white mt-1.5 flex items-center gap-2">
-                          Master Hidden Mode (Complete Disappearance)
+                          Hide your account from search
                         </h5>
                         <p className="text-[10.5px] text-zinc-400 mt-1 leading-relaxed">
                           When enabled, your profile entirely vanishes from search indices, suggestion reels, nearby logs, and follower counts. You become a total ghost node, while still maintaining full active chat capability with previously approved connections.
@@ -1083,12 +1083,12 @@ export default function PrivacySettingsModal({
                     <span className="text-xs font-black text-violet-400 font-mono uppercase block">Where your account can appear</span>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {[
-                        { key: 'searchResults', label: 'Include in Search Results', desc: 'Let people find you in search.' },
-                        { key: 'friendSuggestions', label: 'Suggest to Mutual Connections', desc: 'Suggests your handle to friends of your friends.' },
+                        { key: 'searchResults', label: 'Show me in search', desc: 'Let people find you in search.' },
+                        { key: 'friendSuggestions', label: 'Suggest me to friends', desc: 'People who follow your friends may see your account.' },
                         { key: 'nearbyDiscovery', label: 'Nearby people', desc: 'Let people nearby find your account.' },
                         { key: 'usernameLookup', label: 'Search by username', desc: 'Lets people find you by your username.' },
                         { key: 'phoneNumberLookup', label: 'Find you by contacts', desc: 'Let people find you using their phone contacts.' },
-                        { key: 'trendingUsers', label: 'Trending / Popular Account list', desc: 'Permits listing inside popular creators listings.' }
+                        { key: 'trendingUsers', label: 'Popular accounts', desc: 'Let your account appear in popular creator lists.' }
                       ].map(item => {
                         const val = discoverability[item.key as keyof typeof discoverability];
                         const isDisabled = discoverability.hiddenAccountMode;
@@ -1190,9 +1190,9 @@ export default function PrivacySettingsModal({
                   {/* Soft Restriction Section */}
                   <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-4">
                     <div>
-                      <span className="text-xs font-black text-amber-400 block font-mono uppercase">Restricted Accounts (Soft Privacy Block)</span>
+                      <span className="text-xs font-black text-amber-400 block font-mono uppercase">Restricted accounts</span>
                       <p className="text-[10px] text-zinc-500 mt-1 leading-normal">
-                        Restricted accounts can write message requests to your device, but they receive no alerts of delivery, typing indicators, read ticks, or presence telemetry. Excellent for avoiding connection friction without hard blocks.
+                        Restricted accounts can still send you message requests, but they won't see when you are typing, when you have read their messages or whether you are online.
                       </p>
                     </div>
 
@@ -1215,7 +1215,7 @@ export default function PrivacySettingsModal({
                         </div>
                       )) : (
                         <p className="rounded-xl border border-dashed border-white/10 bg-black/20 p-3 text-[10px] leading-relaxed text-zinc-400">
-                          Restrict is not currently connected to account-level enforcement. Use Block User for the block controls saved to your account.
+                          Restrict is not available yet. Use Block to stop this account from contacting you.
                         </p>
                       )}
                     </div>
@@ -1228,7 +1228,7 @@ export default function PrivacySettingsModal({
                 <div className="space-y-6 text-left">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Key className="w-4 h-4 text-violet-400" /> Hidden Chats Security Configuration
+                      <Key className="w-4 h-4 text-violet-400" /> Hidden chat settings
                     </h4>
                     <p className="text-[11px] text-zinc-400 mt-1">Lock private chats with a PIN so only you can open them.</p>
                   </div>
@@ -1237,12 +1237,12 @@ export default function PrivacySettingsModal({
                     
                     {/* Security credentials form */}
                     <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-4">
-                      <span className="text-xs font-black text-violet-400 font-mono uppercase block">Authentication Gate Selection</span>
+                      <span className="text-xs font-black text-violet-400 font-mono uppercase block">Choose how to lock your chats</span>
                       
                       <div className="space-y-2">
                         {[
                           { id: 'PIN', label: 'Numeric PIN', desc: '4-digit secure code' },
-                          { id: 'Password', label: 'Alphanumeric Key', desc: 'Secure high-entropy word' },
+                          { id: 'Password', label: 'Password', desc: 'A strong password' },
                           { id: 'Pattern', label: 'Swipe pattern', desc: 'Swipe pattern' },
                           { id: 'FaceUnlock', label: 'Face unlock', desc: 'Uses your face on this phone' }
                         ].map(type => (
@@ -1270,12 +1270,12 @@ export default function PrivacySettingsModal({
                       <div className="space-y-2">
                         <span className="text-xs font-black text-indigo-400 font-mono uppercase block">Chat lock PIN</span>
                         <p className="text-[10px] text-zinc-500 leading-normal">
-                          Set the required code to authorize viewing hidden chat tabs in Nexora.
+                          Set the PIN you need to open your hidden chats.
                         </p>
                       </div>
 
                       <div className="my-4 bg-black/40 border border-white/5 rounded-xl p-3 text-center">
-                        <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Current Gate PIN</span>
+                        <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Current chat PIN</span>
                         <span className="text-lg font-mono font-black tracking-widest text-violet-300">••••</span>
                       </div>
 
@@ -1309,7 +1309,7 @@ export default function PrivacySettingsModal({
                 </div>
               )}
 
-              {/* Safety Registry Center Tab */}
+              {/* Safety and sign-ins Tab */}
               {activeTab === 'safety' && (
                 <div className="space-y-6 text-left">
                   <div>
