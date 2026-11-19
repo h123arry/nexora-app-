@@ -13,6 +13,8 @@ test('guest exploration never impersonates a person or uses stock-person avatars
   assert.match(app, /getSafeAvatar\(post\.avatar, post\.name \|\| post\.username\)/);
   assert.match(app, /getSafeAvatar\(c\.avatar, c\.name \|\| c\.username\)/);
   assert.match(app, /getSafeAvatar\(u\.avatar, u\.name \|\| u\.username\)/);
+  assert.match(app, /!isLoggedIn \|\| !firebaseUser \|\| currentUser\.id !== firebaseUser\.uid/);
+  assert.match(app, /!pendingAuthAction \|\| !firebaseUser \|\| currentUser\.id !== firebaseUser\.uid/);
 });
 
 test('transient notification banners stay disabled while the saved inbox and device push remain available', async () => {
