@@ -1438,7 +1438,7 @@ export default function ProfileView({
             {(currentUser.socialTwitter || currentUser.socialInstagram) && <div className="flex flex-wrap gap-3 text-[11px]">{currentUser.socialTwitter && <a href={/^https?:\/\//i.test(currentUser.socialTwitter) ? currentUser.socialTwitter : 'https://' + currentUser.socialTwitter.replace(/^@/, '')} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:text-violet-200 hover:underline">X / Twitter</a>}{currentUser.socialInstagram && <a href={/^https?:\/\//i.test(currentUser.socialInstagram) ? currentUser.socialInstagram : 'https://instagram.com/' + currentUser.socialInstagram.replace(/^@/, '')} target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:text-violet-200 hover:underline">Instagram</a>}</div>}
             {((currentUser.skills || []).length > 0 || Object.keys(currentUser.interestDNA || {}).length > 0) && <div className="flex flex-wrap gap-1.5 pt-1">{[...(currentUser.skills || []), ...Object.keys(currentUser.interestDNA || {}).sort((a,b) => (currentUser.interestDNA[b] || 0) - (currentUser.interestDNA[a] || 0))].filter((value,index,array) => value && array.indexOf(value) === index).slice(0,6).map(item => <span key={item} className="rounded-full border border-violet-400/15 bg-violet-500/10 px-2.5 py-1 text-[10px] font-medium text-violet-200">{item}</span>)}</div>}
             {/* Nexora 6 Statistics Grid */}
-            <div className="nx-profile-stats grid grid-cols-3 sm:grid-cols-6 gap-x-1 sm:gap-x-2 text-center mt-2 sm:mt-3 border-y border-white/10 py-2">
+            <div className="nx-profile-stats grid grid-cols-3 grid-rows-2 text-center mt-2 sm:mt-3">
               {[
                 { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
                 { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
@@ -1446,8 +1446,8 @@ export default function ProfileView({
                 { label: 'Sparks', value: getSecondaryMetric('sparks') },
                 { label: 'Reputation', value: getSecondaryMetric('reputation') },
                 { label: 'Contributions', value: getSecondaryMetric('contributions') },
-              ].map(stat => (
-                <button key={stat.label} type="button" onClick={() => { if (stat.label === 'Followers' || stat.label === 'Following') { setRelationsTab(stat.label === 'Followers' ? 'followers' : 'following'); setActivePanel('social-graph'); } else if (stat.label === 'Posts') setProfileTab('media'); else if (stat.label === 'Sparks') setProfileTab('sparks'); }} className="flex min-w-0 flex-col gap-0.5 rounded-none border-0 bg-transparent px-1 py-1 text-center transition-colors hover:bg-violet-500/[0.06] focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-2px]">
+              ].map((stat, index) => (
+                <button key={stat.label} type="button" onClick={() => { if (stat.label === 'Followers' || stat.label === 'Following') { setRelationsTab(stat.label === 'Followers' ? 'followers' : 'following'); setActivePanel('social-graph'); } else if (stat.label === 'Posts') setProfileTab('media'); else if (stat.label === 'Sparks') setProfileTab('sparks'); }} className={`flex min-w-0 flex-col gap-0.5 rounded-none border-0 bg-transparent px-1 py-2 text-center transition-colors hover:bg-violet-500/[0.06] focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-2px] ${index < 3 ? 'border-b border-white/10' : ''} ${index % 3 !== 2 ? 'border-r border-white/10' : ''}`}>
                   <span className="text-sm sm:text-base font-black text-white leading-tight">{stat.value}</span>
                   <span className="text-[10px] sm:text-xs font-medium text-zinc-300 leading-tight">{stat.label}</span>
                 </button>
@@ -1572,7 +1572,7 @@ export default function ProfileView({
             ) : (
               <div className="w-full max-w-4xl mx-auto px-2">
                 <MediaGrid 
-                  gridPosts={[...filteredTabPosts].filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'videos' ? !!post.videoUrl : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
+                  gridPosts={[...filteredTabPosts].filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
                   pinnedPostIds={pinnedPostIdsList} 
                   onSelectPost={(post) => setSelectedGridPost(post)} 
                 />
