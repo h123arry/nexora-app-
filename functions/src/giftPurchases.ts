@@ -7,7 +7,15 @@ import { findNexoraGift } from './giftCatalogPolicy.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
-const ESCROW = 'gift_escrow';
+const PLATFORM_ACCOUNT = 'platform_treasury';
+
+function safeCounter(value: unknown, label: string): number {
+  if (value === undefined) return 0;
+  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+    throw new HttpsError('failed-precondition', `${label} is invalid. Contact support before retrying.`);
+  }
+  return value as number;
+}
 const validKey = (value: unknown): value is string =>
   typeof value === 'string' && /^[A-Za-z0-9_-]{16,128}$/.test(value);
 
@@ -30,7 +38,7 @@ export const purchaseNexGift = onCall({ maxInstances: 20 }, async request => {
   const transactionId = 'gift_purchase_' + requestId.slice(0, 40);
   const units = gift.priceNex;
   const walletRef = db.collection('nexWallets').doc(uid);
-  const escrowRef = db.collection('nexWallets').doc(ESCROW);
+  const platformRef = db.collection('nexWallets').doc(PLATFORM_ACCOUNT);
   const requestRef = db.collection('nexLedgerRequests').doc('purchase_' + requestId);
   const transactionRef = db.collection('nexLedgerTransactions').doc(transactionId);
   const debitRef = db.collection('nexLedgerEntries').doc(transactionId + ':debit');
@@ -40,8 +48,8 @@ export const purchaseNexGift = onCall({ maxInstances: 20 }, async request => {
 
   try {
     return await db.runTransaction(async tx => {
-      const [prior, wallet, escrow, inventory] = await Promise.all([
-        tx.get(requestRef), tx.get(walletRef), tx.get(escrowRef), tx.get(inventoryRef),
+      const [prior, wallet, platform, inventory] = await Promise.all([
+        tx.get(requestRef), tx.get(walletRef), tx.get(platformRef), tx.get(inventoryRef),
       ]);
       if (prior.exists) {
         const data = prior.data() || {};
@@ -51,19 +59,27 @@ export const purchaseNexGift = onCall({ maxInstances: 20 }, async request => {
         return { giftId: gift.id, quantity: Number(inventory.data()?.quantity || 1), replayed: true, status: 'owned' as const };
       }
       const balance = wallet.data()?.availableBalance ?? 0;
-      const escrowBalance = escrow.data()?.availableBalance ?? 0;
+      const platformBalance = platform.data()?.availableBalance ?? 0;
+      const walletLifetimeCredited = safeCounter(wallet.data()?.lifetimeCredited, 'Wallet lifetime credits');
+      const walletLifetimeDebited = safeCounter(wallet.data()?.lifetimeDebited, 'Wallet lifetime debits');
+      const platformLifetimeCredited = safeCounter(platform.data()?.lifetimeCredited, 'Platform lifetime credits');
+      const platformLifetimeDebited = safeCounter(platform.data()?.lifetimeDebited, 'Platform lifetime debits');
       if (!Number.isSafeInteger(balance) || balance < units) {
         throw new HttpsError('failed-precondition', 'Your NEX balance is too low for this gift.');
       }
-      if (!Number.isSafeInteger(escrowBalance) || escrowBalance < 0) {
-        throw new HttpsError('failed-precondition', 'The gift wallet is temporarily unavailable.');
+      if (!Number.isSafeInteger(platformBalance) || platformBalance < 0) {
+        throw new HttpsError('failed-precondition', 'The platform wallet is temporarily unavailable.');
+      }
+      if (walletLifetimeDebited > Number.MAX_SAFE_INTEGER - units
+        || platformLifetimeCredited > Number.MAX_SAFE_INTEGER - units) {
+        throw new HttpsError('failed-precondition', 'NEX wallet totals exceed the safe integer range.');
       }
       const entries = buildNexTransferEntries({
-        fromAccountId: uid, toAccountId: ESCROW, units, transactionId,
+        fromAccountId: uid, toAccountId: PLATFORM_ACCOUNT, units, transactionId,
         idempotencyKey: 'purchase_' + requestId,
       });
       const nextBalance = applyNexBalanceEntries(balance, entries, uid);
-      const nextEscrow = applyNexBalanceEntries(escrowBalance, entries, ESCROW);
+      const nextPlatform = applyNexBalanceEntries(platformBalance, entries, PLATFORM_ACCOUNT);
       const oldQuantity = inventory.data()?.quantity ?? 0;
       if (!Number.isSafeInteger(oldQuantity) || oldQuantity < 0 || oldQuantity >= Number.MAX_SAFE_INTEGER) {
         throw new HttpsError('failed-precondition', 'Your gift collection needs support before it can be updated.');
@@ -76,24 +92,24 @@ export const purchaseNexGift = onCall({ maxInstances: 20 }, async request => {
       };
       tx.set(walletRef, {
         currency: 'NEX', availableBalance: nextBalance,
-        lifetimeCredited: wallet.data()?.lifetimeCredited ?? 0,
-        lifetimeDebited: (wallet.data()?.lifetimeDebited ?? 0) + units,
+        lifetimeCredited: walletLifetimeCredited,
+        lifetimeDebited: walletLifetimeDebited + units,
         schemaVersion: 1, updatedAt: now,
       }, { merge: true });
-      tx.set(escrowRef, {
-        currency: 'NEX', availableBalance: nextEscrow,
-        lifetimeCredited: (escrow.data()?.lifetimeCredited ?? 0) + units,
-        lifetimeDebited: escrow.data()?.lifetimeDebited ?? 0,
+      tx.set(platformRef, {
+        currency: 'NEX', availableBalance: nextPlatform,
+        lifetimeCredited: platformLifetimeCredited + units,
+        lifetimeDebited: platformLifetimeDebited,
         schemaVersion: 1, updatedAt: now,
       }, { merge: true });
       tx.create(debitRef, { ...common, ...entries[0] });
       tx.create(creditRef, { ...common, ...entries[1] });
       tx.create(transactionRef, {
-        ...common, fromAccountId: uid, toAccountId: ESCROW,
+        ...common, fromAccountId: uid, toAccountId: PLATFORM_ACCOUNT,
         entryIds: [entries[0].entryId, entries[1].entryId],
       });
       tx.create(requestRef, { uid, giftId: gift.id, transactionId, units, createdAt: now });
-      tx.create(historyRef, { ...common, direction: 'debit', balanceAfter: nextBalance, counterpartyAccountId: ESCROW });
+      tx.create(historyRef, { ...common, direction: 'debit', balanceAfter: nextBalance, counterpartyAccountId: PLATFORM_ACCOUNT });
       tx.set(inventoryRef, {
         giftId: gift.id, giftName: gift.name, image: gift.image, rarity: gift.rarity,
         animation: gift.animation, category: gift.category, priceNex: gift.priceNex,
