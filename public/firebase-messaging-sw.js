@@ -42,7 +42,11 @@ self.addEventListener('notificationclick', (event) => {
     const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of windows) {
       if ('focus' in client) {
-        if ('navigate' in client) await client.navigate(targetUrl);
+        try {
+          if ('navigate' in client) await client.navigate(targetUrl);
+        } catch {
+          client.postMessage({ type: 'NEXORA_PUSH_OPEN', data });
+        }
         await client.focus();
         return;
       }
