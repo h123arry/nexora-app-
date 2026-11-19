@@ -1014,6 +1014,19 @@ service cloud.firestore {
       allow get, list: if signedIn() && resource.data.targetType == 'live';
       allow create, update, delete: if false;
     }
+    // Purchased gifts belong to the recipient's private collection. Only trusted callables write these records.
+    match /users/{userId}/giftInventory/{giftId} {
+      allow get, list: if owner(userId);
+      allow create, update, delete: if false;
+    }
+    match /users/{userId}/giftCollectionEvents/{eventId} {
+      allow get, list: if owner(userId);
+      allow create, update, delete: if false;
+    }
+    match /users/{userId}/giftPurchasesSent/{eventId} {
+      allow get, list: if owner(userId);
+      allow create, update, delete: if false;
+    }
     // Creator gift galleries are public to signed-in Nexora members and server-managed.
     match /users/{userId}/giftGallery/{giftId} {
       allow get, list: if signedIn();
