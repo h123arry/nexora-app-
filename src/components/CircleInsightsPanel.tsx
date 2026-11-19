@@ -24,7 +24,7 @@ export default function CircleInsightsPanel({ communityId }: { communityId: stri
       setData(result.data);
     } catch (cause) {
       const code = (cause as { code?: string })?.code || '';
-      setError(code.includes('permission-denied') ? 'Only Circle owners, admins and moderators can see these results.' : 'Community results couldn't load. Check your connection and try again.');
+      setError(code.includes('permission-denied') ? 'Only Circle owners, admins and moderators can see these results.' : 'Community results couldn’t load. Check your connection and try again.');
     } finally { setLoading(false); }
   }, [communityId]);
   useEffect(() => { void refresh(); }, [refresh]);
