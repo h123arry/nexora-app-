@@ -1871,7 +1871,7 @@ export default function FeedView({
                 }
               }}
               className="hidden sm:inline-flex nx-icon-button text-fuchsia-300"
-              title="VOH AI Intelligence"
+              title="VOH AI"
               aria-label="Open VOH AI"
             >
               <Sparkles className="w-4.5 h-4.5 text-fuchsia-400 group-hover:scale-110 transition-transform" />
@@ -2526,7 +2526,7 @@ export default function FeedView({
               {/* Conditional parameters based on category */}
               {composerCategory === 'pulse' && (
                 <div className="space-y-1">
-                  <label className="text-[10px] font-mono text-violet-400 block uppercase">Pulse Location Name</label>
+                  <label className="text-[10px] font-mono text-violet-400 block uppercase">Location</label>
                   <input 
                     type="text"
                     placeholder="e.g. Port Harcourt, Nigeria"
@@ -2667,7 +2667,7 @@ export default function FeedView({
             {/* Right Column: Mini Interaction Control Panel (Visible on Desktop, hidden on tight layouts) */}
             <div className="w-full md:w-80 bg-[#09071a] border-t md:border-t-0 md:border-l border-white/10 p-5 flex flex-col justify-between shrink-0">
               <div className="space-y-4">
-                <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block font-bold border-b border-white/5 pb-2">Narrative Matrix Controller</span>
+                <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block font-bold border-b border-white/5 pb-2">Post layout</span>
                 
                 <div className="flex gap-4 items-center">
                   <button 
@@ -2780,8 +2780,8 @@ export default function FeedView({
                     
                     const pillars = [
                       { label: 'Interest Alignment', val: isHighRep ? 95 : 75, desc: 'Relevance to your personalized DNA interests.', color: 'bg-violet-500' },
-                      { label: 'Engagement Quality', val: nidaDiagnosticPost.likeCount && nidaDiagnosticPost.likeCount > 1000 ? 98 : 65, desc: 'Pure completion rates and organic shares.', color: 'bg-pink-500' },
-                      { label: 'Creator Trust Reputation', val: isHighRep ? 100 : 85, desc: 'Historical compliance and content age.', color: 'bg-cyan-500' },
+                      { label: 'Post engagement', val: nidaDiagnosticPost.likeCount && nidaDiagnosticPost.likeCount > 1000 ? 98 : 65, desc: 'Pure completion rates and organic shares.', color: 'bg-pink-500' },
+                      { label: 'Creator reputation', val: isHighRep ? 100 : 85, desc: 'Historical compliance and content age.', color: 'bg-cyan-500' },
                       { label: 'Content Freshness', val: 90, desc: 'Recency and rapid velocity trend scaling.', color: 'bg-yellow-500' },
                     ];
 
@@ -2829,10 +2829,10 @@ export default function FeedView({
                   </div>
                 </div>
 
-                {/* Satisfaction Signal Vectors */}
+                {/* Post feedback */}
                 <div className="bg-zinc-950/40 border border-white/5 p-4.5 rounded-2xl space-y-3">
                   <h4 className="text-xs font-mono font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Activity className="w-4 h-4" /> Satisfaction Signal Vectors
+                    <Activity className="w-4 h-4" /> Post feedback
                   </h4>
 
                   <div className="space-y-1.5 text-[10px] font-mono">
@@ -3172,7 +3172,7 @@ export default function FeedView({
                     });
                     setLastAction({ type: 'not_interested', postId: contextualMenuPost.id, data: { tags: [cleanTag] } });
                     setContextualMenuPost(null);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Tag muted. Recommendation engine updated.' }));
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '👎 You won't see this tag as often. Your feed preferences were updated.' }));
                   }}
                   className="w-full flex items-center gap-3 p-3 bg-white/3 hover:bg-white/10 rounded-xl text-left text-xs font-sans font-bold text-violet-100 transition-colors"
                 >
