@@ -184,4 +184,5 @@ export class PushNotificationService {
         console.warn('Native notification could not be displayed.');
       }
     });
-  }}
+  }
+}
