@@ -3172,7 +3172,7 @@ export default function FeedView({
                     });
                     setLastAction({ type: 'not_interested', postId: contextualMenuPost.id, data: { tags: [cleanTag] } });
                     setContextualMenuPost(null);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: '👎 You won't see this tag as often. Your feed preferences were updated.' }));
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '👎 You will not see this tag as often. Your feed preferences were updated.' }));
                   }}
                   className="w-full flex items-center gap-3 p-3 bg-white/3 hover:bg-white/10 rounded-xl text-left text-xs font-sans font-bold text-violet-100 transition-colors"
                 >
