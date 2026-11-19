@@ -14,14 +14,36 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  const notificationTitle = payload.notification?.title || 'Nexora Alert';
+  // FCM automatically displays notification-payload messages in the background.
+  // Only create a notification here for data-only messages to avoid duplicates.
+  if (payload.notification) return;
+  const data = payload.data || {};
+  const notificationTitle = data.title || (data.username ? `@${data.username}` : 'NEXORA');
   const notificationOptions = {
-    body: payload.notification?.body || '',
-    icon: payload.notification?.icon || '/logo.png',
+    body: data.body || data.content || 'You have a new NEXORA update.',
+    icon: '/nexora-mark.png',
     badge: '/icons/icon-48.png',
-    data: payload.data
+    tag: data.notificationId || `nexora-${data.type || 'update'}-${data.targetId || 'general'}`,
+    data
   };
-
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const targetUrl = data.url || (data.targetId
+    ? `/#${data.type === 'chat' ? 'inbox' : 'activity'}?target=${encodeURIComponent(data.targetId)}`
+    : '/#activity');
+  event.waitUntil((async () => {
+    const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of windows) {
+      if ('focus' in client) {
+        await client.focus();
+        client.postMessage({ type: 'NEXORA_PUSH_OPEN', data });
+        return;
+      }
+    }
+    await clients.openWindow(targetUrl);
+  })());
 });
