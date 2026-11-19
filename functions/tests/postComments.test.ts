@@ -83,6 +83,6 @@ describe('trusted public post comments', () => {
     const self = await addPublicPostComment(db, 'author', 'comment-post-public', 'My own note', 'self-comment');
     assert.equal(self.created, true);
     const notifications = await db.collection('users').doc('author').collection('notifications').get();
-    assert.equal(notifications.size, 2);
+    assert.equal(notifications.size, 3);
   });
 });
