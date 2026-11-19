@@ -80,42 +80,6 @@ export function triggerEngagementOnNewPost(_post: Post, _currentUser: User) {
 // ============================================================================
 // 6. PROFILE VIEW TRIGGER
 // ============================================================================
-export function recordProfileView(viewedUserId: string, currentUser: User) {
-  // If someone other than currentUser views the profile, or simulated visitor
-  if (viewedUserId !== currentUser.id) {
-    // Current user viewed someone else's profile, log locally
-    try {
-      const historyKey = 'nexora_recent_profile_views';
-      const existing = JSON.parse(localStorage.getItem(historyKey) || '[]');
-      const updated = [{ userId: viewedUserId, timestamp: Date.now() }, ...existing.filter((v: any) => v.userId !== viewedUserId)].slice(0, 30);
-      localStorage.setItem(historyKey, JSON.stringify(updated));
-    } catch (_) {}
-    return;
-  }
-
-  // A network visitor viewed current user's profile
-  const creator = NETWORK_CREATORS[Math.floor(Math.random() * NETWORK_CREATORS.length)];
-  const notif: Notification = {
-    id: `pop-pview-${Date.now()}-${Math.random()}`,
-    type: 'profile_view',
-    userId: creator.id,
-    username: creator.username,
-    actorName: creator.name,
-    avatar: creator.avatar,
-    targetId: currentUser.id,
-    content: `viewed your profile from ${creator.location} (${creator.matchPercentage}% DNA Match)`,
-    location: creator.location,
-    matchPercentage: creator.matchPercentage,
-    timestamp: new Date().toISOString(),
-    isRead: false,
-    priority: 2,
-    actionText: 'View Profile',
-    actionType: 'view_profile',
-    category: 'profile_views'
-  };
-  dispatchRealTimeNotification(notif);
-}
-
 // Profile visits are local browsing history only. Inbound views must come
 // from authenticated server-side activity, never from a simulated actor.
 export function recordProfileView(viewedUserId: string, currentUser: User) {
