@@ -479,7 +479,7 @@ export default function ProfileView({
         : settings.feed.mutedCreatorIds.filter(id => id !== targetId);
       await SettingsService.updateFeed(ownerId, { mutedCreatorIds: mutedIds });
       setMutedUsers(mutedIds);
-      window.dispatchEvent(new CustomEvent('toast', { detail: muted ? 'You won't see this creator's posts in your feed.' : 'Creator unmuted.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: muted ? 'You won’t see this creator’s posts in your feed.' : 'Creator unmuted.' }));
     } catch {
       await refreshSafetyLists();
       window.dispatchEvent(new CustomEvent('toast', { detail: 'This mute setting could not be saved. Please retry.' }));
@@ -609,7 +609,7 @@ export default function ProfileView({
       downloadAnchor.remove();
       window.dispatchEvent(new CustomEvent('toast', { detail: 'A copy of some account information was downloaded. It may not include everything.' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Your account information couldn't be prepared. Please try again later.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Your account information couldn’t be prepared. Please try again later.' }));
     } finally {
       setIsLifecycleBusy(false);
     }
@@ -625,7 +625,7 @@ export default function ProfileView({
       setDeleteAccountPassword('');
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Your account deletion request has been received and will be processed.' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error && error.message.startsWith('For your safety') ? error.message : 'Your deletion request couldn't be sent. Sign in again and try once more.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error && error.message.startsWith('For your safety') ? error.message : 'Your deletion request couldn’t be sent. Sign in again and try once more.' }));
     } finally {
       setIsLifecycleBusy(false);
     }
@@ -1509,7 +1509,7 @@ export default function ProfileView({
                     <LinkIcon className="w-5 h-5 text-zinc-400" />
                     <div className="space-y-0.5">
                       <span className="block text-sm font-semibold text-white">Copy Profile Link</span>
-                      <span className="block text-xs text-zinc-500 font-mono">Copy this creator's profile URL</span>
+                      <span className="block text-xs text-zinc-500 font-mono">Copy this creator’s profile URL</span>
                     </div>
                   </button>
                   {!isOwnProfile && (
