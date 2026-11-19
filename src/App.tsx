@@ -101,11 +101,12 @@ const WorldWeaveView = lazy(() => import('./components/WorldWeaveView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
 import NexoraLoader from './components/NexoraLoader';
 import PublicAccountSetup from './components/PublicAccountSetup';
+import UsernameLoginModal from './components/UsernameLoginModal';
 import OfflineBanner from './components/OfflineBanner';
 import PwaUpdatePrompt from './components/PwaUpdatePrompt';
 
 export default function App() {
-  const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, retryProfileLoad, logout } = useFirebase();
+  const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, retryProfileLoad, logout, loginWithUsername } = useFirebase();
 
   useEffect(() => {
     const connection = (navigator as Navigator & {
@@ -132,7 +133,7 @@ export default function App() {
   // Anonymous Firebase identities can browse, but incomplete account profiles
   // must open the signup/profile flow before attempting follow or post writes.
   const requiresPublicAccountSetup = isLoggedIn && firebaseUser?.isAnonymous === true && !!firebaseProfile
-    && (!firebaseProfile.dateOfBirth || firebaseProfile.name === 'NEXORA Member' || firebaseProfile.username.startsWith('member_'));
+    && (firebaseProfile.name === 'NEXORA Member' || firebaseProfile.username.startsWith('member_'));
   const initialCacheUserId = isLoggedIn && firebaseUser ? firebaseUser.uid : '';
   const [securityReminderStep, setSecurityReminderStep] = useState(0);
   useEffect(() => {
@@ -199,6 +200,7 @@ export default function App() {
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
 
   const [showPublicAccountSetup, setShowPublicAccountSetup] = useState(false);
+  const [showUsernameLogin, setShowUsernameLogin] = useState(false);
   const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
 
@@ -219,16 +221,7 @@ export default function App() {
     setPendingAuthAction(null);
   };
 
-  // Offer profile setup after ten seconds of public browsing. Every dismissal
-  // schedules the next reminder at 20s, 30s, 1m, 2m, 5m, 10m and then 30m.
-  useEffect(() => {
-    if (authInitializing || !isLoggedIn || !firebaseUser?.isAnonymous || !requiresPublicAccountSetup) return;
-    if (showPublicAccountSetup) return;
-    const state = readAnonymousAccountPromptState(accountPromptKey ? localStorage.getItem(accountPromptKey) : null);
-    const delay = state.nextPromptAt === null ? 10_000 : Math.max(0, state.nextPromptAt - Date.now());
-    const timer = window.setTimeout(() => setShowPublicAccountSetup(true), delay);
-    return () => window.clearTimeout(timer);
-  }, [accountPromptKey, authInitializing, isLoggedIn, firebaseUser?.isAnonymous, requiresPublicAccountSetup, showPublicAccountSetup]);
+  // Account setup is action-driven; public browsing is never interrupted by a timer.
 
   const requestProfileSetup = () => {
     if (isLoggedIn && requiresPublicAccountSetup) {
@@ -3446,12 +3439,25 @@ export default function App() {
         <PublicAccountSetup
           user={firebaseProfile}
           onCancel={dismissPublicAccountSetup}
+          onSwitchToLogin={() => { setShowPublicAccountSetup(false); setShowUsernameLogin(true); }}
           onComplete={(updatedUser) => {
             setCurrentUser(getRichUser(updatedUser));
             setShowPublicAccountSetup(false);
             void retryProfileLoad().catch(() => {
               window.dispatchEvent(new CustomEvent('toast', { detail: 'Your profile was saved, but NEXORA could not refresh it yet. Please retry.' }));
             });
+          }}
+        />
+      )}
+
+      {showUsernameLogin && (
+        <UsernameLoginModal
+          onClose={() => setShowUsernameLogin(false)}
+          onLogin={async (username, password) => {
+            await loginWithUsername(username, password);
+            setShowUsernameLogin(false);
+            setShowPublicAccountSetup(false);
+            void retryProfileLoad().catch(() => undefined);
           }}
         />
       )}
