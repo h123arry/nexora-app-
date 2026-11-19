@@ -122,11 +122,11 @@ export default function CreatorGiftEarningsPanel() {
           <h3 className="text-sm font-bold text-white">Gift earnings history</h3>
           <span className="text-[10px] text-slate-500">{history.length.toLocaleString()} records loaded</span>
         </div>
-        {loading ? <div className="p-8 text-center text-sm text-slate-500">Loading verified earnings…</div>
+        {loading ? <div className="p-8 text-center text-sm text-slate-500">Loading your gift earnings…</div>
           : !history.length ? <div className="p-8 text-center">
             <Gift size={24} className="mx-auto text-violet-300/60" />
             <p className="mt-3 text-sm font-semibold text-white">Your gift earnings will appear here</p>
-            <p className="mt-1 text-xs text-slate-500">When people send you GIFTVERSE gifts, their verified records will show here.</p>
+            <p className="mt-1 text-xs text-slate-500">Gifts people send you will appear here.</p>
           </div> : <div className="divide-y divide-white/[.06]">
             {history.map(earning => <div key={earning.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
               <div className="flex min-w-0 items-center gap-3">
