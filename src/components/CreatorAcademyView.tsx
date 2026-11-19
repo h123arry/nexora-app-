@@ -282,9 +282,9 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
         const refreshed = await httpsCallable<void, { sessions: MentorshipSession[]; truncated: boolean }>(functions, 'academyListMentorshipSessions')();
         setMentorshipSessions(refreshed.data.sessions);
         setMentorshipTruncated(refreshed.data.truncated);
-      } catch { setMentorshipError('Your booking went through, but the session list couldn't refresh.'); }
+      } catch { setMentorshipError('Your booking went through, but the session list could not refresh.'); }
     } catch (cause) {
-      setMentorshipError(cause instanceof Error ? cause.message : 'This session couldn't be booked.');
+      setMentorshipError(cause instanceof Error ? cause.message : 'This session could not be booked.');
     } finally { setBookingSessionId(null); }
   };
 
@@ -321,7 +321,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
           </div>
         </div>
         <div className="relative mt-6 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-all" style={{ width: overallProgress + '%' }}/></div>
-        {loadError && <p role="status" className="relative mt-3 text-xs text-amber-200">We couldn't load your saved progress. Your courses remain available; reconnect and refresh to sync progress.</p>}
+        {loadError && <p role="status" className="relative mt-3 text-xs text-amber-200">We could not load your saved progress. Your courses remain available; reconnect and refresh to sync progress.</p>}
         {catalogError && <p role="status" className="relative mt-3 text-xs text-amber-200">{catalogError}</p>}
         {catalogTruncated && <p className="relative mt-2 text-[10px] text-amber-200">Showing the first 50 published institutional courses.</p>}
       </section>
