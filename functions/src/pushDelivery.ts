@@ -8,6 +8,7 @@ export interface NotificationRecord {
   content?: string;
   username?: string;
   actorName?: string;
+  userId?: string;
   targetId?: string;
   isRead?: boolean;
 }
@@ -20,12 +21,14 @@ export function buildNotificationPushData(
   const targetId = typeof notification.targetId === 'string' ? notification.targetId.slice(0, 160) : '';
   const username = typeof notification.username === 'string' ? notification.username.replace(/^@+/, '').slice(0, 40) : '';
   const actorName = typeof notification.actorName === 'string' ? notification.actorName.slice(0, 80) : '';
+  const userId = typeof notification.userId === 'string' ? notification.userId.slice(0, 128) : '';
   return {
     type,
     targetId,
     notificationId,
     username,
     actorName,
+    userId,
     url: type === 'message' && targetId ? '/#inbox' : type === 'follow' && targetId ? '/#profile' : '/#activity',
   };
 }
