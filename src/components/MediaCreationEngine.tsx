@@ -2501,7 +2501,8 @@ export default function MediaCreationEngine({
                           </label>
                         )}
                         {activeTab !== 'story' ? (
-                          <div className="border-t border-[#292244] pt-3 space-y-2">
+                          <>
+                            <div className="border-t border-[#292244] pt-3 space-y-2">
                             <div>
                               <span className="block text-xs font-bold text-[#EEEAF8]">NEXORA Origin · Remix permission</span>
                               <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Choose whether other creators may build on the media you upload in this post. You can change this later.</p>
@@ -2521,7 +2522,8 @@ export default function MediaCreationEngine({
                                 : 'NEXORA will record creator attribution when another account remixes this media. Permission applies only to newly uploaded media in this post.'}
                             </p>
                           </div>
-                          <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
+                            <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
+                          </>
                         ) : (
                           <p className="border-t border-[#292244] pt-3 text-[10px] leading-relaxed text-[#8E88A7]">Stories are public and disappear automatically after 24 hours.</p>
                         )}
