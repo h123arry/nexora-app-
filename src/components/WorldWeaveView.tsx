@@ -97,7 +97,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
         setDiscoveryCursor(page.nextCursor);
         setHasMorePublicWeaves(Boolean(page.nextCursor));
       }).catch(err => {
-        if (active && requestId === discoveryRequestRef.current) setError(err instanceof Error ? err.message : 'Couldn't find shared stories.');
+        if (active && requestId === discoveryRequestRef.current) setError(err instanceof Error ? err.message : 'Could not find shared stories.');
       }).finally(() => { if (active && requestId === discoveryRequestRef.current) setLoadingDiscovery(false); });
     }, 250);
     return () => { active = false; window.clearTimeout(timer); };
@@ -232,7 +232,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       setDiscoveryCursor(page.nextCursor);
       setHasMorePublicWeaves(Boolean(page.nextCursor));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Couldn't load more shared stories.');
+      setError(err instanceof Error ? err.message : 'Could not load more shared stories.');
     } finally {
       if (requestId === discoveryRequestRef.current) setLoadingDiscovery(false);
     }
@@ -264,7 +264,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     try {
       const joined = await joinPublicWorldWeave(selected.id);
       setSelected(joined); setNotice('You are now a contributor. Add your perspective to the shared timeline.');
-    } catch (err) { setError(err instanceof Error ? err.message : 'Couldn't join this shared story.'); }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not join this shared story.'); }
     finally { setBusy(false); }
   };
 
@@ -300,7 +300,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     if (!selected || selected.ownerId === currentUser.id || !window.confirm('Leave this shared story? Your past moments will stay in the story.')) return;
     setBusy(true); setError(''); setNotice('');
     try { await leaveWorldWeave(selected.id); setSelected(null); setNotice('You left the shared story. Your posts will stay in it.'); }
-    catch (err) { setError(err instanceof Error ? err.message : 'Couldn't leave this shared story.'); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not leave this shared story.'); }
     finally { setBusy(false); }
   };
 
@@ -397,7 +397,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       setSelected({ id, ownerId: currentUser.id, ownerName: currentUser.name, title: title.trim(), description: description.trim(),
         visibility, participantIds: [currentUser.id], memberCount: 1, momentCount: 0 });
       setNotice('Your shared story is ready. Add the first moment.');
-    } catch (err) { setError(err instanceof Error ? err.message : 'Couldn't create this shared story.'); }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not create this shared story.'); }
     finally { setBusy(false); }
   };
 
@@ -410,7 +410,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
       setSelected(current => current ? { ...current, title: editTitle.trim(), description: editDescription.trim(), visibility: editVisibility } : current);
       setEditingDetails(false);
       setNotice('Shared story details updated.');
-    } catch (err) { setError(err instanceof Error ? err.message : 'Couldn't update this shared story.'); }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not update this shared story.'); }
     finally { setBusy(false); }
   };
 
