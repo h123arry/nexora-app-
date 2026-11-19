@@ -1325,13 +1325,6 @@ export default function ProfileView({
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button 
-                      onClick={() => setShowShareModal(true)} 
-                      className="p-2.5 bg-white/5 hover:bg-white/10 active:scale-95 rounded-xl text-zinc-300 hover:text-white transition-all border border-white/10 cursor-pointer shadow-sm"
-                      title="Share Profile"
-                    >
-                      <Share2 className="w-4 h-4" />
-                    </button>
-                    <button 
                       onClick={() => setActivePanel('menu')} 
                       className="p-2.5 bg-white/5 hover:bg-white/10 active:scale-95 rounded-xl text-zinc-300 hover:text-white transition-all border border-white/10 cursor-pointer shadow-sm"
                       title="More Options"
@@ -1362,13 +1355,7 @@ export default function ProfileView({
                     >
                       Message
                     </button>
-                    <button 
-                      onClick={() => setShowShareModal(true)} 
-                      className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-zinc-300 hover:text-white transition-all border border-white/10 cursor-pointer h-9 w-9 flex items-center justify-center"
-                      title="Share Profile"
-                    >
-                      <Share2 className="w-4 h-4" />
-                    </button>
+
                   </div>
                 )}
               </div>
