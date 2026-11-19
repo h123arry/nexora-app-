@@ -928,7 +928,7 @@ export default function ProfileView({
 
     try {
       let durableAvatar = editAvatar;
-      if (editAvatar.startsWith('data:image/svg+xml')) {
+      if (editAvatar === '/avatar-placeholder.svg' || editAvatar.startsWith('data:image/svg+xml')) {
         // The SVG is only the UI initials fallback, never a member-uploaded photo.
         durableAvatar = '';
       } else if (editAvatar.startsWith('data:')) {
