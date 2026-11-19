@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { onIdTokenChanged, signInAnonymously, User as FirebaseUser, ConfirmationResult } from 'firebase/auth';
+import { onIdTokenChanged, signInAnonymously, User as FirebaseUser, ConfirmationResult, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { User } from '../types';
 import { ProfileService } from '../services/firebase/profileService';
 import { AuthService } from '../services/firebase/authService';
@@ -15,6 +15,7 @@ interface FirebaseContextType {
   loading: boolean;
   error: string | null;
   loginWithEmail: (email: string, password: string) => Promise<void>;
+  loginWithUsername: (username: string, password: string) => Promise<void>;
   registerWithEmail: (email: string, password: string, name: string, username: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   sendPhoneCode: (phone: string, verifier: any) => Promise<ConfirmationResult>;
@@ -34,6 +35,7 @@ const FirebaseContext = createContext<FirebaseContextType>({
   loading: false,
   error: null,
   loginWithEmail: async () => {},
+  loginWithUsername: async () => {},
   registerWithEmail: async () => {},
   loginWithGoogle: async () => {},
   sendPhoneCode: async () => ({} as ConfirmationResult),
@@ -58,6 +60,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let hydratedIdentity = null as string | null;
     let inFlightHydration: { key: string; promise: Promise<User | null> } | null = null;
     let anonymousBootstrapStarted = false;
+    const persistenceReady = setPersistence(auth, browserLocalPersistence);
 
     const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
       const currentSequence = ++sequence;
@@ -79,7 +82,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (!anonymousBootstrapStarted) {
           anonymousBootstrapStarted = true;
           setInitializing(true);
-          void signInAnonymously(auth).catch((bootstrapError) => {
+          void persistenceReady.then(() => signInAnonymously(auth)).catch((bootstrapError) => {
             const code = (bootstrapError as { code?: string } | null)?.code || 'anonymous-auth-unavailable';
             if (auth.currentUser) return;
             setError(`Unable to start your NEXORA session (${code}). Tap to retry.`);
@@ -159,6 +162,21 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setError(null);
     try {
       const res = await AuthService.loginWithEmail(email, pass);
+      setFirebaseUser(res.firebaseUser);
+      setUser(res.user);
+    } catch (err: any) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithUsername = async (username: string, pass: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await AuthService.loginWithUsername(username, pass, true);
       setFirebaseUser(res.firebaseUser);
       setUser(res.user);
     } catch (err: any) {
@@ -319,6 +337,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         loading,
         error,
         loginWithEmail,
+        loginWithUsername,
         registerWithEmail,
         loginWithGoogle,
         sendPhoneCode,
