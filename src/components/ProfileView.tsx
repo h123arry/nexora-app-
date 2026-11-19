@@ -975,7 +975,6 @@ export default function ProfileView({
       setIsSavingProfile(false);
       setShowSavedFeedback(true);
 
-      const isOnline = navigator.onLine;
       const successMsg = '✓ Profile updated successfully';
       window.dispatchEvent(new CustomEvent('toast', { detail: successMsg }));
 
