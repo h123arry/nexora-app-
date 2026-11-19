@@ -740,7 +740,7 @@ const publicProfile = (uid) => ({
     await assertFails(deleteDoc(doc(dbFor('alice'), 'mediaAssets', 'alice-uploaded')));
   });
 
-  it('allows only the Studio export purpose on private media upload intents', async () => {
+  it('allows Studio exports and story uploads, but rejects unapproved media purposes', async () => {
     const studioRef = doc(dbFor('alice'), 'mediaAssets', 'alice-studio-export');
     await assertSucceeds(setDoc(studioRef, {
       id: 'alice-studio-export',
@@ -751,6 +751,19 @@ const publicProfile = (uid) => ({
       size: 1024,
       status: 'pending_upload',
       purpose: 'studio-export',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }));
+    const storyRef = doc(dbFor('alice'), 'mediaAssets', 'alice-story-media');
+    await assertSucceeds(setDoc(storyRef, {
+      id: 'alice-story-media',
+      ownerId: 'alice',
+      storagePath: 'users/alice/media/alice-story-media',
+      kind: 'image',
+      contentType: 'image/jpeg',
+      size: 1024,
+      status: 'pending_upload',
+      purpose: 'story',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     }));
