@@ -56,7 +56,8 @@ test('mobile asset commands regenerate Android, iOS and PWA outputs from the PNG
   const sync = await readText('../scripts/sync-nexora-brand-assets.mjs');
   assert.match(sync, /icon-512\.png/);
   assert.match(sync, /assets', 'logo\.png/);
-  assert.match(sync, /approvedLogo, join\(publicDir, 'nexora-mark\.png'\)/);
+  assert.match(sync, /sharp\\(approvedLogo\\)/);
+  assert.match(sync, /isBlackMatte/);
   assert.match(sync, /nexora-mark\.png/);
   assert.match(pkg.scripts.dev, /sync-nexora-brand-assets/);
   assert.match(pkg.scripts.build, /sync-nexora-brand-assets/);
