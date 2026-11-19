@@ -111,7 +111,7 @@ test('public profile signup offers both username/password and email/password pat
 
 test('profile edits persist the private profile and update its public projection', async () => {
   const profile = await read('../src/services/firebase/profileService.ts');
-  assert.match(profile, /await updateDoc\(docRef, \{ \.\.\.updates, updatedAt: serverTimestamp\(\) \}\)/);
+  assert.match(profile, /await runTransaction\(db, async transaction =>/);\n  assert.match(profile, /transaction\.update\(privateProfileRef, \{ \.\.\.updates, updatedAt: serverTimestamp\(\) \}\)/);\n  assert.match(profile, /transaction\.set\(publicProfileRef/);
   assert.match(profile, /doc\(db, 'publicProfiles', uid\)/);
 });
 
