@@ -1,13 +1,25 @@
-name: Deploy NEXORA Production Founding and Beta Access Functions
+name: Deploy NEXORA Production Core and GiftVerse Functions
 
 on:
   workflow_dispatch:
     inputs:
       confirm_production_deploy:
-        description: Confirm deployment of Founding 300 and anonymous beta access functions plus Firestore and Storage security rules to NEXORA production
+        description: Confirm deployment of Founding 300, beta access and GiftVerse purchase/delivery functions plus Firestore and Storage security rules to NEXORA production
         required: true
         type: boolean
         default: false
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-production-founding-members.yml'
+      - 'firestore.rules'
+      - 'functions/src/index.ts'
+      - 'functions/src/giftCatalog.ts'
+      - 'functions/src/giftCatalogPolicy.ts'
+      - 'functions/src/giftPurchases.ts'
+      - 'functions/src/giftDelivery.ts'
+      - 'functions/src/giftInventoryTransfers.ts'
+      - 'functions/src/giftFriendPurchases.ts'
 
 permissions:
   contents: read
@@ -19,7 +31,7 @@ concurrency:
 
 jobs:
   deploy:
-    if: inputs.confirm_production_deploy == true
+    if: github.event_name == 'push' || inputs.confirm_production_deploy == true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: nexora-production
@@ -90,10 +102,10 @@ jobs:
             "$NEXORA_PRODUCTION_PROJECT_ID" "$FIRESTORE_DATABASE_ID" "$FIREBASE_STORAGE_BUCKET" \
             > "functions/.env.$NEXORA_PRODUCTION_PROJECT_ID"
 
-      - name: Deploy reviewed Founding 300 and beta access functions and security rules
+      - name: Deploy reviewed Founding 300, beta access and GiftVerse functions and security rules
         run: |
           npx --yes firebase-tools@15.33.0 deploy \
-            --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,firestore:rules,storage \
+            --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,firestore:rules,storage \
             --config firebase.json \
             --project "$NEXORA_PRODUCTION_PROJECT_ID" \
             --non-interactive
@@ -103,5 +115,5 @@ jobs:
           echo "## NEXORA production Functions deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "- Project: $NEXORA_PRODUCTION_PROJECT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "- Firestore database: $FIRESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Deployed callables: createFoundingMemberAccount, createBetaInviteLink, claimBetaInvite" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Deployed callables: createFoundingMemberAccount, createBetaInviteLink, claimBetaInvite, getGiftCatalog, quoteNexGift, purchaseNexGift, getMyGiftInventory, sendNexGift, transferOwnedNexGift, buyNexGiftForFriend" >> "$GITHUB_STEP_SUMMARY"
           echo "- Deployed security rules: Firestore and Storage" >> "$GITHUB_STEP_SUMMARY"
