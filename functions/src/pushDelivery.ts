@@ -79,16 +79,16 @@ export function createNotificationPushDelivery(db: Firestore, app: App) {
       if (!tokenValues.length) return;
 
       const type = typeof notification.type === 'string' ? notification.type : 'system';
-      const detail = typeof notification.content === 'string' ? notification.content.slice(0, 260) : 'You have a new update.';
+      const detail = typeof notification.content === 'string' ? notification.content.slice(0, 300) : 'You have a new update.';
       const username = typeof notification.username === 'string' ? notification.username.replace(/^@+/, '').slice(0, 40) : '';
-      const body = [username ? `@${username}` : '', detail].filter(Boolean).join(' · ').slice(0, 300);
+      const title = username ? `@${username}` : notificationTitle(type);
       const data = buildNotificationPushData(notification, snapshot.id);
       const messaging = getMessaging(app);
 
       for (const tokenChunk of chunkPushTokens(tokenValues)) {
         const response = await messaging.sendEachForMulticast({
           tokens: tokenChunk,
-          notification: { title: notificationTitle(type), body },
+          notification: { title, body: detail },
           data,
           webpush: {
             fcmOptions: { link: data.url },
