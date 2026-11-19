@@ -111,8 +111,8 @@ export default function WalletView({ currentUser }: WalletViewProps) {
 
       <section className="rounded-2xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-5 text-left" aria-labelledby="ledger-title">
         <div className="flex items-center justify-between gap-3">
-          <h2 id="ledger-title" className="flex items-center gap-2 text-sm font-semibold text-white"><History className="h-4 w-4 text-[var(--nx-violet-bright)]" aria-hidden="true" />Transaction history</h2>
-          <span className="text-xs text-[var(--nx-muted)]">Last 25 transactions</span>
+          <h2 id="ledger-title" className="flex items-center gap-2 text-sm font-semibold text-white"><History className="h-4 w-4 text-[var(--nx-violet-bright)]" aria-hidden="true" />Wallet history</h2>
+          <span className="text-xs text-[var(--nx-muted)]">Last 25 wallet updates</span>
         </div>
         {loading ? (
           <p className="mt-4 text-sm text-[var(--nx-muted)]">Loading your wallet history…</p>
@@ -124,7 +124,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
                   {entry.direction === 'credit' ? <ArrowDownLeft className="h-4 w-4" aria-hidden="true" /> : <ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-white">{entry.description || 'Wallet activity'}</p>
+                  <p className="truncate text-sm font-medium text-white">{entry.description || 'Wallet update'}</p>
                   <p className="mt-0.5 text-xs text-[var(--nx-muted)]">{formatDate(entry.createdAt)}</p>
                 </div>
                 <p className={`shrink-0 text-sm font-semibold ${entry.direction === 'credit' ? 'text-emerald-400' : 'text-white'}`}>
