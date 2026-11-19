@@ -145,7 +145,7 @@ export default function StoriesView({ currentUser, onRequireAuth }: StoriesViewP
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-sm font-bold text-white">Stories</h2>
-          <p className="mt-0.5 text-[11px] text-zinc-400">Text updates from Nexora members · visible for 24 hours</p>
+          <p className="mt-0.5 text-[11px] text-zinc-400">Share a quick update · visible for 24 hours</p>
         </div>
         {isSignedIn ? (
           <button type="button" onClick={openComposer} className="nx-icon-button inline-flex gap-1.5 px-3 text-xs font-semibold text-violet-200" aria-label="Create a story">
@@ -161,7 +161,7 @@ export default function StoriesView({ currentUser, onRequireAuth }: StoriesViewP
 
       {!isSignedIn ? (
         <p className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs text-zinc-400">
-          Sign in to view and share stories.
+          Sign in to see and share stories.
         </p>
       ) : (
         <div className="mt-3 flex gap-4 overflow-x-auto overscroll-x-contain pb-1 scrollbar-none">
@@ -197,7 +197,7 @@ export default function StoriesView({ currentUser, onRequireAuth }: StoriesViewP
               <div className="mb-4 flex items-start justify-between gap-4">
                 <div>
                   <h3 className="text-base font-bold text-white">Share a story</h3>
-                  <p className="mt-1 text-xs text-zinc-400">A short text update, shared with signed-in Nexora members for 24 hours.</p>
+                  <p className="mt-1 text-xs text-zinc-400">A short update shared with other Nexora members for 24 hours.</p>
                 </div>
                 <button type="button" className="nx-icon-button inline-flex" onClick={() => setIsComposerOpen(false)} aria-label="Close"><X className="h-4 w-4" /></button>
               </div>
@@ -205,7 +205,7 @@ export default function StoriesView({ currentUser, onRequireAuth }: StoriesViewP
                 <label htmlFor="nexora-story-caption" className="sr-only">Story text</label>
                 <textarea id="nexora-story-caption" autoFocus maxLength={500} value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="What’s on your mind?" className="nx-field min-h-36 w-full resize-y px-4 py-3 text-sm" required />
                 <div className="flex items-center justify-between gap-3 text-[11px] text-zinc-500">
-                  <span>Text stories only; media upload is not connected yet.</span>
+                  <span>Text stories only for now. Photo and video stories aren't available yet.</span>
                   <span>{caption.length}/500</span>
                 </div>
                 <button type="submit" disabled={!caption.trim() || isSaving} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-pink-600 px-4 text-sm font-semibold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">
