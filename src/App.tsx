@@ -1800,7 +1800,6 @@ export default function App() {
     file?: File,
     onProgress?: (progress: number) => void,
     signal?: AbortSignal,
-    storyId?: string,
   ): Promise<string> => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       throw new Error('Please finish signing in before sharing your story.');
@@ -1809,8 +1808,8 @@ export default function App() {
       throw new Error('You are offline. Reconnect before sharing your story.');
     }
     return file
-      ? createMediaStory(currentUser, file, caption, onProgress, signal, storyId)
-      : createTextStory(currentUser, caption, storyId);
+      ? createMediaStory(currentUser, file, caption, onProgress, signal)
+      : createTextStory(currentUser, caption);
   };
 
   const handleRemovePost = (postId: string) => {
