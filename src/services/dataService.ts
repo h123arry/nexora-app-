@@ -999,7 +999,7 @@ export async function updateMessageReadReceipt(
 export type NotificationPreferenceMap = {
   likes: boolean; comments: boolean; followers: boolean; mentions: boolean;
   communities: boolean; events: boolean; verification: boolean;
-  creatorUploads: boolean; friendRequests: boolean; securityAlerts: boolean;
+  creatorUploads: boolean; friendRequests: boolean; securityAlerts: boolean; push: boolean;
 };
 
 export async function getNotificationPreferences(userId: string): Promise<Partial<NotificationPreferenceMap>> {
@@ -1007,7 +1007,7 @@ export async function getNotificationPreferences(userId: string): Promise<Partia
   const snapshot = await getDoc(doc(db, 'users', userId, 'settings', 'preferences'));
   const value = snapshot.data()?.notifications;
   if (!value || typeof value !== 'object') return {};
-  const allowed: (keyof NotificationPreferenceMap)[] = ['likes','comments','followers','mentions','communities','events','verification','creatorUploads','friendRequests','securityAlerts'];
+  const allowed: (keyof NotificationPreferenceMap)[] = ['likes','comments','followers','mentions','communities','events','verification','creatorUploads','friendRequests','securityAlerts','push'];
   return Object.fromEntries(allowed.filter(key => typeof value[key] === 'boolean').map(key => [key, value[key]])) as Partial<NotificationPreferenceMap>;
 }
 
