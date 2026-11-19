@@ -224,7 +224,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
         {!selectedRoom ? (
           <div className="w-full max-w-xl space-y-5 p-6">
             <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-violet-400/20 bg-violet-500/10"><Radio size={34} className="text-violet-200"/></div>
-            <div className="text-center"><p className="text-[10px] font-black uppercase tracking-[.25em] text-violet-300">NEXORA LIVE</p><h2 className="mt-2 text-2xl font-black">Live rooms</h2><p className="mt-2 text-sm text-slate-400">Watch someone live or start your own.</p></div>
+            <div className="text-center"><p className="text-[10px] font-black uppercase tracking-[.25em] text-violet-300">NEXORA LIVE</p><h2 className="mt-2 text-2xl font-black">Live</h2><p className="mt-2 text-sm text-slate-400">Watch someone live or start your own.</p></div>
             <div className="rounded-2xl border border-amber-300/15 bg-amber-500/[.06] p-3 text-[11px] leading-relaxed text-amber-100">Go live with your camera and microphone, or join someone else's live video.</div>
             <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[.03] p-4">
               <h3 className="text-sm font-bold">Go live</h3>
