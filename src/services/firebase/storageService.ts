@@ -45,10 +45,20 @@ class R2NotConfiguredError extends Error {
   code = 'r2_not_configured';
 }
 
+async function getAuthenticatedUploadUser(userId: string) {
+  // Firebase auth can still be hydrating immediately after app startup or a refresh.
+  // Wait for that state before deciding the user is signed out; keep the UID ownership check.
+  await auth.authStateReady();
+  const user = auth.currentUser;
+  if (!user || user.uid !== userId) {
+    throw new Error('Sign in to the same account before uploading media.');
+  }
+  return user;
+}
+
 async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaUploadResult> {
   const { file, userId, onProgress, signal } = options;
-  const user = auth.currentUser;
-  if (!user || user.uid !== userId) throw new Error('Sign in to the same account before uploading media.');
+  const user = await getAuthenticatedUploadUser(userId);
   if (!file || file.size <= 0) throw new Error('The selected file is empty.');
   if (signal?.aborted) throw new DOMException('Upload cancelled.', 'AbortError');
   const contentType = file.type.split(';')[0].trim().toLowerCase();
@@ -156,12 +166,10 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
   });
 }
 
-function uploadMediaFileWithFirebase(options: MediaUploadOptions): Promise<MediaUploadResult> {
+async function uploadMediaFileWithFirebase(options: MediaUploadOptions): Promise<MediaUploadResult> {
   const { file, userId, onProgress, signal } = options;
-  if (!userId) return Promise.reject(new Error('A signed-in user is required to upload media.'));
-  if (!options.chatId && (!auth.currentUser || auth.currentUser.uid !== userId)) {
-    return Promise.reject(new Error('Sign in to the same account before uploading media.'));
-  }
+  if (!userId) throw new Error('A signed-in user is required to upload media.');
+  const authenticatedUser = await getAuthenticatedUploadUser(userId);
   if (!file || file.size <= 0) return Promise.reject(new Error('The selected file is empty.'));
   const normalizedContentType = file.type.split(';')[0].trim().toLowerCase();
   const policy = options.chatId
@@ -173,9 +181,7 @@ function uploadMediaFileWithFirebase(options: MediaUploadOptions): Promise<Media
 
   if (options.chatId) {
     return (async () => {
-      const user = auth.currentUser;
-      if (!user || user.uid !== userId) throw new Error('Sign in to the same account before sending this voice note.');
-      const token = await user.getIdToken();
+      const token = await authenticatedUser.getIdToken();
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(String(reader.result || ''));
