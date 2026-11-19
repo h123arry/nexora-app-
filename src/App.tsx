@@ -459,7 +459,11 @@ export default function App() {
           const incomingPosts = normalizePosts(dbPosts);
           if (!receivedInitialPosts) return incomingPosts;
           const incomingIds = new Set(incomingPosts.map(post => post.id));
-          return [...incomingPosts, ...previousPosts.filter(post => !incomingIds.has(post.id))];
+          const merged = new Map<string, Post>();
+          [...incomingPosts, ...previousPosts].forEach(post => {
+            if (post?.id && !merged.has(post.id)) merged.set(post.id, post);
+          });
+          return [...merged.values()];
         });
         if (!receivedInitialPosts && page) {
           feedCursorRef.current = page.nextCursor;
@@ -1832,7 +1836,7 @@ export default function App() {
     // Do not show the post in the feed or tell the creator it was shared until
     // Firestore confirms the durable write.
     await publishPostNow(newPost, postDetails?.signal);
-    setPosts(previous => [newPost, ...previous]);
+    setPosts(previous => [newPost, ...previous.filter(post => post.id !== newPost.id)]);
     let postType: 'post_create' | 'media_upload' | 'video_publish' | 'pulse_create' | 'voice_publish' = 'post_create';
     if (videoUrl) postType = 'video_publish';
     else if (imageUrl || (images && images.length > 0)) postType = 'media_upload';
@@ -2472,6 +2476,7 @@ export default function App() {
                       currentUser={getRichUser(viewedUser || currentUser)}
                       isLoggedIn={isLoggedIn}
                       posts={resolvedPosts}
+                      userSparks={userSparks}
                       onUpdateProfile={handleUpdateProfile}
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
