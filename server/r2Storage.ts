@@ -94,6 +94,7 @@ export function createR2PresignedUrl(
   expiresSeconds = 900,
   contentType?: string,
   now = new Date(),
+  createOnly = false,
 ): string {
   if (!objectKey || objectKey.startsWith('/') || objectKey.split('/').some(part => !part || part === '.' || part === '..' || part.includes('\\'))) {
     throw new Error('Invalid R2 object key.');
@@ -106,7 +107,9 @@ export function createR2PresignedUrl(
   const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, '');
   const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
   const scope = `${dateStamp}/auto/s3/aws4_request`;
-  const signedHeaders = contentType && method === 'PUT' ? 'content-type;host' : 'host';
+  if (createOnly && method !== 'PUT') throw new Error('Create-only conditions are supported only for R2 uploads.');
+  const signedHeaders = contentType && method === 'PUT'
+    ? (createOnly ? 'content-type;host;if-none-match' : 'content-type;host') : 'host';
   const params = new URLSearchParams({
     'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
     'X-Amz-Credential': `${config.accessKeyId}/${scope}`,
@@ -114,7 +117,9 @@ export function createR2PresignedUrl(
     'X-Amz-Expires': String(expiresSeconds),
     'X-Amz-SignedHeaders': signedHeaders,
   });
-  const headers = contentType && method === 'PUT' ? `content-type:${contentType.trim().toLowerCase()}\nhost:${host}\n` : `host:${host}\n`;
+  const headers = contentType && method === 'PUT'
+    ? `content-type:${contentType.trim().toLowerCase()}\nhost:${host}\n${createOnly ? 'if-none-match:*\\n' : ''}`
+    : `host:${host}\n`;
   const query = canonicalQuery(params);
   const canonicalRequest = [method, canonicalUri, query, headers, signedHeaders, 'UNSIGNED-PAYLOAD'].join('\n');
   const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha256(canonicalRequest)].join('\n');
