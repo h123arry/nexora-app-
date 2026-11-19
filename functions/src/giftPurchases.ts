@@ -14,7 +14,7 @@ const validKey = (value: unknown): value is string =>
 export const purchaseNexGift = onCall({ maxInstances: 20 }, async request => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in to purchase a gift.');
-  await assertCallableSessionActive(db, uid, request.auth.token?.auth_time);
+  await assertCallableSessionActive(db, uid, request.auth?.token?.auth_time);
   const giftId = request.data?.giftId;
   const idempotencyKey = request.data?.idempotencyKey;
   if (typeof giftId !== 'string' || !validKey(idempotencyKey)) {
@@ -111,7 +111,7 @@ export const purchaseNexGift = onCall({ maxInstances: 20 }, async request => {
 export const getMyGiftInventory = onCall({ maxInstances: 20 }, async request => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in to view your gift collection.');
-  await assertCallableSessionActive(db, uid, request.auth.token?.auth_time);
+  await assertCallableSessionActive(db, uid, request.auth?.token?.auth_time);
   const snapshot = await db.collection('users').doc(uid).collection('giftInventory').orderBy('updatedAt', 'desc').limit(500).get();
   return { items: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) };
 });
