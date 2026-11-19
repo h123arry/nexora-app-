@@ -493,7 +493,7 @@ export default function AdminDashboardView({
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-1.5 text-xs font-semibold text-zinc-300">
                 Full name
-                <input value={foundingFullName} onChange={event => setFoundingFullName(event.target.value)} maxLength={80} autoComplete="name" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none focus:border-violet-500" placeholder="Member's full name" />
+                <input value={foundingFullName} onChange={event => setFoundingFullName(event.target.value)} maxLength={80} autoComplete="name" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-sm text-white outline-none focus:border-violet-500" placeholder="Member’s full name" />
               </label>
               <label className="space-y-1.5 text-xs font-semibold text-zinc-300">
                 Username
@@ -582,7 +582,7 @@ export default function AdminDashboardView({
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <span
-                            title="Verification follows the account's verified email or phone status."
+                            title="Verification follows the account’s verified email or phone status."
                             className={`p-1.5 rounded-lg border text-[9.5px] font-mono font-black inline-flex items-center gap-1 uppercase ${user.isVerified ? 'bg-violet-950/40 text-violet-400 border-white/10' : 'bg-zinc-900 border-white/5 text-zinc-500'}`}
                           >
                             <CheckCircle className="w-3 h-3" />
@@ -789,7 +789,7 @@ export default function AdminDashboardView({
                   {(application.reviewSignals?.possibleNameCollision || (application.reviewSignals?.duplicateEvidenceLinkCount || 0) > 0 || application.reviewSignals?.evidenceScanMayBeIncomplete) && (
                     <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 text-[10px] leading-relaxed text-amber-100">
                       <strong>Possible duplicate identity.</strong> {application.reviewSignals?.nameCollisionCount || 0} matching name(s), {application.reviewSignals?.duplicateEvidenceLinkCount || 0} shared proof link(s).
-                      {application.reviewSignals?.evidenceScanMayBeIncomplete ? ' The check couldn't review everything. Please check it manually.' : ' This is a warning to check, not proof that the account should be rejected.'}
+                      {application.reviewSignals?.evidenceScanMayBeIncomplete ? ' The check couldn’t review everything. Please check it manually.' : ' This is a warning to check, not proof that the account should be rejected.'}
                     </div>
                   )}
                   <div className="space-y-1">
@@ -833,7 +833,7 @@ export default function AdminDashboardView({
 
             {analyticsState === 'unavailable' && (
               <div className="p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 text-xs text-amber-200">
-                Activity details aren't available for this account yet. No estimates are shown.
+                Activity details aren’t available for this account yet. No estimates are shown.
               </div>
             )}
             {analyticsState === 'ready' && analyticsPoints.some(point => point.partial) && (
@@ -865,7 +865,7 @@ export default function AdminDashboardView({
               <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 shadow-xs">
                 <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">POST INTERACTIONS</span>
                 <span className="text-2xl font-black font-sans block text-pink-400">{analyticsState === 'ready' ? analyticsTotals.engagements.toLocaleString() : '—'}</span>
-                <span className="text-[10px] text-zinc-500 font-mono block">Doesn't include likes or money earned</span>
+                <span className="text-[10px] text-zinc-500 font-mono block">Doesn’t include likes or money earned</span>
               </div>
             </div>
 
@@ -884,8 +884,8 @@ export default function AdminDashboardView({
               <p className="mt-2 text-xs leading-relaxed text-zinc-400">This page shows payment details provided by NEXORA. It never shows payment passwords or full customer records.</p>
             </div>
             {financeState === 'loading' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Loading payment summary…</div>}
-            {financeState === 'denied' && <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center text-xs text-amber-200">Only approved finance admins can see this information. Moderator access isn't enough.</div>}
-            {financeState === 'unavailable' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Payment details aren't available right now. No money or payment settings were changed.</div>}
+            {financeState === 'denied' && <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center text-xs text-amber-200">Only approved finance admins can see this information. Moderator access isn’t enough.</div>}
+            {financeState === 'unavailable' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Payment details aren’t available right now. No money or payment settings were changed.</div>}
             {financeState === 'ready' && financeSummary && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><span className="text-[10px] uppercase tracking-widest text-zinc-500">Provider</span><p className="mt-2 text-lg font-black text-white">{financeSummary.providerConfigured ? 'Configured' : 'Not configured'}</p></div>
@@ -906,7 +906,7 @@ export default function AdminDashboardView({
             </div>
             {auditState === 'loading' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Loading change history…</div>}
             {auditState === 'denied' && <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center text-xs text-amber-200">Administrator access is required to view this history.</div>}
-            {auditState === 'unavailable' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Change history isn't available right now. No records were changed.</div>}
+            {auditState === 'unavailable' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Change history isn’t available right now. No records were changed.</div>}
             {auditState === 'ready' && (
               <div className="overflow-x-auto rounded-2xl border border-white/10 bg-black/20">
                 <table className="w-full text-left border-collapse">
