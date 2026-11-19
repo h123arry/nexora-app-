@@ -406,7 +406,7 @@ export default function ExploreView({
               Clear Search ✖
             </button>
           </div>
-          {directoryLoading && <p role="status" className="px-1 text-[10px] text-violet-300">Searching the live directory…</p>}
+          {directoryLoading && <p role="status" className="px-1 text-[10px] text-violet-300">Searching…</p>}
           {universalLoading && <p role="status" className="px-1 text-[10px] text-violet-300">Searching across NEXORA…</p>}
           {universalError && <p role="alert" className="px-1 text-[10px] text-amber-300">{universalError}</p>}
           {directoryError && <p role="alert" className="px-1 text-[10px] text-amber-300">Live directory search is unavailable: {directoryError} Showing locally loaded results where possible.</p>}
@@ -464,7 +464,7 @@ export default function ExploreView({
                   {universalResults.nextCursor && (
                     <div className="flex justify-center">
                       <button type="button" disabled={universalLoadingMore} onClick={() => void loadMoreUniversalResults()} className="min-h-11 rounded-xl border border-violet-400/30 bg-violet-500/10 px-5 py-2 text-xs font-mono font-bold uppercase text-violet-200 hover:bg-violet-500/20 disabled:opacity-60">
-                        {universalLoadingMore ? 'Loading more…' : 'Load more NEXORA results'}
+                        {universalLoadingMore ? 'Loading more…' : 'See more results'}
                       </button>
                     </div>
                   )}
@@ -632,7 +632,7 @@ export default function ExploreView({
               )}
               {(searchFilterType === 'all' || searchFilterType === 'communities') && (
                 <div className="rounded-2xl nx-surface p-4 flex items-center justify-between gap-3">
-                  <p className="text-xs text-zinc-400">{directoryLoading ? 'Searching the live NEXORA directory…' : directoryError ? directoryError : 'Open the Communities hub to explore and join available communities.'}</p>
+                  <p className="text-xs text-zinc-400">{directoryLoading ? 'Searching Nexora…' : directoryError ? directoryError : 'Explore and join communities.'}</p>
                   <button type="button" onClick={() => {
                     try { window.sessionStorage.setItem('nexora_community_search_handoff', debouncedSearch); } catch {}
                     setActiveTab('communities');
@@ -648,7 +648,7 @@ export default function ExploreView({
                     onClick={() => void loadMoreDirectoryResults()}
                     className="min-h-11 rounded-xl border border-violet-400/30 bg-violet-500/10 px-5 py-2 text-xs font-mono font-bold uppercase text-violet-200 transition-colors hover:bg-violet-500/20 disabled:cursor-wait disabled:opacity-60"
                   >
-                    {directoryLoadingMore ? 'Loading more…' : 'Load more directory results'}
+                    {directoryLoadingMore ? 'Loading more…' : 'See more results'}
                   </button>
                 </div>
               )}
@@ -694,7 +694,7 @@ export default function ExploreView({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase block">Topics in recent posts · 7 days</span>
+                <span className="text-[10px] font-mono text-zinc-500 uppercase block">Popular topics this week</span>
                 {trendingTags.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-white/10 p-4 text-xs leading-relaxed text-zinc-500">No trending hashtags yet. Start the next conversation from your feed.</div>
                 ) : trendingTags.slice(0, showAllPulse ? 6 : 4).map(([tag, count]) => (
@@ -714,7 +714,7 @@ export default function ExploreView({
               </div>
               <div className="space-y-2">
                 <span className="text-[10px] font-mono text-zinc-500 uppercase block">Network activity</span>
-                <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">Live network-wide activity and community metrics are not available here yet.</p>
+                <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">More activity will appear here soon.</p>
               </div>
             </div>
           </div>
@@ -722,11 +722,11 @@ export default function ExploreView({
           {/* Suggested Accounts (Real Creators from DB) */}
           <div className="space-y-3 text-left">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest">Suggested Creators</h3>
+              <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest">People to follow</h3>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
               {suggestedCreators.length === 0 ? (
-                <div className="nx-surface rounded-2xl p-5 text-xs text-zinc-500">Creator suggestions will appear as Nexora learns your interests.</div>
+                <div className="nx-surface rounded-2xl p-5 text-xs text-zinc-500">People you may like will appear here.</div>
               ) : suggestedCreators.map(user => (
                 <div
                   key={user.id}
@@ -740,7 +740,7 @@ export default function ExploreView({
                       {user.isVerified && <PurpleVerifiedBadge />}
                     </div>
                     <span className="text-[9px] font-mono text-violet-400 truncate block">@{user.username}</span>
-                    {Object.keys(interestDNA).some(tag => (user.interestDNA || {})[tag] > 0) && <span className="text-[9px] text-zinc-500">Shared interests</span>}
+                    {Object.keys(interestDNA).some(tag => (user.interestDNA || {})[tag] > 0) && <span className="text-[9px] text-zinc-500">You have things in common</span>}
                   </div>
                   <button
                     onClick={(e) => {
