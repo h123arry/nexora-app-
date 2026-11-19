@@ -172,6 +172,15 @@ export class ProfileService {
 
   private static async loadOrCreateProfile(firebaseUser: FirebaseUser, additionalData?: Partial<User>): Promise<User> {
     let profile = await this.getProfile(firebaseUser.uid);
+    if (profile) {
+      // Firebase Auth is authoritative for email and verification state; do not
+      // write these protected fields from the client into the private profile.
+      profile = {
+        ...profile,
+        ...(firebaseUser.email ? { email: firebaseUser.email } : {}),
+        isVerified: firebaseUser.emailVerified,
+      };
+    }
     if (!profile) {
       // Approved anonymous beta members receive a complete, durable profile
       // immediately. Reserve the deterministic handle first so overlapping
