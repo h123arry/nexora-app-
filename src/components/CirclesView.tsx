@@ -6,7 +6,7 @@ import { recordRecommendationEvent } from '../utils/recommendations';
 import { CommunityService } from '../services/firebase/communityService';
 import CircleEventsPanel from './CircleEventsPanel';
 import CircleFeedPanel from './CircleFeedPanel';
-import CircleInsightsPanel from './CirclePage insightsPanel';
+import CircleInsightsPanel from './CircleInsightsPanel';
 import CircleMembersPanel from './CircleMembersPanel';
 import CircleAnnouncementsPanel from './CircleAnnouncementsPanel';
 import CircleGovernancePanel from './CircleGovernancePanel';
@@ -494,7 +494,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
 
                 {activePortalTab === 'events' && <CircleEventsPanel communityId={selectedCircle.id} currentUserId={currentUser.id} />}
 
-                {activePortalTab === 'insights' && selectedCircleCanManage && <CirclePage insightsPanel communityId={selectedCircle.id} />}
+                {activePortalTab === 'insights' && selectedCircleCanManage && <CircleInsightsPanel communityId={selectedCircle.id} />}
 
                 {activePortalTab === 'files' && (
                   <div className="mx-auto max-w-2xl space-y-3 text-left">
