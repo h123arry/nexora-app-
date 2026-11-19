@@ -14,7 +14,8 @@ import CreatorGiftGallery from './CreatorGiftGallery';
 import GiftVerseView from './GiftVerseView';
 import { validateUsername } from '../utils/username';
 import ReportModal from './ReportModal';
-import { auth } from '../services/firebase/config';
+import { auth, db } from '../services/firebase/config';
+import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { uploadMediaFile } from '../services/firebase/storageService';
 import { SettingsService } from '../services/firebase/settingsService';
 import RelativeTimestamp from './RelativeTimestamp';
@@ -264,6 +265,23 @@ export default function ProfileView({
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
+  const [receivedSparks, setReceivedSparks] = useState<Array<{ id: string; fromUserId: string; username: string; name: string; avatar: string; postId: string }>>([]);
+  useEffect(() => {
+    if (!isOwnProfile || auth.currentUser?.uid !== currentUser.id) {
+      setReceivedSparks([]);
+      return;
+    }
+    const sparkQuery = query(
+      collection(db, 'users', currentUser.id, 'sparkEvents'),
+      orderBy('createdAt', 'desc'),
+      limit(20),
+    );
+    return onSnapshot(sparkQuery, snapshot => {
+      setReceivedSparks(snapshot.docs.map(item => ({ id: item.id, ...item.data() } as typeof receivedSparks[number])));
+    }, () => {
+      setReceivedSparks([]);
+    });
+  }, [currentUser.id, isOwnProfile]);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [identityVerification, setIdentityVerification] = useState<{ identityType: 'individual' | 'creator' | 'public_figure' | 'organization'; displayName: string } | null>(null);
 
@@ -1447,11 +1465,35 @@ export default function ProfileView({
           </div>
 
           {/* Profile Tab Content Area */}
-          <div 
+          <div
             onTouchStart={handleContentTouchStart}
             onTouchEnd={handleContentTouchEnd}
             className="nx-profile-content w-full pt-4 space-y-4 bg-black min-h-[350px] touch-pan-y"
           >
+            {profileTab === 'sparks' && isOwnProfile && (
+              <section className="w-full max-w-4xl mx-auto px-3 space-y-3">
+                <div>
+                  <h3 className="text-sm font-bold text-white">People who sparked your posts</h3>
+                  <p className="text-xs text-zinc-500 mt-1">These are saved to your profile, not just your notifications.</p>
+                </div>
+                {receivedSparks.length === 0 ? (
+                  <p className="rounded-xl border border-white/5 bg-white/[0.02] p-4 text-xs text-zinc-500">No one has sparked your posts yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {receivedSparks.map(spark => (
+                      <button key={spark.id} type="button" onClick={() => onViewProfile?.(spark.fromUserId)} className="w-full flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.025] p-3 text-left hover:bg-white/[0.05]">
+                        <img src={spark.avatar || getDefaultAvatar(spark.fromUserId)} alt="" className="h-9 w-9 rounded-full object-cover" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-white">{spark.name || spark.username || 'NEXORA member'}</span>
+                          <span className="block truncate text-xs text-zinc-500">@{spark.username || 'member'} sparked your post</span>
+                        </span>
+                        <Zap className="h-4 w-4 shrink-0 text-violet-400" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
             {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} /> : filteredTabPosts.length === 0 ? (
               <div className="p-8 py-16 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 max-w-md mx-auto my-6">
                 <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
@@ -1468,7 +1510,7 @@ export default function ProfileView({
                     {profileTab === 'media' && 'Published visual media and videos will appear here.'}
                     {profileTab === 'voice' && 'Recorded voice pulses and audio broadcasts will appear here.'}
                     {profileTab === 'reposts' && 'Content reposted by this creator will appear here.'}
-                    {profileTab === 'sparks' && 'Content sparked by this creator will appear here.'}
+                    {profileTab === 'sparks' && 'Posts you've sparked will appear here.'}
                     {profileTab === 'bookmarks' && 'Saved bookmarks and favorite posts will appear here.'}
                     {profileTab === 'archive' && 'Your archived posts will appear here.'}
                   </p>
