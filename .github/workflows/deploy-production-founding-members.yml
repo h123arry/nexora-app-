@@ -93,7 +93,7 @@ jobs:
       - name: Deploy reviewed Founding 300, beta access and GiftVerse functions and security rules
         run: |
           npx --yes firebase-tools@15.33.0 deploy \
-            --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:buyNexGiftForFriend,firestore:rules,storage \
+            --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,firestore:rules,storage \
             --config firebase.json \
             --project "$NEXORA_PRODUCTION_PROJECT_ID" \
             --non-interactive
@@ -103,5 +103,5 @@ jobs:
           echo "## NEXORA production Functions deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "- Project: $NEXORA_PRODUCTION_PROJECT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "- Firestore database: $FIRESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Deployed callables: createFoundingMemberAccount, createBetaInviteLink, claimBetaInvite, getGiftCatalog, quoteNexGift, purchaseNexGift, getMyGiftInventory, sendNexGift, buyNexGiftForFriend" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Deployed callables: createFoundingMemberAccount, createBetaInviteLink, claimBetaInvite, getGiftCatalog, quoteNexGift, purchaseNexGift, getMyGiftInventory, sendNexGift, transferOwnedNexGift, buyNexGiftForFriend" >> "$GITHUB_STEP_SUMMARY"
           echo "- Deployed security rules: Firestore and Storage" >> "$GITHUB_STEP_SUMMARY"
