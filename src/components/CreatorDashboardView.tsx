@@ -222,7 +222,7 @@ export default function CreatorDashboardView({
       setScheduledPosts(prev => prev.map(item => item.id === scheduleId ? { ...item, status: 'cancelled' } : item));
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Scheduled post cancelled.' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'The scheduled post couldn't be cancelled.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'The scheduled post couldn’t be cancelled.' }));
     }
   };
 
@@ -276,7 +276,7 @@ export default function CreatorDashboardView({
     return () => clearInterval(interval);
   }, [draftCaption, draftTags, draftType, draftUrl, showDraftModal, currentUser.id]);
 
-  // Only aggregate counters present on the user's stored post records.
+  // Only aggregate counters present on the user’s stored post records.
   const stats = useMemo(() => {
     const active = localPosts.filter(post => !post.isArchived);
     const postMetrics = active.map(buildPostAnalytics);
@@ -609,7 +609,7 @@ export default function CreatorDashboardView({
     });
   }, [localPosts, searchQuery, contentTypeFilter, performanceFilter]);
 
-  // Load this creator's verified media assets from their owner-scoped library.
+  // Load this creator’s verified media assets from their owner-scoped library.
   useEffect(() => {
     let cancelled = false;
     setIsMediaLibraryLoading(true);
@@ -651,7 +651,7 @@ export default function CreatorDashboardView({
     return () => { cancelled = true; };
   }, [currentUser.id]);
 
-  // Combine actual uploaded assets with media already published in the creator's posts.
+  // Combine actual uploaded assets with media already published in the creator’s posts.
   const mediaLibrary = useMemo(() => {
     const postsMedia = localPosts
       .filter(post => post.videoUrl || post.image || post.images)
@@ -689,7 +689,7 @@ export default function CreatorDashboardView({
             <h2 className="text-2xl font-black text-white tracking-tight">NEXORA Studio</h2>
             <span className="text-[10px] border border-violet-400/20 bg-violet-500/10 text-violet-200 font-mono font-bold uppercase px-2 py-0.5 rounded-full">Creator tools</span>
           </div>
-          <p className="text-sm text-violet-200/60 mt-1">Create and manage posts, see how they're doing, and grow your audience.</p>
+          <p className="text-sm text-violet-200/60 mt-1">Create and manage posts, see how they’re doing, and grow your audience.</p>
         </div>
         <div className="flex gap-2">
           {onClose && (
@@ -836,7 +836,7 @@ export default function CreatorDashboardView({
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Your results over time</h4>
-                      <p className="text-xs text-zinc-400 font-mono">Post results over time aren't available yet.</p>
+                      <p className="text-xs text-zinc-400 font-mono">Post results over time aren’t available yet.</p>
                     </div>
                     <div className="flex items-center gap-3 text-[10px] font-bold">
                       <span className="text-zinc-500">No time-series data</span>
@@ -883,7 +883,7 @@ export default function CreatorDashboardView({
                 {isAudienceLoading ? (
                   <p className="mt-5 text-xs text-zinc-400">Loading audience records…</p>
                 ) : audienceError ? (
-                  <p className="mt-5 text-xs text-amber-200">Your audience details couldn't load. Please try again.</p>
+                  <p className="mt-5 text-xs text-amber-200">Your audience details couldn’t load. Please try again.</p>
                 ) : audienceAnalytics ? (
                   <>
                     <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -1195,7 +1195,7 @@ export default function CreatorDashboardView({
                   <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-violet-300" /><h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Scheduled Publishing</h4></div>
                   <span className="text-[10px] text-zinc-500 font-mono">{scheduledPosts.filter(item => item.status === 'scheduled').length} pending</span>
                 </div>
-                <p className="text-xs text-zinc-400 leading-relaxed">Posts are published by NEXORA's trusted scheduler. You can cancel a post while it is still pending.</p>
+                <p className="text-xs text-zinc-400 leading-relaxed">Posts are published by NEXORA’s trusted scheduler. You can cancel a post while it is still pending.</p>
                 {isScheduledPostsLoading ? (
                   <p className="text-xs text-zinc-500 py-5">Loading scheduled posts…</p>
                 ) : scheduledPosts.length === 0 ? (
@@ -1709,7 +1709,7 @@ export default function CreatorDashboardView({
                   )}
                 </div>
 
-                <div className="rounded-xl border border-white/5 bg-white/3 p-3 text-[11px] text-zinc-400">Publishing sends this post through Nexora's post publishing process. Automatic scheduling is not enabled yet.</div>
+                <div className="rounded-xl border border-white/5 bg-white/3 p-3 text-[11px] text-zinc-400">Publishing sends this post through Nexora’s post publishing process. Automatic scheduling is not enabled yet.</div>
 
                 <div className="flex gap-2 pt-4 justify-between border-t border-white/5">
                   <button 
