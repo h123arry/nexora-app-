@@ -8,7 +8,7 @@ import VideoBottomSheet from './VideoBottomSheet';
 import NexoraLoader from './NexoraLoader';
 import NexoraWatermark from './branding/NexoraWatermark';
 import NexoraPostRollCard from './branding/NexoraPostRollCard';
-import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Send, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Send, X, AlertTriangle, EyeOff, Eye, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
 import { recordReelReplay, recordReelSignal } from '../services/reels/reelsRanking';
@@ -65,6 +65,13 @@ interface NexoraVideoPlayerProps {
   onViewProfile?: (userId: string) => void;
   onViewSound?: (soundId: string) => void;
 }
+
+const formatPostViews = (views?: number) => {
+  const count = Number.isFinite(views) ? Math.max(0, Number(views)) : 0;
+  if (count >= 1000000) return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (count >= 1000) return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(count);
+};
 
 const VerificationBadge = () => (
   <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center border border-white/10 shadow-lg ml-1.5 shrink-0">
@@ -1260,6 +1267,14 @@ export default function NexoraVideoPlayer({
                  left: 'calc(env(safe-area-inset-left, 0px) + 16px)'
                }}
              >
+               {/* Creators can see the current view total on their own Reel. */}
+               {isOwnPost && (
+                 <div className="mb-0.5 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md" aria-label={formatPostViews(post.views) + ' views'}>
+                   <Eye className="h-3.5 w-3.5 text-violet-200" />
+                   <span>{formatPostViews(post.views)} views</span>
+                 </div>
+               )}
+
                {/* Search Suggestion if available */}
                {post.searchSuggestion && (
                  <button 
