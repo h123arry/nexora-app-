@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import NexoraLensStudio from './NexoraLensStudio';
 import { NEXORA_LENS_CATALOG } from '../services/nexoraLensCatalog';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Sparkles, Settings, Info, Tag } from 'lucide-react';
+import { X, Check, Plus, Camera, Video, Mic, Clapperboard, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Sparkles, Settings, Info, Tag } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { User } from '../types';
 import { videoFileExtension } from '../services/media/videoFileExtension';
@@ -1877,7 +1877,7 @@ export default function MediaCreationEngine({
 
                   <div className="flex items-center justify-between px-0.5">
                     <div><h4 className="text-sm font-extrabold text-white">Create a post</h4><p className="mt-0.5 text-[10px] text-[#8E88A7]">Choose the format that fits your moment.</p></div>
-                    <span className="text-[10px] font-semibold text-[#756B91]">9 formats</span>
+                    <span className="text-[10px] font-semibold text-[#756B91]">8 formats</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2.5">
                     {[
