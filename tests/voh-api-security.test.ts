@@ -214,9 +214,14 @@ describe('VOH API security boundary', () => {
   });
 
   it('shares a per-UID quota across route requests and rejects the excess', async () => {
-    const replies = await Promise.all(Array.from({ length: 24 }, () => signedRequest('summarize-post', { content: 'A short post.' })));
-    assert.ok(replies.some(response => response.status === 429));
-    assert.ok(replies.every(response => [400, 429, 503].includes(response.status)));
+    const replies: Response[] = [];
+    // Keep requests sequential: the emulator's transaction contention behavior
+    // is not a reliable way to test the production quota boundary under a burst.
+    for (let index = 0; index < 24; index += 1) {
+      replies.push(await signedRequest('summarize-post', { content: 'A short post.' }));
+    }
+    assert.equal(replies.filter(response => response.status === 429).length, 4);
+    assert.ok(replies.slice(0, 20).every(response => response.status === 503));
     assert.ok(uid.length > 0);
   });
 });
