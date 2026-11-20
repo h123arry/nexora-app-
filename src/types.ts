@@ -254,6 +254,10 @@ export interface Message {
 export interface ExtendedMessage extends Message {
   voiceDuration?: string;
   voiceAudioUrl?: string;
+  mediaStoragePath?: string;
+  mediaType?: 'image' | 'video' | 'audio' | 'document';
+  mediaContentType?: string;
+
   isVoicePlaying?: boolean;
   videoUrl?: string;
   fileName?: string;

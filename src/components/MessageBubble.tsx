@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Play, Pause, Check, CheckCheck, WifiOff, Pin, Trash2, Edit, Globe, Quote, MapPin } from 'lucide-react';
+import { Play, Pause, Check, CheckCheck, Pin, Trash2, Edit, Globe, Quote, MapPin, FileText, Download, Loader2 } from 'lucide-react';
 import { ExtendedMessage } from '../types';
 import RelativeTime from './RelativeTime';
 
@@ -13,6 +13,7 @@ interface MessageBubbleProps {
   partnerName?: string;
   partnerAvatar?: string;
   onReply: (msg: ExtendedMessage) => void;
+  onRetry?: (msg: ExtendedMessage) => void;
   onReact: (msgId: string, emoji: string) => void;
   onDelete: (msgId: string, forEveryone: boolean) => void;
   onEdit: (msg: ExtendedMessage) => void;
@@ -46,6 +47,7 @@ export default function MessageBubble({
   partnerName,
   partnerAvatar,
   onReply,
+  onRetry,
   onReact,
   onDelete,
   onEdit,
@@ -71,9 +73,49 @@ export default function MessageBubble({
   const [privateVoiceUrl, setPrivateVoiceUrl] = useState('');
   const [loadingPrivateVoice, setLoadingPrivateVoice] = useState(false);
   const [privateVoiceError, setPrivateVoiceError] = useState('');
+  const [privateMediaUrl, setPrivateMediaUrl] = useState('');
+  const [loadingPrivateMedia, setLoadingPrivateMedia] = useState(false);
+  const [privateMediaError, setPrivateMediaError] = useState('');
+  const attemptedMediaPathRef = useRef('');
   useEffect(() => () => {
     if (privateVoiceUrl) URL.revokeObjectURL(privateVoiceUrl);
   }, [privateVoiceUrl]);
+  useEffect(() => () => { if (privateMediaUrl) URL.revokeObjectURL(privateMediaUrl); }, [privateMediaUrl]);
+  const mediaPreviewRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const path = message.mediaStoragePath || '';
+    const target = mediaPreviewRef.current;
+    if (message.mediaType !== 'image' || !path || !target || attemptedMediaPathRef.current === path) return;
+    let active = true;
+    const loadVisibleImage = () => {
+      if (!active || attemptedMediaPathRef.current === path) return;
+      attemptedMediaPathRef.current = path;
+      setLoadingPrivateMedia(true);
+      void onResolveVoiceMedia(path).then(url => {
+        if (active) setPrivateMediaUrl(url); else URL.revokeObjectURL(url);
+      }).catch(() => { if (active) setPrivateMediaError('Image unavailable. Tap to retry.'); })
+        .finally(() => { if (active) setLoadingPrivateMedia(false); });
+    };
+    if (typeof IntersectionObserver === 'undefined') {
+      loadVisibleImage();
+      return () => { active = false; };
+    }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        observer.disconnect();
+        loadVisibleImage();
+      }
+    }, { rootMargin: '240px' });
+    observer.observe(target);
+    return () => { active = false; observer.disconnect(); };
+  }, [message.mediaStoragePath, message.mediaType, onResolveVoiceMedia]);
+  const loadPrivateMedia = async () => {
+    if (!message.mediaStoragePath || loadingPrivateMedia) return;
+    setLoadingPrivateMedia(true); setPrivateMediaError('');
+    try { setPrivateMediaUrl(await onResolveVoiceMedia(message.mediaStoragePath)); }
+    catch { setPrivateMediaError('This attachment is unavailable or access has expired.'); }
+    finally { setLoadingPrivateMedia(false); }
+  };
   
   const highlightMatch = (text: string, query: string) => {
     if (!query) return <span>{text}</span>;
@@ -90,6 +132,7 @@ export default function MessageBubble({
   };
 
   const isVoice = message.customMediaType === 'voice' || !!message.voiceDuration;
+  const voiceStoragePath = message.voiceAudioUrl || message.videoUrl || message.mediaStoragePath || '';
 
   return (
     <motion.div 
@@ -206,21 +249,21 @@ export default function MessageBubble({
 
             {/* Content - Handle Voice */}
             {isVoice ? (
-              message.voiceAudioUrl || message.videoUrl ? (
+              voiceStoragePath ? (
                 <div className="min-w-[240px] max-w-[320px] rounded-xl border border-white/10 bg-black/25 p-2">
                   <p className="mb-1 text-[10px] font-medium text-[var(--nx-muted)]">Voice message{message.voiceDuration ? ` · ${message.voiceDuration}` : ''}</p>
-                  {(message.voiceAudioUrl || message.videoUrl || '').startsWith('chats/') && !privateVoiceUrl ? (
+                  {voiceStoragePath.startsWith('chats/') && !privateVoiceUrl ? (
                     <button type="button" disabled={loadingPrivateVoice} onClick={async () => {
                       setLoadingPrivateVoice(true);
                       setPrivateVoiceError('');
-                      try { setPrivateVoiceUrl(await onResolveVoiceMedia(message.voiceAudioUrl || message.videoUrl || '')); }
+                      try { setPrivateVoiceUrl(await onResolveVoiceMedia(voiceStoragePath)); }
                       catch (error) { setPrivateVoiceError(error instanceof Error ? error.message : 'Voice note unavailable.'); }
                       finally { setLoadingPrivateVoice(false); }
                     }} className="min-h-11 rounded-lg border border-white/10 px-3 text-xs text-violet-200 disabled:opacity-60">
                       {loadingPrivateVoice ? 'Loading securely…' : 'Load private voice note'}
                     </button>
                   ) : (
-                    <audio className="w-full" controls preload="none" src={privateVoiceUrl || message.voiceAudioUrl || message.videoUrl} aria-label="Play voice message">
+                    <audio className="w-full" controls preload="none" src={privateVoiceUrl || (voiceStoragePath.startsWith('chats/') ? '' : voiceStoragePath)} aria-label="Play voice message">
                       Your browser does not support audio playback.
                     </audio>
                   )}
@@ -229,6 +272,30 @@ export default function MessageBubble({
               ) : (
                 <p className="rounded-lg border border-[var(--nx-edge)] bg-black/20 px-3 py-2 text-xs text-[var(--nx-muted)]">This older voice message has no stored audio file.</p>
               )
+            ) : message.mediaStoragePath && message.mediaType ? (
+              <div ref={mediaPreviewRef} className="mb-1 w-full min-w-[220px] max-w-[320px] overflow-hidden rounded-xl border border-white/10 bg-black/25">
+                {message.mediaType === 'image' ? (
+                  privateMediaUrl
+                    ? <a href={privateMediaUrl} target="_blank" rel="noreferrer"><img src={privateMediaUrl} alt={message.fileName || 'Shared image'} className="max-h-[420px] w-full object-contain" loading="lazy" /></a>
+                    : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-28 w-full flex-col items-center justify-center gap-2 p-4 text-xs text-violet-200"><span>{loadingPrivateMedia ? 'Loading private photo…' : 'Tap to load photo'}</span>{privateMediaError && <span role="status" className="text-rose-300">{privateMediaError}</span>}</button>
+                ) : message.mediaType === 'video' ? (
+                  privateMediaUrl
+                    ? <video controls playsInline preload="metadata" src={privateMediaUrl} className="max-h-[420px] w-full bg-black" aria-label={message.fileName || 'Shared video'} />
+                    : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-28 w-full flex-col items-center justify-center gap-2 p-4 text-xs text-violet-200"><Play className="h-7 w-7"/>{loadingPrivateMedia ? 'Loading private video…' : 'Tap to load video'}{privateMediaError && <span role="status" className="text-rose-300">{privateMediaError}</span>}</button>
+                ) : message.mediaType === 'audio' ? (
+                  privateMediaUrl
+                    ? <audio controls preload="none" src={privateMediaUrl} className="w-full p-2" aria-label={message.fileName || 'Shared audio'} />
+                    : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-16 w-full items-center gap-3 p-3 text-left text-xs text-violet-100"><Play className="h-6 w-6"/><span className="min-w-0 flex-1 truncate">{message.fileName || 'Audio file'}<small className="block text-[10px] text-white/45">{loadingPrivateMedia ? 'Loading securely…' : 'Tap to play'}</small></span></button>
+                ) : (
+                  <div className="flex items-center gap-3 p-3">
+                    <FileText className="h-7 w-7 shrink-0 text-violet-300"/>
+                    <span className="min-w-0 flex-1 truncate text-xs text-white">{message.fileName || 'Document'}<small className="block text-[10px] text-white/45">{message.fileSize || 'Private attachment'}</small></span>
+                    {privateMediaUrl
+                      ? <a href={privateMediaUrl} download={message.fileName || 'attachment'} aria-label="Download attachment" className="rounded-lg bg-violet-600 p-2 text-white"><Download className="h-4 w-4"/></a>
+                      : <button type="button" disabled={loadingPrivateMedia} onClick={() => void loadPrivateMedia()} aria-label="Download attachment" className="rounded-lg bg-violet-600 p-2 text-white disabled:opacity-50">{loadingPrivateMedia ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4"/>}</button>}
+                  </div>
+                )}
+              </div>
             ) : message.customMediaType === 'share_post' && message.customMediaData ? (
               <div 
                 className="mb-1 p-3 rounded-2xl bg-black/40 hover:bg-black/60 border border-white/10 flex flex-col gap-2 cursor-pointer transition-all max-w-[280px]"
@@ -401,7 +468,7 @@ export default function MessageBubble({
               {isMe && (
                 <div className="flex items-center">
                   {message.isOfflineUnsent || message.status === 'failed' ? (
-                    <WifiOff className="w-3 h-3 text-orange-400" />
+                    <button type="button" onClick={() => onRetry?.(message)} className="ml-1 rounded-md border border-orange-300/20 bg-orange-400/10 px-1.5 py-0.5 text-[8px] font-bold text-orange-200">Retry</button>
                   ) : message.status === 'sending' ? (
                     <Check className="w-3 h-3 text-white/30 animate-pulse" />
                   ) : message.status === 'sent' ? (

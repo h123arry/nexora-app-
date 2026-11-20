@@ -5,11 +5,19 @@ export function omitUndefinedFields<T extends object>(value: T): T {
 }
 
 export function serializeOutgoingMessage<T extends { status: string }>(value: T): T {
-  return omitUndefinedFields({ ...value, status: 'sent' } as T);
+  const allowedFields = [
+    'id', 'chatId', 'senderId', 'content', 'timestamp', 'status', 'voiceDuration',
+    'voiceAudioUrl', 'fileName', 'replyToQuote', 'customMediaType', 'mediaStoragePath',
+    'mediaType', 'mediaContentType', 'fileSize',
+  ];
+  const persisted = Object.fromEntries(Object.entries(value).filter(([key, fieldValue]) => allowedFields.includes(key) && fieldValue !== undefined));
+  return { ...persisted, status: 'sent' } as T;
 }
 
-export function isSupportedOutgoingMediaType(type: string): type is 'voice' {
-  return type === 'voice';
+export type OutgoingMediaType = 'voice' | 'image' | 'video' | 'audio' | 'document';
+
+export function isSupportedOutgoingMediaType(type: string): type is OutgoingMediaType {
+  return ['voice', 'image', 'video', 'audio', 'document'].includes(type);
 }
 
 

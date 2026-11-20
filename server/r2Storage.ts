@@ -9,7 +9,7 @@ export type R2Config = {
 };
 
 export type R2UploadPolicy = {
-  kind: 'image' | 'video' | 'audio';
+  kind: 'image' | 'video' | 'audio' | 'document';
   maxBytes: number;
 };
 
@@ -19,6 +19,8 @@ const MEDIA_POLICIES: Record<string, R2UploadPolicy> = {
   'image/webp': { kind: 'image', maxBytes: 12 * 1024 * 1024 },
   'image/gif': { kind: 'image', maxBytes: 12 * 1024 * 1024 },
   'image/avif': { kind: 'image', maxBytes: 12 * 1024 * 1024 },
+  'image/heic': { kind: 'image', maxBytes: 12 * 1024 * 1024 },
+  'image/heif': { kind: 'image', maxBytes: 12 * 1024 * 1024 },
   'video/mp4': { kind: 'video', maxBytes: 250 * 1024 * 1024 },
   'video/webm': { kind: 'video', maxBytes: 250 * 1024 * 1024 },
   'video/quicktime': { kind: 'video', maxBytes: 250 * 1024 * 1024 },
@@ -29,6 +31,21 @@ const MEDIA_POLICIES: Record<string, R2UploadPolicy> = {
   'audio/webm': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
   'audio/ogg': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
   'audio/aac': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
+  'audio/opus': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
+  'audio/flac': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
+  'audio/x-flac': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
+  'audio/x-m4a': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
+  'audio/3gpp': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
+  'application/pdf': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/msword': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/vnd.ms-excel': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/vnd.ms-powerpoint': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'text/plain': { kind: 'document', maxBytes: 10 * 1024 * 1024 },
+  'text/csv': { kind: 'document', maxBytes: 20 * 1024 * 1024 },
+  'application/rtf': { kind: 'document', maxBytes: 20 * 1024 * 1024 },
 };
 
 export function resolveR2Config(env: NodeJS.ProcessEnv = process.env): R2Config | null {

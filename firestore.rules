@@ -78,7 +78,8 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.keys().hasOnly([
           'id', 'chatId', 'senderId', 'content', 'timestamp', 'status',
-          'voiceDuration', 'voiceAudioUrl', 'fileName', 'replyToQuote', 'customMediaType'
+          'voiceDuration', 'voiceAudioUrl', 'fileName', 'replyToQuote', 'customMediaType',
+          'mediaStoragePath', 'mediaType', 'mediaContentType', 'fileSize'
         ])
         && data.id == messageId
         && data.chatId == chatId
@@ -88,7 +89,14 @@ service cloud.firestore {
         && data.timestamp is string
         && data.timestamp.size() <= 40
         && data.status == 'sent'
-        && (!data.keys().hasAny(['customMediaType']) || data.customMediaType == 'voice')
+        && (!data.keys().hasAny(['customMediaType']) || data.customMediaType in ['voice', 'image', 'video', 'audio', 'document'])
+        && (!data.keys().hasAny(['mediaType']) || data.mediaType in ['image', 'video', 'audio', 'document'])
+        && (!data.keys().hasAny(['mediaContentType']) || (data.mediaContentType is string && data.mediaContentType.size() <= 128))
+        && (!data.keys().hasAny(['fileSize']) || (data.fileSize is string && data.fileSize.size() <= 24))
+        && (!data.keys().hasAny(['mediaStoragePath'])
+          || (data.mediaStoragePath is string
+            && data.mediaStoragePath.size() <= 400
+            && data.mediaStoragePath.matches('^chats/' + chatId + '/media/' + request.auth.uid + '/[A-Za-z0-9_-]{1,128}$')))
         && (!data.keys().hasAny(['voiceDuration'])
           || (data.voiceDuration is string && data.voiceDuration.size() <= 24))
         && (!data.keys().hasAny(['fileName'])

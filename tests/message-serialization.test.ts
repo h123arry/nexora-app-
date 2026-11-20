@@ -33,10 +33,22 @@ describe('Firestore message serialization', () => {
     assert.equal(localMessage.status, 'sending');
   });
 
-  it('accepts voice-note metadata only while image/video message payloads remain unavailable', () => {
-    assert.equal(isSupportedOutgoingMediaType('voice'), true);
-    assert.equal(isSupportedOutgoingMediaType('image'), false);
-    assert.equal(isSupportedOutgoingMediaType('video'), false);
+  it('accepts all supported direct-message media types and rejects unknown types', () => {
+    for (const type of ['voice', 'image', 'video', 'audio', 'document']) assert.equal(isSupportedOutgoingMediaType(type), true);
+    assert.equal(isSupportedOutgoingMediaType('executable'), false);
+  });
+
+  it('whitelists persisted message fields so local retry flags never reach Firestore', () => {
+    assert.deepEqual(serializeOutgoingMessage({
+      id: 'message-3', chatId: 'chat-1', senderId: 'alice', content: '[IMAGE]', timestamp: '2026-11-20T00:00:00.000Z',
+      status: 'failed', mediaStoragePath: 'chats/chat-1/media/alice/image-1', mediaType: 'image',
+      mediaContentType: 'image/jpeg', fileName: 'photo.jpg', fileSize: '1200', isOfflineUnsent: true,
+      reactions: [], videoUrl: 'local-preview',
+    } as any), {
+      id: 'message-3', chatId: 'chat-1', senderId: 'alice', content: '[IMAGE]', timestamp: '2026-11-20T00:00:00.000Z',
+      status: 'sent', mediaStoragePath: 'chats/chat-1/media/alice/image-1', mediaType: 'image',
+      mediaContentType: 'image/jpeg', fileName: 'photo.jpg', fileSize: '1200',
+    });
   });
 });
 

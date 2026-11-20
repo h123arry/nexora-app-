@@ -168,6 +168,91 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
   }
 }
 
+export async function uploadPrivateChatMediaFile(options: MediaUploadOptions): Promise<MediaUploadResult> {
+  const { file, userId, chatId, onProgress, signal } = options;
+  if (!chatId) throw new Error('Choose a conversation before attaching media.');
+  if (!file || file.size <= 0) throw new Error('The selected file is empty.');
+  if (signal?.aborted) throw new DOMException('Upload cancelled.', 'AbortError');
+  const user = await getAuthenticatedUploadUser(userId);
+  const contentType = (file.type || 'application/octet-stream').split(';')[0].trim().toLowerCase();
+  const fileName = safeFileName(options.fileName || (file instanceof File ? file.name : 'attachment'));
+  const token = await user.getIdToken(true);
+  const intentResponse = await fetch(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/upload-intent`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contentType, size: file.size, fileName }),
+    signal,
+  });
+  const intent = await intentResponse.json().catch(() => ({}));
+  if (!intentResponse.ok || typeof intent.uploadUrl !== 'string' || typeof intent.mediaId !== 'string' || typeof intent.storagePath !== 'string') {
+    throw new Error(typeof intent.error === 'string' ? intent.error : 'NEXORA could not prepare this attachment.');
+  }
+  const abortIntent = async () => {
+    try {
+      const abortToken = await user.getIdToken();
+      await fetch(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/${encodeURIComponent(intent.mediaId)}/abort`, {
+        method: 'POST', headers: { Authorization: `Bearer ${abortToken}` },
+      });
+    } catch { /* Server-side pending-upload expiry remains the fallback cleanup. */ }
+  };
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      let settled = false;
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        signal?.removeEventListener('abort', abort);
+        if (error) reject(error); else resolve();
+      };
+      const abort = () => xhr.abort();
+      xhr.open('PUT', intent.uploadUrl, true);
+      xhr.setRequestHeader('Content-Type', contentType);
+      xhr.setRequestHeader('If-None-Match', '*');
+      xhr.upload.onprogress = event => {
+        if (event.lengthComputable && event.total > 0) onProgress?.(Math.round(event.loaded / event.total * 100));
+      };
+      xhr.onload = () => xhr.status >= 200 && xhr.status < 300
+        ? (onProgress?.(100), finish())
+        : finish(new Error(`Private media upload failed (HTTP ${xhr.status}).`));
+      xhr.onerror = () => finish(new Error('NEXORA could not reach private media storage. Check your connection and retry.'));
+      xhr.onabort = () => finish(new DOMException('Upload cancelled.', 'AbortError'));
+      signal?.addEventListener('abort', abort, { once: true });
+      if (signal?.aborted) return abort();
+      xhr.send(file);
+    });
+    const completeToken = await user.getIdToken(true);
+    const completeResponse = await fetch(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/${encodeURIComponent(intent.mediaId)}/complete`, {
+      method: 'POST', headers: { Authorization: `Bearer ${completeToken}` }, signal,
+    });
+    const completed = await completeResponse.json().catch(() => ({}));
+    if (!completeResponse.ok || completed.storagePath !== intent.storagePath) {
+      throw new Error(typeof completed.error === 'string' ? completed.error : 'NEXORA could not verify the uploaded attachment.');
+    }
+    return {
+      mediaId: intent.mediaId, downloadUrl: '', storagePath: completed.storagePath,
+      contentType: completed.contentType, size: completed.size,
+    };
+  } catch (error) {
+    await abortIntent();
+    throw error;
+  }
+}
+
+export async function resolvePrivateChatMedia(storagePath: string): Promise<string> {
+  const match = storagePath.match(/^chats\/([A-Za-z0-9_-]{1,150})\/(?:media|audio)\/([A-Za-z0-9_-]{1,128})\/([A-Za-z0-9_-]{1,128})$/);
+  const user = auth.currentUser;
+  if (!match || !user) throw new Error('Sign in to access this private attachment.');
+  const [, chatId, uploaderId, mediaId] = match;
+  const token = await user.getIdToken();
+  const route = storagePath.includes('/media/')
+    ? `/api/private-chat-media/chat/${encodeURIComponent(chatId)}/media/${encodeURIComponent(uploaderId)}/${encodeURIComponent(mediaId)}`
+    : `/api/private-chat-media/chat/${encodeURIComponent(chatId)}/audio/${encodeURIComponent(uploaderId)}/${encodeURIComponent(mediaId)}`;
+  const response = await fetch(route, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+  if (!response.ok) throw new Error('This attachment is unavailable or you are no longer a conversation participant.');
+  return URL.createObjectURL(await response.blob());
+}
+
 export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploadResult> {
   if (options.chatId || options.metadata?.purpose === 'worldweave') return uploadMediaFileWithFirebase(options);
   return uploadMediaFileViaR2(options).catch(error => {

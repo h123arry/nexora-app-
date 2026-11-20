@@ -41,7 +41,10 @@ test('R2 object keys are bound to validated owner and asset IDs', () => {
 test('R2 media policy enforces MIME allowlists and size limits', () => {
   assert.equal(validateR2Upload('image/webp', 1024).kind, 'image');
   assert.equal(validateR2Upload('video/mp4', 1000).kind, 'video');
-  assert.throws(() => validateR2Upload('application/pdf', 1000), /unsupported/);
+  assert.equal(validateR2Upload('application/pdf', 1000).kind, 'document');
+  assert.equal(validateR2Upload('application/vnd.openxmlformats-officedocument.wordprocessingml.document', 1000).kind, 'document');
+  assert.equal(validateR2Upload('audio/mpeg', 1000).kind, 'audio');
+  assert.throws(() => validateR2Upload('application/x-msdownload', 1000), /unsupported/);
   assert.throws(() => validateR2Upload('image/jpeg', 13 * 1024 * 1024), /size limit/);
 });
 

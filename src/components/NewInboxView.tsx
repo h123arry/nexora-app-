@@ -14,7 +14,7 @@ import { createGroupChat } from '../services/firebase/groupChatService';
 import { auth } from '../services/firebase/config';
 import CreateGroupChatModal from './CreateGroupChatModal';
 import { getTranslations } from '../utils/translations';
-import { uploadMediaFile, resolvePrivateChatAudio } from '../services/firebase/storageService';
+import { uploadPrivateChatMediaFile, resolvePrivateChatMedia } from '../services/firebase/storageService';
 import { aggregateMessageReactions, isSupportedOutgoingMediaType, serializeOutgoingMessage, toggleMessageReaction } from '../utils/messageSerialization';
 import { 
   collection, 
@@ -27,6 +27,7 @@ import {
   limit,
   startAfter,
   getDocs,
+  getDoc,
   type QueryDocumentSnapshot,
   type DocumentData,
   deleteDoc,
@@ -102,6 +103,15 @@ export default function NewInboxView({
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const sendingMessageRef = useRef(false);
+  const attachmentUploadRef = useRef(false);
+  const [attachmentProgress, setAttachmentProgress] = useState(0);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const audioInputRef = useRef<HTMLInputElement | null>(null);
   const [activeCall, setActiveCall] = useState<{ type: 'voice' | 'video'; partnerName: string; partnerAvatar: string } | null>(null);
   
   // Message context / reply / edit
@@ -357,15 +367,16 @@ export default function NewInboxView({
   };
 
   // Send message
-  const handleSendMessage = async (customContent?: string, mediaData?: { type: string; url: string; name?: string; duration?: number }) => {
+  const handleSendMessage = async (customContent?: string, mediaData?: { type: string; url: string; name?: string; duration?: number; contentType?: string; size?: number }) => {
     const contentToSend = customContent !== undefined ? customContent : newMessageText.trim();
-    if (!contentToSend && !mediaData) return;
-    if (!activeChatId) return;
+    if (!contentToSend && !mediaData) return false;
+    if (!activeChatId || sendingMessageRef.current) return false;
     if (mediaData && !isSupportedOutgoingMediaType(mediaData.type)) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'You cannot send photos or videos in direct messages yet.' }));
-      return;
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'This attachment type is not supported in direct messages.' }));
+      return false;
     }
 
+    sendingMessageRef.current = true;
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingStateRef.current = null;
     void updateTypingState(activeChatId, currentUser.id, null);
@@ -382,8 +393,11 @@ export default function NewInboxView({
       status: 'sending',
       replyToQuote: replyQuoteText || undefined,
       customMediaType: mediaData?.type,
-      videoUrl: mediaData?.type === 'video' || mediaData?.type === 'image' ? mediaData.url : undefined,
-      voiceAudioUrl: mediaData?.type === 'voice' && mediaData.url ? mediaData.url : undefined,
+      mediaStoragePath: mediaData?.url || undefined,
+      mediaType: mediaData?.type === 'voice' ? 'audio' : (mediaData?.type as 'image' | 'video' | 'audio' | 'document' | undefined),
+      mediaContentType: mediaData?.contentType,
+      fileSize: typeof mediaData?.size === 'number' ? String(mediaData.size) : undefined,
+      voiceAudioUrl: undefined,
       voiceDuration: mediaData?.type === 'voice' && typeof mediaData.duration === 'number' ? `${mediaData.duration}s` : undefined,
       fileName: mediaData?.name
     };
@@ -397,7 +411,7 @@ export default function NewInboxView({
       [activeChatId]: [...(prev[activeChatId] || []), newMsg]
     }));
 
-    const previewText = mediaData ? `Sent a ${mediaData.type}` : contentToSend;
+    const previewText = mediaData ? (mediaData.type === 'voice' ? 'Voice message' : `Sent ${mediaData.type === 'image' ? 'a photo' : mediaData.type === 'video' ? 'a video' : mediaData.type === 'audio' ? 'an audio file' : 'a document'}`) : contentToSend;
     const previousChat = chats.find(chat => chat.id === activeChatId);
     const previousLastMessage = previousChat?.lastMessage || '';
     const previousLastTimestamp = previousChat?.lastTimestamp || '';
@@ -436,6 +450,7 @@ export default function NewInboxView({
         console.warn('[Inbox] Message was sent, but the chat preview could not update yet.');
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Message sent. Your chat will update in a moment.' }));
       }
+      return true;
     } catch {
       console.warn('[Inbox] Firestore send error; details redacted.');
       if (!messagePersisted) {
@@ -451,18 +466,122 @@ export default function NewInboxView({
         if (customContent === undefined && contentToSend) setNewMessageText(value => value || contentToSend);
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be sent. Your draft is saved. Please try again.' }));
       }
+      return false;
+    } finally {
+      sendingMessageRef.current = false;
     }
   };
 
-  const handleStartChatWithUser = (user: User) => {
-    let existingChat = chats.find(c => c.partnerId === user.id);
+  const sendAttachmentFiles = async (fileList: FileList | null, forcedType?: 'image' | 'video' | 'audio' | 'document') => {
+    if (!fileList?.length || !activeChatId || attachmentUploadRef.current) return;
+    attachmentUploadRef.current = true;
+    const files = Array.from(fileList);
+    setIsUploadingAttachment(true);
+    try {
+      for (const file of files) {
+        const detectedType = forcedType || (file.type.startsWith('image/') ? 'image'
+          : file.type.startsWith('video/') ? 'video'
+          : file.type.startsWith('audio/') ? 'audio' : 'document');
+        setAttachmentProgress(0);
+        const extension = file.name.split('.').pop()?.toLowerCase() || '';
+        const mimeByExtension: Record<string, string> = {
+          jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif',
+          mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', ogg: 'audio/ogg', aac: 'audio/aac', opus: 'audio/opus', flac: 'audio/flac',
+          pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          txt: 'text/plain', csv: 'text/csv', rtf: 'application/rtf',
+        };
+        const normalizedFile = !file.type || file.type === 'application/octet-stream'
+          ? new File([file], file.name, { type: mimeByExtension[extension] || file.type || 'application/octet-stream' })
+          : file;
+        const uploaded = await uploadPrivateChatMediaFile({
+          file: normalizedFile, userId: currentUser.id, chatId: activeChatId, fileName: file.name,
+          onProgress: setAttachmentProgress,
+        });
+        const sent = await handleSendMessage('', {
+          type: detectedType, url: uploaded.storagePath, name: file.name,
+          contentType: uploaded.contentType, size: uploaded.size,
+        });
+        if (!sent) throw new Error('The attachment uploaded, but its message was not saved. Tap Retry on the pending message.');
+      }
+      window.dispatchEvent(new CustomEvent('toast', { detail: files.length > 1 ? 'Attachments sent.' : 'Attachment sent.' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Attachment could not be sent. Please retry.' }));
+    } finally {
+      attachmentUploadRef.current = false;
+      setIsUploadingAttachment(false);
+      setAttachmentProgress(0);
+    }
+  };
+
+  const handleRetryMessage = async (message: ExtendedMessage) => {
+    const chatId = message.chatId || activeChatId;
+    if (!chatId || !db) return;
+    setLocalMessages(previous => ({ ...previous, [chatId]: (previous[chatId] || []).map(item => item.id === message.id ? { ...item, status: 'sending', isOfflineUnsent: false } : item) }));
+    try {
+      const messageRef = doc(db, `chats/${chatId}/messages`, message.id);
+      const existing = await getDoc(messageRef);
+      if (!existing.exists()) await setDoc(messageRef, serializeOutgoingMessage(message));
+      setLocalMessages(previous => ({ ...previous, [chatId]: (previous[chatId] || []).map(item => item.id === message.id ? { ...item, status: 'sent', isOfflineUnsent: false } : item) }));
+      const preview = message.customMediaType === 'voice' ? 'Voice message'
+        : message.mediaType === 'image' ? 'Sent a photo'
+        : message.mediaType === 'video' ? 'Sent a video'
+        : message.mediaType === 'audio' ? 'Sent an audio file'
+        : message.mediaType === 'document' ? 'Sent a document' : message.content;
+      await updateDoc(doc(db, 'chats', chatId), { lastMessage: preview, lastTimestamp: message.timestamp });
+    } catch {
+      setLocalMessages(previous => ({ ...previous, [chatId]: (previous[chatId] || []).map(item => item.id === message.id ? { ...item, status: 'failed', isOfflineUnsent: true } : item) }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message still could not be sent. Check your connection and retry.' }));
+    }
+  };
+
+  const handleStartChatWithUser = async (user: User) => {
+    const existingChat = chats.find(chat => chat.partnerId === user.id);
     if (existingChat) {
       setActiveChatId(existingChat.id);
       setShowNewMessageModal(false);
       return;
     }
+    if (!db) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Messaging is temporarily unavailable. Please retry.' }));
+      return;
+    }
 
-    const newChatId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    // A stable direct-chat ID prevents both participants from creating separate
+    // conversations when they start a chat at nearly the same time.
+    const participants = [currentUser.id, user.id].sort();
+    const newChatId = `dm-${participants.join('-')}`;
+    const nowIso = new Date().toISOString();
+    const chatRef = doc(db, 'chats', newChatId);
+    try {
+      await setDoc(chatRef, {
+        id: newChatId,
+        participants,
+        partnerId: user.id,
+        partnerName: user.name,
+        partnerAvatar: user.avatar,
+        lastMessage: '',
+        lastTimestamp: nowIso,
+        unreadCount: 0,
+        isGroup: false,
+      });
+    } catch {
+      // Another participant may have created the deterministic chat first.
+      // Open it only if the server confirms both expected members are present.
+      try {
+        const existing = await getDoc(chatRef);
+        const members = existing.data()?.participants;
+        if (!existing.exists() || !Array.isArray(members)
+          || !members.includes(currentUser.id) || !members.includes(user.id)) {
+          throw new Error('Conversation could not be created.');
+        }
+      } catch {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not start this conversation. Check your connection or the recipient’s message privacy settings.' }));
+        return;
+      }
+    }
+
     const newChat: Chat = {
       id: newChatId,
       partnerId: user.id,
@@ -472,27 +591,15 @@ export default function NewInboxView({
       isPartnerOnline: false,
       unreadCount: 0,
       lastMessage: '',
-      lastTimestamp: new Date().toISOString(),
+      lastTimestamp: nowIso,
       username: user.username,
       isGroup: false,
     };
-
-    setChats(prev => [newChat, ...prev]);
+    setChats(previous => previous.some(chat => chat.id === newChatId) ? previous : [newChat, ...previous]);
+    // Start the message listener only after the participant-bound chat document
+    // exists; otherwise Firestore can terminate the initial listener with permission denied.
     setActiveChatId(newChatId);
     setShowNewMessageModal(false);
-
-    if (db) {
-      setDoc(doc(db, 'chats', newChatId), {
-        id: newChatId,
-        participants: [currentUser.id, user.id],
-        partnerId: user.id,
-        partnerName: user.name,
-        partnerAvatar: user.avatar,
-        lastMessage: 'Started secure conversation',
-        lastTimestamp: new Date().toISOString(),
-        unreadCount: 0
-      }).catch(() => console.warn('[Inbox] Firestore create chat error; details redacted.'));
-    }
   };
 
   const handleReactMessage = async (msgId: string, emoji: string) => {
@@ -792,7 +899,7 @@ export default function NewInboxView({
                   </div>
                   <h4 className="text-xs font-bold text-white mb-1 font-sans">Secure conversation started</h4>
                   <p className="text-[11px] text-zinc-500 max-w-xs font-sans">
-                    Send a message or voice note to begin chatting with {activeChat.partnerName}. Photos and videos are not available in direct messages yet.
+                    Send a message, photo, video, document or voice note to {activeChat.partnerName}.
                   </p>
                 </div>
               ) : (
@@ -810,6 +917,7 @@ export default function NewInboxView({
                       isLastInGroup={true}
                       partnerName={activeChat.partnerName}
                       partnerAvatar={activeChat.partnerAvatar}
+                      onRetry={handleRetryMessage}
                       onReply={(m) => {
                         setReplyQuoteText(m.content);
                         setReplyMessageId(m.id);
@@ -823,7 +931,7 @@ export default function NewInboxView({
                       onToggleContextMenu={() => {}}
                       activeContextMessageId={activeContextMessageId}
                       onTogglePlayVoice={() => {}}
-                      onResolveVoiceMedia={resolvePrivateChatAudio}
+                      onResolveVoiceMedia={resolvePrivateChatMedia}
                       onLongPress={() => {}}
                       playingVoiceId={null}
                       voiceProgress={0}
@@ -860,6 +968,7 @@ export default function NewInboxView({
             {/* Chat Input Footer */}
             <div className="p-3 border-t border-white/10 bg-black/80 backdrop-blur-md relative">
               <div className="flex items-center gap-2">
+                {isUploadingAttachment && <span role="status" className="max-w-16 text-[9px] text-violet-200">{attachmentProgress}%</span>}
                 <button
                   type="button"
                   aria-label="Open attachment options"
@@ -910,7 +1019,7 @@ export default function NewInboxView({
                   type="button"
                   aria-label="Send message"
                   onClick={() => handleSendMessage()}
-                  disabled={!newMessageText.trim()}
+                  disabled={!newMessageText.trim() || isUploadingAttachment}
                   className="p-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:hover:bg-violet-600 text-white rounded-xl shadow-lg transition-all flex items-center justify-center cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
@@ -1014,12 +1123,23 @@ export default function NewInboxView({
         }}
       />
 
+      <input ref={galleryInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files); event.currentTarget.value = ''; }} />
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'image'); event.currentTarget.value = ''; }} />
+      <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'video'); event.currentTarget.value = ''; }} />
+      <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/rtf" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'document'); event.currentTarget.value = ''; }} />
+      <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'audio'); event.currentTarget.value = ''; }} />
+
       {/* ATTACHMENT MENU */}
       <AttachmentMenu
         isOpen={showAttachmentMenu}
         onClose={() => setShowAttachmentMenu(false)}
         onSelect={(id) => {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `${id} attachments are not available yet. Real voice notes can be sent with the recorder below.` }));
+          if (id === 'camera') cameraInputRef.current?.click();
+          else if (id === 'gallery') galleryInputRef.current?.click();
+          else if (id === 'video') videoInputRef.current?.click();
+          else if (id === 'document') documentInputRef.current?.click();
+          else if (id === 'audio') audioInputRef.current?.click();
+          else window.dispatchEvent(new CustomEvent('toast', { detail: `${id} is not available in this chat yet.` }));
         }}
       />
 
@@ -1029,16 +1149,15 @@ export default function NewInboxView({
           onSendMessage={async (audioBlob, duration) => {
             try {
               if (!activeChatId) throw new Error('Open a conversation before sending a voice note.');
-              const uploaded = await uploadMediaFile({
+              const uploaded = await uploadPrivateChatMediaFile({
                 file: audioBlob,
                 userId: currentUser.id,
-                chatId: activeChatId || undefined,
+                chatId: activeChatId,
                 fileName: `voice-note-${Date.now()}.webm`,
-                metadata: { chatId: activeChatId || '' }
               });
               await handleSendMessage('', {
                 type: 'voice', url: uploaded.storagePath,
-                name: `Voice Note (${duration}s)`, duration
+                name: `Voice Note (${duration}s)`, duration, contentType: uploaded.contentType, size: uploaded.size
               });
               setShowVoiceRecorder(false);
             } catch {
