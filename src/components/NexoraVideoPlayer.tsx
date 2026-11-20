@@ -521,7 +521,7 @@ export default function NexoraVideoPlayer({
     lastObservedMediaTimeRef.current = time;
     if (creditedDelta > 0) {
       creditedWatchSecondsRef.current = Math.min(3600, creditedWatchSecondsRef.current + creditedDelta);
-      if (creditedWatchSecondsRef.current - lastWatchSignalWriteRef.current >= 5) {
+      if (creditedWatchSecondsRef.current - lastWatchSignalWriteRef.current >= 3) {
         lastWatchSignalWriteRef.current = creditedWatchSecondsRef.current;
         recordReelSignal(post.id, { watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
         if (currentUser?.id && hasAnalyticsObservationConsent()) {
