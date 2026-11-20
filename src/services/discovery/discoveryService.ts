@@ -334,7 +334,11 @@ export function recommendCreators<T extends User>(
     if (nextIndex < 0) nextIndex = 0;
     const [next] = remaining.splice(nextIndex, 1);
     selected.push(next);
-    const topic = next.sharedTopics[0] || 'general';
+    // For cold-start viewers, diversify by each creator's own declared
+    // topics instead of treating every recommendation as one generic bucket.
+    const creatorTopic = Object.keys(next.creator.interestDNA || {})
+      .map(normalizeTag).find(Boolean);
+    const topic = next.sharedTopics[0] || creatorTopic || 'general';
     topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1);
   }
   return selected.map(({ index: _index, ...item }) => item);
