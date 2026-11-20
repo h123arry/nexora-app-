@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Play, Pause, Check, CheckCheck, WifiOff, Pin, Trash2, Edit, Globe, Quote, MapPin } from 'lucide-react';
+import { Play, Pause, Check, CheckCheck, WifiOff, Pin, Trash2, Edit, Globe, Quote, MapPin, FileText, Download, Loader2 } from 'lucide-react';
 import { ExtendedMessage } from '../types';
 import RelativeTime from './RelativeTime';
 
@@ -71,9 +71,30 @@ export default function MessageBubble({
   const [privateVoiceUrl, setPrivateVoiceUrl] = useState('');
   const [loadingPrivateVoice, setLoadingPrivateVoice] = useState(false);
   const [privateVoiceError, setPrivateVoiceError] = useState('');
+  const [privateMediaUrl, setPrivateMediaUrl] = useState('');
+  const [loadingPrivateMedia, setLoadingPrivateMedia] = useState(false);
+  const [privateMediaError, setPrivateMediaError] = useState('');
   useEffect(() => () => {
     if (privateVoiceUrl) URL.revokeObjectURL(privateVoiceUrl);
   }, [privateVoiceUrl]);
+  useEffect(() => () => { if (privateMediaUrl) URL.revokeObjectURL(privateMediaUrl); }, [privateMediaUrl]);
+  useEffect(() => {
+    if (message.mediaType !== 'image' || !message.mediaStoragePath || privateMediaUrl || loadingPrivateMedia) return;
+    let active = true;
+    setLoadingPrivateMedia(true);
+    void onResolveVoiceMedia(message.mediaStoragePath).then(url => {
+      if (active) setPrivateMediaUrl(url); else URL.revokeObjectURL(url);
+    }).catch(() => { if (active) setPrivateMediaError('Image unavailable. Tap to retry.'); })
+      .finally(() => { if (active) setLoadingPrivateMedia(false); });
+    return () => { active = false; };
+  }, [message.id, message.mediaType, message.mediaStoragePath]);
+  const loadPrivateMedia = async () => {
+    if (!message.mediaStoragePath || loadingPrivateMedia) return;
+    setLoadingPrivateMedia(true); setPrivateMediaError('');
+    try { setPrivateMediaUrl(await onResolveVoiceMedia(message.mediaStoragePath)); }
+    catch { setPrivateMediaError('This attachment is unavailable or access has expired.'); }
+    finally { setLoadingPrivateMedia(false); }
+  };
   
   const highlightMatch = (text: string, query: string) => {
     if (!query) return <span>{text}</span>;
@@ -229,6 +250,30 @@ export default function MessageBubble({
               ) : (
                 <p className="rounded-lg border border-[var(--nx-edge)] bg-black/20 px-3 py-2 text-xs text-[var(--nx-muted)]">This older voice message has no stored audio file.</p>
               )
+            ) : message.mediaStoragePath && message.mediaType ? (
+              <div className="mb-1 w-full min-w-[220px] max-w-[320px] overflow-hidden rounded-xl border border-white/10 bg-black/25">
+                {message.mediaType === 'image' ? (
+                  privateMediaUrl
+                    ? <a href={privateMediaUrl} target="_blank" rel="noreferrer"><img src={privateMediaUrl} alt={message.fileName || 'Shared image'} className="max-h-[420px] w-full object-contain" loading="lazy" /></a>
+                    : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-28 w-full flex-col items-center justify-center gap-2 p-4 text-xs text-violet-200"><span>{loadingPrivateMedia ? 'Loading private photo…' : 'Tap to load photo'}</span>{privateMediaError && <span role="status" className="text-rose-300">{privateMediaError}</span>}</button>
+                ) : message.mediaType === 'video' ? (
+                  privateMediaUrl
+                    ? <video controls playsInline preload="metadata" src={privateMediaUrl} className="max-h-[420px] w-full bg-black" aria-label={message.fileName || 'Shared video'} />
+                    : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-28 w-full flex-col items-center justify-center gap-2 p-4 text-xs text-violet-200"><Play className="h-7 w-7"/>{loadingPrivateMedia ? 'Loading private video…' : 'Tap to load video'}{privateMediaError && <span role="status" className="text-rose-300">{privateMediaError}</span>}</button>
+                ) : message.mediaType === 'audio' ? (
+                  privateMediaUrl
+                    ? <audio controls preload="none" src={privateMediaUrl} className="w-full p-2" aria-label={message.fileName || 'Shared audio'} />
+                    : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-16 w-full items-center gap-3 p-3 text-left text-xs text-violet-100"><Play className="h-6 w-6"/><span className="min-w-0 flex-1 truncate">{message.fileName || 'Audio file'}<small className="block text-[10px] text-white/45">{loadingPrivateMedia ? 'Loading securely…' : 'Tap to play'}</small></span></button>
+                ) : (
+                  <div className="flex items-center gap-3 p-3">
+                    <FileText className="h-7 w-7 shrink-0 text-violet-300"/>
+                    <span className="min-w-0 flex-1 truncate text-xs text-white">{message.fileName || 'Document'}<small className="block text-[10px] text-white/45">{message.fileSize || 'Private attachment'}</small></span>
+                    {privateMediaUrl
+                      ? <a href={privateMediaUrl} download={message.fileName || 'attachment'} aria-label="Download attachment" className="rounded-lg bg-violet-600 p-2 text-white"><Download className="h-4 w-4"/></a>
+                      : <button type="button" disabled={loadingPrivateMedia} onClick={() => void loadPrivateMedia()} aria-label="Download attachment" className="rounded-lg bg-violet-600 p-2 text-white disabled:opacity-50">{loadingPrivateMedia ? <Loader2 className="h-4 w-4 animate-spin"/> : <Download className="h-4 w-4"/>}</button>}
+                  </div>
+                )}
+              </div>
             ) : message.customMediaType === 'share_post' && message.customMediaData ? (
               <div 
                 className="mb-1 p-3 rounded-2xl bg-black/40 hover:bg-black/60 border border-white/10 flex flex-col gap-2 cursor-pointer transition-all max-w-[280px]"
