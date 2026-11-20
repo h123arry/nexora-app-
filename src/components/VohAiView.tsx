@@ -70,6 +70,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const [loadingAi, setLoadingAi] = useState(false);
   const [generatingMessageId, setGeneratingMessageId] = useState<string | null>(null);
   const [typingIndicator, setTypingIndicator] = useState(false);
+  const messagesViewportRef = useRef<HTMLDivElement | null>(null);
 
   // Voice AI States
   const [isRecording, setIsRecording] = useState(false);
@@ -223,6 +224,12 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   }, [aiSettings]);
 
   const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
+
+  useEffect(() => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) return;
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+  }, [activeSessionId, activeSession?.messages.length, activeSession?.messages[activeSession.messages.length - 1]?.text, typingIndicator]);
 
   const createNewSession = (initialPrompt?: string, title?: string) => {
     const newSession: ChatSession = {
@@ -907,7 +914,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               </div>
 
               {/* Messages viewport */}
-              <div className="min-h-0 flex-1 p-4 space-y-4 overflow-y-auto overscroll-contain">
+              <div ref={messagesViewportRef} className="min-h-0 flex-1 p-4 space-y-4 overflow-y-auto overscroll-contain">
                 {activeSession?.messages.map((msg) => (
                   <div 
                     key={msg.id}
