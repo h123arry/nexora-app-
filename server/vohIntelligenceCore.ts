@@ -258,6 +258,7 @@ export function createSelfHostedVohProvider(
   if (typeof config.apiKey !== 'string' || !config.apiKey.trim()) {
     throw new Error('VOH self-hosted inference authentication is not configured.');
   }
+  const apiKey = config.apiKey.trim();
   const timeoutMs = Number.isFinite(config.timeoutMs) ? Math.max(5_000, Math.min(120_000, Math.floor(config.timeoutMs!))) : 45_000;
   const maxTokens = Number.isFinite(config.maxTokens) ? Math.max(128, Math.min(8_192, Math.floor(config.maxTokens!))) : 1_536;
 
@@ -269,7 +270,7 @@ export function createSelfHostedVohProvider(
         response = await fetchImpl(endpoint, {
           method: 'POST',
           headers: {
-            'Authorization': 'Bearer ' + config.apiKey,
+            'Authorization': 'Bearer ' + apiKey,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -284,10 +285,16 @@ export function createSelfHostedVohProvider(
       } catch {
         throw new Error('VOH self-hosted inference service is unavailable or timed out.');
       }
-      if (!response.ok) throw new Error('VOH self-hosted inference returned HTTP ' + response.status + '.');
+      if (!response.ok) {
+        const error = new Error('VOH self-hosted inference returned HTTP ' + response.status + '.') as Error & { status?: number };
+        error.status = response.status;
+        throw error;
+      }
       let payload: Record<string, unknown>;
       try {
-        payload = await response.json() as Record<string, unknown>;
+        const rawPayload = await response.text();
+        if (rawPayload.length > 2_000_000) throw new Error('response too large');
+        payload = JSON.parse(rawPayload) as Record<string, unknown>;
       } catch {
         throw new Error('VOH self-hosted inference returned an invalid response.');
       }
