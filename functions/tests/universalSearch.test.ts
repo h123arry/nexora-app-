@@ -122,7 +122,7 @@ describe('NEXORA universal search', () => {
 
 it('ranks exact multi-word search intent above a weaker term-only match', async () => {
   await db.doc('posts/phrase-exact').set({ id:'phrase-exact', userId:'public-user', content:'Nexora design systems for creators', audience:'public', timestamp:new Date(), tags:['nexora'] });
-  await db.doc('posts/phrase-loose').set({ id:'phrase-loose', userId:'creator-two', content:'Nexora tools for creators who design systems', audience:'public', timestamp:new Date(), tags:['nexora'] });
+  await db.doc('posts/phrase-loose').set({ id:'phrase-loose', userId:'creator-two', content:'Nexora systems for creators who design content', audience:'public', timestamp:new Date(), tags:['nexora'] });
   await syncUniversalSearchRecord(db,'post','phrase-exact','posts/phrase-exact',(await db.doc('posts/phrase-exact').get()).data()!);
   await syncUniversalSearchRecord(db,'post','phrase-loose','posts/phrase-loose',(await db.doc('posts/phrase-loose').get()).data()!);
   const result=await searchNexoraContent(db,'viewer','design systems');
