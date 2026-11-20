@@ -14,6 +14,7 @@ interface MatrixViewProps {
   onOpenCreate?: (initialMode?: 'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null, initialCaption?: string) => void;
   creators?: User[];
   initialSubTab?: MatrixSubTab;
+  onClose?: () => void;
 }
 
 type MatrixSubTab = 'ai' | 'studio' | 'circles' | 'missions' | 'messages';
@@ -24,7 +25,8 @@ export default function MatrixView({
   onAddPost,
   onOpenCreate,
   creators = [],
-  initialSubTab
+  initialSubTab,
+  onClose
 }: MatrixViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<MatrixSubTab>(initialSubTab === 'circles' ? 'messages' : initialSubTab || 'ai');
 
@@ -38,7 +40,7 @@ export default function MatrixView({
   const [deploySuccess, setDeploySuccess] = useState(false);
 
   // Predefined community tags for quick tap selection
-  const popularTags = ['SpaceGlass', 'Rust', 'BuildInPublic', 'DesignTokens', 'AIEngines', 'FutureHuman'];
+  const popularTags = ['Food', 'Travel', 'Music', 'Learning', 'Business', 'Creativity'];
 
   const handleStudioDeploy = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,10 +55,32 @@ export default function MatrixView({
   };
 
   const menuItems = [
-    { id: 'studio' as MatrixSubTab, label: 'Post Studio', desc: 'Create community posts & stories', icon: Paintbrush, color: 'text-fuchsia-400' },
-    { id: 'missions' as MatrixSubTab, label: 'Missions', desc: 'Goals, challenges & helpers', icon: Target, color: 'text-yellow-400' },
-    { id: 'messages' as MatrixSubTab, label: 'Messages', desc: 'Your direct messages', icon: MessageSquare, color: 'text-sky-400' }
+    { id: 'studio' as MatrixSubTab, label: 'Post Studio', desc: 'Write posts and share updates', icon: Paintbrush, color: 'text-fuchsia-400' },
+    { id: 'missions' as MatrixSubTab, label: 'Missions', desc: 'Things to try and achieve', icon: Target, color: 'text-yellow-400' },
+    { id: 'messages' as MatrixSubTab, label: 'Messages', desc: 'Your private conversations', icon: MessageSquare, color: 'text-sky-400' }
   ];
+
+  if (activeSubTab === 'ai') {
+    return (
+      <div className="fixed inset-0 z-[90] flex h-[100dvh] flex-col overflow-hidden bg-[#050914] text-white">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#070D19] px-4">
+          <button type="button" onClick={() => onClose?.()} aria-label="Back to NEXORA" className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white">
+            <ArrowRight className="h-5 w-5 rotate-180" />
+          </button>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <VohIcon size={22} animated glow variant="brand" />
+            <div className="min-w-0">
+              <h1 className="truncate text-sm font-semibold text-white">VOH AI</h1>
+              <p className="text-[11px] text-zinc-400">Your personal AI assistant</p>
+            </div>
+          </div>
+        </header>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <VohAiView currentUser={currentUser} posts={posts} onAddPost={onAddPost} setActiveTab={() => {}} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="voh-ai-centre" className="space-y-6 pb-28 sm:pb-12">
@@ -74,7 +98,7 @@ export default function MatrixView({
             </h2>
           </div>
           <p className="text-xs text-current/60 font-sans">
-            Your friendly space to talk with AI, share updates, join interest communities, and send messages.
+            Create posts, join communities and keep up with your conversations.
           </p>
         </div>
 
