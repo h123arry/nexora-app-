@@ -2380,43 +2380,55 @@ body {
 }
 
 
-/* Edge-to-edge social feed: remove nested card framing and let media meet the viewport edges. */
+/* Instagram-style home feed: full-width rectangular posts, not floating cards. */
 .nx-feed-stage .nx-post-card.nx-feed-post {
+  display: block;
   width: 100%;
-  margin-inline: 0 !important;
+  max-width: none;
+  margin: 0 !important;
   padding-inline: 0;
-  border-inline: 0 !important;
-  border-top: 0 !important;
+  border: 0 !important;
+  border-bottom: 1px solid rgba(255,255,255,.09) !important;
   border-radius: 0 !important;
-  background: transparent !important;
+  background: #090714 !important;
   box-shadow: none !important;
 }
-.nx-feed-stage .nx-feed-post:hover { border-color: var(--nx-edge) !important; }
+.nx-feed-stage .nx-feed-post:hover { background: #0b0819 !important; }
 .nx-feed-stage .nx-feed-media {
+  display: block;
   width: 100%;
+  max-width: none;
   margin-inline: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
+  background: #05040b;
 }
-.nx-feed-stage .nx-feed-media > .nx-video-frame {
+.nx-feed-stage .nx-feed-media > .nx-video-frame,
+.nx-feed-stage .nx-feed-media > * {
   width: 100%;
   border-radius: 0 !important;
 }
-.nx-feed-stage .nx-feed-post > .nx-feed-media img,
-.nx-feed-stage .nx-feed-post > .nx-feed-media video { border-radius: 0 !important; }
+.nx-feed-stage .nx-feed-media img,
+.nx-feed-stage .nx-feed-media video { border-radius: 0 !important; }
 
-/* Reels use the complete dynamic viewport rather than the feed's inline-video height cap. */
-.nx-reels-viewer,
-.nx-reels-viewer > div {
+/* Reels occupy the complete dynamic viewport; no unused lower band. */
+.nx-reels-viewer {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
   height: 100dvh;
   min-height: 100dvh;
+}
+.nx-reels-viewer > div[ class*="bg-black" ] {
   width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 .nx-reels-viewer .nx-video-frame {
   width: 100%;
-  height: 100dvh;
-  min-height: 100dvh;
-  max-height: 100dvh;
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
   aspect-ratio: auto;
   border-radius: 0;
 }
@@ -2425,7 +2437,4 @@ body {
   height: 100%;
   max-height: none !important;
   object-fit: cover !important;
-}
-@media (max-width: 1023px) {
-  .nx-feed-stage .nx-post-card.nx-feed-post { margin-inline: 0 !important; }
 }
