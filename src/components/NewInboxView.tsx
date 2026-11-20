@@ -964,6 +964,7 @@ export default function NewInboxView({
                       isMe={isMe}
                       isGrouped={Boolean(isGrouped)}
                       isLastInGroup={true}
+                      currentUserId={currentUser.id}
                       partnerName={activeChat.partnerName}
                       partnerAvatar={activeChat.partnerAvatar}
                       onRetry={handleRetryMessage}
@@ -1252,7 +1253,6 @@ export default function NewInboxView({
           partnerName={activeCall.partnerName}
           partnerAvatar={activeCall.partnerAvatar}
           callId={activeCall.callId}
-          currentUserId={currentUser.id}
           incoming={activeCall.incoming}
           onClose={() => setActiveCall(null)}
         />
