@@ -1776,7 +1776,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     </div>
                   </div>
 
-                  {/* Category 2: Communities & Nodes */}
+                  {/* Category 2: Communities */}
                   <div className="space-y-3 bg-[#03010b]/50 p-3.5 rounded-xl border border-white/5">
                     <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">🏟️ Communities</span>
 
@@ -1828,11 +1828,11 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                   {/* Category 3: Content Interaction */}
                   <div className="space-y-3 bg-[#03010b]/50 p-3.5 rounded-xl border border-white/5">
-                    <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">⚡ Sparks & Loops</span>
+                    <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">⚡ Likes and comments</span>
 
                     <div className="space-y-2">
                       <div className="space-y-1">
-                        <label className="text-[10px] text-zinc-400">Likes (Sparks)</label>
+                        <label className="text-[10px] text-zinc-400">Likes</label>
                         <input
                           type="text"
                           value={terminologyState.sparksCapitalized}
