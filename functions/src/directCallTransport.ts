@@ -25,7 +25,7 @@ function accountIsRestricted(data: Record<string, any> | undefined, field: strin
   return !expiry || expiry > Date.now();
 }
 
-async function assertCanCall(callerId: string, recipientId: string, chatId: string): Promise<{ callerName: string; recipientName: string }> {
+async function assertCanCall(callerId: string, recipientId: string, chatId: string): Promise<{ callerName: string; recipientName: string; callerAvatar: string; recipientAvatar: string }> {
   const chatRef = db.collection('chats').doc(chatId);
   const callerStatusRef = db.collection('accountStatus').doc(callerId);
   const recipientStatusRef = db.collection('accountStatus').doc(recipientId);
@@ -61,6 +61,8 @@ async function assertCanCall(callerId: string, recipientId: string, chatId: stri
   return {
     callerName: asText(callerData.name || callerData.displayName || callerData.username, 80) || 'NEXORA member',
     recipientName: asText(recipientData.name || recipientData.displayName || recipientData.username, 80) || 'NEXORA member',
+    callerAvatar: asText(callerData.avatar || callerData.avatarUrl, 1000),
+    recipientAvatar: asText(recipientData.avatar || recipientData.avatarUrl, 1000),
   };
 }
 
@@ -111,6 +113,8 @@ export const startDirectCall = onCall({ region: 'europe-west1', maxInstances: 30
     roomName,
     callerName: names.callerName,
     recipientName: names.recipientName,
+    callerAvatar: names.callerAvatar,
+    recipientAvatar: names.recipientAvatar,
     createdAt: now,
     updatedAt: now,
     expiresAt: now + CALL_RING_SECONDS * 1000,
