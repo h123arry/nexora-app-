@@ -66,7 +66,7 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
     let creditedSeconds = 0;
     const started = !previous;
     let viewCounted = false;
-    const postViewerRef = db.collection('postVideoDailyViewers').doc(digest(postId + ':' + day + ':' + uid));
+    const postViewerRef = db.collection('postVideoViewers').doc(digest(postId + ':' + uid));
     const viewerRef = db.collection('creatorVideoDailyViewers').doc(digest(creatorId + ':' + day + ':' + uid));
 
     if (previous) {
@@ -128,17 +128,19 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
         creatorId,
         audience: post.audience,
         creditedSeconds,
-        alreadyCounted: postViewerSnapshot?.exists === true,
+        alreadyCounted: postViewerSnapshot?.get('lastCountedDay') === day,
       })) {
         const currentViews = post.views;
         const safeViews = Number.isSafeInteger(currentViews) && (currentViews as number) >= 0 ? currentViews as number : 0;
-        tx.create(postViewerRef, {
+        const viewMarker = {
           postId,
           creatorId,
-          day,
+          lastCountedDay: day,
           viewerHash: digest(uid),
-          countedAt: FieldValue.serverTimestamp(),
-        });
+          lastCountedAt: FieldValue.serverTimestamp(),
+        };
+        if (postViewerSnapshot?.exists) tx.update(postViewerRef, viewMarker);
+        else tx.create(postViewerRef, viewMarker);
         tx.update(postRef, {
           views: safeViews + 1,
           viewsUpdatedAt: FieldValue.serverTimestamp(),
