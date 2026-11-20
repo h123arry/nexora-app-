@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { acceptedWatchCredit } from '../functions/src/videoWatchAnalyticsPolicy';
+import { acceptedWatchCredit, shouldCountPublicVideoView } from '../functions/src/videoWatchAnalyticsPolicy';
 
 test('credits plausible forward playback using server elapsed time',()=>{
  assert.equal(acceptedWatchCredit({elapsedSeconds:5,previousPositionSeconds:10,nextPositionSeconds:15}),5);
