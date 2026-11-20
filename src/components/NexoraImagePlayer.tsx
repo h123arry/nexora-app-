@@ -46,6 +46,7 @@ interface NexoraImagePlayerProps {
   onNotInterested?: () => void;
   onViewProfile?: (userId: string) => void;
   onViewSound?: (soundId: string) => void;
+  disableFullscreen?: boolean;
 }
 
 export default function NexoraImagePlayer({
@@ -59,6 +60,7 @@ export default function NexoraImagePlayer({
   onCommentToggle,
   onNotInterested,
   onViewProfile,
+  disableFullscreen = false,
 }: NexoraImagePlayerProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -346,8 +348,8 @@ export default function NexoraImagePlayer({
               aria-hidden={hasImageLoadError}
               onLoad={() => { setIsImageLoading(false); setHasImageLoadError(false); }}
               onError={() => { setIsImageLoading(false); setHasImageLoadError(true); }}
-              className={`block w-full h-auto max-h-[78vh] object-contain cursor-zoom-in ${hasImageLoadError ? 'opacity-0' : ''}`}
-              onClick={() => { if (!suppressImageClick.current) setIsFullscreen(true); }}
+              className={`block w-full h-auto ${disableFullscreen ? 'max-h-none cursor-default' : 'max-h-[78vh] cursor-zoom-in'} object-contain ${hasImageLoadError ? 'opacity-0' : ''}`}
+              onClick={() => { if (!disableFullscreen && !suppressImageClick.current) setIsFullscreen(true); }}
               referrerPolicy="no-referrer"
               style={{ filter: (post.imageFilters && post.imageFilters[currentImageIndex]) || post.imageFilter || 'none' }}
             />

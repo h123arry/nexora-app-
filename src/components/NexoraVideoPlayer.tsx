@@ -64,6 +64,7 @@ interface NexoraVideoPlayerProps {
   onNotInterested?: () => void;
   onViewProfile?: (userId: string) => void;
   onViewSound?: (soundId: string) => void;
+  isImmersive?: boolean;
 }
 
 const formatPostViews = (views?: number) => {
@@ -95,7 +96,8 @@ export default function NexoraVideoPlayer({
   isCommentsOpen = false,
   onNotInterested,
   onViewProfile,
-  onViewSound
+  onViewSound,
+  isImmersive = false
 }: NexoraVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1054,7 +1056,7 @@ export default function NexoraVideoPlayer({
       onMouseDown={handleStartHold}
       onMouseUp={handleReleaseHold}
       onMouseLeave={handleReleaseHold}
-      className="nx-video-frame relative overflow-hidden bg-black select-none group w-full flex items-center justify-center animate-fade-in touch-pan-y"
+      className={`nx-video-frame relative overflow-hidden bg-black select-none group w-full flex items-center justify-center animate-fade-in touch-pan-y ${isImmersive ? 'nx-video-frame--immersive' : ''}`}
     >
        {/* Absolute Video Frame */}
        {finalVideoUrl ? (
@@ -1097,7 +1099,7 @@ export default function NexoraVideoPlayer({
               onStalled={() => setIsBuffering(true)}
               onAbort={() => setIsBuffering(false)}
               onEnded={handleVideoEnded}
-              className="relative z-[2] w-full h-full max-h-[85dvh] object-contain cursor-pointer"
+              className={`relative z-[2] w-full h-full max-h-[85dvh] object-contain cursor-pointer ${isImmersive ? 'nx-video-element--immersive' : ''}`}
               style={{ filter: `brightness(${brightnessLevel}%)` }}
             />
             <audio ref={sonicAudioRef} src="/sounds/nexora-sonic-logo.mp3" preload="auto" aria-hidden="true" />

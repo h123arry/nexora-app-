@@ -291,7 +291,7 @@ export default function ImmersiveVideoViewer({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.18, ease: "easeOut" }}
-        className="w-full h-full bg-black relative flex flex-col justify-center overflow-hidden"
+        className="w-full h-full min-h-0 bg-black relative flex flex-col justify-center overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onWheel={handleWheel}
@@ -326,6 +326,7 @@ export default function ImmersiveVideoViewer({
               <NexoraVideoPlayer
                 post={post}
                 videoUrl={post.videoUrl}
+                isImmersive
                 onOpenFullscreen={() => {}}
                 onSpark={handleLike}
                 isProcessing={isProcessing}
