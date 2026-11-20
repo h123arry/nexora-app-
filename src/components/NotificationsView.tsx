@@ -306,6 +306,8 @@ export default function NotificationsView({
       window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-settings', { detail: { section } })), 250);
     } else if (notif.type === 'reputation_milestone' && notif.reputationAwarded) {
       triggerConfetti();
+    } else if (notif.category === 'creator') {
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'creator' } }));
     }
   };
 
