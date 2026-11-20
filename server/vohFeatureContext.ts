@@ -188,10 +188,10 @@ export async function loadVohPublicDiscovery(db: VohFirestoreReader, viewerUid: 
     const hasActiveRestriction = (accountStatus as any).banned === true || (accountStatus as any).suspended === true;
     if (hasActiveRestriction && (!expiryDate || !Number.isFinite(expiryDate.getTime()) || expiryDate.getTime() > Date.now())) return null;
     const ownerBlocks = [
-      ...((settings as any).privacy?.blockedUserIds || []),
-      ...((settings as any).messaging?.blockedUserIds || []),
+      ...((Array.isArray((settings as any).privacy?.blockedUserIds) ? (settings as any).privacy.blockedUserIds : [])),
+      ...((Array.isArray((settings as any).messaging?.blockedUserIds) ? (settings as any).messaging.blockedUserIds : [])),
     ];
-    if (Array.isArray(ownerBlocks) && ownerBlocks.includes(viewerUid)) return null;
+    if (ownerBlocks.includes(viewerUid)) return null;
     const isPrivate = (settings as any).privacy?.isPrivate === true || (settings as any).privacy?.isPrivateAccount === true;
     if (isPrivate) {
       const follow = await db.collection('follows').doc(viewerUid + '_' + ownerId).get();
