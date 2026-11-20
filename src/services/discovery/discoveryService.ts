@@ -52,6 +52,33 @@ function normalizedTags(post: Post): string[] {
   return (post.tags || []).map(normalizeTag).filter(Boolean);
 }
 
+/**
+ * Small, bounded serendipity boost for adjacent interests. Exact interest
+ * matches remain dominant; a shared meaningful token can introduce a nearby
+ * topic without turning broad one-letter overlaps into recommendations.
+ */
+function adjacentInterestScore(tags: string[], interests: Record<string, number>): number {
+  let score = 0;
+  const interestEntries = Object.entries(interests);
+  for (const tag of tags) {
+    if (interests[tag] > 0) continue;
+    const tagTokens = new Set(tag.split(/\\s+/).filter(token => token.length >= 4));
+    if (!tagTokens.size) continue;
+    let best = 0;
+    for (const [interest, weight] of interestEntries) {
+      if (weight <= 0) continue;
+      const interestTokens = new Set(interest.split(/\\s+/).filter(token => token.length >= 4));
+      if (!interestTokens.size) continue;
+      const overlap = [...tagTokens].filter(token => interestTokens.has(token)).length;
+      const union = new Set([...tagTokens, ...interestTokens]).size;
+      const similarity = union ? overlap / union : 0;
+      if (similarity >= 0.5) best = Math.max(best, similarity * Math.min(1.5, weight) * 0.8);
+    }
+    score += best;
+  }
+  return Math.min(3.5, score);
+}
+
 function engagementScore(post: Post): number {
   return boundedEngagementScore({
     likes: post.likes,
@@ -112,6 +139,7 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
       const tags = normalizedTags(post);
       const matchedTags = tags.filter(tag => interests[tag] > 0);
       const interestScore = matchedTags.reduce((sum, tag) => sum + Math.min(3, interests[tag]), 0) * RANKING_WEIGHTS.interest;
+      const explorationScore = adjacentInterestScore(tags, interests);
       const age = ageHours(post.timestamp, now);
       const freshness = Math.max(0, 48 - age) * RANKING_WEIGHTS.recency;
       const followBoost = following.has(post.userId) ? RANKING_WEIGHTS.follow : 0;
@@ -125,13 +153,14 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
           ? freshness + followBoost + unseenBoost
           : mode === 'trending'
             ? engagementScore(post) * RANKING_WEIGHTS.popularity * freshnessMultiplier(age, 72) + Math.max(0, 48 - age) * 0.025
-            : interestScore + freshness + followBoost + unseenBoost
+            : interestScore + explorationScore + freshness + followBoost + unseenBoost
               + engagementScore(post) * RANKING_WEIGHTS.popularity * freshnessMultiplier(age, 36)
               + (post.isVerified ? RANKING_WEIGHTS.verifiedTrust : 0)
               + feedbackScore * 0.5;
       const reasons: string[] = [];
       if (followBoost) reasons.push('from an account you follow');
       if (matchedTags.length) reasons.push(`matches topics ${matchedTags.slice(0, 2).map(tag => `#${tag}`).join(' and ')}`);
+      else if (explorationScore > 0) reasons.push('explores a topic related to your interests');
       if (age < 24) reasons.push('recently published');
       if (!seen.has(post.id)) reasons.push('new to your feed');
       if (mode === 'trending') reasons.push('showing recent community activity');
