@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 
-const projectId = 'demo-nexora-rules';
+const projectId = 'demo-nexora-direct-calls-rules';
 let env;
 
 before(async () => {
@@ -37,7 +37,7 @@ describe('Direct-call Firestore access', () => {
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'directCalls', 'call_record_123456')));
     await assertSucceeds(getDoc(doc(dbFor('bob'), 'directCalls', 'call_record_123456')));
     await assertFails(getDoc(doc(dbFor('mallory'), 'directCalls', 'call_record_123456')));
-    await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'directCalls'), where('participants', 'array-contains', 'alice'))));
+    await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'directCalls'), where('callerId', '==', 'alice'), where('status', '==', 'ringing'))));
   });
 
   it('prevents clients from creating, changing or deleting call state and active-call locks', async () => {
