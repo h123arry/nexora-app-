@@ -1,8 +1,6 @@
 import { authenticatedVohFetch } from './authenticatedVohFetch';
 import { auth } from '../../lib/firebase';
 import { Post, User } from '../../types';
-import { readUserScopedJson } from '../../utils/userScopedStorage';
-import { getJoinedCirclesForUser } from '../../data/database';
 
 export interface Message {
   id: string;
@@ -95,12 +93,10 @@ export class ChatEngine {
     message: string,
     history: { sender: 'user' | 'voh'; text: string }[],
     currentUser: User,
-    visiblePosts: Post[] = []
+    visiblePosts: Post[] = [],
+    contextScope: 'feed' | 'profile' | 'none' = 'none'
   ): Promise<{ text: string }> {
     // Dynamic context integration
-    const localCircles = getJoinedCirclesForUser(currentUser.id);
-    const localNotifications = readUserScopedJson(localStorage, 'nexora_notifications', currentUser.id, []);
-
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 45_000);
     let response: Response;
@@ -114,16 +110,17 @@ export class ChatEngine {
           history: history.slice(-24).map(item => ({ sender: item.sender, text: item.text.slice(0, 4000) })),
           context: {
             // The server loads the authoritative private profile using the verified Firebase UID.
-            posts: visiblePosts.slice(0, 10).map(post => ({
+            scope: contextScope,
+            posts: contextScope === 'feed' ? visiblePosts.slice(0, 10).map(post => ({
               id: post.id,
               username: post.username,
               content: post.content,
               timestamp: post.timestamp,
               tags: Array.isArray(post.tags) ? post.tags.slice(0, 8) : [],
               likes: Number.isFinite(post.likes) ? post.likes : null,
-            })),
-            circles: localCircles.slice(0, 12),
-            notifications: localNotifications.slice(0, 5)
+            })) : [],
+            circles: [],
+            notifications: []
           }
         })
       });

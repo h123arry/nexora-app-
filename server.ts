@@ -16,6 +16,7 @@ import { shapeWorldPulseAiContext } from './server/vohPulseContext';
 import { shapeAuthenticatedVohAccountContext } from './server/vohAccountContext';
 import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, isCurrentPublicProfileMedia, buildR2OriginUploadRecords } from './server/r2Storage';
 import { runVohContextTool, VOH_CONTEXT_TOOL_DECLARATIONS } from './server/vohTools';
+import { createGeminiVohProvider, resolveVohContextScope, runVohIntelligence, VohEmptyModelResponseError, VohToolRegistry } from './server/vohIntelligenceCore';
 
 const isProduction = process.env.NEXORA_ENV === 'production' || process.env.NODE_ENV === 'production';
 // Load local environment variables only outside production. Production values
@@ -827,6 +828,11 @@ function shapeVohContext(context: any, authenticatedUid: string) {
 
 // Helper to initialize Gemini safely (lazy loading)
 function getGeminiClient(): { ai: GoogleGenAI; model: string } | null {
+  // The app selects a provider by configuration; provider SDK details stay
+  // behind the VOH model adapter. Gemini remains the configured adapter until
+  // another provider is deliberately implemented and tested.
+  const provider = (process.env.VOH_AI_PROVIDER || 'gemini').trim().toLowerCase();
+  if (provider !== 'gemini') return null;
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
     return null;
@@ -839,7 +845,7 @@ function getGeminiClient(): { ai: GoogleGenAI; model: string } | null {
       },
     },
   });
-  return { ai, model: process.env.GEMINI_MODEL || 'gemini-2.5-flash' };
+  return { ai, model: process.env.VOH_AI_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-flash' };
 }
 
 // ----------------- VOH AI API ENDPOINTS -----------------
@@ -945,17 +951,27 @@ vohRouter.post('/chat', async (req, res) => {
       sender: item?.sender === 'user' ? 'user' : 'voh',
       text: clipText(item?.text, 4000),
     })) : [];
+    const contextScope = resolveVohContextScope(req.body?.context?.scope);
     const [accountContext, personalMemoryPrompt] = await Promise.all([
-      getAuthenticatedVohAccountContext(res.locals.vohUid).catch(error => {
-        console.error('VOH account context unavailable:', error instanceof Error ? error.name : 'unknown');
-        return null;
-      }),
+      contextScope === 'profile'
+        ? getAuthenticatedVohAccountContext(res.locals.vohUid).catch(error => {
+            console.error('VOH account context unavailable:', error instanceof Error ? error.name : 'unknown');
+            return null;
+          })
+        : Promise.resolve(null),
       getVohMemoryPrompt(res.locals.vohUid).catch(error => {
         console.error('VOH personal memory unavailable:', error instanceof Error ? error.name : 'unknown');
         return 'Persistent personal memory could not be loaded for this request. Do not claim that saved memories were consulted.';
       }),
     ]);
-    const context = shapeVohContext({ ...(req.body?.context || {}), currentUser: accountContext }, res.locals.vohUid);
+    const suppliedContext = req.body?.context && typeof req.body.context === 'object' ? req.body.context : {};
+    const context = shapeVohContext({
+      ...(suppliedContext),
+      posts: contextScope === 'feed' ? suppliedContext.posts : [],
+      circles: [],
+      notifications: [],
+      currentUser: contextScope === 'profile' ? accountContext : null,
+    }, res.locals.vohUid);
 
     const clientInfo = getGeminiClient();
     
@@ -1033,40 +1049,40 @@ When answering:
       parts: [{ text: h.text }]
     }));
 
-    // Generate response
-    const toolContents: any[] = [...chatHistoryParts, { role: 'user', parts: [{ text: contextPrompt }] }];
-    const toolConfig = {
+    // The intelligence core owns orchestration. Gemini is only the current
+    // provider adapter; the core, context policy and tools do not depend on it.
+    const toolRegistry = new VohToolRegistry();
+    for (const declaration of VOH_CONTEXT_TOOL_DECLARATIONS) {
+      toolRegistry.register({
+        name: declaration.name,
+        description: declaration.description,
+        declaration,
+        access: 'read',
+        execute: (_authorizedContext, args) => runVohContextTool(declaration.name, { ...context, ..._authorizedContext }),
+      });
+    }
+    const chatContents: any[] = [...chatHistoryParts, { role: 'user', parts: [{ text: contextPrompt }] }];
+    const result = await runVohIntelligence({
+      provider: createGeminiVohProvider(ai as any),
+      model,
+      contents: chatContents,
       systemInstruction: replaceTerminology(systemInstruction),
       temperature: 0.55,
-      tools: [{ functionDeclarations: VOH_CONTEXT_TOOL_DECLARATIONS }],
-      toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
-    };
-    let response = await ai.models.generateContent({ model, contents: toolContents, config: toolConfig as any });
-    // Execute only allowlisted, read-only tools against context authorized for this request.
-    for (let toolRound = 0; toolRound < 3; toolRound += 1) {
-      const functionCalls = response.functionCalls || [];
-      if (!functionCalls.length) break;
-      const modelTurn = response.candidates?.[0]?.content;
-      if (modelTurn) toolContents.push(modelTurn);
-      const functionResponses = functionCalls.map((call: any) => ({
-        functionResponse: { name: call.name, response: { result: runVohContextTool(call.name || '', context) } },
-      }));
-      toolContents.push({ role: 'user', parts: functionResponses });
-      response = await ai.models.generateContent({ model, contents: toolContents, config: toolConfig as any });
-    }
-    const rawText = typeof response.text === 'string' ? response.text.trim() : '';
-    if (!rawText) {
-      const finishReason = response.candidates?.[0]?.finishReason;
-      console.warn('VOH AI returned no text response:', { finishReason: finishReason || 'unknown' });
+      context,
+      tools: toolRegistry,
+      maxToolRounds: 3,
+    });
+    return res.json({ text: replaceTerminology(result.text), runtime: { provider: result.provider, model: result.model } });
+
+  } catch (error: any) {
+    if (error instanceof VohEmptyModelResponseError) {
+      console.warn('VOH AI returned no usable response:', { finishReason: error.finishReason });
       return res.status(502).json({
-        error: finishReason === 'SAFETY'
+        error: error.finishReason === 'SAFETY'
           ? 'I could not answer that request. Please try asking in a different way.'
           : 'VOH AI did not return an answer. Please try again.',
       });
     }
-    return res.json({ text: replaceTerminology(rawText) });
-
-  } catch (error: any) {
     const safeMessage = error instanceof Error
       ? error.message.replace(/\b(api[_-]?key|access[_-]?token)=([^\s&]+)/gi, '$1=[redacted]').slice(0, 240)
       : 'unknown';
