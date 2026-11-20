@@ -36,11 +36,14 @@ test('only either participant can end an active call', () => {
 test('call room grants are scoped and never permit data-channel publishing', () => {
   const room = directCallRoomName('call_identifier_123');
   assert.equal(room, 'nexora_call_call_identifier_123');
-  assert.deepEqual(createDirectCallVideoGrant(room), {
-    roomJoin: true, room, canPublish: true, canPublishData: false, canSubscribe: true, canUpdateOwnMetadata: false,
+  assert.deepEqual(createDirectCallVideoGrant(room, 'voice'), {
+    roomJoin: true, room, canPublish: true, canPublishSources: ['microphone'], canPublishData: false, canSubscribe: true, canUpdateOwnMetadata: false,
+  });
+  assert.deepEqual(createDirectCallVideoGrant(room, 'video'), {
+    roomJoin: true, room, canPublish: true, canPublishSources: ['microphone', 'camera'], canPublishData: false, canSubscribe: true, canUpdateOwnMetadata: false,
   });
   assert.throws(() => directCallRoomName('bad'));
-  assert.throws(() => createDirectCallVideoGrant('nexora_other_room'));
+  assert.throws(() => createDirectCallVideoGrant('nexora_other_room', 'voice'));
 });
 
 test('call participant checks reject unrelated accounts and malformed participant lists', () => {
