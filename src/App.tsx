@@ -3353,12 +3353,12 @@ export default function App() {
                     className="p-2.5 rounded-xl bg-white/3 border border-white/5 hover:border-cyan-500/30 text-left hover:bg-cyan-950/20 transition-all group cursor-pointer"
                   >
                     <span className="block text-[10.5px] font-black text-white group-hover:text-cyan-300 font-sans">#OptimizeEarnings</span>
-                    <span className="block text-[9px] text-zinc-400 font-sans mt-0.5">Learn about reach weightings</span>
+                    <span className="block text-[9px] text-zinc-400 font-sans mt-0.5">Learn how to reach more people</span>
                   </button>
                 </div>
               </div>
 
-              {/* Core Command Input */}
+              {/* Ask VOH AI */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -3381,11 +3381,11 @@ export default function App() {
                 className="space-y-3 relative z-10"
               >
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-mono tracking-wider text-zinc-400 uppercase block">What is your request?</label>
+                  <label className="text-[9px] font-mono tracking-wider text-zinc-400 uppercase block">What would you like help with?</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="e.g. Find startup opportunities in Nigeria..."
+                      placeholder="Ask a question or share an idea..."
                       value={quickAiQuery}
                       onChange={(e) => setQuickAiQuery(e.target.value)}
                       className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-xs text-white focus:outline-none focus:border-white/10"
