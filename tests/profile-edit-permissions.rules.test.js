@@ -2,7 +2,7 @@ import { after, before, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, runTransaction, deleteField } from 'firebase/firestore';
 
 const projectId = 'demo-nexora-profile-permissions';
 let env;
@@ -65,6 +65,59 @@ describe('profile editing Firestore permissions', () => {
     assert.equal(publicSnapshot.get('creatorType'), 'Premium creator');
     assert.equal(publicSnapshot.get('socialTwitter'), 'https://x.com/alice');
     assert.equal(publicSnapshot.get('socialInstagram'), 'https://instagram.com/alice');
+  });
+
+
+  it('allows the profile editor transaction to persist avatar and cover updates to both profile documents', async () => {
+    await seed(async db => {
+      await setDoc(doc(db, 'users', 'alice'), {
+        id: 'alice', email: 'alice@example.test', username: 'alice', name: 'Alice',
+        bio: '', avatar: '', location: '', website: '', coverImage: '',
+        followers: 0, following: 0, sparks: 0
+      });
+      await setDoc(doc(db, 'publicProfiles', 'alice'), {
+        id: 'alice', username: 'alice', name: 'Alice', avatar: '', bio: '',
+        website: '', followers: 0, following: 0, sparks: 0, coverImage: ''
+      });
+    });
+
+    const db = dbFor('alice');
+    await assertSucceeds(runTransaction(db, async transaction => {
+      const privateRef = doc(db, 'users', 'alice');
+      const publicRef = doc(db, 'publicProfiles', 'alice');
+      const settingsRef = doc(db, 'users', 'alice', 'settings', 'preferences');
+      const [privateSnapshot, settingsSnapshot] = await Promise.all([
+        transaction.get(privateRef),
+        transaction.get(settingsRef)
+      ]);
+      assert.equal(privateSnapshot.exists(), true);
+      const updates = {
+        avatar: 'https://media.example.test/alice-avatar.webp',
+        coverImage: 'https://media.example.test/alice-cover.webp'
+      };
+      transaction.update(privateRef, { ...updates, updatedAt: serverTimestamp() });
+      transaction.set(publicRef, {
+        id: 'alice',
+        username: 'alice',
+        name: 'Alice',
+        avatar: updates.avatar,
+        bio: '',
+        website: '',
+        followers: 0,
+        following: 0,
+        sparks: 0,
+        coverImage: updates.coverImage,
+        location: settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone' ? '' : deleteField(),
+        interestDNA: deleteField()
+      }, { merge: true });
+    }));
+
+    const privateSnapshot = await getDoc(doc(db, 'users', 'alice'));
+    const publicSnapshot = await getDoc(doc(db, 'publicProfiles', 'alice'));
+    assert.equal(privateSnapshot.get('avatar'), 'https://media.example.test/alice-avatar.webp');
+    assert.equal(privateSnapshot.get('coverImage'), 'https://media.example.test/alice-cover.webp');
+    assert.equal(publicSnapshot.get('avatar'), 'https://media.example.test/alice-avatar.webp');
+    assert.equal(publicSnapshot.get('coverImage'), 'https://media.example.test/alice-cover.webp');
   });
 
   it('does not allow profile editing to change private account or moderation fields', async () => {
