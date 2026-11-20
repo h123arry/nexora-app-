@@ -59,6 +59,17 @@ export default function SettingsView({
   const [betaInviteError, setBetaInviteError] = useState('');
 
   useEffect(() => {
+    const handleOpenSettingsSection = (event: Event) => {
+      const section = (event as CustomEvent<{ section?: string }>).detail?.section;
+      if (section && ['account', 'privacy', 'notifications', 'appearance', 'security', 'connected', 'about', 'beta', 'origin'].includes(section)) {
+        setActiveSection(section as typeof activeSection);
+      }
+    };
+    window.addEventListener('nexora-open-settings', handleOpenSettingsSection);
+    return () => window.removeEventListener('nexora-open-settings', handleOpenSettingsSection);
+  }, []);
+
+  useEffect(() => {
     let active = true;
     setSettingsReady(false);
     SettingsService.getSettings(currentUser.id).then(settings => {
