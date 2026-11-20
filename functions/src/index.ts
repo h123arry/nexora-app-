@@ -3,6 +3,7 @@ import { setGlobalOptions } from 'firebase-functions/v2';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
 import { revokeAllSessions } from './accountSecurity.js';
+import { recordAccountSecurityNotification } from './accountSecurityNotifications.js';
 import { FieldPath, getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
 import { createPublicPostRepost } from './postReposts.js';
@@ -93,6 +94,23 @@ const adminDb = getFirestore(adminApp, firestoreDatabaseId);
 
 export const deliverNotificationPush = createNotificationPushDelivery(adminDb, adminApp);
 export const deliverFollowInboxNotification = createFollowInboxNotification(adminDb);
+
+export const recordAccountSecurityEvent = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to record this account event.');
+  try {
+    return await recordAccountSecurityNotification(
+      adminDb,
+      request.auth.uid,
+      request.data?.eventType,
+      request.data?.details,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid account security event')) throw new HttpsError('invalid-argument', message);
+    console.error('[Account security] Notification could not be recorded.', error);
+    throw new HttpsError('internal', 'This account event could not be recorded. Please retry.');
+  }
+});
 
 const syncSearch = (kind: Parameters<typeof syncUniversalSearchRecord>[1], id: string, path: string, data: Record<string, unknown> | null, parent?: Record<string, unknown>) =>
   syncUniversalSearchRecord(adminDb, kind, id, path, data, parent);
