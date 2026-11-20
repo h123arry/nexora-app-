@@ -73,11 +73,11 @@ export async function loadVohJoinedCommunities(db: VohFirestoreReader, uid: stri
   if (!uid) throw new Error('A verified account is required.');
   const memberships = await db.collectionGroup('members')
     .where('userId', '==', uid)
-    .where('status', '==', 'active')
-    .limit(12)
+    .limit(50)
     .get();
 
-  const resolved = await Promise.all(memberships.docs.map(async membership => {
+  const activeMemberships = memberships.docs.filter(membership => membership.data().status === 'active').slice(0, 12);
+  const resolved = await Promise.all(activeMemberships.map(async membership => {
     const communityRef = membership.ref?.parent?.parent;
     if (!communityRef) return null;
     const community = await communityRef.get();
