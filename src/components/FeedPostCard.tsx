@@ -582,7 +582,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           )}
         </div>
       ) : (post.image || (post.images && post.images.length > 0)) && !post.opportunityType ? (
-        <div className="mb-3 mx-4 sm:mx-6 overflow-hidden rounded-2xl border border-white/10 bg-black">
+        <div className="nx-feed-media mb-3 w-full overflow-hidden bg-black">
           <NexoraImagePlayer
             post={post}
             image={post.image}
