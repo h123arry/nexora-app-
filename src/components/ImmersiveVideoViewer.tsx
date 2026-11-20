@@ -253,7 +253,7 @@ export default function ImmersiveVideoViewer({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center overflow-hidden h-[100dvh] w-full select-none"
+      className="nx-reels-viewer fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center overflow-hidden h-[100dvh] w-full select-none"
     >
       {/* Absolute Exit / Close button in top-right */}
       <button 
