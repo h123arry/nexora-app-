@@ -2417,8 +2417,10 @@ export default function App() {
               setTheme={setTheme}
               onOpenCreatePost={() => {
                 requireAuth(() => {
+                  setIsCreateMenuOpen(false);
                   setCreationInitialMode('photo');
                   setCreationInitialTab(undefined);
+                  setCreationInitialCaption('');
                   setIsCreatePostModalOpen(true);
                 });
               }}
