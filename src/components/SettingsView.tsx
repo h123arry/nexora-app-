@@ -19,6 +19,7 @@ interface SettingsViewProps {
   theme: ThemeMood;
   setTheme: (theme: ThemeMood) => void;
   onUpdateProfile?: (updatedData: Partial<UserType>) => void;
+  onOpenProfile?: () => void;
   initialSection?: 'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta' | 'origin';
 }
 
@@ -27,6 +28,7 @@ export default function SettingsView({
   theme,
   setTheme,
   onUpdateProfile,
+  onOpenProfile,
   initialSection = 'account'
 }: SettingsViewProps) {
   const [activeSection, setActiveSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta' | 'origin'>(initialSection);
@@ -345,7 +347,7 @@ export default function SettingsView({
                   <div><p className="text-zinc-500">Profile</p><p className="mt-1 text-zinc-200">Name, photo, bio and links</p></div>
                 </div>
               </div>
-              <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('nexora-open-profile-editor'))}
+              <button type="button" onClick={() => onOpenProfile?.()}
                 className="w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500">
                 Edit profile
               </button>
