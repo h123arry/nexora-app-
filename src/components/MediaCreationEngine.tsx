@@ -1774,7 +1774,7 @@ export default function MediaCreationEngine({
                 </button>
                 <button 
                   onClick={() => { void handlePermissionContinue(); }}
-                  className="flex-1 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-bold cursor-pointer transition-all"
+                  className="flex-1 py-2 rounded-xl border border-[#554778] bg-[#211A38] hover:bg-[#2A2145] text-[#E6DDFB] text-xs font-sans font-semibold cursor-pointer transition-colors"
                 >
                   Continue
                 </button>
