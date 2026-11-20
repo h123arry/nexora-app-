@@ -1125,6 +1125,11 @@ export default function App() {
         if (profileId) handleViewProfile(profileId);
         return;
       }
+      if (data.type === 'pulse_alert' && data.targetId) {
+        navigateTo('live', null);
+        window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-live', { detail: { sessionId: data.targetId } })), 650);
+        return;
+      }
       if (data.type === 'message' || data.type === 'chat') {
         navigateTo('inbox', null);
         if (data.targetId) window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-chat', { detail: { chatId: data.targetId } })), 500);
@@ -1217,6 +1222,9 @@ export default function App() {
     window.history.replaceState({}, '', `${window.location.pathname}${remaining ? `?${remaining}` : ''}${window.location.hash}`);
     if ((pushType === 'follow' || pushType === 'profile_view') && userId) {
       window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userId } }));
+    } else if (pushType === 'pulse_alert' && targetId) {
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'live' } }));
+      window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-live', { detail: { sessionId: targetId } })), 650);
     } else if (pushType === 'message' || pushType === 'chat') {
       window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox' } }));
       if (targetId) window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-chat', { detail: { chatId: targetId } })), 500);
