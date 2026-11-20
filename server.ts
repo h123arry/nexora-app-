@@ -200,7 +200,7 @@ async function allowChatMediaPlayback(uid: string): Promise<boolean> {
     const now = Date.now();
     const cutoff = now - windowMs;
     const storedTimestamps = Array.isArray(previous?.requestTimestamps)
-      ? previous.requestTimestamps.filter((value: unknown): value is number => Number.isFinite(value) && value > cutoff)
+      ? previous.requestTimestamps.filter((value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > cutoff)
       : [];
 
     // Gracefully carry forward counters written by the previous fixed-window
