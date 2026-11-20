@@ -14,7 +14,7 @@ import { createGroupChat } from '../services/firebase/groupChatService';
 import { auth } from '../services/firebase/config';
 import CreateGroupChatModal from './CreateGroupChatModal';
 import { getTranslations } from '../utils/translations';
-import { uploadMediaFile, resolvePrivateChatAudio } from '../services/firebase/storageService';
+import { uploadPrivateChatMediaFile, resolvePrivateChatMedia } from '../services/firebase/storageService';
 import { aggregateMessageReactions, isSupportedOutgoingMediaType, serializeOutgoingMessage, toggleMessageReaction } from '../utils/messageSerialization';
 import { 
   collection, 
@@ -102,6 +102,13 @@ export default function NewInboxView({
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [attachmentProgress, setAttachmentProgress] = useState(0);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const audioInputRef = useRef<HTMLInputElement | null>(null);
   const [activeCall, setActiveCall] = useState<{ type: 'voice' | 'video'; partnerName: string; partnerAvatar: string } | null>(null);
   
   // Message context / reply / edit
@@ -357,12 +364,12 @@ export default function NewInboxView({
   };
 
   // Send message
-  const handleSendMessage = async (customContent?: string, mediaData?: { type: string; url: string; name?: string; duration?: number }) => {
+  const handleSendMessage = async (customContent?: string, mediaData?: { type: string; url: string; name?: string; duration?: number; contentType?: string; size?: number }) => {
     const contentToSend = customContent !== undefined ? customContent : newMessageText.trim();
     if (!contentToSend && !mediaData) return;
     if (!activeChatId) return;
     if (mediaData && !isSupportedOutgoingMediaType(mediaData.type)) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'You cannot send photos or videos in direct messages yet.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'This attachment type is not supported in direct messages.' }));
       return;
     }
 
@@ -382,8 +389,11 @@ export default function NewInboxView({
       status: 'sending',
       replyToQuote: replyQuoteText || undefined,
       customMediaType: mediaData?.type,
-      videoUrl: mediaData?.type === 'video' || mediaData?.type === 'image' ? mediaData.url : undefined,
-      voiceAudioUrl: mediaData?.type === 'voice' && mediaData.url ? mediaData.url : undefined,
+      mediaStoragePath: mediaData?.url || undefined,
+      mediaType: mediaData?.type === 'voice' ? 'audio' : (mediaData?.type as 'image' | 'video' | 'audio' | 'document' | undefined),
+      mediaContentType: mediaData?.contentType,
+      fileSize: typeof mediaData?.size === 'number' ? String(mediaData.size) : undefined,
+      voiceAudioUrl: undefined,
       voiceDuration: mediaData?.type === 'voice' && typeof mediaData.duration === 'number' ? `${mediaData.duration}s` : undefined,
       fileName: mediaData?.name
     };
@@ -397,7 +407,7 @@ export default function NewInboxView({
       [activeChatId]: [...(prev[activeChatId] || []), newMsg]
     }));
 
-    const previewText = mediaData ? `Sent a ${mediaData.type}` : contentToSend;
+    const previewText = mediaData ? (mediaData.type === 'voice' ? 'Voice message' : `Sent ${mediaData.type === 'image' ? 'a photo' : mediaData.type === 'video' ? 'a video' : mediaData.type === 'audio' ? 'an audio file' : 'a document'}`) : contentToSend;
     const previousChat = chats.find(chat => chat.id === activeChatId);
     const previousLastMessage = previousChat?.lastMessage || '';
     const previousLastTimestamp = previousChat?.lastTimestamp || '';
@@ -451,6 +461,34 @@ export default function NewInboxView({
         if (customContent === undefined && contentToSend) setNewMessageText(value => value || contentToSend);
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be sent. Your draft is saved. Please try again.' }));
       }
+    }
+  };
+
+  const sendAttachmentFiles = async (fileList: FileList | null, forcedType?: 'image' | 'video' | 'audio' | 'document') => {
+    if (!fileList?.length || !activeChatId) return;
+    const files = Array.from(fileList);
+    setIsUploadingAttachment(true);
+    try {
+      for (const file of files) {
+        const detectedType = forcedType || (file.type.startsWith('image/') ? 'image'
+          : file.type.startsWith('video/') ? 'video'
+          : file.type.startsWith('audio/') ? 'audio' : 'document');
+        setAttachmentProgress(0);
+        const uploaded = await uploadPrivateChatMediaFile({
+          file, userId: currentUser.id, chatId: activeChatId, fileName: file.name,
+          onProgress: setAttachmentProgress,
+        });
+        await handleSendMessage('', {
+          type: detectedType, url: uploaded.storagePath, name: file.name,
+          contentType: uploaded.contentType, size: uploaded.size,
+        });
+      }
+      window.dispatchEvent(new CustomEvent('toast', { detail: files.length > 1 ? 'Attachments sent.' : 'Attachment sent.' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Attachment could not be sent. Please retry.' }));
+    } finally {
+      setIsUploadingAttachment(false);
+      setAttachmentProgress(0);
     }
   };
 
@@ -792,7 +830,7 @@ export default function NewInboxView({
                   </div>
                   <h4 className="text-xs font-bold text-white mb-1 font-sans">Secure conversation started</h4>
                   <p className="text-[11px] text-zinc-500 max-w-xs font-sans">
-                    Send a message or voice note to begin chatting with {activeChat.partnerName}. Photos and videos are not available in direct messages yet.
+                    Send a message, photo, video, document or voice note to {activeChat.partnerName}.
                   </p>
                 </div>
               ) : (
@@ -823,7 +861,7 @@ export default function NewInboxView({
                       onToggleContextMenu={() => {}}
                       activeContextMessageId={activeContextMessageId}
                       onTogglePlayVoice={() => {}}
-                      onResolveVoiceMedia={resolvePrivateChatAudio}
+                      onResolveVoiceMedia={resolvePrivateChatMedia}
                       onLongPress={() => {}}
                       playingVoiceId={null}
                       voiceProgress={0}
@@ -860,6 +898,7 @@ export default function NewInboxView({
             {/* Chat Input Footer */}
             <div className="p-3 border-t border-white/10 bg-black/80 backdrop-blur-md relative">
               <div className="flex items-center gap-2">
+                {isUploadingAttachment && <span role="status" className="max-w-16 text-[9px] text-violet-200">{attachmentProgress}%</span>}
                 <button
                   type="button"
                   aria-label="Open attachment options"
@@ -910,7 +949,7 @@ export default function NewInboxView({
                   type="button"
                   aria-label="Send message"
                   onClick={() => handleSendMessage()}
-                  disabled={!newMessageText.trim()}
+                  disabled={!newMessageText.trim() || isUploadingAttachment}
                   className="p-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:hover:bg-violet-600 text-white rounded-xl shadow-lg transition-all flex items-center justify-center cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
@@ -1014,12 +1053,23 @@ export default function NewInboxView({
         }}
       />
 
+      <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'image'); event.currentTarget.value = ''; }} />
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'image'); event.currentTarget.value = ''; }} />
+      <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'video'); event.currentTarget.value = ''; }} />
+      <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/rtf" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'document'); event.currentTarget.value = ''; }} />
+      <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'audio'); event.currentTarget.value = ''; }} />
+
       {/* ATTACHMENT MENU */}
       <AttachmentMenu
         isOpen={showAttachmentMenu}
         onClose={() => setShowAttachmentMenu(false)}
         onSelect={(id) => {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `${id} attachments are not available yet. Real voice notes can be sent with the recorder below.` }));
+          if (id === 'camera') cameraInputRef.current?.click();
+          else if (id === 'gallery') galleryInputRef.current?.click();
+          else if (id === 'video') videoInputRef.current?.click();
+          else if (id === 'document') documentInputRef.current?.click();
+          else if (id === 'audio') audioInputRef.current?.click();
+          else window.dispatchEvent(new CustomEvent('toast', { detail: `${id} is not available in this chat yet.` }));
         }}
       />
 
@@ -1029,16 +1079,15 @@ export default function NewInboxView({
           onSendMessage={async (audioBlob, duration) => {
             try {
               if (!activeChatId) throw new Error('Open a conversation before sending a voice note.');
-              const uploaded = await uploadMediaFile({
+              const uploaded = await uploadPrivateChatMediaFile({
                 file: audioBlob,
                 userId: currentUser.id,
-                chatId: activeChatId || undefined,
+                chatId: activeChatId,
                 fileName: `voice-note-${Date.now()}.webm`,
-                metadata: { chatId: activeChatId || '' }
               });
               await handleSendMessage('', {
                 type: 'voice', url: uploaded.storagePath,
-                name: `Voice Note (${duration}s)`, duration
+                name: `Voice Note (${duration}s)`, duration, contentType: uploaded.contentType, size: uploaded.size
               });
               setShowVoiceRecorder(false);
             } catch {
