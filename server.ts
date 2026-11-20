@@ -508,6 +508,7 @@ privateChatMediaRouter.post('/chat/:chatId/upload-intent', async (req, res) => {
   let policy: ReturnType<typeof validateR2Upload>;
   try { policy = validateR2Upload(contentType, size); }
   catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : 'Unsupported attachment.' }); }
+  if (policy.kind === 'video' && size > 50 * 1024 * 1024) return res.status(413).json({ error: 'Chat videos must be 50 MiB or smaller.' });
   try {
     const chat = await serverDb.collection('chats').doc(chatId).get();
     if (!chat.exists || !Array.isArray(chat.get('participants')) || !chat.get('participants').includes(uid)) {
@@ -576,6 +577,7 @@ privateChatMediaRouter.get('/chat/:chatId/media/:uploaderId/:mediaId', async (re
       || asset.get('storagePath') !== storagePath || asset.get('status') !== 'uploaded') return res.status(404).end();
     const linkedMessage = await chatRef.collection('messages').where('mediaStoragePath', '==', storagePath).limit(1).get();
     if (linkedMessage.empty) return res.status(404).end();
+    if (!await allowChatMediaPlayback(uid)) return res.status(429).json({ error: 'Attachment download limit reached. Please try again shortly.' });
     const downloadUrl = createR2PresignedUrl(r2Config, 'GET', storagePath, 60);
     const upstream = await fetch(downloadUrl, { method: 'GET' });
     if (!upstream.ok || !upstream.body) return res.status(404).end();
@@ -584,7 +586,7 @@ privateChatMediaRouter.get('/chat/:chatId/media/:uploaderId/:mediaId', async (re
       'Content-Length': String(asset.get('size')),
       'Cache-Control': 'private, no-store, max-age=0',
       'X-Content-Type-Options': 'nosniff',
-      'Content-Disposition': 'inline',
+      'Content-Disposition': asset.get('kind') === 'document' ? 'attachment' : 'inline',
     });
     Readable.fromWeb(upstream.body as import('node:stream/web').ReadableStream).pipe(res);
   } catch (error) {
