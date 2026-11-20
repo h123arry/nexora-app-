@@ -38,7 +38,7 @@ export default function IncomingDirectCallListener({ currentUser, creators, enab
           callId: incoming.id,
           type: incoming.type,
           partnerName: caller?.name || incoming.callerName || 'NEXORA member',
-          partnerAvatar: caller?.avatar || '',
+          partnerAvatar: caller?.avatar || incoming.callerAvatar || '',
         };
       });
     }, error => console.warn('[NEXORA calls] Incoming call updates are unavailable:', error.message));
