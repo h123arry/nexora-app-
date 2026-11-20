@@ -1292,8 +1292,10 @@ export default function FeedView({
       if (!isPostFromFriend) return false;
     } else if (feedTab === 'trending') {
       // Trending: highly interactive posts and system updates
-      const engagement = (post.likes || 0) + (post.commentsCount || 0) * 3 + (post.shares || 0) * 5;
-      const isHot = engagement > 15 || post.isBroadcastPost;
+      const engagement = (post.likes || 0) + (post.commentsCount || post.comments?.length || 0) * 3 + (post.shares || 0) * 5 + (post.bookmarksCount || post.saves || 0) * 2;
+      // Do not impose an arbitrary popularity threshold: the strongest real engagement
+      // available on a young or small network should still be eligible for Trending.
+      const isHot = engagement > 0 || post.isBroadcastPost;
       if (!isHot) return false;
     }
 
