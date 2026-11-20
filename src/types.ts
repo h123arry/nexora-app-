@@ -316,7 +316,7 @@ export interface Notification {
   actionType?: 'follow_back' | 'reply' | 'join_community' | 'view_post' | 'save' | 'open_chat' | 'view_profile';
   title?: string;
   eventType?: string;
-  category?: 'account' | 'messages' | 'mentions' | 'followers' | 'communities' | 'world_pulse' | 'voh_ai' | 'comments' | 'sparks' | 'profile_views';
+  category?: 'account' | 'creator' | 'messages' | 'mentions' | 'followers' | 'communities' | 'world_pulse' | 'voh_ai' | 'comments' | 'sparks' | 'profile_views';
   actorName?: string;
   targetPostPreview?: string;
   targetPostImage?: string;
