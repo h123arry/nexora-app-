@@ -864,28 +864,34 @@ export default function ProfileView({
   ]);
 
   const handleGalleryFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Please select a valid image file.' }));
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Image file is too large (max 5MB).' }));
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        setGalleryImage(reader.result as string);
-        setAvatarSourceType('gallery_edit');
-        setAvatarZoom(1.0);
-        setAvatarRotation(0);
-      };
-      reader.onerror = () => {
-        window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Failed to read image file. Please try another.' }));
-      };
-      reader.readAsDataURL(file);
+    const input = e.currentTarget;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Please select a valid image file.' }));
+      return;
     }
+    if (file.size <= 0 || file.size > 12 * 1024 * 1024) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose an image smaller than 12 MB.' }));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string' || !reader.result.startsWith('data:image/')) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'NEXORA could not read that photo. Please try another.' }));
+        return;
+      }
+      setGalleryImage(reader.result);
+      setAvatarSourceType('gallery_edit');
+      setAvatarZoom(1.0);
+      setAvatarRotation(0);
+    };
+    reader.onerror = () => {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'NEXORA could not read that photo. Please try another.' }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const capturePhotoToGallery = () => {
@@ -911,43 +917,52 @@ export default function ProfileView({
     if (!galleryImage) return;
 
     const img = new Image();
-    img.src = galleryImage;
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const size = 300;
-      canvas.width = size;
-      canvas.height = size;
-
-      ctx.clearRect(0, 0, size, size);
-      ctx.save();
-      ctx.translate(size / 2, size / 2);
-      ctx.rotate((avatarRotation * Math.PI) / 180);
-      ctx.scale(avatarZoom, avatarZoom);
-
-      const drawSize = size;
-      const aspect = img.width / img.height;
-      let dw, dh;
-      if (aspect > 1) {
-        dw = drawSize * aspect;
-        dh = drawSize;
-      } else {
-        dw = drawSize;
-        dh = drawSize / aspect;
+      if (!img.naturalWidth || !img.naturalHeight) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'This photo could not be prepared. Please choose another.' }));
+        return;
       }
-      ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
-      ctx.restore();
 
-      const finalDataUrl = canvas.toDataURL('image/jpeg');
-      setEditAvatar(finalDataUrl);
-      setIsAvatarModalOpen(false);
-      setGalleryImage(null);
-      setAvatarZoom(1.0);
-      setAvatarRotation(0);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Profile photo cropped & saved!' }));
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Image editor is unavailable on this device.');
+
+        const size = 512;
+        canvas.width = size;
+        canvas.height = size;
+        ctx.clearRect(0, 0, size, size);
+        ctx.save();
+        ctx.translate(size / 2, size / 2);
+        ctx.rotate((avatarRotation * Math.PI) / 180);
+        ctx.scale(avatarZoom, avatarZoom);
+
+        const aspect = img.naturalWidth / img.naturalHeight;
+        const drawWidth = aspect > 1 ? size * aspect : size;
+        const drawHeight = aspect > 1 ? size : size / aspect;
+        ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+        ctx.restore();
+
+        const finalDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        if (!finalDataUrl.startsWith('data:image/jpeg;base64,')) {
+          throw new Error('NEXORA could not prepare your profile photo. Please try another image.');
+        }
+        setEditAvatar(finalDataUrl);
+        setIsAvatarModalOpen(false);
+        setGalleryImage(null);
+        setAvatarZoom(1.0);
+        setAvatarRotation(0);
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Photo ready. Select Save Changes to upload it to your profile.' }));
+      } catch (error) {
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: error instanceof Error ? error.message : 'NEXORA could not prepare your profile photo. Please try another image.'
+        }));
+      }
     };
+    img.onerror = () => {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'This photo could not be opened. Please choose another one.' }));
+    };
+    img.src = galleryImage;
   };
 
   // Dynamic status presets
