@@ -255,6 +255,13 @@ export default function ProfileView({
   onOpenVohAi
 }: ProfileViewProps) {
   const reduceMotion = useReducedMotion();
+  useEffect(() => {
+    const openEditor = () => {
+      if (isOwnProfile) setActivePanel('edit-profile');
+    };
+    window.addEventListener('nexora-open-profile-editor', openEditor);
+    return () => window.removeEventListener('nexora-open-profile-editor', openEditor);
+  }, [isOwnProfile]);
   const profileFrameAsset = getCreatorCommunityAsset(currentUser.profileFrameId);
   const profileBadgeAsset = getCreatorCommunityAsset(currentUser.profileBadgeId);
   // Navigation State
