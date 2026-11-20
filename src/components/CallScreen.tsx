@@ -124,7 +124,7 @@ export default function CallScreen({
     const publication = publications ? Array.from(publications.values()).find((item: any) => item.track) as any : null;
     if (publication?.track) publication.track.attach(localRef.current);
     return () => { if (publication?.track && localRef.current) publication.track.detach(localRef.current); };
-  }, [connected, type]);
+  }, [connected, type, cameraOn]);
 
   useEffect(() => {
     if (!connected) return;
