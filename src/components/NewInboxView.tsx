@@ -348,7 +348,7 @@ export default function NewInboxView({
 
   const handleMessageInputChange = (value: string) => {
     setNewMessageText(value);
-    if (!activeChatId) return;
+    if (!activeChatId) return false;
     const nextTypingState = value.trim() ? 'typing' : null;
     if (nextTypingState !== typingStateRef.current) {
       typingStateRef.current = nextTypingState;
@@ -366,11 +366,11 @@ export default function NewInboxView({
   // Send message
   const handleSendMessage = async (customContent?: string, mediaData?: { type: string; url: string; name?: string; duration?: number; contentType?: string; size?: number }) => {
     const contentToSend = customContent !== undefined ? customContent : newMessageText.trim();
-    if (!contentToSend && !mediaData) return;
+    if (!contentToSend && !mediaData) return false;
     if (!activeChatId) return;
     if (mediaData && !isSupportedOutgoingMediaType(mediaData.type)) {
       window.dispatchEvent(new CustomEvent('toast', { detail: 'This attachment type is not supported in direct messages.' }));
-      return;
+      return false;
     }
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
@@ -446,6 +446,7 @@ export default function NewInboxView({
         console.warn('[Inbox] Message was sent, but the chat preview could not update yet.');
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Message sent. Your chat will update in a moment.' }));
       }
+      return true;
     } catch {
       console.warn('[Inbox] Firestore send error; details redacted.');
       if (!messagePersisted) {
@@ -461,6 +462,7 @@ export default function NewInboxView({
         if (customContent === undefined && contentToSend) setNewMessageText(value => value || contentToSend);
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be sent. Your draft is saved. Please try again.' }));
       }
+      return false;
     }
   };
 
@@ -478,10 +480,11 @@ export default function NewInboxView({
           file, userId: currentUser.id, chatId: activeChatId, fileName: file.name,
           onProgress: setAttachmentProgress,
         });
-        await handleSendMessage('', {
+        const sent = await handleSendMessage('', {
           type: detectedType, url: uploaded.storagePath, name: file.name,
           contentType: uploaded.contentType, size: uploaded.size,
         });
+        if (!sent) throw new Error('The attachment uploaded, but its message was not saved. Tap Retry on the pending message.');
       }
       window.dispatchEvent(new CustomEvent('toast', { detail: files.length > 1 ? 'Attachments sent.' : 'Attachment sent.' }));
     } catch (error) {
@@ -489,6 +492,20 @@ export default function NewInboxView({
     } finally {
       setIsUploadingAttachment(false);
       setAttachmentProgress(0);
+    }
+  };
+
+  const handleRetryMessage = async (message: ExtendedMessage) => {
+    const chatId = message.chatId || activeChatId;
+    if (!chatId || !db) return;
+    setLocalMessages(previous => ({ ...previous, [chatId]: (previous[chatId] || []).map(item => item.id === message.id ? { ...item, status: 'sending', isOfflineUnsent: false } : item) }));
+    try {
+      await setDoc(doc(db, `chats/${chatId}/messages`, message.id), serializeOutgoingMessage(message));
+      setLocalMessages(previous => ({ ...previous, [chatId]: (previous[chatId] || []).map(item => item.id === message.id ? { ...item, status: 'sent', isOfflineUnsent: false } : item) }));
+      await updateDoc(doc(db, 'chats', chatId), { lastMessage: message.content, lastTimestamp: message.timestamp });
+    } catch {
+      setLocalMessages(previous => ({ ...previous, [chatId]: (previous[chatId] || []).map(item => item.id === message.id ? { ...item, status: 'failed', isOfflineUnsent: true } : item) }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message still could not be sent. Check your connection and retry.' }));
     }
   };
 
@@ -848,6 +865,7 @@ export default function NewInboxView({
                       isLastInGroup={true}
                       partnerName={activeChat.partnerName}
                       partnerAvatar={activeChat.partnerAvatar}
+                      onRetry={handleRetryMessage}
                       onReply={(m) => {
                         setReplyQuoteText(m.content);
                         setReplyMessageId(m.id);
