@@ -73,7 +73,7 @@ export class PushNotificationService {
   }
 
   private static async registerWebPush(uid: string): Promise<string | null> {
-    if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) return null;
+    if (!import.meta.env.PROD || typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) return null;
     if (Notification.permission !== 'granted') return null;
 
     const vapidKey = (import.meta as any).env?.VITE_FIREBASE_VAPID_KEY?.trim();
