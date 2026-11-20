@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Camera, Image, FileText, Music, Video, User, BarChart, Gift, Smile, MapPin, X } from 'lucide-react';
+import { Camera, Image, FileText, Music, Video, X } from 'lucide-react';
 
 interface AttachmentOption {
   id: string;
@@ -14,11 +14,6 @@ const options: AttachmentOption[] = [
   { id: 'video', label: 'Video', icon: Video },
   { id: 'document', label: 'Document', icon: FileText },
   { id: 'audio', label: 'Audio', icon: Music },
-  { id: 'contact', label: 'Contact', icon: User },
-  { id: 'poll', label: 'Poll', icon: BarChart },
-  { id: 'gif', label: 'GIF', icon: Gift },
-  { id: 'sticker', label: 'Stickers', icon: Smile },
-  { id: 'location', label: 'Location', icon: MapPin },
 ];
 
 interface AttachmentMenuProps {
