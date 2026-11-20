@@ -709,7 +709,7 @@ export default function NewInboxView({
                 if (tab.id === 'circles') setActiveChatId(null);
               }} aria-selected={inboxTab === tab.id}
                 className={`min-h-10 shrink-0 rounded-lg px-3 font-semibold transition-all ${inboxTab === tab.id ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}>
-                {tab.label}{typeof tab.count === 'number' && <span className="ml-1 opacity-75">{tab.count}</span>}
+                {tab.label}{'count' in tab && <span className="ml-1 opacity-75">{tab.count}</span>}
               </button>
             ))}
           </div>

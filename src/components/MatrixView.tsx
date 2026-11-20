@@ -16,7 +16,7 @@ interface MatrixViewProps {
   initialSubTab?: MatrixSubTab;
 }
 
-type MatrixSubTab = 'ai' | 'studio' | 'missions' | 'messages';
+type MatrixSubTab = 'ai' | 'studio' | 'circles' | 'missions' | 'messages';
 
 export default function MatrixView({
   currentUser,
@@ -26,11 +26,11 @@ export default function MatrixView({
   creators = [],
   initialSubTab
 }: MatrixViewProps) {
-  const [activeSubTab, setActiveSubTab] = useState<MatrixSubTab>(initialSubTab || 'ai');
+  const [activeSubTab, setActiveSubTab] = useState<MatrixSubTab>(initialSubTab === 'circles' ? 'messages' : initialSubTab || 'ai');
 
   useEffect(() => {
     if (initialSubTab) {
-      setActiveSubTab(initialSubTab);
+      setActiveSubTab(initialSubTab === 'circles' ? 'messages' : initialSubTab);
     }
   }, [initialSubTab]);
   const [customPostContent, setCustomPostContent] = useState('');
