@@ -3276,19 +3276,21 @@ export default function ProfileView({
                     <span>Keep it simple. You can update this anytime.</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   <label className="min-w-0 text-xs text-zinc-300">Creator type
                     <select value={editCreatorType} onChange={e => setEditCreatorType(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
                       <option value="Premium creator">Premium</option><option value="Creator">Creator</option><option value="Collaborator">Collaborator</option>
                     </select>
                   </label>
-                  <div className="flex items-end justify-end gap-3 pb-2 text-xs">
-                    <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => setEditSocialTwitter('')}
-                      className="text-zinc-400 hover:text-white">Clear X link</button>
-                    <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => setEditSocialInsta('')}
-                      className="text-zinc-400 hover:text-white">Clear Instagram</button>
-                  </div>
+                  <label className="min-w-0 text-xs text-zinc-300">X profile
+                    <input value={editSocialTwitter} onChange={e => setEditSocialTwitter(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                      className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
+                  </label>
+                  <label className="col-span-2 min-w-0 text-xs text-zinc-300">Instagram
+                    <input value={editSocialInsta} onChange={e => setEditSocialInsta(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                      className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
+                  </label>
                 </div>
               </div>
               <p className="shrink-0 pb-1 text-center text-[10px] text-zinc-500">Your changes will appear on your profile after you save.</p>
