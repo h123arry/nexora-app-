@@ -486,7 +486,7 @@ export default function NewInboxView({
         const extension = file.name.split('.').pop()?.toLowerCase() || '';
         const mimeByExtension: Record<string, string> = {
           jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif',
-          mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', ogg: 'audio/ogg', aac: 'audio/aac',
+          mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', ogg: 'audio/ogg', aac: 'audio/aac', opus: 'audio/opus', flac: 'audio/flac',
           pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
@@ -1098,7 +1098,7 @@ export default function NewInboxView({
         }}
       />
 
-      <input ref={galleryInputRef} type="file" accept="image/*" multiple className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'image'); event.currentTarget.value = ''; }} />
+      <input ref={galleryInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files); event.currentTarget.value = ''; }} />
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'image'); event.currentTarget.value = ''; }} />
       <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'video'); event.currentTarget.value = ''; }} />
       <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/rtf" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'document'); event.currentTarget.value = ''; }} />
