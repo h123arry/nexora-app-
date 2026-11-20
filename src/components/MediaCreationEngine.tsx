@@ -218,6 +218,8 @@ interface MediaCreationEngineProps {
 
 interface SelectedImage {
   url: string;
+  fileName?: string;
+  capturedAt?: number;
   rotation: number;
   zoom: number;
   cropOffset: { x: number; y: number };
@@ -852,7 +854,7 @@ export default function MediaCreationEngine({
     const files = e.target.files;
     if (!files) return;
     requestPermission('gallery', () => {
-      void Promise.all(Array.from(files).slice(0, 10).map(async (file: File) => {
+      void Promise.all(Array.from(files).filter((file: File) => file.type.startsWith('image/')).slice(0, 20).map(async (file: File) => {
         try {
           await validateMediaFile(file, 'image');
         } catch (error) {
@@ -864,7 +866,7 @@ export default function MediaCreationEngine({
           if (ev.target?.result) {
             setSelectedImages(prev => [
               ...prev,
-              { url: ev.target!.result as string, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }
+              { url: ev.target!.result as string, fileName: file.name, capturedAt: file.lastModified || Date.now(), rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }
             ]);
           }
         };
@@ -1947,7 +1949,7 @@ export default function MediaCreationEngine({
                           <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
                         )}
                         <div className="relative z-10 flex items-center justify-center gap-3 rounded-3xl border border-white/15 bg-black/45 p-3 backdrop-blur-xl">
-                          <label className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white">Gallery<input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /></label>
+                          <label className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white">Gallery<input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} /></label>
                           <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Flip</button>
                           <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="rounded-full bg-gradient-to-br from-[#A855F7] to-[#4B10F2] px-7 py-4 text-sm font-black text-white shadow-[0_0_35px_rgba(113,56,255,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">Capture</button>
                         </div>
@@ -1995,19 +1997,20 @@ export default function MediaCreationEngine({
                         <FileImage className="w-8 h-8 text-[#8E88A7] mx-auto" />
                         <p className="text-xs text-[#D1CBE3] font-bold">Add photos to your collection</p>
                         <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
-                          Add multiple images
+                          Choose photos
                           <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
                         </label>
                       </div>
 
                       {selectedImages.length > 0 && (
                         <div className="space-y-2 bg-[#120E2B]/70 p-3 rounded-xl border border-[#292244]">
-                          <span className="text-[9px] font-mono text-[#A39BBF] uppercase">Your photos ({selectedImages.length}) · Arrange them in the order you want</span>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#B9AED8]">Selected media · {selectedImages.length}/20</span><span className="text-[10px] text-[#817895]">Hold your order · move items below</span></div>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-px overflow-hidden rounded-xl border border-[#292244] bg-[#292244]">
                             {selectedImages.map((img, index) => (
-                              <div key={index} className="relative aspect-square rounded-lg border border-[#292244] overflow-hidden group">
-                                <img src={img.url} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                              <div key={index} className="group relative aspect-[4/5] overflow-hidden bg-[#090714]">
+                                <img src={img.url} alt={img.fileName || `Selected photo ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
+                                <span className="absolute left-1.5 top-1.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-bold text-white">{index + 1}</span>
+                                <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/55 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                                   {index > 0 && (
                                     <button onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index - 1]; next[index - 1] = tmp; setSelectedImages(next); }} className="p-1 bg-[#120E2B] rounded text-white">
                                       <ChevronLeft className="w-3.5 h-3.5" />
