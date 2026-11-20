@@ -1893,7 +1893,7 @@ export default function MediaCreationEngine({
 
               {currentStep === 2 && (
                 /* STEP 2: MEDIA IMPORT & RECORDING */
-                <div className="space-y-4 animate-fadeIn">
+                <div className="flex h-full min-h-0 flex-col space-y-4 animate-fadeIn">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-semibold text-[#B69BFF]">{activeMode === 'photo' ? 'Choose a photo or take one' : activeMode === 'reel' ? 'Record a video or choose one' : activeMode === 'video' ? 'Choose a video' : 'Add your content'}</span>
                     <button 
@@ -1905,7 +1905,7 @@ export default function MediaCreationEngine({
                   </div>
 
                   {activeMode === 'photo' && (
-                    <div className="relative h-full min-h-0 w-full overflow-hidden rounded-3xl bg-[#050914]">
+                    <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-3xl bg-[#050914]">
                       {/* Drag upload zone */}
                       <div className="hidden">
                         <FileImage className="w-8 h-8 text-[#8E88A7] animate-bounce" />
