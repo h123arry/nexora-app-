@@ -216,6 +216,25 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .nx-post-card:hover { border-color: rgba(85, 201, 242, 0.34); }
+
+/* For You photo posts use a flush media surface, not a rounded card inset. */
+.nx-post-card--photo-feed {
+  margin-inline: 0 !important;
+  border-inline: 0 !important;
+  border-top: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.nx-post-card--photo-feed > .nx-feed-photo-media {
+  margin-inline: 0 !important;
+  border-inline: 0 !important;
+  border-radius: 0 !important;
+  width: 100%;
+}
+.nx-post-card--photo-feed .nx-feed-photo-media img {
+  max-height: none !important;
+}
 .nx-post-card > div[class*="border-b"] { border-color: var(--nx-edge); }
 .nx-skeleton {
   background: linear-gradient(105deg, rgba(255,255,255,0.045) 20%, rgba(138,63,252,0.16) 38%, rgba(255,255,255,0.045) 56%);
@@ -225,6 +244,25 @@ button { -webkit-tap-highlight-color: transparent; }
 @keyframes nx-skeleton-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 .nx-video-frame { position: relative; min-height: min(58dvh, 560px); aspect-ratio: 9 / 16; background: #090714; }
 .nx-video-frame > video { display: block; width: 100%; height: 100%; max-height: 85dvh; object-fit: contain; }
+.nx-video-frame--immersive {
+  width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  max-height: none;
+  flex: 1 1 auto;
+  aspect-ratio: auto;
+  align-self: stretch;
+}
+.nx-video-frame--immersive > video,
+.nx-video-frame--immersive .nx-video-poster {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: none !important;
+  object-fit: cover;
+}
 .nx-video-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity 220ms ease; }
 .nx-video-action-rail { bottom: max(calc(env(safe-area-inset-bottom, 0px) + 42px), 2rem) !important; right: max(calc(env(safe-area-inset-right, 0px) + 14px), 0.75rem); }
 
@@ -316,6 +354,7 @@ button { -webkit-tap-highlight-color: transparent; }
   .nx-app-shell { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
   .nx-feed-stage { padding-bottom: 72px; }
   .nx-post-card { margin-inline: 12px; }
+  .nx-post-card--photo-feed { margin-inline: 0 !important; }
   .nx-page-shell { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 }
 
