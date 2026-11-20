@@ -698,7 +698,7 @@ export default function ExploreView({
           <div className="nx-surface rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm text-left">
             <div className="flex items-center justify-between border-b border-white/5 pb-3">
               <h3 className="text-sm font-sans font-semibold text-white flex items-center gap-2">
-                <Flame className="w-4 h-4 text-pink-500" /> Trending on Nexora
+                <Flame className="w-4 h-4 text-pink-500" /> Trending topics
               </h3>
               <button 
                 onClick={() => setShowAllPulse(!showAllPulse)} 
@@ -794,8 +794,10 @@ export default function ExploreView({
                     setActiveTab('feed');
                   }} aria-label={`Open post by @${post.username}`}
                     className="group relative aspect-[4/5] min-w-0 overflow-hidden rounded-xl bg-[#0B1424] text-left focus-visible:outline-2 focus-visible:outline-violet-300">
-                    {post.image || post.videoUrl ? (
-                      <img src={post.image || post.videoUrl} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
+                    {post.image ? (
+                      <img src={post.image} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
+                    ) : post.videoUrl ? (
+                      <video src={post.videoUrl} muted playsInline preload="metadata" className="absolute inset-0 h-full w-full object-cover" aria-hidden="true" />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#24134e] to-[#080d1a] p-3">
                         <p className="line-clamp-6 text-sm font-medium leading-relaxed text-white">{post.content}</p>
