@@ -926,7 +926,7 @@ export default function MediaCreationEngine({
       context.drawImage(video, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
       context.restore();
       const snapUrl = canvas.toDataURL('image/jpeg', 0.92);
-      setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: cameraZoom, cropOffset: { x: 0, y: 0 } }]);
+      setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
       setCurrentStep(3);
       window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Photo captured.' }));
     });
