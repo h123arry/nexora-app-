@@ -36,7 +36,6 @@ const MEDIA_POLICIES: Record<string, R2UploadPolicy> = {
   'audio/x-flac': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
   'audio/x-m4a': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
   'audio/3gpp': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
-  'audio/3gpp': { kind: 'audio', maxBytes: 50 * 1024 * 1024 },
   'application/pdf': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
   'application/msword': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
