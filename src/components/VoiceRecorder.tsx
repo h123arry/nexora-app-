@@ -108,7 +108,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
 
   const stopAndSend = () => {
     stopTimer();
-    discardRef.current = true;
+    discardRef.current = false;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
@@ -120,6 +120,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
 
   const discardRecording = () => {
     stopTimer();
+    discardRef.current = true;
     setIsTrashAnimating(true);
     if (navigator.vibrate) navigator.vibrate([30, 30]);
     
