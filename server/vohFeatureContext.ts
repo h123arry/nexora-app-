@@ -24,7 +24,7 @@ interface VohQuery {
 }
 
 interface VohDocumentReference {
-  collection(name: string): VohQuery;
+  collection(name: string): VohCollectionReference;
   get(): Promise<VohSnapshotDocument>;
 }
 
