@@ -44,6 +44,9 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
     const [postSnap, sessionSnap] = await Promise.all([tx.get(postRef), tx.get(sessionRef)]);
     if (!postSnap.exists) throw new HttpsError('not-found', 'This video is unavailable.');
     const post = postSnap.data()!;
+    if (post.isArchived === true || post.isDraft === true) {
+      throw new HttpsError('not-found', 'This video is no longer available.');
+    }
     const creatorId = typeof post.userId === 'string' ? post.userId : '';
     if (!creatorId || !(post.videoUrl || post.mediaType === 'video')) {
       throw new HttpsError('failed-precondition', 'This post is not a playable video.');
