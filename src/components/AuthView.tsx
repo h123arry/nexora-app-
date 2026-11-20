@@ -127,7 +127,9 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
 
   // Step 2 Avatar
   const [selectedAvatar, setSelectedAvatar] = useState('');
+  const [selectedCover, setSelectedCover] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
 
   // Step 3 Interests
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
@@ -495,18 +497,29 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
     }
   };
 
-  const handleCustomAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (uploadEvent) => {
-        if (uploadEvent.target?.result) {
-          const resultStr = uploadEvent.target.result as string;
-          setSelectedAvatar(resultStr);
-        }
-      };
-      reader.readAsDataURL(file);
+  const readOnboardingImage = (file: File, onReady: (dataUrl: string) => void) => {
+    if (!file.type.startsWith('image/') || file.size <= 0 || file.size > 12 * 1024 * 1024) {
+      setErrorMsg('Choose an image smaller than 12 MB.');
+      return;
     }
+    const reader = new FileReader();
+    reader.onload = event => {
+      if (typeof event.target?.result === 'string') onReady(event.target.result);
+    };
+    reader.onerror = () => setErrorMsg('NEXORA could not read that image. Please try another photo.');
+    reader.readAsDataURL(file);
+  };
+
+  const handleCustomAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) readOnboardingImage(file, setSelectedAvatar);
+  };
+
+  const handleCustomCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) readOnboardingImage(file, setSelectedCover);
   };
 
   const handleSaveAvatar = () => {
@@ -539,10 +552,11 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
       interestDNA: interestDNAObj
     };
 
+    let persistedAvatar = finalUser.avatar;
+    let persistedCover = selectedCover || finalUser.coverImage || '';
     setIsPending(true);
     setErrorMsg('');
     try {
-      let persistedAvatar = finalUser.avatar;
       if (persistedAvatar.startsWith('data:image/')) {
         const avatarBlob = await fetch(persistedAvatar).then(response => {
           if (!response.ok) throw new Error('NEXORA could not prepare your profile photo.');
@@ -555,9 +569,23 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
         });
         persistedAvatar = uploadedAvatar.downloadUrl;
       }
+      if (persistedCover.startsWith('data:image/')) {
+        const coverBlob = await fetch(persistedCover).then(response => {
+          if (!response.ok) throw new Error('NEXORA could not prepare your cover photo.');
+          return response.blob();
+        });
+        const uploadedCover = await uploadMediaFile({
+          file: coverBlob,
+          userId: finalUser.id,
+          fileName: 'profile-cover-onboarding',
+          metadata: { purpose: 'profile-cover' },
+        });
+        persistedCover = uploadedCover.downloadUrl;
+      }
       await AuthService.updateUserProfile(finalUser.id, {
         username: finalUser.username,
         avatar: persistedAvatar,
+        coverImage: persistedCover,
         interestDNA: finalUser.interestDNA
       });
     } catch (e: any) {
@@ -570,7 +598,7 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
 
     // Launch into home feed!
     setIsPending(false);
-    onLoginSuccess(finalUser);
+    onLoginSuccess({ ...finalUser, avatar: persistedAvatar, coverImage: persistedCover });
   };
 
   // Render Onboarding Screen if new user onboarding is active
@@ -702,6 +730,23 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
                   <p className="text-xs text-zinc-400 mt-1">
                     Add your own photo, or continue with the neutral NEXORA placeholder.
                   </p>
+                </div>
+
+                {/* Optional cover photo */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold text-zinc-200">Cover photo</p>
+                      <p className="text-[10px] text-zinc-500">Optional. You can add or change it later.</p>
+                    </div>
+                    <button type="button" onClick={() => coverFileInputRef.current?.click()} className="shrink-0 rounded-xl border border-violet-400/25 bg-violet-500/10 px-3 py-2 text-[10px] font-bold text-violet-200 hover:bg-violet-500/20">
+                      {selectedCover ? 'Change cover' : 'Add cover'}
+                    </button>
+                  </div>
+                  <div className="h-24 w-full overflow-hidden rounded-xl border border-white/10 bg-gradient-to-r from-[#21134b] to-[#090714]">
+                    {selectedCover ? <img src={selectedCover} alt="Cover photo preview" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-[10px] text-zinc-500">NEXORA cover preview</div>}
+                  </div>
+                  <input ref={coverFileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={handleCustomCoverUpload} className="hidden" />
                 </div>
 
                 {/* Avatar Preview */}
