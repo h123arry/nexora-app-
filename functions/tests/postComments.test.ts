@@ -12,7 +12,7 @@ before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Post comment tests require the Firestore Emulator.');
   await Promise.all([
     db.doc('publicProfiles/comment-post-owner').set({ username: 'comment-post-owner', name: 'Post Author', avatar: 'https://cdn.example.com/author.webp' }),
-    db.doc('publicProfiles/commenter').set({ username: 'comment-post-commenter', name: 'Commenter', avatar: 'https://cdn.example.com/commenter.webp' }),
+    db.doc('publicProfiles/comment-post-commenter').set({ username: 'comment-post-commenter', name: 'Commenter', avatar: 'https://cdn.example.com/commenter.webp' }),
   ]);
   await db.doc('posts/comment-post-public').set({
     id: 'comment-post-public', userId: 'comment-post-owner', audience: 'public', commentsCount: 0, comments: [],
