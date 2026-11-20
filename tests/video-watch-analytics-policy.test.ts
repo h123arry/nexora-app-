@@ -16,3 +16,12 @@ test('rejects seeks, rewinds, paused gaps and impossible progress',()=>{
   {elapsedSeconds:NaN,previousPositionSeconds:0,nextPositionSeconds:5},
  ]) assert.equal(acceptedWatchCredit(input),0);
 });
+
+test('counts only qualified public views from other accounts once per daily marker',()=>{
+ const base={viewerId:'viewer-1',creatorId:'creator-1',audience:'public',creditedSeconds:5,alreadyCounted:false};
+ assert.equal(shouldCountPublicVideoView(base),true);
+ assert.equal(shouldCountPublicVideoView({...base,viewerId:'creator-1'}),false);
+ assert.equal(shouldCountPublicVideoView({...base,audience:'followers'}),false);
+ assert.equal(shouldCountPublicVideoView({...base,creditedSeconds:0}),false);
+ assert.equal(shouldCountPublicVideoView({...base,alreadyCounted:true}),false);
+});
