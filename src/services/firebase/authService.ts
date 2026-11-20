@@ -580,6 +580,12 @@ export class AuthService {
     try {
       await reauthenticateWithCredential(currentUser, EmailAuthProvider.credential(currentUser.email, currentPassword));
       await updatePassword(currentUser, newPassword);
+      void SecurityNotificationService.notifySecurityEvent(
+        currentUser.uid,
+        currentUser.email,
+        currentUser.displayName || 'NEXORA member',
+        'PASSWORD_CHANGED'
+      ).catch(() => console.warn('Password changed successfully; its account notification could not be delivered.'));
     } catch (error) {
       throw this.publicAuthError(error);
     }
