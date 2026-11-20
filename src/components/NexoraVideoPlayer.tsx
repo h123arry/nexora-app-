@@ -684,6 +684,18 @@ export default function NexoraVideoPlayer({
   };
 
   const handleVideoEnded = () => {
+    if (currentUser?.id && hasAnalyticsObservationConsent()
+      && creditedWatchSecondsRef.current - lastWatchSignalWriteRef.current >= 1) {
+      lastWatchSignalWriteRef.current = creditedWatchSecondsRef.current;
+      const recordHeartbeat = httpsCallable(getFunctions(app), 'recordVideoWatchHeartbeat');
+      void recordHeartbeat({
+        postId: post.id,
+        sessionId: serverWatchSessionId,
+        positionSeconds: Math.floor((videoRef.current?.currentTime || 0) * 10) / 10,
+      }).catch(() => {
+        // Final watch credit is best effort and never blocks playback completion.
+      });
+    }
     setIsPlaying(false);
     setShowPostRoll(true);
     if (postRollTimeoutRef.current) clearTimeout(postRollTimeoutRef.current);
