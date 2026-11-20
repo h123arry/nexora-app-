@@ -69,8 +69,8 @@ after(async () => {
   await db.doc('verifiedIdentities/creator-two').delete().catch(() => undefined);
   await db.doc('communities/search-circle').delete().catch(() => undefined);
   await deleteApp(app);
-  await trendingDb.recursiveDelete(trendingDb.doc('posts')).catch(() => undefined);
-  await trendingDb.recursiveDelete(trendingDb.doc('users')).catch(() => undefined);
+  await trendingDb.recursiveDelete(trendingDb.collection('posts')).catch(() => undefined);
+  await trendingDb.recursiveDelete(trendingDb.collection('users')).catch(() => undefined);
   await deleteApp(trendingApp);
 });
 describe('NEXORA universal search', () => {
@@ -115,7 +115,15 @@ describe('NEXORA universal search', () => {
     assert.ok(result.results.some(hit => hit.targetId === 'public-video'));
   });
   it('calculates platform trends across distinct public creators and ignores private creators', async () => {
-    const trends = await getNexoraTrending(db);
+    await trendingDb.doc('users/public-user').set({ username:'public-user' });
+    await trendingDb.doc('users/creator-two').set({ username:'creator-two' });
+    await trendingDb.doc('users/private-user').set({ username:'private-user' });
+    await trendingDb.doc('users/private-user/settings/preferences').set({ privacy:{ isPrivateAccount:true } });
+    await trendingDb.doc('posts/trend-a').set({ id:'trend-a', userId:'public-user', audience:'public', timestamp:new Date(), tags:['trending'], likes:20 });
+    await trendingDb.doc('posts/trend-b').set({ id:'trend-b', userId:'creator-two', audience:'public', timestamp:new Date(), tags:['trending'], likes:15 });
+    await trendingDb.doc('posts/private-trend-a').set({ id:'private-trend-a', userId:'private-user', audience:'public', timestamp:new Date(), tags:['private-only'] });
+    await trendingDb.doc('posts/private-trend-b').set({ id:'private-trend-b', userId:'private-user', audience:'public', timestamp:new Date(), tags:['private-only'] });
+    const trends = await getNexoraTrending(trendingDb);
     assert.ok(trends.some(item => item.tag === 'trending' && item.postCount === 2 && item.creatorCount === 2));
     assert.ok(!trends.some(item => item.tag === 'private only'));
   });
