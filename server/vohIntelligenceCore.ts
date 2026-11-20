@@ -145,3 +145,10 @@ export function createGeminiVohProvider(client: {
     }),
   };
 }
+
+export type VohContextScope = 'feed' | 'profile' | 'none';
+
+/** Unknown or omitted scope fails closed to no account context. */
+export function resolveVohContextScope(value: unknown): VohContextScope {
+  return value === 'feed' || value === 'profile' ? value : 'none';
+}
