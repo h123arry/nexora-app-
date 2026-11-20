@@ -12,7 +12,7 @@ const apiKey = defineSecret('LIVEKIT_API_KEY');
 const apiSecret = defineSecret('LIVEKIT_API_SECRET');
 const DEFAULT_LIVEKIT_URL = 'wss://nexora-live-is43sh5r.livekit.cloud';
 const CALL_RING_SECONDS = 45;
-const TOKEN_TTL_SECONDS = 10 * 60;
+const TOKEN_TTL_SECONDS = 60 * 60;
 const ACTIVE_CALL_MAX_MS = 12 * 60 * 60 * 1000;
 
 function asText(value: unknown, max = 120): string {
