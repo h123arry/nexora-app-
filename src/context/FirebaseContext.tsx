@@ -316,6 +316,8 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const logout = async () => {
     setLoading(true);
     try {
+      const { PushNotificationService } = await import('../services/firebase/pushNotificationService');
+      await PushNotificationService.unregister();
       await AuthService.logout();
       setFirebaseUser(null);
       setUser(null);
