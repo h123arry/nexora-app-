@@ -94,7 +94,8 @@ export class ChatEngine {
     history: { sender: 'user' | 'voh'; text: string }[],
     currentUser: User,
     visiblePosts: Post[] = [],
-    contextScope: 'feed' | 'profile' | 'none' = 'none'
+    contextScope: 'feed' | 'profile' | 'none' = 'none',
+    contextScopes: Array<'feed' | 'profile' | 'world_pulse'> = []
   ): Promise<{ text: string }> {
     // Dynamic context integration
     const controller = new AbortController();
@@ -111,7 +112,8 @@ export class ChatEngine {
           context: {
             // The server loads the authoritative private profile using the verified Firebase UID.
             scope: contextScope,
-            posts: contextScope === 'feed' ? visiblePosts.slice(0, 10).map(post => ({
+            scopes: contextScopes.length ? contextScopes : (contextScope === 'feed' || contextScope === 'profile' ? [contextScope] : []),
+            posts: (contextScopes.includes('feed') || (!contextScopes.length && contextScope === 'feed')) ? visiblePosts.slice(0, 10).map(post => ({
               id: post.id,
               username: post.username,
               content: post.content,
