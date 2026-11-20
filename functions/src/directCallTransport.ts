@@ -157,6 +157,13 @@ export const respondToDirectCall = onCall({ region: 'europe-west1', maxInstances
     throw new HttpsError('invalid-argument', 'The call response is invalid.');
   }
   const ref = db.collection('directCalls').doc(callId);
+  const initialSnapshot = await ref.get();
+  if (!initialSnapshot.exists) throw new HttpsError('not-found', 'This call is no longer available.');
+  const initialCall = initialSnapshot.data() as any;
+  if (initialCall.recipientId !== uid || initialCall.status !== 'ringing') {
+    throw new HttpsError('permission-denied', 'Only the invited person can answer this call.');
+  }
+  await assertCanCall(initialCall.callerId, initialCall.recipientId, initialCall.chatId);
   const result = await db.runTransaction(async tx => {
     const snapshot = await tx.get(ref);
     if (!snapshot.exists) throw new HttpsError('not-found', 'This call is no longer available.');
