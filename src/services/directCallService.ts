@@ -48,14 +48,29 @@ export async function getDirectCallToken(callId: string) {
 }
 
 export function watchDirectCalls(uid: string, onCalls: (calls: DirectCall[]) => void, onError?: (error: Error) => void): Unsubscribe {
-  const callsQuery = query(
-    collection(db, 'directCalls'),
-    where('participants', 'array-contains', uid),
-    where('status', 'in', ['ringing', 'accepted']),
-  );
-  return onSnapshot(callsQuery, snapshot => {
-    onCalls(snapshot.docs.map(item => ({ id: item.id, ...item.data() } as DirectCall)));
+  const callsCollection = collection(db, 'directCalls');
+  const activeStatuses = ['ringing', 'accepted'];
+  let callerCalls: DirectCall[] = [];
+  let recipientCalls: DirectCall[] = [];
+  const emit = () => {
+    const merged = new Map<string, DirectCall>();
+    [...callerCalls, ...recipientCalls].forEach(call => merged.set(call.id, call));
+    onCalls([...merged.values()].sort((a, b) => b.createdAt - a.createdAt));
+  };
+  const callerQuery = query(callsCollection, where('callerId', '==', uid), where('status', 'in', activeStatuses));
+  const recipientQuery = query(callsCollection, where('recipientId', '==', uid), where('status', 'in', activeStatuses));
+  const callerUnsubscribe = onSnapshot(callerQuery, snapshot => {
+    callerCalls = snapshot.docs.map(item => ({ id: item.id, ...item.data() } as DirectCall));
+    emit();
   }, error => onError?.(error));
+  const recipientUnsubscribe = onSnapshot(recipientQuery, snapshot => {
+    recipientCalls = snapshot.docs.map(item => ({ id: item.id, ...item.data() } as DirectCall));
+    emit();
+  }, error => onError?.(error));
+  return () => {
+    callerUnsubscribe();
+    recipientUnsubscribe();
+  };
 }
 
 export function watchDirectCall(callId: string, onCall: (call: DirectCall | null) => void, onError?: (error: Error) => void): Unsubscribe {
