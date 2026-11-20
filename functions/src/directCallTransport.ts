@@ -80,7 +80,7 @@ async function sendIncomingCallPush(recipientId: string, payload: Record<string,
       tokens: tokenValues.slice(i, i + 500),
       data: payload,
       android: { priority: 'high', ttl: CALL_RING_SECONDS * 1000 },
-      webpush: { headers: { Urgency: 'high', TTL: String(CALL_RING_SECONDS) }, notification: { requireInteraction: true, tag: 'nexora-call-' + payload.callId } },
+      webpush: { headers: { Urgency: 'high', TTL: String(CALL_RING_SECONDS) } },
     });
   }
 }
