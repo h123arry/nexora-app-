@@ -11,7 +11,7 @@ test('VOH tool registry exposes only registered read tools and blocks writes', a
   assert.equal((await registry.execute('read_profile', context)).ok, true);
   assert.equal((await registry.execute('update_profile', context)).ok, false);
   assert.equal((await registry.execute('unknown_tool', context)).ok, false);
-  assert.deepEqual(registry.declarations(), [{ name: 'read_profile' }, { name: 'update_profile' }]);
+  assert.deepEqual(registry.declarations(), [{ name: 'read_profile' }]);
 });
 
 test('VOH intelligence runs provider calls and bounded read-only tool rounds', async () => {
