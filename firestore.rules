@@ -176,14 +176,14 @@ service cloud.firestore {
         'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
         'followers', 'following', 'sparks', 'hasStory',
         'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
-        'interestDNA', 'skills', 'dateOfBirth', 'statusText', 'statusEmoji', 'pinnedMusicSong',
+        'interestDNA', 'skills', 'dateOfBirth', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
         'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'dateOfBirth'
       ];
     }
     function editableProfileKeys() {
       return [
         'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
-        'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
+        'skills', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
         'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts'
       ];
     }
@@ -380,10 +380,17 @@ service cloud.firestore {
         && request.resource.data.id == userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
-          'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
+          'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong', 'lastUsernameChangeTime', 'lastDisplayNameChangeTime',
           'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'preferredLanguage',
           'savedCollections', 'updatedAt'
         ])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastDisplayNameChangeTime']) || (request.resource.data.diff(resource.data).affectedKeys().hasAny(['name']) && request.resource.data.lastDisplayNameChangeTime is string && request.resource.data.lastDisplayNameChangeTime.size() <= 40))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastUsernameChangeTime']) || (request.resource.data.diff(resource.data).affectedKeys().hasAny(['username']) && request.resource.data.lastUsernameChangeTime is string && request.resource.data.lastUsernameChangeTime.size() <= 40))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['pronouns']) || (request.resource.data.pronouns is string && request.resource.data.pronouns.size() <= 40))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileCategory']) || (request.resource.data.profileCategory is string && request.resource.data.profileCategory.size() <= 80))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['creatorType']) || (request.resource.data.creatorType is string && request.resource.data.creatorType.size() <= 80))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['socialTwitter']) || (request.resource.data.socialTwitter is string && request.resource.data.socialTwitter.size() <= 300))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['socialInstagram']) || (request.resource.data.socialInstagram is string && request.resource.data.socialInstagram.size() <= 300))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
         ;
