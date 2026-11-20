@@ -424,6 +424,7 @@ export default function MediaCreationEngine({
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
   const [isCaptureMenuOpen, setIsCaptureMenuOpen] = useState(false);
   const [cameraZoom, setCameraZoom] = useState(1);
+  const [activePhotoTool, setActivePhotoTool] = useState<'filters' | 'adjust' | 'text' | 'crop'>('filters');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [draftsList, setDraftsList] = useState<DraftItem[]>(() => readLocalDrafts(draftsKey));
   const [composerStateOwnerId, setComposerStateOwnerId] = useState(currentUser.id);
@@ -2088,7 +2089,7 @@ export default function MediaCreationEngine({
                             <p className="text-[10px] text-[#8E88A7]">The selected section is re-encoded in your browser. Audio is retained when media capture is supported.</p>
                             <button type="button" onClick={applyVideoTrim} disabled={isTrimmingVideo || videoTrimEnd <= videoTrimStart} className="w-full rounded-lg bg-violet-600/20 border border-violet-500/30 px-3 py-2 text-xs font-bold text-violet-200 disabled:opacity-50">{isTrimmingVideo ? 'Trimming video…' : 'Apply trim'}</button>
                           </div>
-                          <div className="space-y-2 border-t border-[#292244] pt-3">
+                          <div className={`${activePhotoTool === 'adjust' ? 'space-y-2' : 'hidden'} border-t border-[#292244] pt-3`}>
                             <p className="text-[10px] font-semibold text-white">Choose your cover</p>
                             <input aria-label="Cover frame time" type="range" min="0" max={Math.max(0, videoDuration - 0.1)} step="0.1" value={Math.min(videoCoverTime, Math.max(0, videoDuration - 0.1))} onChange={event => { const value = Number(event.target.value); setVideoCoverTime(value); if (trimVideoRef.current) trimVideoRef.current.currentTime = value; }} className="w-full accent-violet-500" />
                             <button type="button" onClick={captureVideoCover} className="w-full rounded-lg border border-[#44376F] px-3 py-2 text-xs font-semibold text-[#D1CBE3]">Use this frame as cover</button>
@@ -2250,9 +2251,12 @@ export default function MediaCreationEngine({
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Media render wrapper */}
-                    <div className="aspect-square rounded-2xl border border-[#292244] bg-black flex items-center justify-center relative overflow-hidden">
+                    <div className="aspect-[4/5] rounded-2xl border border-[#292244] bg-black flex items-center justify-center relative overflow-hidden">
                       {selectedImages.length > 0 ? (
                         <div className="relative w-full h-full">
+                          <div className="absolute right-2 top-2 z-20 flex flex-col gap-1.5">
+                            {([{ id: "filters", label: "Filters", icon: Sparkles }, { id: "adjust", label: "Adjust", icon: SlidersHorizontal }, { id: "text", label: "Text", icon: FileText }, { id: "crop", label: "Crop", icon: Crop }] as const).map(tool => <button key={tool.id} type="button" onClick={() => setActivePhotoTool(tool.id)} className={`flex items-center gap-1.5 rounded-full border px-2.5 py-2 text-[10px] font-semibold backdrop-blur-md transition-colors ${activePhotoTool === tool.id ? "border-[#8170B7]/70 bg-[#211A38]/95 text-white" : "border-white/15 bg-[#050914]/70 text-white/75"}`}><tool.icon className="h-3.5 w-3.5" />{tool.label}</button>)}
+                          </div>
                           <img 
                             src={selectedImages[activeEditIndex || 0]?.url} 
                             style={{ 
@@ -2291,7 +2295,7 @@ export default function MediaCreationEngine({
                       <span className="text-[10px] font-mono text-[#A39BBF] uppercase block tracking-wider pt-1">Photo adjustments</span>
                       
                       {/* Interactive CSS filters row */}
-                      {selectedImages.length > 0 && (
+                      {selectedImages.length > 0 && activePhotoTool === 'filters' && (
                         <div className="space-y-1.5">
                           <span className="text-[9px] font-mono text-[#8E88A7] block uppercase">Choose a NEXORA look · {FILTER_PRESETS.length} original styles</span>
                           <div className="flex gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
@@ -2320,7 +2324,7 @@ export default function MediaCreationEngine({
                       )}
 
                       {/* Crop/Rotate utilities */}
-                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#292244]">
+                      <div className={`${activePhotoTool === 'crop' ? 'grid' : 'hidden'} grid-cols-1 gap-2 pt-1 border-t border-[#292244]`}>
                         <button 
                           onClick={() => {
                             setSelectedImages(prev => prev.map((img, idx) => {
@@ -2334,19 +2338,10 @@ export default function MediaCreationEngine({
                         >
                           <RotateCw className="w-3.5 h-3.5" /> Rotate photo
                         </button>
-                        <button 
-                          onClick={() => {
-                            setSelectedImages(prev => prev.map((img, idx) => {
-                              if (idx === (activeEditIndex || 0)) {
-                                return { ...img, zoom: img.zoom === 1 ? 1.5 : 1 };
-                              }
-                              return img;
-                            }));
-                          }}
-                          className="py-1.5 bg-[#120E2B] hover:bg-[#19143A] text-[10px] font-mono text-[#D1CBE3] rounded-lg flex items-center justify-center gap-1"
-                        >
-                          <Crop className="w-3.5 h-3.5" /> Zoom photo
-                        </button>
+                        <div className="space-y-1.5 rounded-xl border border-[#292244] bg-[#0B0918] p-3">
+                          <div className="flex items-center justify-between text-[10px] text-[#D1CBE3]"><span>Zoom</span><span>{(selectedImages[activeEditIndex || 0]?.zoom || 1).toFixed(1)}×</span></div>
+                          <input aria-label="Photo zoom" type="range" min="1" max="3" step="0.1" value={selectedImages[activeEditIndex || 0]?.zoom || 1} onChange={event => setSelectedImages(previous => previous.map((img, idx) => idx === (activeEditIndex || 0) ? { ...img, zoom: Number(event.target.value) } : img))} className="w-full accent-[#8A78D6]" />
+                        </div>
                       </div>
 
                       {/* Adjust Sliders */}
@@ -2366,7 +2361,7 @@ export default function MediaCreationEngine({
                       </div>
 
                       {/* Stickers Overlay & Text Overlays */}
-                      <div className="space-y-2 border-t border-[#292244] pt-3 text-left">
+                      <div className={`${activePhotoTool === 'text' ? 'space-y-2' : 'hidden'} border-t border-[#292244] pt-3 text-left`}>
                         <span className="text-[9px] font-mono text-[#8E88A7] uppercase block">Stickers and text</span>
                         <div className="flex gap-2">
                           {['🔥', '⚡', '✨', '🏆', '👾', '🚀', '💯'].map((emo) => (
