@@ -62,12 +62,12 @@ function adjacentInterestScore(tags: string[], interests: Record<string, number>
   const interestEntries = Object.entries(interests);
   for (const tag of tags) {
     if (interests[tag] > 0) continue;
-    const tagTokens = new Set(tag.split(/\\s+/).filter(token => token.length >= 4));
+    const tagTokens = new Set(tag.split(/\s+/).filter(token => token.length >= 4));
     if (!tagTokens.size) continue;
     let best = 0;
     for (const [interest, weight] of interestEntries) {
       if (weight <= 0) continue;
-      const interestTokens = new Set(interest.split(/\\s+/).filter(token => token.length >= 4));
+      const interestTokens = new Set(interest.split(/\s+/).filter(token => token.length >= 4));
       if (!interestTokens.size) continue;
       const overlap = [...tagTokens].filter(token => interestTokens.has(token)).length;
       const union = new Set([...tagTokens, ...interestTokens]).size;
@@ -328,7 +328,8 @@ export function recommendCreators<T extends User>(
   const remaining = [...ranked];
   while (remaining.length && selected.length < limit) {
     let nextIndex = remaining.findIndex(item => {
-      const topic = item.sharedTopics[0] || 'general';
+      const creatorTopic = Object.keys(item.creator.interestDNA || {}).map(normalizeTag).find(Boolean);
+      const topic = item.sharedTopics[0] || creatorTopic || 'general';
       return (topicCounts.get(topic) || 0) < topicCap;
     });
     if (nextIndex < 0) nextIndex = 0;
