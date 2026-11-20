@@ -442,6 +442,12 @@ export const CommunityService = {
     return result.data as { communityId: string; joined: boolean };
   },
 
+  async transferOwnership(communityId: string, targetUid: string): Promise<void> {
+    if (!communityId || communityId.includes('/') || !targetUid || targetUid.includes('/')) throw new Error('Choose an active Circle member.');
+    const transfer = httpsCallable(functions, 'transferCommunityOwnership');
+    await transfer({ communityId, targetUid });
+  },
+
   async setMemberRole(communityId: string, targetUid: string, role: 'admin' | 'moderator' | 'member', reason: string): Promise<void> {
     if (!communityId || communityId.includes('/') || !targetUid || targetUid.includes('/')) {
       throw new Error('A valid Circle member is required.');

@@ -44,6 +44,7 @@ import VoiceRecorder from './VoiceRecorder';
 import EmojiPicker from './EmojiPicker';
 import MediaGallery from './MediaGallery';
 import CallScreen from './CallScreen';
+import CirclesView from './CirclesView';
 
 interface NewInboxViewProps {
   currentUser: User;
@@ -89,7 +90,7 @@ export default function NewInboxView({
   });
 
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
-  const [inboxTab, setInboxTab] = useState<'chats' | 'requests' | 'archived'>('chats');
+  const [inboxTab, setInboxTab] = useState<'chats' | 'groups' | 'circles' | 'requests' | 'archived'>('chats');
   const [searchQuery, setSearchQuery] = useState('');
   const [newMessageText, setNewMessageText] = useState('');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
@@ -266,8 +267,11 @@ export default function NewInboxView({
     return chats.filter(chat => {
       const isArchived = archivedChats.includes(chat.id);
       if (inboxTab === 'archived' && !isArchived) return false;
-      if (inboxTab === 'chats' && isArchived) return false;
+      if ((inboxTab === 'chats' || inboxTab === 'groups') && isArchived) return false;
+      if (inboxTab === 'chats' && chat.isGroup) return false;
+      if (inboxTab === 'groups' && !chat.isGroup) return false;
       if (inboxTab === 'requests') return messageRequests.some(r => r.id === chat.id);
+      if (inboxTab === 'circles') return false;
 
       const q = searchQuery.toLowerCase();
       return (
@@ -287,7 +291,8 @@ export default function NewInboxView({
   }, [chats, searchQuery, inboxTab, archivedChats, pinnedChats, messageRequests]);
 
   const tabCounts = useMemo(() => ({
-    chats: chats.filter(chat => !archivedChats.includes(chat.id)).length,
+    chats: chats.filter(chat => !chat.isGroup && !archivedChats.includes(chat.id)).length,
+    groups: chats.filter(chat => Boolean(chat.isGroup) && !archivedChats.includes(chat.id)).length,
     requests: messageRequests.length,
     archived: chats.filter(chat => archivedChats.includes(chat.id)).length,
   }), [chats, archivedChats, messageRequests]);
@@ -691,28 +696,22 @@ export default function NewInboxView({
 
         {/* Tabs & Search */}
         <div className="p-3 border-b border-white/5 space-y-3 bg-black/30">
-          <div className="nx-segmented flex text-xs">
-            <button
-              onClick={() => setInboxTab('chats')}
-              aria-selected={inboxTab === 'chats'}
-              className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'chats' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
-            >
-              {copy.inboxChats} <span className="ml-1 opacity-75">{tabCounts.chats}</span>
-            </button>
-            <button
-              onClick={() => setInboxTab('requests')}
-              aria-selected={inboxTab === 'requests'}
-              className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'requests' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
-            >
-              {copy.inboxRequests} <span className="ml-1 opacity-75">{tabCounts.requests}</span>
-            </button>
-            <button
-              onClick={() => setInboxTab('archived')}
-              aria-selected={inboxTab === 'archived'}
-              className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'archived' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
-            >
-              {copy.inboxArchived} <span className="ml-1 opacity-75">{tabCounts.archived}</span>
-            </button>
+          <div className="nx-segmented flex gap-1 overflow-x-auto text-xs scrollbar-none" role="tablist" aria-label="Messaging sections">
+            {([
+              { id: 'chats', label: copy.inboxChats, count: tabCounts.chats },
+              { id: 'groups', label: 'Groups', count: tabCounts.groups },
+              { id: 'circles', label: 'Circles' },
+              { id: 'requests', label: copy.inboxRequests, count: tabCounts.requests },
+              { id: 'archived', label: copy.inboxArchived, count: tabCounts.archived },
+            ] as const).map(tab => (
+              <button key={tab.id} type="button" role="tab" onClick={() => {
+                setInboxTab(tab.id);
+                if (tab.id === 'circles') setActiveChatId(null);
+              }} aria-selected={inboxTab === tab.id}
+                className={`min-h-10 shrink-0 rounded-lg px-3 font-semibold transition-all ${inboxTab === tab.id ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}>
+                {tab.label}{typeof tab.count === 'number' && <span className="ml-1 opacity-75">{tab.count}</span>}
+              </button>
+            ))}
           </div>
 
           <div className="relative">
@@ -811,8 +810,10 @@ export default function NewInboxView({
         </div>
       </div>
 
+      {inboxTab === 'circles' && <section className="min-w-0 flex-1 h-full overflow-y-auto bg-[var(--nx-canvas)] p-3 sm:p-5" aria-label="Circles"><CirclesView currentUser={currentUser} /></section>}
+
       {/* RIGHT COLUMN: Active Chat Screen */}
-      <div className={`nx-inbox-chat flex-1 flex flex-col h-full bg-[var(--nx-canvas)] ${!activeChatId ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`nx-inbox-chat flex-1 flex flex-col h-full bg-[var(--nx-canvas)] ${inboxTab === 'circles' ? 'hidden' : !activeChatId ? 'hidden md:flex' : 'flex'}`}>
         {activeChat ? (
           <>
             {/* Chat Header */}

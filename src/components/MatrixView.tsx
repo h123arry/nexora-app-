@@ -4,7 +4,6 @@ import { Sparkles, Paintbrush, Compass, Users, Target, Terminal, Mic, MicOff, Se
 import VohIcon from './VohIcon';
 import { User, Post } from '../types';
 import VohAiView from './VohAiView';
-import CirclesView from './CirclesView';
 import SocialMissionsView from './SocialMissionsView';
 import NewInboxView from './NewInboxView';
 
@@ -17,7 +16,7 @@ interface MatrixViewProps {
   initialSubTab?: MatrixSubTab;
 }
 
-type MatrixSubTab = 'ai' | 'studio' | 'circles' | 'missions' | 'messages';
+type MatrixSubTab = 'ai' | 'studio' | 'missions' | 'messages';
 
 export default function MatrixView({
   currentUser,
@@ -55,7 +54,6 @@ export default function MatrixView({
 
   const menuItems = [
     { id: 'studio' as MatrixSubTab, label: 'Post Studio', desc: 'Create community posts & stories', icon: Paintbrush, color: 'text-fuchsia-400' },
-    { id: 'circles' as MatrixSubTab, label: 'Circles', desc: 'Your audiences & close network', icon: Users, color: 'text-emerald-400' },
     { id: 'missions' as MatrixSubTab, label: 'Missions', desc: 'Goals, challenges & helpers', icon: Target, color: 'text-yellow-400' },
     { id: 'messages' as MatrixSubTab, label: 'Messages', desc: 'Your direct messages', icon: MessageSquare, color: 'text-sky-400' }
   ];
@@ -212,10 +210,6 @@ export default function MatrixView({
                   </form>
                 </div>
               </div>
-            )}
-
-            {activeSubTab === 'circles' && (
-              <CirclesView currentUser={currentUser} />
             )}
 
             {activeSubTab === 'missions' && (
