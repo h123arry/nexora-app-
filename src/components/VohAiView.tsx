@@ -1026,19 +1026,19 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                   onClick={() => handleSendPrompt(undefined, "Summarize my active feed.")}
                   className="px-2.5 py-1 text-[9.5px] font-sans border border-current/10 rounded-lg hover:border-white/10 text-current/70 hover:text-violet-400 transition-all bg-current/5"
                 >
-                  #SummarizeFeed
+                  Summarize my feed
                 </button>
                 <button
                   onClick={() => handleSendPrompt(undefined, "What is currently trending in Nigeria?")}
                   className="px-2.5 py-1 text-[9.5px] font-sans border border-current/10 rounded-lg hover:border-emerald-500/30 text-current/70 hover:text-emerald-400 transition-all bg-current/5"
                 >
-                  #NigeriaTrends
+                  What's trending in Nigeria?
                 </button>
                 <button
                   onClick={() => handleSendPrompt(undefined, "Identify job & collaboration opportunities.")}
                   className="px-2.5 py-1 text-[9.5px] font-sans border border-current/10 rounded-lg hover:border-amber-500/30 text-current/70 hover:text-amber-400 transition-all bg-current/5"
                 >
-                  #FindOpportunities
+                  Find jobs and opportunities
                 </button>
               </div>
 
@@ -1058,7 +1058,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                           none: 'feed'
                         };
                         setAttachedContextType(cycle[attachedContextType]);
-                        showToast(`Switched context to ${cycle[attachedContextType].toUpperCase()}`);
+                        showToast('Shared information updated.');
                       }}
                       className="px-2.5 py-1 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 border border-white/10 text-[10px] font-sans font-extrabold text-violet-300 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
                     >
@@ -1066,20 +1066,20 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {attachedContextType === 'profile' && <UserCheck className="w-3 h-3 text-cyan-400" />}
                       {attachedContextType === 'inbox' && <MessageSquare className="w-3 h-3 text-fuchsia-400" />}
                       {attachedContextType === 'none' && <Sparkle className="w-3 h-3 text-amber-400" />}
-                      <span>CYCLE DATA CONTEXT</span>
+                      <span>Change shared information</span>
                     </button>
 
                     <span className="text-[10px] text-current/60 font-sans hidden sm:inline">
-                      {attachedContextType === 'feed' && "📎 Shared: posts currently loaded in this browser"}
-                      {attachedContextType === 'profile' && `👤 Shared: profile fields explicitly sent with this request`}
-                      {attachedContextType === 'inbox' && "💬 Shared: inbox mode label only; message content is not attached"}
-                      {attachedContextType === 'none' && "🌐 Shared: no Nexora context"}
+                      {attachedContextType === 'feed' && "Uses posts from your feed"}
+                      {attachedContextType === 'profile' && `Uses your profile details`}
+                      {attachedContextType === 'inbox' && "Private messages are never shared"}
+                      {attachedContextType === 'none' && "No extra information shared"}
                     </span>
                     <span className="text-[10px] text-current/60 font-sans sm:hidden inline">
-                      {attachedContextType === 'feed' && "📎 Loaded Feed"}
-                      {attachedContextType === 'profile' && "👤 Shared Profile"}
-                      {attachedContextType === 'inbox' && "💬 Inbox Mode"}
-                      {attachedContextType === 'none' && "🌐 No Context"}
+                      {attachedContextType === 'feed' && "Feed information"}
+                      {attachedContextType === 'profile' && "Profile information"}
+                      {attachedContextType === 'inbox' && "Private messages stay private"}
+                      {attachedContextType === 'none' && "No extra information"}
                     </span>
                   </div>
 
@@ -1104,14 +1104,14 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                         ? 'bg-rose-600 border-rose-500 text-white animate-pulse' 
                         : 'bg-white/5 border-white/5 text-current/60 hover:text-violet-400'
                     }`}
-                    title={continuousListening ? "Continuous Listening Active" : "Enable continuous voice listening"}
+                    title={continuousListening ? "Listening" : "Use voice input"}
                   >
                     <Mic className="w-4 h-4" />
                   </button>
 
                   <input
                     type="text"
-                    placeholder={loadingAi ? "VOH AI is thinking..." : "Ask VOH AI: summarize feed, find job..."}
+                    placeholder={loadingAi ? "VOH AI is thinking..." : "Message VOH AI..."}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     disabled={loadingAi}
@@ -1171,7 +1171,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                   >
                     {isRecording ? <MicOff className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
                   </button>
-                  <span className="text-[10px] text-current/40 uppercase tracking-wider">{isRecording ? `Recording...` : 'Transmitter Standby'}</span>
+                  <span className="text-[10px] text-current/40 uppercase tracking-wider">{isRecording ? `Recording...` : 'Microphone ready'}</span>
                 </div>
 
                 <div className="border-t border-white/5 pt-3 flex gap-2">
@@ -1183,7 +1183,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       className="bg-transparent border-none text-[11px] font-bold focus:outline-none text-violet-300"
                     >
                       <option value="en-US">English (US)</option>
-                      <option value="en-NG">English (Nigerian Dialect)</option>
+                      <option value="en-NG">English (Nigeria)</option>
                       <option value="fr-FR">French</option>
                       <option value="de-DE">German</option>
                     </select>
@@ -1191,7 +1191,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                   <div className="flex-1 bg-white/5 rounded-xl p-2.5 flex items-center justify-between">
                     <div>
-                      <span className="text-[8px] text-current/40 uppercase block mb-0.5">Auto Voice Play</span>
+                      <span className="text-[8px] text-current/40 uppercase block mb-0.5">Read replies aloud</span>
                       <span className="text-[11px] font-bold text-violet-300">{voiceConfig.autoRead ? 'ON' : 'OFF'}</span>
                     </div>
                     <input 
