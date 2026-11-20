@@ -603,30 +603,7 @@ export default function NexoraVideoPlayer({
       logToWatchHistory();
       recordReelSignal(post.id, { watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
 
-      try {
-        const currentUserStr = localStorage.getItem('nexora_user');
-        const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
-        
-        // Block creator watching their own video from inflating views
-        const isCreatorWatching = currentUser && (currentUser.id === post.userId || currentUser.username === post.username);
-        
-        if (!isCreatorWatching) {
-          // Prevent rapid duplicate views within same session
-          const viewedPostsKey = `nexora_viewed_posts_${encodeURIComponent(currentUser?.id || 'guest')}`;
-          const viewedPostsJson = sessionStorage.getItem(viewedPostsKey);
-          const viewedPosts = viewedPostsJson ? JSON.parse(viewedPostsJson) : [];
-          
-          if (!viewedPosts.includes(post.id)) {
-            viewedPosts.push(post.id);
-            sessionStorage.setItem(viewedPostsKey, JSON.stringify(viewedPosts));
-            
-            // Dispatch to root posts state (Single Source of Truth)
-            window.dispatchEvent(new CustomEvent('nexora-increment-view', { detail: { postId: post.id } }));
-          }
-        }
-      } catch (e) {
-        console.error("View counting verification error:", e);
-      }
+
     }
   };
 
