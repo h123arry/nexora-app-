@@ -79,7 +79,7 @@ export async function loadVohJoinedCommunities(db: VohFirestoreReader, uid: stri
     .limit(50)
     .get();
 
-  const activeMemberships = memberships.docs.filter(membership => membership.data().status === 'active').slice(0, 12);
+  const activeMemberships = memberships.docs.filter(membership => (membership.data() || {}).status === 'active').slice(0, 12);
   const resolved = await Promise.all(activeMemberships.map(async membership => {
     const communityRef = membership.ref?.parent?.parent;
     if (!communityRef || !communityRef.path || !/^communities\/[^/]+$/.test(communityRef.path)) return null;
