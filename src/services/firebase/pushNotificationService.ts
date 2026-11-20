@@ -203,7 +203,7 @@ export class PushNotificationService {
     const tokenId = await this.tokenDocumentId(token);
     await deleteDoc(doc(db, 'users', uid, 'pushTokens', tokenId));
     if (isNativeRuntime()) {
-      await FirebaseMessaging.unregister().catch(() => undefined);
+      await FirebaseMessaging.deleteToken().catch(() => undefined);
       await FirebaseMessaging.removeAllListeners();
     }
     if (this.messaging) await deleteToken(this.messaging);
