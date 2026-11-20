@@ -422,6 +422,8 @@ export default function MediaCreationEngine({
   const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const pendingPermissionActionRef = useRef<(() => void) | null>(null);
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
+  const [isCaptureMenuOpen, setIsCaptureMenuOpen] = useState(false);
+  const [cameraZoom, setCameraZoom] = useState(1);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [draftsList, setDraftsList] = useState<DraftItem[]>(() => readLocalDrafts(draftsKey));
   const [composerStateOwnerId, setComposerStateOwnerId] = useState(currentUser.id);
@@ -874,6 +876,34 @@ export default function MediaCreationEngine({
     e.target.value = '';
   };
 
+  const handleCameraZoomChange = (value: number) => {
+    const nextZoom = Math.max(1, Math.min(3, value));
+    setCameraZoom(nextZoom);
+    const stream = photoStreamRef.current || videoStreamRef.current;
+    const track = stream?.getVideoTracks()[0];
+    if (!track) return;
+    const capabilities = track.getCapabilities() as MediaTrackCapabilities & { zoom?: { min: number; max: number; step?: number } };
+    if (capabilities.zoom) {
+      const hardwareZoom = Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.max, nextZoom));
+      void track.applyConstraints({ advanced: [{ zoom: hardwareZoom } as MediaTrackConstraintSet] }).catch(() => undefined);
+    }
+  };
+
+  const openSelectedImagesInStudio = async () => {
+    if (!onOpenStudio || selectedImages.length === 0) return;
+    try {
+      const files = await Promise.all(selectedImages.map(async (image, index) => {
+        const response = await fetch(image.url);
+        if (!response.ok) throw new Error('A selected photo could not be opened.');
+        const blob = await response.blob();
+        return new File([blob], `nexora-photo-${index + 1}.jpg`, { type: blob.type || 'image/jpeg' });
+      }));
+      onOpenStudio(files);
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Could not open these photos in NEXORA Studio.' }));
+    }
+  };
+
   const openVideoInStudio = () => {
     if (!videoRawBlob || !onOpenStudio) return;
     const type = videoRawBlob.type || 'video/webm';
@@ -896,7 +926,11 @@ export default function MediaCreationEngine({
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not capture the frame. Please try again.' }));
         return;
       }
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      context.save();
+      context.translate(canvas.width / 2, canvas.height / 2);
+      context.scale(cameraZoom, cameraZoom);
+      context.drawImage(video, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+      context.restore();
       const snapUrl = canvas.toDataURL('image/jpeg', 0.92);
       setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
       window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Photo captured.' }));
@@ -1596,6 +1630,9 @@ export default function MediaCreationEngine({
     }
   };
 
+  // Camera-first Create uses the full viewport; the familiar composer chrome returns for editing and publishing.
+  const immersiveCameraMode = activeTab !== 'drafts' && currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel') && !isLensStudioOpen;
+
   // Dynamic Styles
   const getModalBg = () => 'bg-[#090714]/98 border-[#44376F]/70 text-white';
 
@@ -1753,11 +1790,11 @@ export default function MediaCreationEngine({
         initial={{ scale: 0.98, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.98, opacity: 0, y: 10 }}
-        className={`relative h-[100dvh] w-full max-w-none rounded-none p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] border-0 shadow-none flex flex-col min-h-0 overflow-hidden ${getModalBg()}`}
+        className={`relative h-[100dvh] w-full max-w-none rounded-none ${immersiveCameraMode ? 'p-0' : 'p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]'} border-0 shadow-none flex flex-col min-h-0 overflow-hidden ${getModalBg()}`}
         id="creation-studio-frame"
       >
         {/* Header toolbar */}
-        <div className="flex justify-between items-start border-b border-white/10 pb-3 mb-4 shrink-0">
+        <div className={`${immersiveCameraMode ? 'hidden' : 'flex'} justify-between items-start border-b border-white/10 pb-3 mb-4 shrink-0`}>
           <div>
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-violet-600/10 border border-white/10 rounded-lg text-violet-400">
@@ -1783,7 +1820,7 @@ export default function MediaCreationEngine({
         </div>
 
         {/* Global Tab Navigation */}
-        <div className="flex gap-1.5 p-1 bg-[#070511]/80 border border-[#292244] rounded-xl mb-4 shrink-0">
+        <div className={`${immersiveCameraMode ? 'hidden' : 'flex'} gap-1.5 p-1 bg-[#070511]/80 border border-[#292244] rounded-xl mb-4 shrink-0`}>
           <button 
             onClick={() => { setActiveTab('feed'); setCurrentStep(1); }}
             className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'feed' ? 'bg-[#19143A] text-white' : 'text-[#8E88A7] hover:text-[#D1CBE3]'}`}
@@ -1805,7 +1842,7 @@ export default function MediaCreationEngine({
         </div>
 
         {/* A quiet progress line keeps the focus on creating, not on navigating a dashboard. */}
-        {activeTab !== 'drafts' && (
+        {activeTab !== 'drafts' && !immersiveCameraMode && (
           <div className="mb-4 shrink-0 px-1" aria-label={`Creation step ${currentStep} of 6`}>
             <div className="h-1 overflow-hidden rounded-full bg-[#292244]">
               <div className="h-full rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] transition-all duration-300" style={{ width: `${(currentStep / 6) * 100}%` }} />
@@ -1814,7 +1851,7 @@ export default function MediaCreationEngine({
         )}
 
         {/* Dynamic Core Body */}
-        <div className={`flex-1 min-h-0 pr-1 space-y-4 text-left font-sans ${currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel') ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
+        <div className={`${immersiveCameraMode ? 'absolute inset-0 z-10' : 'flex-1 min-h-0 pr-1 space-y-4'} text-left font-sans ${currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel') ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
           
           {activeTab === 'drafts' ? (
             /* Draft Organizer Screen */
@@ -1854,7 +1891,7 @@ export default function MediaCreationEngine({
             </div>
           ) : (
             /* WIZARD SCREENS */
-            <div className="space-y-4">
+            <div className={immersiveCameraMode ? 'h-full w-full' : 'space-y-4'}>
               
               {currentStep === 1 && (
                 /* STEP 1: CHOOSE CONTENT TYPE */
@@ -1893,8 +1930,8 @@ export default function MediaCreationEngine({
 
               {currentStep === 2 && (
                 /* STEP 2: MEDIA IMPORT & RECORDING */
-                <div className="flex h-full min-h-0 flex-col space-y-4 animate-fadeIn">
-                  <div className="flex justify-between items-center">
+                <div className={`flex h-full min-h-0 flex-col ${immersiveCameraMode ? 'space-y-0' : 'space-y-4'} animate-fadeIn`}>
+                  <div className={`${immersiveCameraMode ? 'hidden' : 'flex'} justify-between items-center`}>
                     <span className="text-xs font-semibold text-[#B69BFF]">{activeMode === 'photo' ? 'Choose a photo or take one' : activeMode === 'reel' ? 'Record a video or choose one' : activeMode === 'video' ? 'Choose a video' : 'Add your content'}</span>
                     <button 
                       onClick={() => setCurrentStep(1)} 
@@ -1905,7 +1942,7 @@ export default function MediaCreationEngine({
                   </div>
 
                   {activeMode === 'photo' && (
-                    <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-3xl bg-[#050914]">
+                    <div className={`relative flex-1 min-h-0 w-full overflow-hidden ${immersiveCameraMode ? 'fixed inset-0 z-20 h-[100dvh] w-full rounded-none bg-[#050914]' : 'rounded-3xl bg-[#050914]'}`}>
                       {/* Drag upload zone */}
                       <div className="hidden">
                         <FileImage className="w-8 h-8 text-[#8E88A7] animate-bounce" />
@@ -1920,22 +1957,45 @@ export default function MediaCreationEngine({
                       </div>
 
                       {/* Snap device simulation */}
-                      <div className="absolute inset-0 flex flex-col justify-between p-4 text-center">
-                        <div className="relative z-10 self-start rounded-2xl border border-white/15 bg-black/45 px-4 py-2 text-left backdrop-blur-xl">
-                          <span className="text-sm font-semibold text-white block">NEXORA Camera</span>
-                          <p className="text-[10px] text-white/70">Your moment, your space.</p>
-                        </div>
-                        <video ref={photoPreviewRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full rounded-3xl object-cover bg-[#050914]" aria-label="Live camera preview" />
-                        {permissionState !== 'granted' && (
-                          <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
-                        )}
-                        <div className="relative z-10 flex items-center justify-center gap-3 rounded-3xl border border-white/15 bg-black/45 p-3 backdrop-blur-xl">
-                          <label className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white">Gallery<input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /></label>
-                          <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Flip</button>
-                          <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="rounded-full bg-gradient-to-br from-[#A855F7] to-[#4B10F2] px-7 py-4 text-sm font-black text-white shadow-[0_0_35px_rgba(113,56,255,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">Capture</button>
-                        </div>
-                        <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="relative z-10 self-center rounded-full border border-violet-300/40 bg-violet-600/80 px-5 py-2.5 text-xs font-bold text-white shadow-lg backdrop-blur-xl transition-all hover:brightness-110"><Sparkles className="mr-1 inline h-3.5 w-3.5" /> Open Filters & Lenses</button>
-                        <div className="flex flex-wrap gap-1.5 justify-center mt-2">
+                      <div className="absolute inset-0 flex flex-col justify-between px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] text-center">
+                         <div className="relative z-10 flex items-start justify-between gap-3 text-left">
+                           <div className="rounded-2xl border border-white/10 bg-[#050914]/55 px-3 py-2 backdrop-blur-xl">
+                             <span className="block text-sm font-semibold tracking-tight text-white">NEXORA</span>
+                             <p className="text-[10px] text-white/65">Create</p>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <button type="button" onClick={() => setIsCaptureMenuOpen(value => !value)} aria-expanded={isCaptureMenuOpen} className="rounded-full border border-white/15 bg-[#050914]/60 px-3 py-2 text-xs font-semibold text-white backdrop-blur-xl">More</button>
+                             <button type="button" onClick={handleExitClick} aria-label="Close camera" className="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-[#050914]/60 text-white backdrop-blur-xl"><X className="h-4 w-4" /></button>
+                           </div>
+                         </div>
+                         {isCaptureMenuOpen && (
+                           <div className="absolute right-4 top-[max(4.75rem,calc(env(safe-area-inset-top)+3.5rem))] z-30 w-56 overflow-hidden rounded-2xl border border-[#44376F]/80 bg-[#090714]/95 p-1.5 text-left shadow-xl backdrop-blur-xl">
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveMode('reel'); setCurrentStep(2); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Record a video</button>
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveMode('video'); setCurrentStep(2); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Choose a video</button>
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setCurrentStep(3); }} disabled={selectedImages.length === 0} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15 disabled:opacity-40">Edit photo</button>
+                             {onOpenStudio && <button type="button" onClick={() => { setIsCaptureMenuOpen(false); void openSelectedImagesInStudio(); }} disabled={selectedImages.length === 0} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15 disabled:opacity-40">Open in NEXORA Studio</button>}
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Filters & lenses</button>
+                           </div>
+                         )}
+                         <video ref={photoPreviewRef} autoPlay muted playsInline style={{ transform: `scale(${cameraZoom})` }} className="absolute inset-0 h-full w-full object-cover bg-[#050914]" aria-label="Live camera preview" />
+                         {permissionState !== 'granted' && (
+                           <button type="button" onClick={() => setPermissionTarget('camera')} className="relative z-10 mx-auto rounded-xl border border-[#44376F] bg-[#120E2B] px-5 py-3 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
+                         )}
+                         <div className="relative z-10 w-full space-y-3">
+                           <div className="mx-auto flex w-full max-w-xs items-center gap-3 rounded-full border border-white/10 bg-[#050914]/55 px-4 py-2 backdrop-blur-xl">
+                             <span className="text-[10px] font-medium text-white/75">Zoom</span>
+                             <input aria-label="Camera zoom" type="range" min="1" max="3" step="0.1" value={cameraZoom} onChange={event => handleCameraZoomChange(Number(event.target.value))} className="min-w-0 flex-1 accent-[#8A78D6]" />
+                             <span className="w-8 text-right text-[10px] tabular-nums text-white/75">{cameraZoom.toFixed(1)}×</span>
+                           </div>
+                           <div className="flex items-center justify-between gap-3">
+                             <label className="grid h-12 min-w-12 place-items-center rounded-full border border-white/15 bg-[#050914]/60 px-4 text-xs font-semibold text-white backdrop-blur-xl">Gallery<input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /></label>
+                             <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="grid h-[76px] w-[76px] shrink-0 place-items-center rounded-full border-[5px] border-white/90 bg-[#8B79D4] text-xs font-bold text-white shadow-[0_0_0_5px_rgba(5,9,20,.45)] transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">Capture</button>
+                             <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} aria-label="Flip camera" className="grid h-12 min-w-12 place-items-center rounded-full border border-white/15 bg-[#050914]/60 px-4 text-xs font-semibold text-white backdrop-blur-xl disabled:opacity-40"><RefreshCw className="h-4 w-4" /></button>
+                           </div>
+                           <div className="flex items-center justify-center gap-2 text-[10px] text-white/60"><Sparkles className="h-3 w-3" /> NEXORA camera</div>
+                         </div>
+                       </div>
+                       <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                           {selectedImages.map((img, i) => (
                             <div key={i} className="relative w-12 h-12 rounded-lg border border-[#44376F] overflow-hidden shrink-0">
                               <img src={img.url} className="w-full h-full object-cover" />
@@ -2684,7 +2744,7 @@ export default function MediaCreationEngine({
         </div>
 
         {/* Publishing controls */}
-        {activeTab !== 'drafts' && postingStatus === 'idle' && (
+        {activeTab !== 'drafts' && postingStatus === 'idle' && !immersiveCameraMode && (
           <div className="border-t border-[#292244]/60 pt-4 flex justify-between items-center shrink-0">
             <div>
               <button 
