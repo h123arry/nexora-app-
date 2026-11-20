@@ -115,7 +115,7 @@ export class SecurityNotificationService {
         });
 
         // Store as in-app notification
-        const notificationRef = await addDoc(collection(db, 'users', userId, 'notifications'), {
+        await addDoc(collection(db, 'users', userId, 'notifications'), {
           type: 'security',
           userId: 'system',
           username: 'NEXORA',
