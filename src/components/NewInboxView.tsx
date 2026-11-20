@@ -536,15 +536,52 @@ export default function NewInboxView({
     }
   };
 
-  const handleStartChatWithUser = (user: User) => {
-    let existingChat = chats.find(c => c.partnerId === user.id);
+  const handleStartChatWithUser = async (user: User) => {
+    const existingChat = chats.find(chat => chat.partnerId === user.id);
     if (existingChat) {
       setActiveChatId(existingChat.id);
       setShowNewMessageModal(false);
       return;
     }
+    if (!db) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Messaging is temporarily unavailable. Please retry.' }));
+      return;
+    }
 
-    const newChatId = `chat-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    // A stable direct-chat ID prevents both participants from creating separate
+    // conversations when they start a chat at nearly the same time.
+    const participants = [currentUser.id, user.id].sort();
+    const newChatId = `dm-${participants.join('-')}`;
+    const nowIso = new Date().toISOString();
+    const chatRef = doc(db, 'chats', newChatId);
+    try {
+      await setDoc(chatRef, {
+        id: newChatId,
+        participants,
+        partnerId: user.id,
+        partnerName: user.name,
+        partnerAvatar: user.avatar,
+        lastMessage: '',
+        lastTimestamp: nowIso,
+        unreadCount: 0,
+        isGroup: false,
+      });
+    } catch {
+      // Another participant may have created the deterministic chat first.
+      // Open it only if the server confirms both expected members are present.
+      try {
+        const existing = await getDoc(chatRef);
+        const members = existing.data()?.participants;
+        if (!existing.exists() || !Array.isArray(members)
+          || !members.includes(currentUser.id) || !members.includes(user.id)) {
+          throw new Error('Conversation could not be created.');
+        }
+      } catch {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not start this conversation. Check your connection or the recipient’s message privacy settings.' }));
+        return;
+      }
+    }
+
     const newChat: Chat = {
       id: newChatId,
       partnerId: user.id,
@@ -554,27 +591,15 @@ export default function NewInboxView({
       isPartnerOnline: false,
       unreadCount: 0,
       lastMessage: '',
-      lastTimestamp: new Date().toISOString(),
+      lastTimestamp: nowIso,
       username: user.username,
       isGroup: false,
     };
-
-    setChats(prev => [newChat, ...prev]);
+    setChats(previous => previous.some(chat => chat.id === newChatId) ? previous : [newChat, ...previous]);
+    // Start the message listener only after the participant-bound chat document
+    // exists; otherwise Firestore can terminate the initial listener with permission denied.
     setActiveChatId(newChatId);
     setShowNewMessageModal(false);
-
-    if (db) {
-      setDoc(doc(db, 'chats', newChatId), {
-        id: newChatId,
-        participants: [currentUser.id, user.id],
-        partnerId: user.id,
-        partnerName: user.name,
-        partnerAvatar: user.avatar,
-        lastMessage: 'Started secure conversation',
-        lastTimestamp: new Date().toISOString(),
-        unreadCount: 0
-      }).catch(() => console.warn('[Inbox] Firestore create chat error; details redacted.'));
-    }
   };
 
   const handleReactMessage = async (msgId: string, emoji: string) => {
