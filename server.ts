@@ -16,7 +16,7 @@ import { shapeWorldPulseAiContext } from './server/vohPulseContext';
 import { shapeAuthenticatedVohAccountContext } from './server/vohAccountContext';
 import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, isCurrentPublicProfileMedia, buildR2OriginUploadRecords } from './server/r2Storage';
 import { runVohContextTool, VOH_CONTEXT_TOOL_DECLARATIONS } from './server/vohTools';
-import { createGeminiVohProvider, runVohIntelligence, VohEmptyModelResponseError, VohToolRegistry } from './server/vohIntelligenceCore';
+import { createGeminiVohProvider, resolveVohContextScope, runVohIntelligence, VohEmptyModelResponseError, VohToolRegistry } from './server/vohIntelligenceCore';
 
 const isProduction = process.env.NEXORA_ENV === 'production' || process.env.NODE_ENV === 'production';
 // Load local environment variables only outside production. Production values
@@ -946,8 +946,7 @@ vohRouter.post('/chat', async (req, res) => {
       sender: item?.sender === 'user' ? 'user' : 'voh',
       text: clipText(item?.text, 4000),
     })) : [];
-    const requestedScope = req.body?.context?.scope;
-    const contextScope: 'feed' | 'profile' | 'none' = requestedScope === 'feed' || requestedScope === 'profile' ? requestedScope : 'none';
+    const contextScope = resolveVohContextScope(req.body?.context?.scope);
     const [accountContext, personalMemoryPrompt] = await Promise.all([
       contextScope === 'profile'
         ? getAuthenticatedVohAccountContext(res.locals.vohUid).catch(error => {
