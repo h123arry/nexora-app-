@@ -103,6 +103,8 @@ export class PushNotificationService {
           }).catch(error => console.warn('[NEXORA push] Device token could not be saved:', error));
         });
         await PushNotifications.addListener('registrationError', error => {
+          this.isInitialized = false;
+          this.tokenOwnerUid = null;
           console.warn('[NEXORA push] Native device registration failed:', error);
         });
         await PushNotifications.addListener('pushNotificationActionPerformed', action => {
