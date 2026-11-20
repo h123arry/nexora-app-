@@ -18,11 +18,11 @@ describe('VOH feature-scoped tool access', () => {
   it('exposes only tools backed by an explicitly selected feature', () => {
     const feed = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['feed']));
     assert.deepEqual(feed.map(tool => tool.name), ['get_visible_feed']);
-    const combined = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['profile', 'world_pulse']));
-    assert.deepEqual(combined.map(tool => tool.name), ['get_my_profile_summary', 'get_world_pulse_snapshot']);
+    const combined = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['profile', 'world_pulse', 'circles']));
+    assert.deepEqual(combined.map(tool => tool.name), ['get_my_profile_summary', 'get_my_communities', 'get_world_pulse_snapshot']);
   });
   it('never exposes community, notification, inbox or write tools without an explicit integration', () => {
-    const names = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['feed', 'profile', 'world_pulse'])).map(tool => tool.name);
+    const names = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['feed', 'profile', 'world_pulse', 'circles'])).map(tool => tool.name);
     assert.equal(names.some(name => /inbox|message|send|publish|delete|community|notification/i.test(name)), false);
   });
 });
