@@ -1,8 +1,6 @@
 import { authenticatedVohFetch } from './authenticatedVohFetch';
 import { auth } from '../../lib/firebase';
 import { Post, User } from '../../types';
-import { readUserScopedJson } from '../../utils/userScopedStorage';
-import { getJoinedCirclesForUser } from '../../data/database';
 
 export interface Message {
   id: string;
@@ -99,9 +97,6 @@ export class ChatEngine {
     contextScope: 'feed' | 'profile' | 'none' = 'none'
   ): Promise<{ text: string }> {
     // Dynamic context integration
-    const localCircles = getJoinedCirclesForUser(currentUser.id);
-    const localNotifications = readUserScopedJson(localStorage, 'nexora_notifications', currentUser.id, []);
-
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 45_000);
     let response: Response;
