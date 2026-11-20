@@ -31,7 +31,7 @@ test('verification is issued as a creator milestone only when verified', () => {
     publishedPosts: 0,
     isVerified: true,
   });
-  assert.deepEqual(milestones.map(item => item.id), ['creator_verified']);
+  assert.deepEqual(milestones.map(item => item.id), ['account_verified']);
 });
 
 test('milestone thresholds are stable and do not produce duplicate identifiers', () => {
