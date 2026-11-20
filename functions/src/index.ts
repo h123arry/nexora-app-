@@ -127,7 +127,9 @@ export const indexPublicProfileForSearch = onDocumentWritten('users/{userId}', a
 });
  
 export const notifyCreatorMilestonesFromPost = onDocumentWritten('posts/{postId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const post = event.data?.after.exists ? event.data.after.data() : null;
+  if (before && post && !searchFieldsChanged(before, post as Record<string, unknown>, ['likes', 'views', 'viewCount', 'isArchived', 'isDraft', 'audience', 'userId'])) return;
   if (!post || post.isArchived === true || post.isDraft === true) return;
   const creatorId = typeof post.userId === 'string' ? post.userId : typeof post.authorId === 'string' ? post.authorId : '';
   if (!creatorId) return;
@@ -137,12 +139,18 @@ export const notifyCreatorMilestonesFromPost = onDocumentWritten('posts/{postId}
 
 export const notifyCreatorMilestonesFromAccount = onDocumentWritten('users/{userId}', async event => {
   if (!event.data?.after.exists) return;
+  const before = event.data.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const after = event.data.after.data() as Record<string, unknown>;
+  if (before && !searchFieldsChanged(before, after, ['followers', 'isVerified'])) return;
   try { await issueCreatorMilestones(adminDb, event.params.userId); }
   catch (error) { console.error('[Creator milestones] Account milestone evaluation failed.', error); }
 });
 
 export const notifyCreatorMilestonesFromPublicProfile = onDocumentWritten('publicProfiles/{userId}', async event => {
   if (!event.data?.after.exists) return;
+  const before = event.data.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const after = event.data.after.data() as Record<string, unknown>;
+  if (before && !searchFieldsChanged(before, after, ['followers', 'isVerified'])) return;
   try { await issueCreatorMilestones(adminDb, event.params.userId); }
   catch (error) { console.error('[Creator milestones] Public profile milestone evaluation failed.', error); }
 });
