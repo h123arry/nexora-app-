@@ -45,12 +45,13 @@ export function directCallRoomName(callId: string): string {
   return 'nexora_call_' + callId;
 }
 
-export function createDirectCallVideoGrant(roomName: string) {
+export function createDirectCallVideoGrant(roomName: string, callType: 'voice' | 'video') {
   if (!/^nexora_call_[A-Za-z0-9_-]{12,128}$/.test(roomName)) throw new Error('A valid direct-call room is required.');
   return {
     roomJoin: true,
     room: roomName,
     canPublish: true,
+    canPublishSources: callType === 'voice' ? ['microphone'] : ['microphone', 'camera'],
     canPublishData: false,
     canSubscribe: true,
     canUpdateOwnMetadata: false,
