@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Bug, Scale } from 'lucide-react';
 import { User as UserType, ThemeMood } from '../types';
 import { SettingsService } from '../services/firebase/settingsService';
+import { SecurityNotificationService } from '../services/firebase/securityNotificationService';
 import { AuthService } from '../services/firebase/authService';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
@@ -174,6 +175,7 @@ export default function SettingsView({
     setLinkedAccountMessage('');
     try {
       await AuthService.linkEmailAccount(securityEmail, securityPassword);
+      await SecurityNotificationService.notifySecurityEvent(currentUser.id, currentUser.email || securityEmail, currentUser.name || currentUser.username, 'EMAIL_LINKED');
       setLinkedProviders(AuthService.getLinkedProviders());
       setSecurityEmail('');
       setSecurityPassword('');
@@ -209,6 +211,7 @@ export default function SettingsView({
     setLinkedAccountMessage('');
     try {
       await AuthService.confirmPhoneLink(phoneLinkConfirmation, securityOtp);
+      await SecurityNotificationService.notifySecurityEvent(currentUser.id, currentUser.email || '', currentUser.name || currentUser.username, 'PHONE_LINKED');
       setLinkedProviders(AuthService.getLinkedProviders());
       setPhoneLinkConfirmation(null);
       setSecurityOtp('');
