@@ -95,19 +95,18 @@ export class PushNotificationService {
             vibration: true,
           });
         }
-        await FirebaseMessaging.addListener('registration', registration => {
+        await FirebaseMessaging.addListener('tokenReceived', event => {
           const platform = Capacitor.getPlatform();
           if (platform !== 'android' && platform !== 'ios') return;
-          void this.persistToken(registration.value, platform).then(() => {
-            this.token = registration.value;
-          }).catch(error => console.warn('[NEXORA push] Device token could not be saved:', error));
+          void this.persistToken(event.token, platform).then(() => {
+            this.token = event.token;
+          }).catch(error => {
+            this.isInitialized = false;
+            this.tokenOwnerUid = null;
+            console.warn('[NEXORA push] Device token could not be saved:', error);
+          });
         });
-        await FirebaseMessaging.addListener('registrationError', error => {
-          this.isInitialized = false;
-          this.tokenOwnerUid = null;
-          console.warn('[NEXORA push] Native device registration failed:', error);
-        });
-        await FirebaseMessaging.addListener('pushNotificationActionPerformed', action => {
+        await FirebaseMessaging.addListener('notificationActionPerformed', action => {
           if (action.notification.data?.type === 'incoming_call') {
             window.dispatchEvent(new CustomEvent('NEXORA_INCOMING_CALL_PUSH_OPENED', {
               detail: action.notification.data,
