@@ -3,7 +3,7 @@ export interface VohToolContext {
   posts: Record<string, unknown>[];
   circles: Record<string, unknown>[];
   notifications: Record<string, unknown>[];
-  pulse?: Record<string, unknown> | null;
+  pulse?: unknown;
 }
 
 export const VOH_CONTEXT_TOOL_DECLARATIONS = [
