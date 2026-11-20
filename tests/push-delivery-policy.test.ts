@@ -18,7 +18,8 @@ describe('trusted notification push delivery policy', () => {
   });
 
   it('uses a safe default route for unknown notification types', () => {
-    assert.equal(buildNotificationPushData({}, 'n1').url, '/#activity');
+    assert.equal(new URL(buildNotificationPushData({}, 'n1').url, 'https://nexora.example').searchParams.get('nxPushType'), 'system');
+    assert.match(buildNotificationPushData({}, 'n1').url, /#activity$/);
   });
 
 
