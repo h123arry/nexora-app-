@@ -600,7 +600,7 @@ export default function NexoraImagePlayer({
       />
 
       {isFullscreen && displayImages[currentImageIndex] && (
-        <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Photo viewer">
+        <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center touch-pan-y" role="dialog" aria-modal="true" aria-label="Photo viewer" onTouchStart={handlePhotoTouchStart} onTouchEnd={handlePhotoTouchEnd}>
           <img src={displayImages[currentImageIndex]} alt={post.imageAltText || post.content || "Post photo"} className="w-full h-full object-contain select-none" draggable={false} />
         </div>
       )}
