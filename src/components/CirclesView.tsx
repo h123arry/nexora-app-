@@ -229,12 +229,12 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
             </h2>
           </div>
           <p className="text-xs text-violet-300/60 font-sans">
-            Your audiences • Curated networks, close connections & shared interest groups
+            A place for shared interests, smaller communities and ongoing conversations.
           </p>
         </div>
       </div>
 
-      {/* Community Builder Module */}
+      {/* Create a Circle Module */}
       <div className="bg-[#05030c] border border-white/10 rounded-3xl p-5 relative overflow-hidden">
         {/* Background micro gradient glow */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-violet-600/10 rounded-full blur-2xl pointer-events-none" />
@@ -242,12 +242,12 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" />
           <h3 className="text-xs font-black tracking-widest uppercase font-mono text-violet-400">
-            Community Builder
+            Create a Circle
           </h3>
         </div>
 
         <p className="text-xs text-violet-200/80 mb-4 leading-normal font-sans text-left">
-          Describe your community. NEXORA will create a public Circle using the details you provide.
+          Start a Circle around a topic, project, or group of people.
         </p>
 
         <form onSubmit={handleCreateCommunity} className="space-y-3 relative z-10">
@@ -256,7 +256,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               type="text"
               required
               disabled={isBuilding}
-              placeholder='e.g., "Create a football community in Port Harcourt" or "science discussion group"'
+              placeholder='Give your Circle a name or describe its purpose'
               value={promptInput}
               onChange={(e) => setPromptInput(e.target.value)}
               className="flex-1 px-4 py-2 bg-white/5 border border-white/10 focus:outline-hidden text-xs rounded-xl focus:border-white/10 text-white font-sans text-left"
@@ -267,7 +267,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               className="px-5 py-2 font-mono font-black text-xs bg-[#8b5cf6] text-white rounded-xl hover:brightness-110 active:scale-97 disabled:opacity-50 flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Wand2 className="w-3.5 h-3.5" />
-              <span>{isBuilding ? 'BUILDING...' : 'CREATE CIRCLE'}</span>
+              <span>{isBuilding ? 'BUILDING...' : 'Create Circle'}</span>
             </button>
           </div>
           <div className="space-y-2">
@@ -294,7 +294,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 : 'border-transparent text-violet-300/60 hover:text-white'
             }`}
           >
-            All Communities
+            All Circles
           </button>
           <button
             onClick={() => setActiveFilter('joined')}
@@ -304,7 +304,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 : 'border-transparent text-violet-300/60 hover:text-white'
             }`}
           >
-            My Communities
+            My Circles
           </button>
           <button
             onClick={() => setActiveFilter('explore')}
@@ -319,7 +319,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
         </div>
 
         <span className="hidden md:block text-[10px] font-mono text-violet-400/40 uppercase">
-          {filteredCircles.length} COMMUNITIES AVAILABLE
+          {filteredCircles.length} CIRCLES
         </span>
       </div>
 
@@ -329,9 +329,9 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
           <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
             <Users className="w-6 h-6" />
           </div>
-          <h4 className="text-sm font-sans font-extrabold text-white">No Communities Found</h4>
+          <h4 className="text-sm font-sans font-extrabold text-white">No Circles yet</h4>
           <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
-            Use the Community Builder above to instantly launch your custom community space on Nexora.
+            Use the Create a Circle above to instantly launch your custom community space on Nexora.
           </p>
         </div>
       ) : (
@@ -395,7 +395,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 {/* Creator/Members count */}
                 <div className="flex items-center gap-2 text-violet-400">
                   <Users className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-mono">Member count unavailable</span>
+                  <span className="text-[10px] font-mono">Circle members</span>
                 </div>
 
                 {/* Toggle Button */}
@@ -449,7 +449,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                   <button 
                     onClick={() => setSelectedCircle(null)}
                     className="p-1.5 sm:p-2 bg-black/40 hover:bg-black/60 text-white rounded-xl border border-white/5 transition-colors cursor-pointer shrink-0"
-                    title="Close Lounge"
+                    title="Close Circle"
                   >
                     <X className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button></div>
@@ -460,16 +460,16 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               <div className="bg-black/40 border-b border-white/10 overflow-x-auto scrollbar-none flex-shrink-0">
                 <div className="flex gap-1.5 px-3 py-2.5 min-w-max">
                   {[
-                    { id: 'feed', label: '📢 Feed', icon: FileText },
-                    { id: 'members', label: '👥 Members', icon: Users },
-                    { id: 'events', label: '📅 Events', icon: Calendar },
-                    { id: 'files', label: '📁 Files', icon: FileText },
-                    { id: 'polls', label: '📊 Polls', icon: BarChart2 },
-                                        { id: 'chat', label: '💬 Chat', icon: Send },
-                    { id: 'announcements', label: '🔔 Announcements', icon: Megaphone },
-                    { id: 'mods', label: '🛡 Moderators', icon: Shield },
-                    { id: 'rules', label: '📋 Rules', icon: FileText },
-                                                            ...(selectedCircleCanManage ? [{ id: 'insights', label: '📈 Page insights', icon: BarChart2 }] : [])
+                    { id: 'chat', label: 'Chat', icon: Send },
+                    { id: 'members', label: 'People', icon: Users },
+                    { id: 'feed', label: 'Feed', icon: FileText },
+                    { id: 'events', label: 'Events', icon: Calendar },
+                    { id: 'files', label: 'Shared media', icon: FileText },
+                    { id: 'polls', label: 'Polls', icon: BarChart2 },
+                    { id: 'announcements', label: 'Announcements', icon: Megaphone },
+                    { id: 'mods', label: 'Admins', icon: Shield },
+                    { id: 'rules', label: 'Rules', icon: FileText },
+                    ...(selectedCircleCanManage ? [{ id: 'insights', label: 'Circle insights', icon: BarChart2 }] : [])
                   ].map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activePortalTab === tab.id;
