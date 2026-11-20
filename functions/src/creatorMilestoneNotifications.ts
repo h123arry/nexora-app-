@@ -50,8 +50,8 @@ export function buildCreatorMilestones(stats: CreatorMilestoneStats): CreatorMil
       `People have saved your published posts ${threshold.toLocaleString()} times.`, stats.totalSaves >= threshold);
   }
   for (const threshold of [1000, 10000]) {
-    add(`nex_earned_${threshold}`, `${threshold.toLocaleString()} NEX earned`,
-      `Your creator activity has generated ${threshold.toLocaleString()} NEX in recorded earnings.`, stats.totalEarnedNex >= threshold);
+    add(`nex_earned_${threshold}`, `${threshold.toLocaleString()} NEX in creator earnings`,
+      `Your creator activity has generated ${threshold.toLocaleString()} NEX in recorded gift earnings.`, stats.totalEarnedNex >= threshold);
   }
   for (const threshold of [3, 10]) {
     add(`published_posts_${threshold}`, `${threshold} posts published`,
@@ -83,7 +83,7 @@ export async function issueCreatorMilestones(db: Firestore, creatorId: string, i
     postsQuery.aggregate({ totalBookmarks: AggregateField.sum('bookmarksCount') }).get(),
     postsQuery.aggregate({ totalSaves: AggregateField.sum('saves') }).get(),
     includeGiftEarnings
-      ? db.collection('creatorEarnings').where('creatorId', '==', creatorId).limit(500).get()
+      ? db.collection('creatorEarnings').where('creatorId', '==', creatorId).aggregate({ totalCreatorShareNex: AggregateField.sum('creatorShareNex') }).get()
       : Promise.resolve(null),
   ]);
   const user = userSnapshot.data() || {};
@@ -97,10 +97,7 @@ export async function issueCreatorMilestones(db: Firestore, creatorId: string, i
     totalSaves: Math.max(safeCount(bookmarksSnapshot.data().totalBookmarks), safeCount(savesSnapshot.data().totalSaves)),
     totalEarnedNex: Math.max(
       safeCount(user.totalEarnedNex),
-      earningsSnapshot?.docs.reduce((total, document) => {
-        const earning = document.data();
-        return total + (earning.status === 'available' ? safeCount(earning.creatorShareNex) : 0);
-      }, 0) ?? 0,
+      safeCount(earningsSnapshot?.data().totalCreatorShareNex),
     ),
     publishedPosts: safeCount(postCountSnapshot.data().count),
     isVerified: user.isVerified === true || profile.isVerified === true,
