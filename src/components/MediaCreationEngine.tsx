@@ -2021,21 +2021,24 @@ export default function MediaCreationEngine({
                           <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#B9AED8]">Selected media · {selectedImages.length}/20</span><span className="text-[10px] text-[#817895]">Hold your order · move items below</span></div>
                           <div className="grid grid-cols-3 sm:grid-cols-4 gap-px overflow-hidden rounded-xl border border-[#292244] bg-[#292244]">
                             {selectedImages.map((img, index) => (
-                              <div key={index} className="group relative aspect-[4/5] overflow-hidden bg-[#090714]">
-                                <img src={img.url} alt={img.fileName || `Selected photo ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
-                                <span className="absolute left-1.5 top-1.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-bold text-white">{index + 1}</span>
-                                <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/55 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                              <div key={index} className={`group relative aspect-[4/5] overflow-hidden bg-[#090714] ${activeEditIndex === index ? 'ring-2 ring-inset ring-violet-400' : ''}`}>
+                                <button type="button" onClick={() => setActiveEditIndex(index)} aria-label={`Preview photo ${index + 1}`} aria-pressed={activeEditIndex === index} className="absolute inset-0 z-0 h-full w-full cursor-pointer">
+                                  <img src={img.url} alt={img.fileName || `Selected photo ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
+                                </button>
+                                <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-bold text-white">{index + 1}</span>
+                                {activeEditIndex === index && <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-md bg-violet-600 px-1.5 py-0.5 text-[8px] font-bold text-white">EDITING</span>}
+                                <div className="absolute inset-0 z-10 flex items-center justify-center gap-1 bg-black/55 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                                   {index > 0 && (
-                                    <button onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index - 1]; next[index - 1] = tmp; setSelectedImages(next); }} className="p-1 bg-[#120E2B] rounded text-white">
+                                    <button type="button" aria-label={`Move photo ${index + 1} left`} onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index - 1]; next[index - 1] = tmp; setSelectedImages(next); setActiveEditIndex(index - 1); }} className="p-1.5 bg-[#120E2B] rounded text-white">
                                       <ChevronLeft className="w-3.5 h-3.5" />
                                     </button>
                                   )}
                                   {index < selectedImages.length - 1 && (
-                                    <button onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index + 1]; next[index + 1] = tmp; setSelectedImages(next); }} className="p-1 bg-[#120E2B] rounded text-white">
+                                    <button type="button" aria-label={`Move photo ${index + 1} right`} onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index + 1]; next[index + 1] = tmp; setSelectedImages(next); setActiveEditIndex(index + 1); }} className="p-1.5 bg-[#120E2B] rounded text-white">
                                       <ChevronRight className="w-3.5 h-3.5" />
                                     </button>
                                   )}
-                                  <button onClick={() => setSelectedImages(prev => prev.filter((_, idx) => idx !== index))} className="p-1 bg-rose-950/80 rounded text-rose-400">
+                                  <button type="button" aria-label={`Remove photo ${index + 1}`} onClick={() => { setSelectedImages(prev => prev.filter((_, idx) => idx !== index)); setActiveEditIndex(previous => previous === null ? null : previous > index ? previous - 1 : previous === index ? Math.max(0, selectedImages.length - 2) : previous); }} className="p-1.5 bg-rose-950/80 rounded text-rose-300">
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
@@ -2056,7 +2059,7 @@ export default function MediaCreationEngine({
                       </div>
                       <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
                         Choose from gallery
-                        <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
+                        <input type="file" accept="video/*" capture={undefined} className="hidden" onChange={handleVideoUpload} />
                       </label>
                       {(videoFileUrl || recordedVideoUrl) && (
                         <div className="max-w-sm mx-auto p-3 bg-[#120E2B] border border-[#292244] rounded-xl space-y-3 text-left">
