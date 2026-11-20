@@ -41,7 +41,7 @@ export default function ImmersiveVideoViewer({
 
   // Filter posts with videoUrl or media, and guarantee the clicked initialPost is included
   const postsToShow = useMemo(() => {
-    const list = (creatorPosts || []).filter(p => p && (p.videoUrl || p.image || p.id === initialPost.id));
+    const list = (creatorPosts || []).filter(p => p && (p.videoUrl || p.image || (p.images?.length || 0) > 0 || p.id === initialPost.id));
     if (initialPost && !list.some(p => p.id === initialPost.id)) {
       return [initialPost, ...list];
     }

@@ -61,12 +61,39 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
   }
 
   return (
-    <div className="nx-profile-media-grid grid grid-cols-3 gap-[2px] w-full bg-[var(--nx-canvas)]">
+    <div className="nx-profile-media-grid grid w-full grid-cols-[repeat(3,minmax(0,1fr))] gap-px bg-[#090714]">
       {gridPosts.map(post => {
-        const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
+        const isVoice = post.isVoice || !!post.voiceAudioUrl || !!(post as any).audioUrl || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
+        const thumbnail = post.image || post.images?.find(Boolean);
+        const voiceAudioUrl = post.voiceAudioUrl || (post as any).audioUrl;
+        const isMultiImage = !isVideo && (post.images?.filter(Boolean).length || 0) > 1;
         const isPinned = pinnedPostIds.includes(post.id);
         
+        if (isVoice && !isVideo) {
+          return (
+            <motion.div
+              key={post.id}
+              layout
+              className="aspect-square min-w-0 overflow-hidden bg-gradient-to-br from-[#1d1242] to-[#050314] p-2.5 flex flex-col justify-between text-left"
+            >
+              <div className="flex items-center justify-between gap-1">
+                <Mic className="h-4 w-4 shrink-0 text-violet-300" />
+                <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-violet-200">Voice</span>
+              </div>
+              {thumbnail && <img src={thumbnail} alt="" loading="lazy" decoding="async" className="h-10 w-10 rounded-lg object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />}
+              <div className="min-w-0 space-y-1.5">
+                {voiceAudioUrl ? (
+                  <audio controls preload="none" src={voiceAudioUrl} className="h-8 w-full max-w-full" aria-label="Play voice post" />
+                ) : (
+                  <p className="text-[9px] leading-tight text-amber-200/80">Audio file unavailable</p>
+                )}
+                <p className="line-clamp-2 text-[9px] leading-snug text-zinc-200">{post.voiceTranscript || post.content}</p>
+              </div>
+            </motion.div>
+          );
+        }
+
         return (
           <motion.button
             type="button"
@@ -77,21 +104,22 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="group aspect-[2/3] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-3px]"
+            className="group aspect-square overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-3px]"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
               {isVideo ? (
                 <div className="w-full h-full bg-slate-950 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/40 via-[#0a0521]/90 to-[#2c0b3d]/30" />
-                  {post.image ? (
+                  {thumbnail ? (
                     <img 
-                      src={post.image} 
+                      src={thumbnail} 
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
                       alt={post.content || 'Video thumbnail'}
                       referrerPolicy="no-referrer"
+                      onError={(event) => { event.currentTarget.style.display = 'none'; }}
                     />
                   ) : (
                     <NexoraVideo 
@@ -109,28 +137,32 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
                   <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[9px] font-mono font-bold z-20 flex items-center gap-1">
                     <Play className="w-2 h-2 fill-white text-white" />
                     {(() => {
-                      const views = post.views !== undefined ? post.views : 0;
-                      const formatted = views >= 1000000 
-                        ? (views / 1000000).toFixed(1).replace(/\.0$/, '') + 'M' 
-                        : views >= 1000 
-                          ? (views / 1000).toFixed(1).replace(/\.0$/, '') + 'K' 
-                          : views.toString();
-                      return `${formatted}`;
+                      const views = Number.isFinite(post.views) ? Math.max(0, Number(post.views)) : 0;
+                      const formatted = views >= 1000000
+                        ? (views / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
+                        : views >= 1000
+                          ? (views / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
+                          : String(views);
+                      return formatted;
                     })()}
                   </div>
                   <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[9px] font-mono font-bold z-20">
                     {post.videoDuration || 'Reel'}
                   </div>
                 </div>
-              ) : post.image ? (
+              ) : thumbnail ? (
+                <>
                 <img 
-                  src={post.image} 
+                  src={thumbnail} 
                   loading="lazy"
                   decoding="async"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
                   alt={post.content || 'Post image'}
                   referrerPolicy="no-referrer"
+                  onError={(event) => { event.currentTarget.style.display = 'none'; }}
                 />
+                {isMultiImage && <div className="absolute top-2 right-2 z-20 rounded-full bg-black/65 p-1.5 text-white backdrop-blur-md" aria-label="Multiple photos"><Layers className="h-3.5 w-3.5" /></div>}
+                </>
               ) : isVoice ? (
                 <div className="w-full h-full bg-gradient-to-tr from-pink-950/75 via-[#1d1242] to-[#040212] flex flex-col justify-between p-3">
                   <div className="flex justify-between items-center">
@@ -330,8 +362,6 @@ export default function ProfileView({
       : identityVerification?.identityType === 'creator'
         ? 'creator'
         : 'default';
-  const [allContentFilter, setAllContentFilter] = useState<'all' | 'photos' | 'posts' | 'pinned'>('all');
-  const [showAllContentDropdown, setShowAllContentDropdown] = useState(false);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const [selectedGridPost, setSelectedGridPost] = useState<Post | null>(null);
   const [showGiftVerse, setShowGiftVerse] = useState(false);
@@ -706,11 +736,6 @@ export default function ProfileView({
         e.preventDefault();
         return;
       }
-      if (showAllContentDropdown) {
-        setShowAllContentDropdown(false);
-        e.preventDefault();
-        return;
-      }
       if (isStorageCenterOpen) {
         setIsStorageCenterOpen(false);
         e.preventDefault();
@@ -737,7 +762,6 @@ export default function ProfileView({
     selectedGridPost,
     showShareModal,
     isProfileMenuOpen,
-    showAllContentDropdown,
     isStorageCenterOpen,
     showReputationModal,
     activePanel
@@ -1116,9 +1140,9 @@ export default function ProfileView({
 
     switch (profileTab) {
       case 'media':
-        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.videoUrl));
+        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.images?.length || !!p.videoUrl));
       case 'voice':
-        return userMyPosts.filter(p => !p.isArchived && (p.isVoice || p.voiceDuration || (p as any).audioUrl || p.content.includes('🎙')));
+        return userMyPosts.filter(p => !p.isArchived && (p.isVoice || p.voiceAudioUrl || p.voiceDuration || (p as any).audioUrl || p.content.includes('🎙')));
       case 'reposts':
         return allActive.filter(p => !p.isArchived && ((p as any).isRepost && ((p as any).repostedBy === currentUser.username || (p as any).repostedBy === currentUser.id || p.userId === currentUser.id)));
       case 'sparks':
@@ -1128,11 +1152,18 @@ export default function ProfileView({
       case 'archive':
         return isOwnProfile ? userMyPosts.filter(p => p.isArchived) : [];
       default:
-        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.videoUrl));
+        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.images?.length || !!p.videoUrl));
     }
   };
 
   const filteredTabPosts = getTabContent();
+
+  // Keep the open viewer bound to the latest profile post snapshot so creator view totals stay current.
+  useEffect(() => {
+    if (!selectedGridPost) return;
+    const latestPost = posts.find(post => post.id === selectedGridPost.id);
+    if (latestPost && latestPost.views !== selectedGridPost.views) setSelectedGridPost(latestPost);
+  }, [posts, selectedGridPost?.id, selectedGridPost?.views]);
 
   const formatSecondaryStat = (num: number) => {
     if (num === undefined || num === null || isNaN(num)) return '0';
@@ -1169,7 +1200,7 @@ export default function ProfileView({
       {/* 1. TOP NAVIGATION ACTION BAR */}
       <div className="nx-page-header nx-profile-topbar sticky top-0 z-40 py-2 px-4 flex items-center justify-between border-b">
         <div className="flex items-center gap-3 relative">
-          <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none">NEXORA</span>
+          <span className="text-sm font-extrabold tracking-tight text-white leading-none select-none">{isOwnProfile ? 'Your profile' : 'Profile'}</span>
           {onCloseProfile && (
             <button 
               onClick={onCloseProfile}
@@ -1507,7 +1538,7 @@ export default function ProfileView({
 
           {/* Profile content navigation */}
           <div role="group" aria-label="Profile content views" className="nx-profile-tabbar sticky top-0 nx-glass z-30 border-y border-white/10 mt-4 px-0 w-full">
-            <div className={`w-full mx-auto grid gap-2 p-2 ${isOwnProfile ? 'max-w-4xl grid-cols-3' : 'max-w-2xl grid-cols-2 sm:grid-cols-4'}`}>
+            <div className="nx-profile-tabs-track mx-auto flex w-full min-w-0 items-center gap-2 overflow-x-auto px-2 py-2 sm:justify-center">
               {[
                 { id: 'media', label: 'Posts', icon: Camera },
                 { id: 'voice', label: 'Voice', icon: Mic },
@@ -1529,7 +1560,7 @@ export default function ProfileView({
                     aria-label={tab.label}
                     aria-pressed={isActive}
                     title={tab.label}
-                    className={`min-h-12 flex justify-center items-center gap-2 rounded-xl border px-2 py-2 transition-all cursor-pointer focus-visible:outline-violet-300 ${
+                    className={`min-h-11 min-w-[88px] shrink-0 flex justify-center items-center gap-2 rounded-xl border px-3 py-2 transition-all cursor-pointer focus-visible:outline-violet-300 ${
                       isActive
                         ? 'border-violet-300/40 bg-violet-500/20 text-white shadow-[inset_0_0_0_1px_rgba(167,139,250,0.12)]'
                         : 'border-white/[0.06] bg-white/[0.025] text-zinc-300 hover:border-violet-300/25 hover:bg-white/[0.06] hover:text-white'
@@ -1573,8 +1604,7 @@ export default function ProfileView({
                 )}
               </section>
             )}
-            {profileTab === 'media' && <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-2 px-3 pb-1"><span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Content</span><div className="flex flex-wrap gap-1.5">{([{id:'all',label:'All'},{id:'photos',label:'Photos'},{id:'posts',label:'Text'},{id:'pinned',label:'Pinned'}] as const).map(filter => <button key={filter.id} type="button" onClick={() => setAllContentFilter(filter.id)} aria-pressed={allContentFilter === filter.id} className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold transition-colors ${allContentFilter === filter.id ? 'border-violet-400/40 bg-violet-500/15 text-violet-100' : 'border-white/10 bg-white/[0.025] text-zinc-400 hover:text-white'}`}>{filter.label}</button>)}</div></div>}
-            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} isOwner={auth.currentUser?.uid === currentUser.id} onExplore={() => setShowGiftVerse(true)} /> : filteredTabPosts.filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).length === 0 ? (
+            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} isOwner={auth.currentUser?.uid === currentUser.id} onExplore={() => setShowGiftVerse(true)} /> : profileTab === 'sparks' && isOwnProfile ? null : filteredTabPosts.length === 0 ? (
               <div className="p-8 py-16 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 max-w-md mx-auto my-6">
                 <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                   {profileTab === 'media' && <Camera className="w-6 h-6" />}
@@ -1585,7 +1615,7 @@ export default function ProfileView({
                   {profileTab === 'archive' && <HardDrive className="w-6 h-6" />}
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-200 capitalize">No {profileTab} found</h4>
+                  <h4 className="text-sm font-bold text-zinc-200">{profileTab === 'media' ? 'No posts yet' : profileTab === 'voice' ? 'No voice posts yet' : profileTab === 'reposts' ? 'No reposts yet' : profileTab === 'sparks' ? 'No sparks yet' : profileTab === 'bookmarks' ? 'No saved posts yet' : 'No archived posts yet'}</h4>
                   <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-relaxed">
                     {profileTab === 'media' && 'Published visual media and videos will appear here.'}
                     {profileTab === 'voice' && 'Recorded voice pulses and audio broadcasts will appear here.'}
@@ -1597,9 +1627,9 @@ export default function ProfileView({
                 </div>
               </div>
             ) : (
-              <div className="w-full max-w-4xl mx-auto px-2">
+              <div className="w-full max-w-[1040px] mx-auto px-0">
                 <MediaGrid 
-                  gridPosts={[...filteredTabPosts].filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
+                  gridPosts={[...filteredTabPosts].sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
                   pinnedPostIds={pinnedPostIdsList} 
                   onSelectPost={(post) => setSelectedGridPost(post)} 
                 />
@@ -3654,7 +3684,7 @@ export default function ProfileView({
         {selectedGridPost && (
           <ImmersiveVideoViewer
             initialPost={selectedGridPost}
-            creatorPosts={myPosts}
+            creatorPosts={filteredTabPosts}
             currentUser={currentUser}
             onClose={() => setSelectedGridPost(null)}
             onLikePost={(postId) => {
