@@ -316,6 +316,13 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const logout = async () => {
     setLoading(true);
     try {
+      // Revoke this device's push registration while the owning account is still authenticated.
+      try {
+        const { PushNotificationService } = await import('../services/firebase/pushNotificationService');
+        await PushNotificationService.unregister();
+      } catch (pushError) {
+        console.warn('[NEXORA] Could not unregister push before sign-out.', pushError);
+      }
       await AuthService.logout();
       setFirebaseUser(null);
       setUser(null);
