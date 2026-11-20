@@ -2685,7 +2685,7 @@ export default function FeedView({
 
             <div className="absolute bottom-0 left-0 z-30 max-w-[calc(100%-5.5rem)] px-4 pb-[max(env(safe-area-inset-bottom),1.25rem)] pt-8 text-left"
               style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
-              <button type="button" onClick={() => onViewProfile?.(activeVideoFullscreen.userId)} className="mb-2 flex items-center gap-2 text-left">
+              <button type="button" onClick={() => onViewProfile?.(activeVideoFullscreen.userId || activeVideoFullscreen.username)} className="mb-2 flex items-center gap-2 text-left">
                 <img src={activeVideoFullscreen.avatar} alt="" className="h-9 w-9 rounded-full border border-white/40 object-cover" />
                 <span className="text-sm font-bold text-white drop-shadow">{activeVideoFullscreen.name || activeVideoFullscreen.username}</span>
                 <span className="text-xs text-white/75 drop-shadow">@{activeVideoFullscreen.username}</span>
