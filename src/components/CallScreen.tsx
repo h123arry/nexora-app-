@@ -256,7 +256,7 @@ export default function CallScreen({
             {type === 'video' && (
               <>
                 <button type="button" disabled={!connected || busy} onClick={() => void toggleCamera()} className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-white disabled:opacity-40" aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'}>{cameraOn ? <Video /> : <VideoOff />}</button>
-                <button type="button" disabled={!connected || busy} onClick={() => void switchCamera()} className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw /></button>
+                <button type="button" disabled={!connected || !cameraOn || busy} onClick={() => void switchCamera()} className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw /></button>
               </>
             )}
             <button type="button" disabled={busy} onClick={() => void closeCall()} className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-600 text-white disabled:opacity-50" aria-label="End call"><PhoneOff /></button>
