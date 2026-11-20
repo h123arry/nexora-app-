@@ -457,7 +457,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       } else if (attachedContextType === 'studio') {
         contextualMessage = `[SYSTEM CONTEXT: The user selected their cloud Studio project. Use only the project summary supplied for their authenticated account; source media and private asset paths are not accessible.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'discovery') {
-        contextualMessage = `[SYSTEM CONTEXT: The user selected Public Discovery. Use only the bounded, privacy-filtered sample of public posts and topics supplied by NEXORA. It is not a complete or live platform-wide index.]\\n\\nUser query: ${message}`;
+        contextualMessage = `[SYSTEM CONTEXT: The user selected Public Discovery. Use only the bounded, privacy-filtered sample of public posts and topics supplied by NEXORA. It is not a complete or live platform-wide index.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'inbox') {
         contextualMessage = `[SYSTEM CONTEXT: The user is viewing the inbox. Private message contents are not included; do not claim access to them.]\n\nUser query: ${message}`;
       }
