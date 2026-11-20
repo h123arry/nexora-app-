@@ -34,6 +34,10 @@ describe('trusted notification push delivery policy', () => {
     const follow = buildNotificationPushData({ type: 'follow', userId: 'follower-3' }, 'follow-4');
     assert.match(follow.url, /#profile$/);
     assert.equal(new URL(follow.url, 'https://nexora.example').searchParams.get('nxPushUser'), 'follower-3');
+
+    const live = buildNotificationPushData({ type: 'pulse_alert', targetId: 'live-42', userId: 'creator-2' }, 'live-5');
+    assert.match(live.url, /#live$/);
+    assert.equal(new URL(live.url, 'https://nexora.example').searchParams.get('nxPushTarget'), 'live-42');
   });
 
   it('chunks device tokens into provider-safe batches', () => {
