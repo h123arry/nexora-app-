@@ -171,3 +171,21 @@ test('adjacent-interest discovery ignores weak one-character overlaps and remain
   assert.equal(ranked[0]?.post.id, 'related');
   assert.ok(ranked.every(item => Number.isFinite(item.score)));
 });
+
+
+test('cold-start creator recommendations diversify across creators own topics', () => {
+  const creator = (id: string, interestDNA: Record<string, number>, followers: number) => ({
+    id, username: id, name: id, followers, isVerified: false,
+    isBanned: false, isSuspended: false, interestDNA,
+  }) as any;
+  const results = recommendCreators([
+    creator('design-a', { design: 90 }, 9000),
+    creator('design-b', { design: 80 }, 8000),
+    creator('design-c', { design: 70 }, 7000),
+    creator('design-d', { design: 60 }, 6000),
+    creator('travel-a', { travel: 30 }, 100),
+    creator('food-a', { food: 25 }, 80),
+  ], { viewerId: 'new-viewer', interests: {}, limit: 6 });
+  assert.equal(results.length, 6);
+  assert.ok(results.slice(0, 4).some(item => item.creator.id === 'travel-a' || item.creator.id === 'food-a'));
+});
