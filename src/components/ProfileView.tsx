@@ -914,7 +914,7 @@ export default function ProfileView({
   };
 
   const handleSaveCroppedAvatar = () => {
-    if (!galleryImage) return;
+    if (!galleryImage || isSavingProfile) return;
 
     const img = new Image();
     img.onload = () => {
@@ -947,12 +947,36 @@ export default function ProfileView({
         if (!finalDataUrl.startsWith('data:image/jpeg;base64,')) {
           throw new Error('NEXORA could not prepare your profile photo. Please try another image.');
         }
-        setEditAvatar(finalDataUrl);
-        setIsAvatarModalOpen(false);
-        setGalleryImage(null);
-        setAvatarZoom(1.0);
-        setAvatarRotation(0);
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Photo ready. Select Save Changes to upload it to your profile.' }));
+
+        // Save Photo is a complete action: upload to R2, then persist the new
+        // avatar in the private profile and public profile projection.
+        setIsSavingProfile(true);
+        void (async () => {
+          try {
+            const response = await fetch(finalDataUrl);
+            if (!response.ok) throw new Error('NEXORA could not prepare your profile photo.');
+            const avatarBlob = await response.blob();
+            const uploadedAvatar = await uploadMediaFile({
+              file: new File([avatarBlob], 'profile-avatar.jpg', { type: 'image/jpeg' }),
+              userId: currentUser.id,
+              fileName: 'profile-avatar',
+              metadata: { purpose: 'profile-avatar' },
+            });
+            await onUpdateProfile({ avatar: uploadedAvatar.downloadUrl });
+            setEditAvatar(uploadedAvatar.downloadUrl);
+            setIsAvatarModalOpen(false);
+            setGalleryImage(null);
+            setAvatarZoom(1.0);
+            setAvatarRotation(0);
+            window.dispatchEvent(new CustomEvent('toast', { detail: 'Your profile photo has been uploaded and saved.' }));
+          } catch (error) {
+            window.dispatchEvent(new CustomEvent('toast', {
+              detail: error instanceof Error ? error.message : 'NEXORA could not upload your profile photo. Please try again.'
+            }));
+          } finally {
+            setIsSavingProfile(false);
+          }
+        })();
       } catch (error) {
         window.dispatchEvent(new CustomEvent('toast', {
           detail: error instanceof Error ? error.message : 'NEXORA could not prepare your profile photo. Please try another image.'
@@ -3614,9 +3638,10 @@ export default function ProfileView({
                     </button>
                     <button
                       onClick={handleSaveCroppedAvatar}
-                      className="flex-1 py-2.5 bg-linear-to-r from-violet-600 to-violet-500 hover:brightness-110 text-white font-mono text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer"
+                      disabled={isSavingProfile}
+                      className="flex-1 py-2.5 bg-linear-to-r from-violet-600 to-violet-500 hover:brightness-110 text-white font-mono text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer disabled:cursor-wait disabled:opacity-60"
                     >
-                      Save Photo
+                      {isSavingProfile ? 'Uploading…' : 'Upload & Save Photo'}
                     </button>
                   </div>
                 </div>
