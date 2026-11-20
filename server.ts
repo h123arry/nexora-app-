@@ -1144,8 +1144,8 @@ When answering:
       parts: [{ text: h.text }]
     }));
 
-    // The intelligence core owns orchestration. Gemini is only the current
-    // provider adapter; the core, context policy and tools do not depend on it.
+    // The intelligence core owns orchestration. The selected provider is an
+    // adapter; context policy and read-only tools remain provider-independent.
     const toolRegistry = new VohToolRegistry();
     const availableToolDeclarations = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, featureScopes);
     for (const declaration of availableToolDeclarations) {
