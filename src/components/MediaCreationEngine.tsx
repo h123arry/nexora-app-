@@ -1857,37 +1857,54 @@ export default function MediaCreationEngine({
             <div className="space-y-4">
               
               {currentStep === 1 && (
-                /* STEP 1: CHOOSE CONTENT TYPE */
-                <div className="space-y-4 animate-fadeIn">
-                  <div>
-                    <span className="text-xs font-semibold text-violet-300 block mb-1">Create</span>
-                    <h3 className="text-base font-bold text-white">What's on your mind?</h3>
+                /* STEP 1: CREATION HOME */
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="relative overflow-hidden rounded-[26px] border border-violet-400/20 bg-[radial-gradient(ellipse_at_top_right,rgba(113,56,255,0.28),transparent_58%),linear-gradient(145deg,#17102F_0%,#0B1020_58%,#080B16_100%)] p-5">
+                    <div className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-violet-500/15 blur-3xl" />
+                    <div className="relative flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200"><Sparkles size={12}/> Your creative space</span>
+                        <h3 className="max-w-[250px] text-[22px] font-black leading-tight tracking-tight text-white">Make something worth sharing.</h3>
+                        <p className="mt-2 max-w-[260px] text-xs leading-relaxed text-[#B9B2D0]">Capture a moment, tell a story or bring an idea to life.</p>
+                      </div>
+                      <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-400/10 text-violet-200 shadow-[0_0_35px_rgba(113,56,255,0.16)]"><Camera size={23}/></div>
+                    </div>
+                    <div className="relative mt-5 grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => { setActiveMode('photo'); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-3 py-3 text-xs font-extrabold text-white shadow-[0_8px_24px_rgba(75,16,242,0.25)] transition-transform active:scale-[0.98]"><Camera size={16}/> Open camera</button>
+                      <button type="button" onClick={() => { setActiveMode('carousel'); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 py-3 text-xs font-bold text-white transition-colors hover:bg-white/10 active:scale-[0.98]"><FileImage size={16}/> Choose from gallery</button>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="flex items-center justify-between px-0.5">
+                    <div><h4 className="text-sm font-extrabold text-white">Create a post</h4><p className="mt-0.5 text-[10px] text-[#8E88A7]">Choose the format that fits your moment.</p></div>
+                    <span className="text-[10px] font-semibold text-[#756B91]">9 formats</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
                     {[
-                      { id: 'text', icon: FileText, label: 'Write something', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a thought or update.' },
-                      { id: 'photo', icon: Camera, label: 'Take a photo', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Use your camera or choose a photo.' },
-                      { id: 'carousel', icon: FileImage, label: 'Choose photos', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Pick several photos from your gallery.' },
-                      { id: 'video', icon: Video, label: 'Choose a video', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Add a video from your gallery.' },
-                      { id: 'reel', icon: Sparkle, label: 'Record a video', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Open the camera and record a moment.' },
-                      { id: 'voice', icon: Mic, label: 'Record a voice note', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Record something in your own voice.' },
-                      { id: 'poll', icon: BarChart2, label: 'Ask a question', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Let people vote on your question.' },
-                      { id: 'pulse', icon: MapPin, label: 'Local update', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share what is happening nearby.' },
-                      { id: 'community', icon: Users, label: 'Share with a Circle', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share something with your Circle.' }
+                      { id: 'text', icon: FileText, label: 'Text post', desc: 'A thought or update', tint: 'text-[#C4B2FF]', glow: 'bg-violet-500/10' },
+                      { id: 'video', icon: Video, label: 'Video', desc: 'Upload a video', tint: 'text-[#B7A3FF]', glow: 'bg-violet-500/10' },
+                      { id: 'reel', icon: Sparkle, label: 'Record video', desc: 'Shoot a new moment', tint: 'text-[#D0B8FF]', glow: 'bg-purple-500/10' },
+                      { id: 'voice', icon: Mic, label: 'Voice note', desc: 'Let your voice lead', tint: 'text-[#B8ACFF]', glow: 'bg-indigo-500/10' },
+                      { id: 'carousel', icon: FileImage, label: 'Photo carousel', desc: 'Share multiple photos', tint: 'text-[#C4B2FF]', glow: 'bg-violet-500/10' },
+                      { id: 'poll', icon: BarChart2, label: 'Poll', desc: 'Ask people to vote', tint: 'text-[#B7A3FF]', glow: 'bg-violet-500/10' },
+                      { id: 'pulse', icon: MapPin, label: 'Local update', desc: 'What is happening nearby', tint: 'text-[#C4B2FF]', glow: 'bg-purple-500/10' },
+                      { id: 'community', icon: Users, label: 'Circle post', desc: 'Share with your Circle', tint: 'text-[#B8ACFF]', glow: 'bg-indigo-500/10' },
                     ].map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => { setActiveMode(item.id as any); setCurrentStep(2); }}
-                        className={`p-3.5 text-left rounded-2xl bg-[#090812] border transition-all hover:bg-[#120E2B]/70 group cursor-pointer ${item.color}`}
-                      >
-                        <item.icon className="w-5 h-5 mb-1.5" />
-                        <span className="block text-xs font-black text-white group-hover:text-violet-300">{item.label}</span>
-                        <p className="text-[10px] text-[#8E88A7] leading-tight mt-1">{item.desc}</p>
+                      <button key={item.id} type="button" onClick={() => { setActiveMode(item.id as any); setCurrentStep(2); }} className="group flex min-h-[82px] items-center gap-3 rounded-2xl border border-[#292244] bg-[#0C0A19] p-3 text-left transition-all hover:border-violet-400/40 hover:bg-[#14102A] active:scale-[0.985]">
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] ${item.glow} ${item.tint}`}><item.icon size={19}/></span>
+                        <span className="min-w-0"><span className="block text-xs font-extrabold text-white group-hover:text-violet-200">{item.label}</span><span className="mt-1 block text-[10px] leading-snug text-[#89839F]">{item.desc}</span></span>
+                        <ChevronRight size={14} className="ml-auto shrink-0 text-[#625A78] transition-transform group-hover:translate-x-0.5 group-hover:text-violet-300"/>
                       </button>
                     ))}
                   </div>
+
+                  {onOpenStudio && (
+                    <button type="button" onClick={() => onOpenStudio([])} className="group flex w-full items-center gap-3 rounded-2xl border border-violet-400/25 bg-[linear-gradient(100deg,rgba(113,56,255,0.14),rgba(15,12,32,0.88))] p-3.5 text-left transition-all hover:border-violet-300/50 hover:bg-violet-500/10">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Clapperboard size={21}/></span>
+                      <span className="min-w-0 flex-1"><span className="block text-xs font-extrabold text-white">Open NEXORA Studio</span><span className="mt-1 block text-[10px] text-[#A39BBF]">Edit clips, add music, captions, transitions and more.</span></span>
+                      <ChevronRight size={17} className="text-violet-300 transition-transform group-hover:translate-x-1"/>
+                    </button>
+                  )}
                 </div>
               )}
 
