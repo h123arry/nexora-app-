@@ -128,8 +128,6 @@ export const startDirectCall = onCall({ region: 'europe-west1', maxInstances: 30
     if (recipientActive.exists && Number(recipientActive.data()?.expiresAt || 0) > now) {
       throw new HttpsError('failed-precondition', 'This person is already in another call.');
     }
-    if (callerActive.exists) tx.delete(callerActiveRef);
-    if (recipientActive.exists) tx.delete(recipientActiveRef);
     tx.create(callRef, callRecord);
     tx.set(callerActiveRef, { callId: checked.callId, status: 'ringing', expiresAt: callRecord.expiresAt });
     tx.set(recipientActiveRef, { callId: checked.callId, status: 'ringing', expiresAt: callRecord.expiresAt });
