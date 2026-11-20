@@ -527,7 +527,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const handleImprovePostQuery = async () => {
     if (!query.trim()) return;
     setLoadingAi(true);
-    showToast("Polishing your command...");
+    showToast("Improving your post...");
     try {
       const res = await authenticatedVohFetch('/api/voh-ai/improve-post', {
         method: 'POST',
@@ -538,7 +538,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         const data = await res.json();
         if (typeof data.text === 'string' && data.text.trim()) {
           setQuery(data.text);
-          showToast("Command polished successfully! ✨");
+          showToast("Your post is ready to use.");
         }
       } else {
         const payload = await res.json().catch(() => ({}));
@@ -619,7 +619,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     
     const results = SearchEngine.getSuggestions(aiSearchInput, allUsers, posts, allCircles);
     setIntelligentResults(results);
-    showToast("Parsed Search DNA!");
+    showToast("Search complete.");
   };
 
   // Moderation Analysis triggers
@@ -673,7 +673,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   };
 
   return (
-    <div id="premium-voh-ai-workspace" className="space-y-6">
+    <div id="premium-voh-ai-workspace" className="h-full min-h-0 flex flex-col gap-4 overflow-hidden px-3 sm:px-5 pb-3">
       
       {/* Dynamic Toast Alerts */}
       <AnimatePresence>
@@ -697,11 +697,11 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
           <div className="flex items-center gap-2.5 mb-1">
             <VohIcon size={26} animated glow variant="brand" />
             <h1 className="text-2xl font-black font-sans tracking-tight text-current uppercase">
-              VOH AI Assistant
+              VOH AI
             </h1>
           </div>
           <p className="text-xs text-current/60 font-sans leading-relaxed">
-            AI help for your chats, posts, search and account.
+            Ask questions, get ideas and help with your NEXORA account.
           </p>
         </div>
 
@@ -709,7 +709,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 bg-violet-950/40 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-mono">
             <VohIcon size={15} animated variant="violet" />
-            <span className="font-black text-violet-300 uppercase">YOUR NEXORA ACCOUNT</span>
+            <span className="font-black text-violet-300 uppercase">YOUR ACCOUNT</span>
           </div>
 
           <button 
@@ -717,7 +717,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             className="px-3.5 py-1.5 bg-gradient-to-tr from-violet-600 to-pink-600 text-white text-xs font-black font-sans rounded-xl hover:brightness-110 shadow-md flex items-center gap-1 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>NEW CHAT</span>
+            <span>New chat</span>
           </button>
         </div>
       </div>
@@ -730,7 +730,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             onClick={() => {
               setActiveSubView(view);
               if (view === 'moderation' && currentUser.role !== 'admin' && currentUser.role !== 'founder') {
-                showToast("This text assessment does not change live moderation decisions.");
+                showToast("This review is a guide and does not change moderation decisions.");
               }
             }}
             className={`px-4 py-2 rounded-xl text-xs font-bold font-sans uppercase tracking-wider transition-all cursor-pointer ${
@@ -739,13 +739,13 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                 : 'bg-current/5 text-current/60 hover:text-current hover:bg-current/10'
             }`}
           >
-            {view}
+            {{ chat: 'Chat', voice: 'Voice', assistants: 'Helpers', search: 'Search', ecosystem: 'More tools', moderation: 'Content review', settings: 'Settings' }[view]}
           </button>
         ))}
       </div>
 
       {/* Main Work Area Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className={activeSubView === 'chat' ? "flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch overflow-hidden" : "flex-1 min-h-0 overflow-y-auto grid grid-cols-1 xl:grid-cols-12 gap-4 items-start"}>
         
         {/* ======================================================== */}
         {/* CHAT MAIN VIEW */}
@@ -753,8 +753,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         {activeSubView === 'chat' && (
           <>
             {/* Sessions Sidebar Column (Left 4 cols) */}
-            <div className="lg:col-span-4 space-y-4">
-              <div className="bg-[#03010b] border border-white/10 rounded-3xl p-4 space-y-4 min-h-[420px] max-h-[600px] flex flex-col justify-between">
+            <div className="hidden xl:block xl:col-span-3 min-h-0 space-y-4">
+              <div className="bg-[#03010b] border border-white/10 rounded-3xl p-4 space-y-4 min-h-0 max-h-[calc(100dvh-15rem)] flex flex-col justify-between">
                 
                 <div className="space-y-4 overflow-y-auto flex-1">
                   {/* Search sessions */}
@@ -762,7 +762,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-current/30" />
                     <input
                       type="text"
-                      placeholder="Search dialogues..."
+                      placeholder="Search chats..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-9 pr-3 py-1.5 bg-white/5 border border-white/5 rounded-xl text-xs focus:outline-none focus:border-white/10"
@@ -796,7 +796,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                   {/* Dialogues List */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-sans font-black tracking-wider text-violet-400 uppercase block">Active Dialogues</span>
+                    <span className="text-[10px] font-sans font-black tracking-wider text-violet-400 uppercase block">Your chats</span>
                     
                     <div className="space-y-1 max-h-[250px] overflow-y-auto">
                       {sessions
@@ -849,13 +849,13 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                 {showFolderModal && (
                   <div className="border border-white/10 p-3 rounded-2xl bg-slate-950 space-y-2.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-sans font-bold text-violet-400 uppercase">Create New Folder</span>
+                      <span className="text-[10px] font-sans font-bold text-violet-400 uppercase">Create a folder</span>
                       <button onClick={() => setShowFolderModal(false)}><X className="w-3.5 h-3.5" /></button>
                     </div>
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="Folder name..."
+                        placeholder="Folder name"
                         value={folderName}
                         onChange={(e) => setFolderName(e.target.value)}
                         className="flex-1 px-2.5 py-1 text-xs bg-white/5 border border-white/5 rounded-lg focus:outline-none"
@@ -866,7 +866,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                             setFolders(prev => [...prev, { id: `folder-${Date.now()}`, name: `📁 ${folderName}` }]);
                             setFolderName('');
                             setShowFolderModal(false);
-                            showToast("Folder registered.");
+                            showToast("Folder created.");
                           }
                         }}
                         className="px-3 py-1 bg-violet-600 text-white rounded-lg text-xs"
@@ -881,13 +881,16 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             </div>
 
             {/* Chat Conversation Area (Right 8 cols) */}
-            <div className="lg:col-span-8 flex flex-col border border-current/10 rounded-3xl bg-current/3 overflow-hidden min-h-[420px] max-h-[600px] justify-between">
+            <div className="xl:col-span-9 flex h-full min-h-0 flex-col border border-current/10 rounded-2xl bg-current/3 overflow-hidden justify-between">
               
-              {/* Dialogue Header */}
+              {/* Chat Header */}
               <div className="p-3 border-b border-current/5 bg-current/5 flex justify-between items-center">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-500" />
-                  <span className="text-xs font-bold text-current">{activeSession?.title || 'Dialogue Session'}</span>
+                  <span className="text-xs font-bold text-current">{activeSession?.title || 'Chat'}</span>
+                  <select aria-label="Choose a chat" value={activeSessionId} onChange={(event) => setActiveSessionId(event.target.value)} className="xl:hidden ml-2 min-w-0 max-w-[46%] rounded-lg border border-white/10 bg-[#101B2E] px-2 py-1.5 text-[11px] text-white">
+                    {sessions.filter(session => !session.isArchived).map(session => <option key={session.id} value={session.id}>{session.title}</option>)}
+                  </select>
                 </div>
                 {activeSession?.messages && activeSession.messages.length > 0 && (
                   <button 
@@ -898,13 +901,13 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     className="p-1 rounded hover:bg-white/5 text-[10px] font-sans text-current/40 flex items-center gap-1"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    <span>Clear logs</span>
+                    <span>Clear chat</span>
                   </button>
                 )}
               </div>
 
               {/* Messages viewport */}
-              <div className="p-4 space-y-4 overflow-y-auto flex-1 max-h-[380px]">
+              <div className="min-h-0 flex-1 p-4 space-y-4 overflow-y-auto overscroll-contain">
                 {activeSession?.messages.map((msg) => (
                   <div 
                     key={msg.id}
@@ -1057,13 +1060,13 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                             <ShieldCheck className="w-4 h-4 text-emerald-400" />
                             <span className="text-xs font-black font-sans text-white group-hover:text-emerald-300">Security Guard</span>
                           </div>
-                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Validate localized session logs and encrypted transaction syncs.</p>
+                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Review recent account activity and connection status.</p>
                         </button>
 
                       </div>
                     </div>
 
-                    {/* Bento Row 2: Learned Memory DNA capsules */}
+                    {/* Bento Row 2: What VOH AI remembers */}
                     <div className="p-4 bg-white/3 border border-white/5 rounded-2xl space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
@@ -1079,7 +1082,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                             }}
                             className="text-[9px] font-mono text-rose-400 hover:underline cursor-pointer"
                           >
-                            Wipe memory DNA
+                            Clear saved details
                           </button>
                         )}
                       </div>
@@ -1094,7 +1097,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                           ))}
                         </div>
                       ) : (
-                        <p className="text-[10px] text-current/40 italic">No persistent memory logged. Speak or chat with VOH AI to build your profile DNA.</p>
+                        <p className="text-[10px] text-current/40 italic">No saved details yet. Chat with VOH AI to build your personal memory.</p>
                       )}
                       
                       <p className="text-[9px] text-current/40 font-mono">These are local preference labels only. VOH does not silently save new memories from this chat.</p>
@@ -1107,7 +1110,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                         <span className="text-xs font-black font-sans text-emerald-400">Local UI</span>
                       </div>
                       <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
-                        <span className="text-[8px] text-current/40 uppercase block mb-0.5">Linked Engines</span>
+                        <span className="text-[8px] text-current/40 uppercase block mb-0.5">Connected tools</span>
                         <span className="text-xs font-black font-sans text-violet-300">Scoped</span>
                       </div>
                       <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
@@ -1202,7 +1205,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       className="px-2.5 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-[10px] font-sans font-extrabold text-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95 animate-pulse"
                     >
                       <Sparkles className="w-3 h-3 text-amber-400 animate-spin" />
-                      <span>POLISH COMMAND</span>
+                      <span>Improve post</span>
                     </button>
                   )}
                 </div>
@@ -1519,7 +1522,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         )}
 
         {/* ======================================================== */}
-        {/* ECOSYSTEM & MONETIZATION SUBVIEW */}
+        {/* MORE TOOLS */}
         {/* ======================================================== */}
         {activeSubView === 'ecosystem' && (
           <div className="lg:col-span-12 space-y-4">
@@ -1662,7 +1665,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             <div className="bg-[#03010b] border border-white/10 rounded-3xl p-6 space-y-6">
               <div>
                 <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block mb-1">VOH AI PARAMETERS CONTROL</span>
-                <p className="text-xs text-current/60">Customize systemic instructions, temperature, rate limit thresholds and memory DNA preferences.</p>
+                <p className="text-xs text-current/60">Choose how VOH AI responds and manage what it remembers.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
