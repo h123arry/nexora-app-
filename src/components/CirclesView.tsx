@@ -629,6 +629,18 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                       currentUserId={currentUser.id}
                       isOwner={selectedCircle.ownerId === currentUser.id}
                       canManage={selectedCircle.ownerId === currentUser.id || Boolean(selectedCircle.admins?.includes(currentUser.id) || selectedCircle.moderators?.includes(currentUser.id))}
+                      onOwnershipTransferred={newOwnerId => {
+                        setSelectedCircle(previous => previous ? {
+                          ...previous,
+                          ownerId: newOwnerId,
+                          admins: [...new Set([...(previous.admins || []).filter(id => id !== newOwnerId), currentUser.id])],
+                        } : previous);
+                        setCircles(previous => previous.map(circle => circle.id === selectedCircle.id ? {
+                          ...circle,
+                          ownerId: newOwnerId,
+                          admins: [...new Set([...(circle.admins || []).filter(id => id !== newOwnerId), currentUser.id])],
+                        } : circle));
+                      }}
                     />
                     <div className="border-t border-white/10 pt-5">
                       <CircleReportsPanel

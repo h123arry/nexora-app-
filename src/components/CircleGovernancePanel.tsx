@@ -16,11 +16,13 @@ export default function CircleGovernancePanel({
   currentUserId,
   isOwner,
   canManage = isOwner,
+  onOwnershipTransferred,
 }: {
   communityId: string;
   currentUserId: string;
   isOwner: boolean;
   canManage?: boolean;
+  onOwnershipTransferred?: (newOwnerId: string) => void;
 }) {
   const [members, setMembers] = useState<CircleMember[]>([]);
   const [reasonByUser, setReasonByUser] = useState<Record<string, string>>({});
@@ -117,6 +119,7 @@ export default function CircleGovernancePanel({
     try {
       await CommunityService.transferOwnership(communityId, successorId);
       setOwnershipTransferred(true);
+      onOwnershipTransferred?.(successorId);
       setMembers(previous => previous.map(member => member.userId === currentUserId
         ? { ...member, role: 'admin' }
         : member.userId === successorId ? { ...member, role: 'owner' } : member));

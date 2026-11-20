@@ -706,7 +706,7 @@ export default function NewInboxView({
             ] as const).map(tab => (
               <button key={tab.id} type="button" role="tab" onClick={() => {
                 setInboxTab(tab.id);
-                if (tab.id === 'circles') setActiveChatId(null);
+                setActiveChatId(null);
               }} aria-selected={inboxTab === tab.id}
                 className={`min-h-10 shrink-0 rounded-lg px-3 font-semibold transition-all ${inboxTab === tab.id ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}>
                 {tab.label}{'count' in tab && <span className="ml-1 opacity-75">{tab.count}</span>}
