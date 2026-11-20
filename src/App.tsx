@@ -3210,19 +3210,28 @@ export default function App() {
               </header>
 
               <main className="flex min-h-0 flex-1 flex-col justify-center gap-4 py-4">
-                <button
-                  type="button"
-                  onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('photo'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }}
-                  className="group relative mx-auto flex w-full max-w-md flex-1 min-h-[190px] max-h-[38dvh] flex-col items-center justify-center overflow-hidden rounded-[2rem] border border-[#9A76FF]/45 bg-[linear-gradient(145deg,rgba(113,56,255,.26),rgba(18,14,43,.92)_58%,rgba(7,5,17,.98))] px-5 text-center shadow-[0_20px_80px_rgba(65,31,150,.24)] transition hover:border-[#C5B2FF]/75"
-                >
-                  <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(138,63,252,.25),transparent_52%)]" />
-                  <span className="relative grid h-20 w-20 place-items-center rounded-full border border-white/20 bg-[#7138FF]/25 text-white shadow-[0_0_55px_rgba(113,56,255,.38)] transition duration-300 group-hover:scale-105">
-                    <Camera className="h-9 w-9" />
-                  </span>
-                  <span className="relative mt-4 text-lg font-extrabold text-white sm:text-xl">Open camera</span>
-                  <span className="relative mt-1 max-w-xs text-xs leading-relaxed text-[#C7BCE4]">Capture a photo, record a moment or choose media from your gallery.</span>
-                  <span className="relative mt-3 rounded-full border border-white/15 bg-black/20 px-3 py-1 text-[10px] font-semibold tracking-wide text-[#D8CBFF]">CAMERA + GALLERY</span>
-                </button>
+                <div className="mx-auto grid w-full max-w-md grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('photo'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }}
+                    className="group relative flex min-h-[150px] flex-col items-center justify-center overflow-hidden rounded-[1.7rem] border border-[#9A76FF]/45 bg-[linear-gradient(145deg,rgba(113,56,255,.30),rgba(18,14,43,.94)_62%,rgba(7,5,17,.98))] px-3 py-4 text-center shadow-[0_16px_55px_rgba(65,31,150,.20)] transition hover:border-[#C5B2FF]/75 active:scale-[0.985]"
+                  >
+                    <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(138,63,252,.25),transparent_58%)]" />
+                    <span className="relative grid h-14 w-14 place-items-center rounded-full border border-white/20 bg-[#7138FF]/25 text-white shadow-[0_0_40px_rgba(113,56,255,.32)] transition duration-300 group-hover:scale-105"><Camera className="h-7 w-7" /></span>
+                    <span className="relative mt-3 text-sm font-extrabold text-white">Open camera</span>
+                    <span className="relative mt-1 text-[10px] leading-relaxed text-[#C7BCE4]">Take a photo or record</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('carousel'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }}
+                    className="group relative flex min-h-[150px] flex-col items-center justify-center overflow-hidden rounded-[1.7rem] border border-white/12 bg-[linear-gradient(145deg,rgba(31,24,62,.92),rgba(12,10,25,.98))] px-3 py-4 text-center transition hover:border-[#9A76FF]/55 hover:bg-[#19143A] active:scale-[0.985]"
+                  >
+                    <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(138,63,252,.12),transparent_58%)]" />
+                    <span className="relative grid h-14 w-14 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-[#D5C7FF] transition duration-300 group-hover:scale-105"><FileImage className="h-7 w-7" /></span>
+                    <span className="relative mt-3 text-sm font-extrabold text-white">Choose from gallery</span>
+                    <span className="relative mt-1 text-[10px] leading-relaxed text-[#AFA6C8]">Select photos from your device</span>
+                  </button>
+                </div>
 
                 <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
                   <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('reel'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="group flex min-h-[76px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left backdrop-blur-xl transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]">
