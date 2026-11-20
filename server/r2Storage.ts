@@ -46,6 +46,17 @@ const MEDIA_POLICIES: Record<string, R2UploadPolicy> = {
   'text/plain': { kind: 'document', maxBytes: 10 * 1024 * 1024 },
   'text/csv': { kind: 'document', maxBytes: 20 * 1024 * 1024 },
   'application/rtf': { kind: 'document', maxBytes: 20 * 1024 * 1024 },
+  'application/vnd.oasis.opendocument.text': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/vnd.oasis.opendocument.spreadsheet': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/vnd.oasis.opendocument.presentation': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/zip': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/x-7z-compressed': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/vnd.rar': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/x-tar': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/gzip': { kind: 'document', maxBytes: 50 * 1024 * 1024 },
+  'application/json': { kind: 'document', maxBytes: 10 * 1024 * 1024 },
+  'application/xml': { kind: 'document', maxBytes: 10 * 1024 * 1024 },
+  'text/markdown': { kind: 'document', maxBytes: 10 * 1024 * 1024 },
 };
 
 export function resolveR2Config(env: NodeJS.ProcessEnv = process.env): R2Config | null {
