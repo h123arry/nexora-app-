@@ -95,7 +95,7 @@ export class ChatEngine {
     currentUser: User,
     visiblePosts: Post[] = [],
     contextScope: 'feed' | 'profile' | 'none' = 'none',
-    contextScopes: Array<'feed' | 'profile' | 'world_pulse'> = []
+    contextScopes: Array<'feed' | 'profile' | 'world_pulse' | 'circles' | 'notifications'> = []
   ): Promise<{ text: string }> {
     // Dynamic context integration
     const controller = new AbortController();
