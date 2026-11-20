@@ -303,7 +303,7 @@ export interface Chat {
 
 export interface Notification {
   id: string;
-  type: 'like' | 'comment' | 'follow' | 'mention' | 'system' | 'security' | 'mission_milestone' | 'pulse_alert' | 'message' | 'community' | 'spark' | 'ai_recommendation' | 'reputation_milestone' | 'profile_view' | 'origin_attribution';
+  type: 'like' | 'spark' | 'comment' | 'comment_reply' | 'follow' | 'repost' | 'gift' | 'mention' | 'system' | 'security' | 'mission_milestone' | 'pulse_alert' | 'message' | 'community' | 'ai_recommendation' | 'reputation_milestone' | 'profile_view' | 'origin_attribution';
   userId: string;
   username: string;
   avatar: string;
