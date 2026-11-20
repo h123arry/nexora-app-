@@ -30,6 +30,7 @@ import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageC
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { assertCallableSessionActive } from './callableSession.js';
 import { createDailySessionRecorder } from './retention.js';
+import { issueCreatorMilestones } from './creatorMilestoneNotifications.js';
 export { saveCreatorStudioTemplate, listCreatorStudioTemplates, deleteCreatorStudioTemplate } from './creatorStudio.js';
 export { saveCreatorLens, submitCreatorLensForReview, reviewCreatorLens, listMyCreatorLenses, listPublishedCreatorLenses } from './creatorLenses.js';
 export { getCreatorEarningsSnapshot, getPendingGiftEarningsForFinance, settleGiftCreatorEarning } from './giftEarnings.js';
@@ -123,6 +124,21 @@ export const indexPublicProfileForSearch = onDocumentWritten('users/{userId}', a
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
   if (before && data && !searchFieldsChanged(before, data, ['username','name','avatar','bio','isVerified','isBanned','isSuspended','isSeedProfile'])) return;
   await syncSearch('person', event.params.userId, 'users/' + event.params.userId, data);
+});
+ 
+export const notifyCreatorMilestonesFromPost = onDocumentWritten('posts/{postId}', async event => {
+  const post = event.data?.after.exists ? event.data.after.data() : null;
+  if (!post || post.isArchived === true || post.isDraft === true) return;
+  const creatorId = typeof post.userId === 'string' ? post.userId : typeof post.authorId === 'string' ? post.authorId : '';
+  if (!creatorId) return;
+  try { await issueCreatorMilestones(adminDb, creatorId); }
+  catch (error) { console.error('[Creator milestones] Post milestone evaluation failed.', error); }
+});
+
+export const notifyCreatorMilestonesFromAccount = onDocumentWritten('users/{userId}', async event => {
+  if (!event.data?.after.exists) return;
+  try { await issueCreatorMilestones(adminDb, event.params.userId); }
+  catch (error) { console.error('[Creator milestones] Account milestone evaluation failed.', error); }
 });
 export const indexPageForSearch = onDocumentWritten('pages/{pageId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
