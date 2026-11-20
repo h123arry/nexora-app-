@@ -11,7 +11,6 @@ test('creator milestone policy issues only thresholds actually reached', () => {
     totalShares: 49,
     totalSaves: 50,
     totalEarnedNex: 1000,
-    highestPostViews: 499,
     publishedPosts: 3,
     isVerified: false,
   });
@@ -22,7 +21,6 @@ test('creator milestone policy issues only thresholds actually reached', () => {
   assert.ok(ids.includes('views_1000'));
   assert.ok(!ids.includes('views_10000'));
   assert.ok(!ids.includes('likes_500'));
-  assert.ok(!ids.includes('post_views_500'));
   assert.ok(ids.includes('comments_100'));
   assert.ok(!ids.includes('shares_50'));
   assert.ok(ids.includes('saves_50'));
@@ -39,7 +37,6 @@ test('verification is issued as a creator milestone only when verified', () => {
     totalShares: 0,
     totalSaves: 0,
     totalEarnedNex: 0,
-    highestPostViews: 0,
     publishedPosts: 0,
     isVerified: true,
   });
@@ -55,7 +52,6 @@ test('milestone thresholds are stable and do not produce duplicate identifiers',
     totalShares: 100,
     totalSaves: 100,
     totalEarnedNex: 10000,
-    highestPostViews: 1000,
     publishedPosts: 10,
     isVerified: true,
   });
@@ -63,7 +59,6 @@ test('milestone thresholds are stable and do not produce duplicate identifiers',
   assert.equal(new Set(ids).size, ids.length);
   assert.ok(ids.includes('followers_1000'));
   assert.ok(ids.includes('likes_1000'));
-  assert.ok(ids.includes('post_views_1000'));
   assert.ok(ids.includes('comments_500'));
   assert.ok(ids.includes('shares_100'));
   assert.ok(ids.includes('saves_100'));
