@@ -140,6 +140,12 @@ export const notifyCreatorMilestonesFromAccount = onDocumentWritten('users/{user
   try { await issueCreatorMilestones(adminDb, event.params.userId); }
   catch (error) { console.error('[Creator milestones] Account milestone evaluation failed.', error); }
 });
+
+export const notifyCreatorMilestonesFromPublicProfile = onDocumentWritten('publicProfiles/{userId}', async event => {
+  if (!event.data?.after.exists) return;
+  try { await issueCreatorMilestones(adminDb, event.params.userId); }
+  catch (error) { console.error('[Creator milestones] Public profile milestone evaluation failed.', error); }
+});
 export const indexPageForSearch = onDocumentWritten('pages/{pageId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
