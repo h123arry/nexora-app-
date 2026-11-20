@@ -2354,3 +2354,27 @@ body {
 @media (max-width: 360px) {
   .nx-profile-shell .nx-profile-media-grid { gap: 1px; }
 }
+
+
+/* Profile navigation stays in one swipeable row on narrow screens. */
+.nx-profile-tabbar .nx-profile-tabs-track {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+.nx-profile-tabbar .nx-profile-tabs-track::-webkit-scrollbar { display: none; }
+.nx-profile-tabbar .nx-profile-tabs-track > button {
+  min-width: 88px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.nx-profile-shell .nx-profile-media-grid img { display: block; object-fit: cover; }
+@media (min-width: 768px) {
+  .nx-profile-tabbar .nx-profile-tabs-track { justify-content: center; }
+}
