@@ -75,7 +75,8 @@ async function sendIncomingCallPush(
     db.collection('users').doc(recipientId).collection('pushTokens').get(),
     db.collection('users').doc(recipientId).collection('settings').doc('preferences').get(),
   ]);
-  if (preferences.data()?.notifications?.push === false) return;
+  const notificationPreferences = preferences.data()?.notifications || {};
+  if (notificationPreferences.push === false || notificationPreferences.pushEnabled === false) return;
   const tokenValues = tokens.docs.map(doc => doc.data().token).filter((token): token is string =>
     typeof token === 'string' && token.length >= 20 && token.length <= 4096
   );
