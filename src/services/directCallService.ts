@@ -1,8 +1,6 @@
 import { collection, doc, onSnapshot, query, where, type Unsubscribe } from 'firebase/firestore';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app, db } from '../lib/firebase';
-
-const callFunctions = getFunctions(app, 'europe-west1');
+import { httpsCallable } from 'firebase/functions';
+import { db, regionalFunctions } from '../lib/firebase';
 
 export interface DirectCall {
   id: string;
@@ -27,17 +25,17 @@ export async function startDirectCall(chatId: string, recipientId: string, type:
   const callable = httpsCallable<
     { callId: string; chatId: string; recipientId: string; type: 'voice' | 'video' },
     { callId: string; status: 'ringing'; expiresAt: number }
-  >(callFunctions, 'startDirectCall');
+  >(regionalFunctions, 'startDirectCall');
   return (await callable({ callId, chatId, recipientId, type })).data;
 }
 
 export async function respondToDirectCall(callId: string, decision: 'accept' | 'decline') {
-  const callable = httpsCallable<{ callId: string; decision: 'accept' | 'decline' }, { status: DirectCall['status'] }>(callFunctions, 'respondToDirectCall');
+  const callable = httpsCallable<{ callId: string; decision: 'accept' | 'decline' }, { status: DirectCall['status'] }>(regionalFunctions, 'respondToDirectCall');
   return (await callable({ callId, decision })).data;
 }
 
 export async function endDirectCall(callId: string) {
-  const callable = httpsCallable<{ callId: string }, { ended: true }>(callFunctions, 'endDirectCall');
+  const callable = httpsCallable<{ callId: string }, { ended: true }>(regionalFunctions, 'endDirectCall');
   return (await callable({ callId })).data;
 }
 
@@ -45,7 +43,7 @@ export async function getDirectCallToken(callId: string) {
   const callable = httpsCallable<
     { callId: string },
     { token: string; wsUrl: string; roomName: string; expiresAt: number; callType: 'voice' | 'video' }
-  >(callFunctions, 'getDirectCallToken');
+  >(regionalFunctions, 'getDirectCallToken');
   return (await callable({ callId })).data;
 }
 
