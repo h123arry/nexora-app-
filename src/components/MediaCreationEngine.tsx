@@ -136,6 +136,83 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
 }
 
 
+/** Re-encode a video through a canvas so the selected crop is part of the exported file. */
+async function renderCroppedVideoBlob(source: Blob, ratio: number): Promise<Blob> {
+  if (typeof MediaRecorder === 'undefined' || typeof HTMLCanvasElement.prototype.captureStream !== 'function') {
+    throw new Error('Video cropping is not supported by this browser. Your original video has not changed.');
+  }
+  const sourceUrl = URL.createObjectURL(source);
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  video.src = sourceUrl;
+  let sourceStream: MediaStream | null = null;
+  let outputStream: MediaStream | null = null;
+  let frameRequest = 0;
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error('This video could not be opened for cropping.'));
+      video.load();
+    });
+    const sourceWidth = video.videoWidth;
+    const sourceHeight = video.videoHeight;
+    if (!sourceWidth || !sourceHeight) throw new Error('The video dimensions could not be read.');
+    const outputWidth = 1080;
+    const outputHeight = Math.max(1, Math.round(outputWidth / ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Video cropping is not available on this device.');
+    const sourceRatio = sourceWidth / sourceHeight;
+    let sx = 0, sy = 0, sw = sourceWidth, sh = sourceHeight;
+    if (sourceRatio > ratio) { sw = sourceHeight * ratio; sx = (sourceWidth - sw) / 2; }
+    else { sh = sourceWidth / ratio; sy = (sourceHeight - sh) / 2; }
+    outputStream = canvas.captureStream(30);
+    const captureVideo = video as HTMLVideoElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream };
+    const capture = captureVideo.captureStream || captureVideo.mozCaptureStream;
+    if (capture) {
+      sourceStream = capture.call(video);
+      sourceStream.getAudioTracks().forEach(track => outputStream!.addTrack(track));
+    }
+    const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
+    const recorder = new MediaRecorder(outputStream, mimeType ? { mimeType } : undefined);
+    const chunks: Blob[] = [];
+    const finished = new Promise<Blob>((resolve, reject) => {
+      recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+      recorder.onerror = () => reject(new Error('The cropped video could not be encoded.'));
+      recorder.onstop = () => chunks.length ? resolve(new Blob(chunks, { type: recorder.mimeType || 'video/webm' })) : reject(new Error('The cropped video was empty.'));
+    });
+    const drawFrame = () => {
+      if (video.readyState >= 2) context.drawImage(video, sx, sy, sw, sh, 0, 0, outputWidth, outputHeight);
+      if (!video.ended && !video.paused) frameRequest = requestAnimationFrame(drawFrame);
+    };
+    context.fillStyle = '#000';
+    context.fillRect(0, 0, outputWidth, outputHeight);
+    recorder.start(250);
+    await video.play();
+    drawFrame();
+    await new Promise<void>((resolve, reject) => {
+      const timeout = window.setTimeout(() => { video.pause(); reject(new Error('Video cropping took too long. Please try again.')); }, Math.max(30000, (video.duration + 10) * 1000));
+      video.onended = () => { clearTimeout(timeout); resolve(); };
+      video.onerror = () => { clearTimeout(timeout); reject(new Error('Video playback stopped while cropping.')); };
+    });
+    if (recorder.state !== 'inactive') recorder.stop();
+    return await finished;
+  } finally {
+    cancelAnimationFrame(frameRequest);
+    sourceStream?.getTracks().forEach(track => track.stop());
+    outputStream?.getTracks().forEach(track => track.stop());
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
+
 /**
  * Reduce large still-image uploads on-device without touching animated formats.
  * WebP keeps transparency and is only used when the encoded result is smaller.
@@ -383,6 +460,8 @@ export default function MediaCreationEngine({
   const [videoCoverBlob, setVideoCoverBlob] = useState<Blob | null>(null);
   const [videoCoverTime, setVideoCoverTime] = useState(0);
   const [isTrimmingVideo, setIsTrimmingVideo] = useState(false);
+  const [videoCropRatio, setVideoCropRatio] = useState<'original' | '1:1' | '4:5' | '9:16'>('original');
+  const [isCroppingVideo, setIsCroppingVideo] = useState(false);
   const trimVideoRef = useRef<HTMLVideoElement>(null);
   const [mentionSuggestions, setMentionSuggestions] = useState<Array<{ username: string; name: string; avatar: string }>>([]);
   const [mentionValidation, setMentionValidation] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
@@ -1025,6 +1104,28 @@ export default function MediaCreationEngine({
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Video trimmed and ready to publish.' }));
     } catch (error) { setErrorMessage(error instanceof Error ? error.message : 'Video trimming failed.'); }
     finally { stream?.getTracks().forEach(track => track.stop()); setIsTrimmingVideo(false); }
+  };
+
+  const applyVideoCrop = async () => {
+    if (!videoRawBlob || videoCropRatio === 'original') return;
+    const ratio = videoCropRatio === '1:1' ? 1 : videoCropRatio === '4:5' ? 4 / 5 : 9 / 16;
+    setIsCroppingVideo(true);
+    setErrorMessage('');
+    try {
+      const cropped = await renderCroppedVideoBlob(videoRawBlob, ratio);
+      const nextUrl = trackObjectUrl(URL.createObjectURL(cropped));
+      revokeTrackedObjectUrl(videoFileUrl);
+      revokeTrackedObjectUrl(recordedVideoUrl);
+      setVideoFileUrl(nextUrl);
+      setRecordedVideoUrl(null);
+      setVideoRawBlob(cropped);
+      setVideoCropRatio('original');
+      setVideoCoverBlob(null);
+      setVideoCoverTime(0);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Video crop applied. The exported video now uses this frame.' }));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Video cropping failed. Your original video is unchanged.');
+    } finally { setIsCroppingVideo(false); }
   };
 
   const captureVideoCover = async () => {
@@ -2140,6 +2241,16 @@ export default function MediaCreationEngine({
                           <p className="text-[10px] text-emerald-300 font-semibold">✓ Video ready · {Math.round(videoDuration)} seconds</p>
                           <video ref={trimVideoRef} src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" onLoadedMetadata={event => { const duration = Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : videoDuration; setVideoDuration(duration); setVideoTrimEnd(previous => Math.min(previous, duration)); }} className="w-full rounded-lg bg-black" />
                            {videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-lg border border-violet-400/40 bg-violet-500/10 px-3 py-2.5 text-xs font-semibold text-violet-100 hover:bg-violet-500/20">Edit video</button>}
+                          <div className="space-y-2 rounded-xl border border-[#292244] bg-[#0B0918] p-3">
+                            <div className="flex items-center justify-between"><p className="text-xs font-semibold text-white">Crop video</p><span className="text-[10px] text-[#8E88A7]">Centre frame</span></div>
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {([{ label: 'Original', value: 'original' }, { label: 'Square', value: '1:1' }, { label: 'Portrait', value: '4:5' }, { label: 'Full screen', value: '9:16' }] as const).map(option => (
+                                <button key={option.value} type="button" onClick={() => setVideoCropRatio(option.value)} className={`rounded-lg border px-2 py-2 text-[10px] font-semibold ${videoCropRatio === option.value ? 'border-[#8170B7] bg-[#211A38] text-white' : 'border-[#292244] bg-[#120E2B] text-[#A39BBF]'}`}>{option.label}</button>
+                              ))}
+                            </div>
+                            <p className="text-[10px] leading-relaxed text-[#8E88A7]">This crops the actual video file, not just its preview. The original is kept if your browser cannot export the crop.</p>
+                            <button type="button" onClick={applyVideoCrop} disabled={isCroppingVideo || videoCropRatio === 'original' || !videoRawBlob} className="w-full rounded-lg border border-violet-500/30 bg-violet-600/20 px-3 py-2 text-xs font-bold text-violet-200 disabled:opacity-40">{isCroppingVideo ? 'Cropping video…' : 'Apply video crop'}</button>
+                          </div>
                           <div className="space-y-2">
                             <div className="flex justify-between text-[10px] text-[#A39BBF]"><label htmlFor="video-trim-start">Start · {videoTrimStart.toFixed(1)}s</label><span>End · {videoTrimEnd.toFixed(1)}s</span></div>
                             <input id="video-trim-start" aria-label="Video trim start" type="range" min="0" max={Math.max(0, videoDuration - 1)} step="0.1" value={Math.min(videoTrimStart, Math.max(0, videoDuration - 1))} onChange={event => { const value = Number(event.target.value); setVideoTrimStart(value); if (value >= videoTrimEnd) setVideoTrimEnd(Math.min(videoDuration, value + 1)); }} className="w-full accent-violet-500" />
