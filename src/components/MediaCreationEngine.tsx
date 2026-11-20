@@ -2398,6 +2398,12 @@ export default function MediaCreationEngine({
 
                       {/* Crop/Rotate utilities */}
                       <div className={`${activePhotoTool === 'crop' ? 'grid' : 'hidden'} grid-cols-1 gap-2 pt-1 border-t border-[#292244]`}>
+                        <p className="text-[10px] text-[#A39BBF]">Frame your photo. Choose how much of the edges to crop.</p>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {[{ label: 'Original', zoom: 1 }, { label: 'Light', zoom: 1.15 }, { label: 'Closer', zoom: 1.35 }, { label: 'Tight', zoom: 1.6 }].map(option => (
+                            <button key={option.label} type="button" onClick={() => setSelectedImages(prev => prev.map((img, idx) => idx === (activeEditIndex || 0) ? { ...img, zoom: option.zoom } : img))} className={`rounded-lg border px-2 py-2 text-[10px] font-semibold transition-colors ${(selectedImages[activeEditIndex || 0]?.zoom || 1) === option.zoom ? 'border-[#8170B7] bg-[#211A38] text-white' : 'border-[#292244] bg-[#120E2B] text-[#A39BBF] hover:text-white'}`}>{option.label}</button>
+                          ))}
+                        </div>
                         <button 
                           onClick={() => {
                             setSelectedImages(prev => prev.map((img, idx) => {
