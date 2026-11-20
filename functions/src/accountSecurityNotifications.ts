@@ -61,6 +61,7 @@ export function buildAccountSecurityEventMessage(eventType: AccountSecurityEvent
     case 'SESSIONS_REVOKED':
       return { title: 'Other sessions signed out', body: 'Your active account sessions were revoked. Sign in again on devices you still use.' };
   }
+  return { title: 'Account security update', body: 'A security change was recorded for your NEXORA account.' };
 }
 
 /** Store an authenticated account event and its inbox notification atomically. */
