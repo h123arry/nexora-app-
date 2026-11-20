@@ -38,7 +38,7 @@ export default function MatrixView({
   }, [initialSubTab]);
   const [customPostContent, setCustomPostContent] = useState('');
   const [customPostTags, setCustomPostTags] = useState('');
-  const [deploySuccess, setShare postSuccess] = useState(false);
+  const [deploySuccess, setDeploySuccess] = useState(false);
 
   // Predefined community tags for quick tap selection
   const popularTags = ['Food', 'Travel', 'Music', 'Learning', 'Business', 'Creativity'];
