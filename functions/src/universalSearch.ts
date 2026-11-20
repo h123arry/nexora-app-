@@ -360,7 +360,10 @@ export async function getNexoraTrending(db: Firestore): Promise<Array<{
     const data = post.data();
     const creator = String(data.userId || data.authorId || '');
     const timestamp = asDate(data.timestamp).getTime();
-    if (!creator || hiddenCreators.has(creator) || !Number.isFinite(timestamp) || timestamp < cutoff || timestamp > now) continue;
+    const status = String(data.status || '').toLowerCase();
+    if (!creator || hiddenCreators.has(creator) || data.isArchived === true
+      || status === 'deleted' || status === 'removed'
+      || !Number.isFinite(timestamp) || timestamp < cutoff || timestamp > now) continue;
     const ageHours = Math.max(0,(now-timestamp)/3600000);
     const current = timestamp >= now - windowMs;
     const tags = Array.isArray(data.tags) ? [...new Set(data.tags)] : [];
