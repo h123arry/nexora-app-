@@ -4,145 +4,191 @@
 
 **One network. Real connections. Endless possibilities.**
 
-NEXORA is an actively developed social platform bringing together profiles, a social feed, conversations, communities, creator tools, discovery, and VOH AI. Its product direction is an integrated, mobile-first experience rather than a collection of disconnected applications.
+NEXORA is a social platform built to bring people, creators, conversations, communities, and digital experiences together in one connected place. It combines a personalized social feed, photo and video sharing, profiles, messaging, communities, creator tools, discovery, and a growing digital gift economy.
 
-**Visual identity:** Nexora Violet: a premium violet signal on a private midnight canvas.
+NEXORA is designed around a simple idea: social media should feel like a place people belong, not just a place they scroll.
 
-> **Project status:** This repository contains a mix of Firebase-backed application paths, client-local features, prototypes, and disabled integrations. Code or UI presence is not proof that a service is deployed, production-configured, or available to users.
+**Brand identity:** Nexora Violet — a premium violet signal on a private midnight canvas.
 
-## Expansion programme
+---
 
-The additive [NEXORA Expansion Programme](docs/NEXORA_EXPANSION_PROGRAMME.md) defines 11 connected workstreams, delivery safeguards, implementation sequencing, and release gates. It is a scope and status contract, not a claim that those workstreams are already implemented.
+## Project status
 
-The new [NEXORA ORIGIN foundation](docs/NEXORA_ORIGIN_FOUNDATION.md) defines a privacy-aware provenance, attribution, and remix-lineage workstream. It is a specification only; implementation and release gates remain outstanding.
+**NEXORA is deployed and in production use.** The platform has moved beyond a development-only project: real early users are registering and sharing photos, videos, written posts, and other content.
 
-## About NEXORA
+The product is now in its real-world refinement and growth stage. Development priorities include performance, reliability, usability, privacy, safety, and the quality of the everyday user experience as the community grows.
 
-NEXORA is being developed around meaningful interactions, secure accounts, reliable messaging, personalized discovery, and a consistent visual experience. The implementation is still evolving; the readiness of each feature varies. The sections below distinguish repository capabilities from integrations that remain incomplete or unverified.
+Production status describes the deployed platform. Individual integrations and capabilities can still depend on their required provider configuration, operational safeguards, and release settings. We distinguish implemented application functionality from optional services or financial operations that have not been cleared for live use.
 
-## Features and implementation status
+## What NEXORA brings together
 
-### Social networking and discovery
+### Social feed and discovery
+- A social home for discovering and keeping up with people, creators, and posts.
+- Personalized feed experiences and content discovery.
+- Post interactions including comments, replies, reactions/Sparks, sharing, and saved content.
+- Search and discovery experiences for people and content.
+- Feed preferences and controls designed to help people shape what they see.
 
-- Firebase Authentication provides user identities. Profile records and public profile projections are stored in Cloud Firestore.
-- Post creation, public-feed retrieval, comments, and feed subscriptions use the existing Firestore-backed post path. Likes are committed by an authenticated callable Cloud Function with a per-user Firestore marker and transactional post counter. Saved posts now use the owner-only `users/{uid}/postBookmarks` collection; the device-local list is retained only to migrate older saved items and provide a local cache. Repost/share counters are persisted by the main app flow, while an alternate share-sheet repost interaction remains UI-local.
-- Follow and profile-discovery surfaces are present. Explore searches the posts and public profiles currently loaded in the client, keeps recent search terms locally, and derives recent hashtag counts from loaded posts. The public-profile subscription is bounded; this is not a global indexed-search or personalized recommendation service.
-- **World Pulse** has interactive topic and category controls, but live activity aggregation, map data, measured trends, and alert delivery are not connected. Treat it as an in-progress discovery surface, not a live trends service.
+### Photos, videos, and creation
+- Photo and multi-photo publishing for visual storytelling.
+- Vertical, full-screen video experiences for immersive viewing.
+- A unified creation flow for composing and sharing content.
+- Media preparation and upload flows designed for real user-generated content.
+- Creator-facing content and publishing experiences.
 
-### Communities and Circles
-
-- The Communities hub reads public and owner-managed community records from Firestore and supports search, browsing, creation, and per-user membership records in each community's `members` subcollection. Public join/leave state is Firestore-backed and cross-device; private or invite-only access requests are not yet available.
-- Circle discussion posts are written through an authenticated server callable to `communities/{communityId}/posts` and read through a membership-scoped Firestore subscription. Active-member rules protect the feed; Circle posts are not published into the global public-post feed. Circle polls and events use authenticated callables, transactional vote/RSVP records, and real-time Firestore subscriptions. Active-member directory and member counts are also read from Firestore.
-- The Matrix **Circles** experience uses the same persisted community services: Firestore-backed discovery and membership, member-scoped discussion posts, real-time group messages and polls, transactional voting, events and RSVPs, announcements, member directory, invite links, role delegation, and server-aggregated activity insights. These are not seeded demo records. Insight streams report when a query reaches its cap rather than inventing totals.
-- Circle owner/admin role delegation and invite governance are connected. Circle member removal and bans are now enforced by trusted callables. Owners, admins, and moderators can remove lower-ranked members; managers can review a private ban list and unban members. Every action records an audit event, role hierarchy is enforced server-side, and private ban markers prevent rejoining without exposing banned user IDs on public Circle documents. Timed mute enforcement remains incomplete. Members can report Circle posts and other members; managers have a private report queue to dismiss reports, remove reported posts/messages, or ban reported members. The secure Circle media upload/download pipeline is also not yet connected.
+### Profiles and identity
+- Personal profiles and public identity.
+- Profile photos, cover images, profile details, and account settings.
+- Follow relationships and creator identity.
+- Account-aware profile and social activity experiences.
 
 ### Messaging and communication
+- Direct conversations with real-time message updates.
+- Conversation activity, read states, and communication preferences.
+- Voice-note and media-sharing capabilities, subject to the enabled media routes and permissions.
+- Private media access is designed around authenticated conversation participants.
 
-- Chats, messages, conversation previews, read updates, typing indicators, and chat presence use Cloud Firestore, including real-time snapshot listeners. Presence and typing are therefore **Firestore-backed in the current implementation, not Firebase Realtime Database-backed**.
-- The message UI has local `sending`, `sent`, and `failed` states and a Firestore read-receipt writer. A delivered-receipt helper exists, but a reliable end-to-end delivered transition has not been established.
-- Voice notes use an authenticated private-media API and Firebase Storage. Other chat attachment options are not available in the current chat UI. Ordinary media flows can store metadata in Firestore and bytes in Firebase Storage.
+### Communities and Circles
+- Community discovery, membership, and group participation.
+- Circle discussions, group messages, polls, events, and announcements.
+- Member roles and moderation workflows.
+- Access controls for community and member-scoped content.
 
-### Feed personalization and privacy controls
+### Creators and Creator Academy
+- Creator-facing tools and dashboard experiences.
+- Creator education through the NEXORA Creator Academy.
+- Learning progress and institutional course capabilities.
+- Creator growth and achievement experiences.
 
-- Feed controls include hiding posts, muting or blocking creators, and marking topics as not interesting. Authenticated clients persist preference settings through Firestore; guest/device-only preferences use `localStorage`.
-- Filtering is performed in the client against the posts currently loaded; it is not a server-side feed query. Production cross-device behavior has not been verified. The empty-feed fallback currently does not reapply the not-interested-tag filter, so behavior can differ in that state.
-- Reset controls clear saved feed lists and the current viewed-post cache while preserving the selected feed tab. They do not delete unrelated account data.
+### GiftVerse and the NEX economy
+- GiftVerse is NEXORA's digital gifting universe, with a catalogue of more than 1,100 gifts represented in the project.
+- Gifts have their own identities, artwork, categories, and catalogue information.
+- Gift delivery, collection, and creator-economy workflows are built around server-authoritative transaction handling.
+- NEX uses a ledger-based wallet model for supported in-platform transactions.
 
-### Creators, analytics, reputation, and NEX
+NEX is an internal platform unit. It should not be described as a bank deposit, guaranteed cash equivalent, or freely withdrawable currency. Creator withdrawals and cash settlement remain subject to the required provider, compliance, funding, and operational approvals. The presence of payout code does not by itself mean live withdrawals are enabled.
 
-- The Creator Dashboard provides creator-facing content and achievement surfaces. Draft and scheduling behavior includes local/mock data.
-- Analytics code records bounded client observations and can produce platform aggregates; it is not a verified creator-level analytics or revenue product. Some data is client-originated, and scheduled production aggregation has not been verified.
-- Reputation scoring and activity logic exist, but are local-first/client-side with best-effort persistence; do not treat the result as a tamper-proof trust ledger.
-- **NEX is an internal platform unit with a server-authoritative wallet and immutable double-entry ledger.** The trusted gift-delivery callable validates catalogue prices, debits the sender, credits gift escrow, records creator gift earnings and delivers a GIFTVERSE event/gallery record transactionally. NEX is not a bank deposit or cash equivalent; wallet top-ups and general cash conversion are not enabled. A Paystack NGN creator-payout path exists, including beneficiary, compliance, OTP, webhook-signature and reconciliation workflows, but live withdrawals remain gated on finance approval, verified provider business, funded settlement, compliance approval, verified webhooks and a successful live test transfer. Do not describe payouts as live until all gates and a real settlement are verified.
-
-### Business Pages and bookings
-
-- Business service listings and booking requests are stored in Firestore. A booking remains pending until the business owner accepts or declines it; service duration is snapshotted on the request so later listing edits do not change an existing appointment.
-- The trusted booking flow prevents overlapping confirmed appointments, lets either participant cancel a pending request or future confirmed appointment, and sends an idempotent reminder notification to both parties before an accepted appointment. The reminder worker runs every 15 minutes and uses the existing notification/push pipeline when web push is enabled.
-- The scheduled reminder function and its Firestore index require deployment before reminders run in production. This does not add checkout, payment collection, external calendar sync, email or SMS reminders.
-
-### Creator Academy
-
-- The bundled creator curriculum and the published institutional-course system use account-scoped Firestore progress. Lesson completion is validated by a trusted callable against the bundled curriculum or a currently published institutional lesson.
-- Progress is merged transactionally to protect concurrent updates from multiple devices. Progress is not a credential: certificates are issued only through the separately assessed server-side course/assessment workflow.
+### Notifications and activity
+- An Activity experience for social and account-related updates.
+- Notification identity and navigation designed to take users to the relevant person or activity.
+- Push-notification support where the relevant device, browser, and server configuration is enabled.
 
 ### VOH AI
+- VOH AI capabilities are integrated into the wider NEXORA experience.
+- Server-side AI features depend on a valid provider configuration and available service access.
+- Private provider credentials must remain on the server and must never be committed to the repository or exposed in browser code.
 
-- The Express server contains authenticated, server-side Gemini endpoints for VOH chat, post improvement, audio transcription, and post summaries. `GEMINI_API_KEY` is server-only; `GEMINI_MODEL` defaults to `gemini-2.5-flash`. Without a valid configured provider key, VOH endpoints report that the service is unavailable.
-- Chat history and optional memory preferences are browser-local. Memory starts disabled and can be enabled, disabled, or cleared locally. Cloud memory sync is not implemented, and the current chat request does not attach the stored memory profile as model context.
-- A checked-in endpoint or UI does not establish that Gemini credentials, quotas, provider access, or production deployment are configured. Live provider-backed behavior has not been verified.
 
-### Notifications and push
+### Live experiences and creator production tools
+- Live-session and streaming workflows, including LiveKit token policy, live-session discovery, moderation-related controls, and replay/recording support in the codebase.
+- NEXORA Studio provides creator-oriented media editing workflows, including timeline, audio, text, subtitles, transitions, export validation, and cloud-draft policy modules.
+- NEXORA Lens includes a lens catalogue, expressions, scene effects, and augmented-reality capability policy and creator-lens workflows.
+- Availability of live streaming, recording storage, native camera capabilities, and media export depends on the relevant provider credentials, platform permissions, deployment, and real-device verification.
 
-- The Activity view and shared data services include Firestore-backed notification reads and updates. Other app notification state and some synthetic events are stored in React state or browser `localStorage`.
-- Optional Firebase Cloud Messaging code can request browser permission, obtain a token when configured, and handle foreground messages. The repository does not establish a backend token-registration/sending pipeline or reliable background/closed-tab push delivery.
+### World Pulse and intelligent discovery
+- World Pulse includes community, topic, signal, and AI-context modules intended to help people understand activity across NEXORA.
+- Discovery and recommendation work includes feed pagination, recommendation quality, watch-time signals, freshness, and user preference policies.
+- A module or signal pipeline in the repository should not be interpreted as proof of a fully populated real-time global trends service; live data coverage and production behavior depend on configured sources and observed activity.
 
-### Monetization and payments
+### Business, services, and bookings
+- Business Pages and service-directory workflows support service listings and booking requests.
+- Booking operations include trusted server-side handling, participant actions, scheduling safeguards, and reminder workflows in the codebase.
+- Payment collection, external calendar integrations, and delivery of reminders through every channel are separate integrations and must not be assumed enabled without deployment and end-to-end verification.
 
-Paid product checkout and subscriptions are **not enabled**: the billing module has no provider adapter and explicitly fails closed. This is separate from NEX gift transactions, which use a trusted callable and ledger, and from the Paystack creator-payout integration. Paystack transfer code, webhook verification and scheduled reconciliation are present, but production withdrawal activation is conditional on all six finance/operations gates. Provider secrets, business verification, approved NEX-to-NGN rate, settlement funding, compliance approval, webhook verification and a successful live transfer must be verified in the actual Firebase/Paystack environments. No production payout is claimed as completed.
+### Trust, safety, identity, and account controls
+- The repository includes moderation and reporting policy modules, community report workflows, identity-verification authority policies, account-security workflows, and account-deletion safeguards.
+- These capabilities are intended to support safer accounts and communities; their actual production enforcement depends on deployed rules, trusted services, configuration, and operational review.
+- Users' privacy, content ownership, and access boundaries remain central to product development.
 
-## Technology stack
+### NEXORA Origin and content provenance
+- NEXORA Origin is the project's provenance and attribution direction for source content, permission-aware reuse, remix lineage, and creator insights.
+- Origin policy and workflow modules exist in the codebase. The presence of these modules does not imply that every Origin workflow is generally available to all users.
 
-| Technology | Current role |
+
+---
+
+## Platform architecture
+
+NEXORA is developed in its existing application architecture. The project is not a replacement or rewrite of the original platform.
+
+| Technology | Role |
 | --- | --- |
-| React 19 | Web application UI |
-| TypeScript | Application and server type safety |
-| Vite | Development server and frontend build |
-| Tailwind CSS 4 | Utility styling and responsive layouts |
-| Motion | Interface animation |
-| Express 4 | Node.js application/API server |
-| Firebase Authentication | User identity |
-| Cloud Firestore | Profiles, posts, chats, presence, typing, settings, and some notification data |
-| Firebase Storage | Media bytes and private chat voice media |
-| Firebase Functions | Trusted/server-side operations and scheduled functions where configured |
-| Google GenAI SDK (Gemini) | Optional server-side VOH provider integration |
+| React 19 | Application interface |
+| TypeScript | Application and server-side type safety |
+| Vite | Frontend development and build tooling |
+| Tailwind CSS 4 | Styling and responsive UI |
+| Motion | Interface and interaction animation |
+| Express 4 | Node.js server and API routes |
+| Firebase Authentication | Account identity and authentication |
+| Cloud Firestore | Application data, profiles, posts, conversations, communities, and other persisted records |
+| Firebase Functions | Trusted server-side operations and event-driven workflows |
+| Cloudflare R2 | Media object storage and authenticated media workflows |
+| Google Gemini | Optional server-side AI provider for VOH AI |
+| Capacitor | Android and iOS application packaging and native integration |
 
-The root application and Functions package target **Node.js 22**. Firebase Realtime Database is not listed as an active application dependency below because the current repository does not initialize or use its SDK/API.
+The root application targets **Node.js 22**. Refer to the lockfiles and package manifests for the exact dependency versions.
 
-## Firebase architecture and configuration
 
-Firebase services have separate configuration and security models:
+## Mobile apps and store-release target
 
-| Service | Repository usage |
-| --- | --- |
-| Firebase Authentication | Email/Password and Google are enabled in the Console. Phone is disabled. Authorized domains include `localhost`, `nexora-prod-voiceharrison.firebaseapp.com`, and `nexora-prod-voiceharrison.web.app`; no custom host is listed. No live signup/login flow has been tested. |
-| Cloud Firestore | Primary persistence for profiles, posts/feed, follows, communities, chats/messages, notifications, and preferences. Messaging typing and presence snapshots are Firestore-backed, not RTDB. The active `default` database is in `europe-west1`; the Console showed no read/write/realtime-read metrics for the selected last seven days, scheduled backups are disabled, and published rules are unverified. |
-| Firebase Storage | App code expects Storage for media and private chat voice media, but the Console shows Storage onboarding and requires Blaze billing. No production bucket or upload is verified. |
-| Firebase Functions | Callable, scheduled, and trusted operations. Source presence does not prove deployment. |
-| Firebase Cloud Messaging | Optional foreground/browser messaging code; end-to-end background delivery is not established. |
-| Firebase Realtime Database | **No current application initialization or use found**, including for messaging, typing, or presence. The Console confirms the supplied `europe-west1` instance; live rules are deny-all (`.read: false`, `.write: false`). |
+NEXORA's mobile application work uses **Capacitor** to package the existing web application for Android and iOS, with native project and asset-generation workflows in the repository.
 
-The owner-confirmed Firebase project is `nexora-prod-voiceharrison`. Firebase Console lists the single active Cloud Firestore database as the literal `default` in `europe-west1`. This is distinct from Firestore's special `(default)` database. `FIRESTORE_DATABASE_ID` and `VITE_FIREBASE_DATABASE_ID` select a **Firestore database ID**; they are not Realtime Database URLs. The Firebase CLI config now targets only the confirmed `default` database to avoid an accidental deployment to the separate `(default)` target. No collection or document was opened during verification.
+**Target: January 2027 — Google Play and Apple App Store.** This is the project's intended release window, not a claim that either store has approved or published the apps. Store availability will follow completion of the release work and the independent review processes of Google Play and Apple.
 
-The Realtime Database URL `https://nexora-prod-voiceharrison-default-rtdb.europe-west1.firebasedatabase.app` was independently confirmed in Console; its location is Belgium (`europe-west1`). Its live rules deny all reads and writes. Because no application feature initializes or uses RTDB, no `databaseURL` was added to the app configuration. Do not treat this URL as a Firestore database ID or add RTDB reads/writes unless a feature and its access model are deliberately designed and tested.
+The mobile release track includes:
+- Android and iOS project synchronization from the web build.
+- Platform-specific app assets and splash-screen generation.
+- Android and iOS build scripts.
+- Real-device testing for authentication, media permissions, camera/gallery access, uploads, notifications, navigation, and lifecycle behavior.
+- Store listing preparation, privacy disclosures, support details, signing and release configuration, and submission review.
 
-The current client and Admin code use Firebase named-database APIs. Firebase's official references mark the relevant named-database overloads as **Public Preview** and advise against production use: [Firebase JS Firestore reference](https://firebase.google.com/docs/reference/js/firestore_) and [Firebase Admin Firestore reference](https://firebase.google.com/docs/reference/admin/node/firebase-admin.firestore). The Firestore emulator also does not model multiple databases. This is a production architecture decision, not something CI success resolves.
+Useful repository commands:
+```sh
+npm run mobile:doctor
+npm run mobile:sync
+npm run mobile:build:android
+npm run mobile:build:ios
+```
 
-## Security and engineering
+These commands describe the available build workflow; they do not establish that a signed release build has passed device acceptance, or that store submissions have been completed. The January 2027 target remains subject to testing, release readiness, and store approval.
 
-Security-related controls present in the repository include:
+## Security and responsible operation
 
-- Firestore rules with a default-deny unmatched-path policy and owner-, membership-, and data-scoped access.
-- Storage rules that constrain user media and deny direct client access to private chat objects.
-- Firebase ID-token verification and server-side authorization checks for protected API routes.
-- Bounded VOH request context and per-user rate limiting; private chat media checks verify conversation access and message linkage.
-- Emulator-based Auth, Firestore Rules, Storage Rules, and API security tests, plus unit and policy tests.
+Security and data integrity are core engineering requirements, not optional polish. The existing codebase includes security-oriented controls such as:
 
-These are source and test artifacts—not proof of production enforcement. Email/Password and Google are enabled, but Phone Auth is disabled and no custom domain is listed. Published Firestore rules/indexes, App Check (Console still shows `Get started`), IAM, rate limits, secrets, backups, and live data behavior remain unverified or incomplete. Storage is not set up in the project. Do not disable checks or deploy broad allow rules to work around configuration failures.
+- Authenticated account and API flows.
+- Server-side authorization for protected operations.
+- Firestore security rules and emulator-based rules tests.
+- Authenticated media upload and playback routes.
+- Media validation and upload lifecycle safeguards.
+- Rate limiting and bounded request handling on protected server routes.
+- Transactional handling for supported wallet, gift, and other sensitive operations.
+- Secret scanning and environment separation practices.
 
-## Final integration and launch readiness
+The presence of a control in source code or a passing emulator test is not, by itself, proof that every production resource is correctly configured. Production security also depends on deployed rules, IAM, secrets, provider settings, backups, monitoring, and ongoing operational review. Never commit service-account credentials, API secrets, signing keys, or private environment files.
 
-See [Phase 6 integration and launch-readiness matrix](docs/phase-6-integration-and-launch-readiness.md) for the final verification contract, evidence boundaries, and owner-controlled release gates.
+## Production and real-world refinement
+
+NEXORA is now being shaped by real usage, not only by development assumptions. The next stage focuses on:
+
+1. **Performance:** fast loading, responsive interactions, efficient media delivery, and smooth scrolling.
+2. **Reliability:** consistent publishing, messaging, notifications, and account experiences.
+3. **User experience:** clear language, intuitive navigation, accessible interactions, and thoughtful details.
+4. **Privacy and safety:** protecting accounts, conversations, user content, and community spaces.
+5. **Retention and community:** understanding what brings people back and what helps meaningful connections grow.
+6. **Scalability:** maintaining quality as registrations, content, and activity increase.
+
+The goal is not to add features simply to match a competitor's checklist. The goal is to make the features NEXORA offers genuinely useful, dependable, and enjoyable.
 
 ## Getting started
 
-### Prerequisites
+### Requirements
+- Node.js 22
+- npm
+- Java 21 when running Firebase Emulator Suite tests
+- Access to an approved Firebase emulator or non-production environment for backend-dependent development
 
-- Node.js 22 and npm.
-- Java 21 for the Firebase Emulator Suite tests.
-- Authorized access to a suitable Firebase emulator or non-production project for backend-dependent development.
-
-### Install and run
+### Install
 
 ```sh
 git clone https://github.com/h123arry/nexora-app-.git
@@ -151,83 +197,75 @@ npm ci
 npm ci --prefix functions
 ```
 
-Review `.env.example`, then create a local `.env` and set values for an emulator or owner-approved staging project before starting the app. The example contains production-shaped Firebase identifiers; do not assume that using it is safe for production data. `.env` files are ignored by Git, while `.env.example` is tracked. The `npm run dev` script starts the application server; it does not start the Firebase emulators.
+### Configure the environment
+
+Review `.env.example` and the deployment documentation before creating a local `.env` file.
+
+Use emulator or owner-approved staging resources for local development. Do not point local experiments at production data. Browser-visible `VITE_*` values are configuration, not secrets. Private credentials such as `GEMINI_API_KEY`, Firebase service-account credentials, and storage signing secrets must remain server-side and must never be committed.
+
+### Run locally
 
 ```sh
 npm run dev
 ```
 
-The server listens on `PORT` (default `3000`). To build and run the bundled server:
+The development server uses the configured `PORT` (default `3000`).
+
+### Build
 
 ```sh
 npm run build
 npm start
 ```
 
-### Environment configuration
+For deployment and environment setup, consult the runbooks in the `docs/` directory, including:
 
-Use the existing variable names in `.env.example` and the deployment documentation. Key settings include:
-
-- `GCLOUD_PROJECT`, `FIRESTORE_DATABASE_ID`, `FIREBASE_STORAGE_BUCKET`, `PORT`, and `RELEASE_VERSION` for the server. Production startup requires the Firebase project, Firestore database ID, storage bucket, and release version; server credentials must be supplied through the host's credential/secret mechanism.
-- `VITE_FIREBASE_*` values are browser-visible configuration, not secrets. App Check site keys and FCM VAPID keys are also public client configuration.
-- `GEMINI_API_KEY` is a private, server-only secret. Never prefix it with `VITE_`, place it in frontend source, or commit it or service-account credentials.
-- `APP_URL` is optional for integrations that need the hosted application URL.
-
-See [the deployment runbook](docs/deployment-runbook.md), [Firebase deployment runbook](docs/FIREBASE_DEPLOYMENT_RUNBOOK.md), [staging setup](docs/staging-setup-and-verification.md), and [production Firebase status](docs/production-firebase-migration.md) before configuring or deploying services.
+- [Deployment runbook](docs/deployment-runbook.md)
+- [Firebase deployment runbook](docs/FIREBASE_DEPLOYMENT_RUNBOOK.md)
+- [Staging setup and verification](docs/staging-setup-and-verification.md)
+- [Phase 6 integration and launch-readiness matrix](docs/phase-6-integration-and-launch-readiness.md)
 
 ## Checks and tests
 
-The root package exposes named scripts; there is no `npm test` or `npm run test` script.
+The repository provides focused checks for application code, server functions, security policies, and Firebase emulator behavior. Common commands include:
 
 | Command | Purpose |
 | --- | --- |
-| `npm run lint` | TypeScript check (`tsc --noEmit`) |
+| `npm run lint` | TypeScript validation |
+| `npm run build` | Build the frontend and bundled server |
 | `npm run functions:build` | Build Firebase Functions |
 | `npm run test:unit` | Unit and policy tests |
-| `npm run test:auth` | Auth regression tests using Auth/Firestore emulators |
-| `npm run test:rules` | Firestore security rules tests |
-| `npm run test:storage` | Storage security rules tests |
-| `npm run test:migration` | Public-post migration tests |
-| `npm run test:engagement` | Post engagement tests |
-| `npm run test:voh-security` | Authenticated VOH API security tests |
+| `npm run test:auth` | Authentication tests using emulators |
+| `npm run test:rules` | Firestore rules tests |
+| `npm run test:storage` | Storage rules tests |
+| `npm run test:engagement` | Engagement and related server workflow tests |
+| `npm run test:voh-security` | VOH API security tests |
 | `npm run security:scan` | Scan tracked files for secret patterns |
-| `npm run validate:deployment` | Validate checked-in deployment metadata; does not deploy |
-| `npm run validate:staging` | Validate staging configuration metadata |
-| `npm run build` | Build frontend and bundled Express server |
+| `npm run validate:deployment` | Validate deployment metadata; does not deploy |
 
-The Firebase emulator tests use demo project IDs and do not access production data. Relevant emulator tests are started by their individual scripts. CI additionally audits production dependencies with `npm audit --omit=dev --audit-level=high` and the equivalent Functions command.
-
-## CI and deployment status
-
-GitHub Actions runs on pushes and pull requests to `main`. The workflow installs both lockfiles, runs the secret scan, type check, Functions build, unit and emulator suites, production dependency audits, production build, and deployment metadata validation. **CI does not deploy the app or verify live Firebase resources.** A passing CI run is not proof of production registration, login, push, AI, or payment behavior.
-
-Production release is not certified. Blockers include the named-Firestore API Public Preview limitation, Storage requiring Blaze billing, App Check not configured, Phone Auth disabled, any custom production host not yet authorized, disabled Firestore scheduled backups, unverified published Firestore rules, and untested live authentication, server environment, and provider integrations. The `.firebaserc` includes the production project; always verify the target and owner approval before any deployment. Do not run an unrestricted production deploy.
+Run the relevant checks for the area you change. Emulator tests use isolated demo projects and do not test production user data. A passing CI workflow is valuable evidence about the commit, but it is not a substitute for production monitoring or real-device acceptance testing.
 
 ## Project principles
 
-- Preserve existing functionality and data; review the current architecture before changing it.
-- Prefer real, persistent behavior over mock interactions, and label prototypes honestly.
-- Keep authentication, authorization, privacy, and fail-closed validation enabled.
-- Test changes before merging or deploying; do not confuse emulator tests with live-project verification.
-- Keep Nexora Violet and the mobile-first product identity cohesive.
-- Report incomplete integrations and unverified production behavior honestly.
+- Improve the existing NEXORA architecture; do not replace working systems without a clear reason.
+- Build real, persistent experiences rather than presenting mock interactions as completed functionality.
+- Preserve user data and enforce authentication, authorization, and privacy boundaries.
+- Keep integrations fail-closed when required credentials or provider configuration are missing.
+- Test changes and review deployment targets before release.
+- Keep the Nexora Violet identity consistent and reuse the established NEXORA brand assets.
+- Be transparent about optional integrations and financial operations that are not enabled.
+- Let real user needs and observed product quality guide the roadmap.
 
 ## Contributing
 
-Development takes place in the existing repository. Before proposing changes, identify the affected components and dependencies, preserve security and data-integrity guarantees, avoid duplicating working systems, validate relevant package scripts, and document any configuration or deployment requirements.
+Work in the existing repository and follow its current architecture and conventions. Before changing a feature, inspect its existing UI, services, persistence model, security rules, and tests. Keep changes focused, validate the affected workflows, and document any required environment or deployment changes.
 
 ## License
 
-No root `LICENSE` file is present in this repository. Do not assume an open-source license or permissions that have not been established.
+No root `LICENSE` file is currently declared. All rights and permissions should be treated as reserved unless a license is added by the project owner.
 
 ---
 
 **NEXORA — The World's Living Social Network**
-Connection, creativity, community, and intelligent experiences.
 
-
-## NEXORA Live recordings and replays
-
-See [private GCS recording and replay setup](docs/live-recordings-and-replays.md) for bucket provisioning, service-account permissions, secret configuration, deployment, and end-to-end verification.
-
-See [NEXORA Live streaming operations](docs/live-streaming-operations.md) for LiveKit setup, host moderation, screen sharing, discovery behavior, and the real-device production acceptance checklist.
+*Connection. Creativity. Community. A world that moves with its people.*
