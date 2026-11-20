@@ -4,6 +4,10 @@ export interface CreatorMilestoneStats {
   followers: number;
   totalLikes: number;
   totalViews: number;
+  totalComments: number;
+  totalShares: number;
+  totalSaves: number;
+  totalEarnedNex: number;
   highestPostViews: number;
   publishedPosts: number;
   isVerified: boolean;
@@ -35,6 +39,20 @@ export function buildCreatorMilestones(stats: CreatorMilestoneStats): CreatorMil
   for (const threshold of [1000, 10000]) {
     add(`views_${threshold}`, `${threshold.toLocaleString()} recorded views`,
       `Your published posts have reached ${threshold.toLocaleString()} recorded views.`, stats.totalViews >= threshold);
+  }
+  for (const threshold of [100, 500]) {
+    add(`comments_${threshold}`, `${threshold.toLocaleString()} comments received`,
+      `People have left ${threshold.toLocaleString()} comments across your published posts.`, stats.totalComments >= threshold);
+  }
+  for (const threshold of [50, 100]) {
+    add(`shares_${threshold}`, `${threshold.toLocaleString()} shares and reposts`,
+      `Your published posts have been shared or reposted ${threshold.toLocaleString()} times.`, stats.totalShares >= threshold);
+    add(`saves_${threshold}`, `${threshold.toLocaleString()} saves`,
+      `People have saved your published posts ${threshold.toLocaleString()} times.`, stats.totalSaves >= threshold);
+  }
+  for (const threshold of [1000, 10000]) {
+    add(`nex_earned_${threshold}`, `${threshold.toLocaleString()} NEX earned`,
+      `Your creator activity has generated ${threshold.toLocaleString()} NEX in recorded earnings.`, stats.totalEarnedNex >= threshold);
   }
   for (const threshold of [500, 1000]) {
     add(`post_views_${threshold}`, `${threshold.toLocaleString()} views on one post`,
@@ -73,6 +91,10 @@ export async function issueCreatorMilestones(db: Firestore, creatorId: string): 
     followers: safeCount(profile.followers ?? user.followers),
     totalLikes: posts.reduce((total, post) => total + safeCount(post.likes ?? post.likeCount), 0),
     totalViews: views.reduce((total, value) => total + value, 0),
+    totalComments: posts.reduce((total, post) => total + safeCount(post.commentsCount ?? (Array.isArray(post.comments) ? post.comments.length : 0)), 0),
+    totalShares: posts.reduce((total, post) => total + safeCount(post.shares), 0),
+    totalSaves: posts.reduce((total, post) => total + safeCount(post.bookmarksCount ?? post.saves), 0),
+    totalEarnedNex: safeCount(user.totalEarnedNex),
     highestPostViews: views.reduce((highest, value) => Math.max(highest, value), 0),
     publishedPosts: posts.length,
     isVerified: user.isVerified === true || profile.isVerified === true,
