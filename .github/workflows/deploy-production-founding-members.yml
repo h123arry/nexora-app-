@@ -119,17 +119,20 @@ jobs:
             --project "$NEXORA_PRODUCTION_PROJECT_ID" \
             --non-interactive
 
-      - name: Deploy Storage rules only when the production bucket is provisioned
+      - name: Deploy Storage rules when Firebase Storage is provisioned
         run: |
-          gcloud storage buckets list --project "$NEXORA_PRODUCTION_PROJECT_ID" --format='value(name)' > /tmp/nexora-storage-buckets.txt
-          if grep -Fxq "$FIREBASE_STORAGE_BUCKET" /tmp/nexora-storage-buckets.txt; then
-            npx --yes firebase-tools@15.33.0 deploy \
-              --only storage \
-              --config firebase.json \
-              --project "$NEXORA_PRODUCTION_PROJECT_ID" \
-              --non-interactive
+          if npx --yes firebase-tools@15.33.0 deploy \
+            --only storage \
+            --config firebase.json \
+            --project "$NEXORA_PRODUCTION_PROJECT_ID" \
+            --non-interactive > /tmp/nexora-storage-deploy.log 2>&1; then
+            cat /tmp/nexora-storage-deploy.log
+          elif grep -Fq "Firebase Storage has not been set up" /tmp/nexora-storage-deploy.log; then
+            cat /tmp/nexora-storage-deploy.log
+            echo "::notice::Firebase Storage is not provisioned in production; Storage rules were not changed."
           else
-            echo "::notice::Firebase Storage bucket is not provisioned in the production project; Storage rules were not changed."
+            cat /tmp/nexora-storage-deploy.log
+            exit 1
           fi
 
       - name: Record deployment target
