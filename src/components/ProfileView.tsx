@@ -65,6 +65,8 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
       {gridPosts.map(post => {
         const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
+        const thumbnail = post.image || post.images?.find(Boolean);
+        const isMultiImage = !isVideo && (post.images?.filter(Boolean).length || 0) > 1;
         const isPinned = pinnedPostIds.includes(post.id);
         
         return (
@@ -84,9 +86,9 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
               {isVideo ? (
                 <div className="w-full h-full bg-slate-950 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/40 via-[#0a0521]/90 to-[#2c0b3d]/30" />
-                  {post.image ? (
+                  {thumbnail ? (
                     <img 
-                      src={post.image} 
+                      src={thumbnail} 
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
@@ -109,28 +111,32 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
                   <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[9px] font-mono font-bold z-20 flex items-center gap-1">
                     <Play className="w-2 h-2 fill-white text-white" />
                     {(() => {
-                      const views = post.views !== undefined ? post.views : 0;
-                      const formatted = views >= 1000000 
-                        ? (views / 1000000).toFixed(1).replace(/\.0$/, '') + 'M' 
-                        : views >= 1000 
-                          ? (views / 1000).toFixed(1).replace(/\.0$/, '') + 'K' 
-                          : views.toString();
-                      return `${formatted}`;
+                      const views = Number.isFinite(post.views) ? Math.max(0, Number(post.views)) : 0;
+                      const formatted = views >= 1000000
+                        ? (views / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
+                        : views >= 1000
+                          ? (views / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
+                          : String(views);
+                      return formatted;
                     })()}
                   </div>
                   <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[9px] font-mono font-bold z-20">
                     {post.videoDuration || 'Reel'}
                   </div>
                 </div>
-              ) : post.image ? (
+              ) : thumbnail ? (
+                <>
                 <img 
-                  src={post.image} 
+                  src={thumbnail} 
                   loading="lazy"
                   decoding="async"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
                   alt={post.content || 'Post image'}
                   referrerPolicy="no-referrer"
+                  onError={(event) => { event.currentTarget.style.display = 'none'; }}
                 />
+                {isMultiImage && <div className="absolute top-2 right-2 z-20 rounded-full bg-black/65 p-1.5 text-white backdrop-blur-md" aria-label="Multiple photos"><Layers className="h-3.5 w-3.5" /></div>}
+                </>
               ) : isVoice ? (
                 <div className="w-full h-full bg-gradient-to-tr from-pink-950/75 via-[#1d1242] to-[#040212] flex flex-col justify-between p-3">
                   <div className="flex justify-between items-center">
@@ -1161,7 +1167,7 @@ export default function ProfileView({
       {/* 1. TOP NAVIGATION ACTION BAR */}
       <div className="nx-page-header nx-profile-topbar sticky top-0 z-40 py-2 px-4 flex items-center justify-between border-b">
         <div className="flex items-center gap-3 relative">
-          <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none">NEXORA</span>
+          <span className="text-sm font-extrabold tracking-tight text-white leading-none select-none">{isOwnProfile ? 'Your profile' : 'Profile'}</span>
           {onCloseProfile && (
             <button 
               onClick={onCloseProfile}
@@ -1294,7 +1300,7 @@ export default function ProfileView({
       </div>
 
       {/* 2. PROFILE HEADER (COMPRESSED) */}
-      <div className="nx-profile-main w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
+      <div className="nx-profile-main w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left" aria-busy={isLoadingProfile}>
         
           {/* Profile Completion Prompts */}
           {false && isOwnProfile && (
@@ -1499,7 +1505,7 @@ export default function ProfileView({
 
           {/* Profile content navigation */}
           <div role="group" aria-label="Profile content views" className="nx-profile-tabbar sticky top-0 nx-glass z-30 border-y border-white/10 mt-4 px-0 w-full">
-            <div className={`w-full mx-auto grid gap-2 p-2 ${isOwnProfile ? 'max-w-4xl grid-cols-3' : 'max-w-2xl grid-cols-2 sm:grid-cols-4'}`}>
+            <div className="nx-profile-tabs-track mx-auto flex w-full min-w-0 items-center gap-2 overflow-x-auto px-2 py-2 sm:justify-center">
               {[
                 { id: 'media', label: 'Posts', icon: Camera },
                 { id: 'voice', label: 'Voice', icon: Mic },
@@ -1521,7 +1527,7 @@ export default function ProfileView({
                     aria-label={tab.label}
                     aria-pressed={isActive}
                     title={tab.label}
-                    className={`min-h-12 flex justify-center items-center gap-2 rounded-xl border px-2 py-2 transition-all cursor-pointer focus-visible:outline-violet-300 ${
+                    className={`min-h-11 min-w-[88px] shrink-0 flex justify-center items-center gap-2 rounded-xl border px-3 py-2 transition-all cursor-pointer focus-visible:outline-violet-300 ${
                       isActive
                         ? 'border-violet-300/40 bg-violet-500/20 text-white shadow-[inset_0_0_0_1px_rgba(167,139,250,0.12)]'
                         : 'border-white/[0.06] bg-white/[0.025] text-zinc-300 hover:border-violet-300/25 hover:bg-white/[0.06] hover:text-white'
@@ -1576,7 +1582,7 @@ export default function ProfileView({
                   {profileTab === 'archive' && <HardDrive className="w-6 h-6" />}
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-200 capitalize">No {profileTab} found</h4>
+                  <h4 className="text-sm font-bold text-zinc-200">{profileTab === 'media' ? 'No posts yet' : profileTab === 'voice' ? 'No voice posts yet' : profileTab === 'reposts' ? 'No reposts yet' : profileTab === 'sparks' ? 'No sparks yet' : profileTab === 'bookmarks' ? 'No saved posts yet' : 'No archived posts yet'}</h4>
                   <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-relaxed">
                     {profileTab === 'media' && 'Published visual media and videos will appear here.'}
                     {profileTab === 'voice' && 'Recorded voice pulses and audio broadcasts will appear here.'}
