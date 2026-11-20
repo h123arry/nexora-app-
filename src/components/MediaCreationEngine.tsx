@@ -531,6 +531,7 @@ export default function MediaCreationEngine({
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
   const [isCaptureMenuOpen, setIsCaptureMenuOpen] = useState(false);
   const [cameraZoom, setCameraZoom] = useState(1);
+  const cameraZoomRef = useRef(1);
   const pinchStartRef = useRef<{ distance: number; zoom: number } | null>(null);
   const [activePhotoTool, setActivePhotoTool] = useState<'filters' | 'adjust' | 'text' | 'crop'>('filters');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -987,7 +988,9 @@ export default function MediaCreationEngine({
   };
 
   const handleCameraZoomChange = (value: number) => {
-    setCameraZoom(Math.max(1, Math.min(3, value)));
+    const nextZoom = Math.max(1, Math.min(3, value));
+    cameraZoomRef.current = nextZoom;
+    setCameraZoom(nextZoom);
   };
 
   const handleCameraPinchStart = (event: React.TouchEvent<HTMLVideoElement>) => {
@@ -1195,21 +1198,26 @@ export default function MediaCreationEngine({
               }
               let recordingStream = stream;
               const previewVideo = videoPreviewRef.current;
-              if (cameraZoom > 1 && previewVideo && previewVideo.videoWidth > 0) {
+              if (previewVideo && previewVideo.videoWidth > 0 && typeof HTMLCanvasElement.prototype.captureStream === 'function') {
+                // Always record through a canvas so pinch changes made while recording
+                // are reflected in the saved video, not only in the live preview.
                 const canvas = document.createElement('canvas');
                 canvas.width = previewVideo.videoWidth;
                 canvas.height = previewVideo.videoHeight;
                 const context = canvas.getContext('2d');
-                if (context && typeof canvas.captureStream === 'function') {
+                if (context) {
                   const zoomStream = canvas.captureStream(30);
                   recordingStream = new MediaStream([...zoomStream.getVideoTracks(), ...stream.getAudioTracks()]);
                   let frameId = 0;
                   const drawZoomedFrame = () => {
-                    const cropWidth = previewVideo.videoWidth / cameraZoom;
-                    const cropHeight = previewVideo.videoHeight / cameraZoom;
+                    const currentZoom = cameraZoomRef.current;
+                    const cropWidth = previewVideo.videoWidth / currentZoom;
+                    const cropHeight = previewVideo.videoHeight / currentZoom;
                     const sourceX = (previewVideo.videoWidth - cropWidth) / 2;
                     const sourceY = (previewVideo.videoHeight - cropHeight) / 2;
-                    context.drawImage(previewVideo, sourceX, sourceY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+                    if (previewVideo.readyState >= 2) {
+                      context.drawImage(previewVideo, sourceX, sourceY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+                    }
                     frameId = requestAnimationFrame(drawZoomedFrame);
                   };
                   drawZoomedFrame();
@@ -1218,6 +1226,8 @@ export default function MediaCreationEngine({
                     zoomStream.getTracks().forEach(track => track.stop());
                   };
                 }
+              } else if (cameraZoomRef.current > 1) {
+                window.dispatchEvent(new CustomEvent('toast', { detail: 'This device can zoom the preview, but cannot include pinch zoom in the recording.' }));
               }
               const mimeType = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
               const recorder = new MediaRecorder(recordingStream, mimeType ? { mimeType } : undefined);
