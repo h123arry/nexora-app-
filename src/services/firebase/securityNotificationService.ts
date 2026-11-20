@@ -130,12 +130,6 @@ export class SecurityNotificationService {
           priority: 8,
           iconType: 'shield'
         });
-        await addDoc(collection(db, 'users', userId, 'securityLogs'), {
-          notificationId: notificationRef.id,
-          eventType,
-          notificationDelivered: true,
-          recordedAt: serverTimestamp()
-        });
       }
     } catch {
       console.warn('Firestore security notification was unavailable; authentication remains authoritative in Firebase Auth.');
