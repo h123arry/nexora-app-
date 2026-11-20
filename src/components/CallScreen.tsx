@@ -116,6 +116,14 @@ export default function CallScreen({
   }, [isOpen, call?.status, connectRoom]);
 
   useEffect(() => {
+    if (!connected || type !== 'video' || !localRef.current || !roomRef.current) return;
+    const publications = roomRef.current.localParticipant.videoTrackPublications;
+    const publication = publications ? Array.from(publications.values()).find((item: any) => item.track) as any : null;
+    if (publication?.track) publication.track.attach(localRef.current);
+    return () => { if (publication?.track && localRef.current) publication.track.detach(localRef.current); };
+  }, [connected, type]);
+
+  useEffect(() => {
     if (!connected) return;
     const startedAt = call?.acceptedAt || Date.now();
     const update = () => setElapsed(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
@@ -132,13 +140,15 @@ export default function CallScreen({
   const closeCall = async () => {
     if (busy) return;
     setBusy(true);
-    try { await endDirectCall(callId); }
-    catch { setError('The call could not be ended cleanly. Close this screen and check your connection.'); }
-    finally {
+    try {
+      await endDirectCall(callId);
       if (roomRef.current) await roomRef.current.disconnect();
       roomRef.current = null;
       setBusy(false);
       onClose();
+    } catch {
+      setError('The call could not be ended. Check your connection and try again.');
+      setBusy(false);
     }
   };
 
@@ -248,6 +258,11 @@ export default function CallScreen({
             )}
             <button type="button" disabled={busy} onClick={() => void closeCall()} className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-600 text-white disabled:opacity-50" aria-label="End call"><PhoneOff /></button>
           </div>
+        )}
+        {error && call?.status === 'accepted' && !connected && !connecting && (
+          <button type="button" onClick={() => void connectRoom()} className="mx-auto mt-3 flex items-center gap-2 rounded-full border border-violet-400/30 bg-violet-500/15 px-4 py-2 text-xs font-semibold text-violet-100">
+            <RefreshCw className="h-3.5 w-3.5" /> Try connecting again
+          </button>
         )}
         {connecting && <p className="mt-3 flex items-center justify-center gap-2 text-xs text-zinc-500"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Connecting securely</p>}
       </footer>
