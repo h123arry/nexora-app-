@@ -159,7 +159,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       id={`post-${post.id}`}
       data-post-id={post.id}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 450px' }}
-      className={`nx-post-card py-4 sm:py-5 border-b border-white/5 transition-colors duration-150 group text-left relative space-y-3 transform-gpu ${
+      className={`nx-post-card nx-feed-post py-3 sm:py-4 border-b border-white/[0.035] transition-colors duration-150 group text-left relative space-y-2 transform-gpu ${
         post.isBroadcastPost
           ? 'bg-gradient-to-b from-amber-500/5 to-transparent'
           : post.userId === 'user-0'
@@ -188,7 +188,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       )}
 
       {/* Card Header Row */}
-      <div className="px-4 sm:px-6 flex items-start justify-between gap-3 mb-4">
+      <div className="nx-feed-post-header px-4 sm:px-6 flex items-start justify-between gap-3 mb-2 pt-1">
         <div className="flex gap-3">
           <button
             type="button"
@@ -554,7 +554,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
       {/* Media Players (Photo or Video) */}
       {post.videoUrl ? (
-        <div className="mb-3 mx-4 sm:mx-6 overflow-hidden rounded-2xl border border-white/10 bg-black">
+        <div className="nx-feed-media relative mb-0 w-full overflow-hidden bg-black">
           <NexoraVideoPlayer
             post={post}
             videoUrl={post.videoUrl}
@@ -575,14 +575,14 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             onViewProfile={(userId) => onViewProfile?.(userId)}
           />
           {typeof post.views === 'number' && Number.isFinite(post.views) && post.views >= 0 && (
-            <div className="flex items-center gap-1.5 border-t border-white/10 bg-[#070914] px-3 py-2 text-[11px] font-medium text-slate-300">
-              <Eye className="h-3.5 w-3.5 text-violet-300" />
+            <div className="pointer-events-none absolute bottom-3 left-3 z-30 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-semibold text-white/90 backdrop-blur-sm">
+              <Eye className="h-3.5 w-3.5 text-violet-200" />
               <span>{post.views.toLocaleString()} views</span>
             </div>
           )}
         </div>
       ) : (post.image || (post.images && post.images.length > 0)) && !post.opportunityType ? (
-        <div className="mb-3 mx-4 sm:mx-6 overflow-hidden rounded-2xl border border-white/10 bg-black">
+        <div className="nx-feed-media mb-0 w-full overflow-hidden bg-black">
           <NexoraImagePlayer
             post={post}
             image={post.image}
