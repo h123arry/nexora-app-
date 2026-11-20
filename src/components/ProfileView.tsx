@@ -1627,7 +1627,7 @@ export default function ProfileView({
                 </div>
               </div>
             ) : (
-              <div className="w-full max-w-[1040px] mx-auto px-0">
+              <div className="nx-profile-media-grid-bleed w-full max-w-[1040px] mx-auto px-0">
                 <MediaGrid 
                   gridPosts={[...filteredTabPosts].sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
                   pinnedPostIds={pinnedPostIdsList} 
