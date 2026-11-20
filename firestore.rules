@@ -176,7 +176,7 @@ service cloud.firestore {
         'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
         'followers', 'following', 'sparks', 'hasStory',
         'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
-        'interestDNA', 'skills', 'dateOfBirth', 'statusText', 'statusEmoji', 'pinnedMusicSong',
+        'interestDNA', 'skills', 'dateOfBirth', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
         'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'dateOfBirth'
       ];
     }
