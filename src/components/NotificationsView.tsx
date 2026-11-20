@@ -144,7 +144,7 @@ export default function NotificationsView({
       const resolvedProps = (propNotifications || []).map(n => ({
         ...n,
         timeSection: getNotificationTimeSection(n.timestamp),
-        priorityLevel: (n.type === 'mention' || n.type === 'system' ? 'high' : 'medium') as any,
+        priorityLevel: (n.type === 'mention' || n.type === 'system' || n.type === 'security' ? 'high' : 'medium') as any,
         isRead: n.isRead
       }));
 
@@ -319,7 +319,7 @@ export default function NotificationsView({
       if (n.type === 'follow' && !settingsToggles.followers) return false;
       if (n.type === 'mention' && !settingsToggles.mentions) return false;
       if (n.type === 'community' && !settingsToggles.communities) return false;
-      if (n.type === 'system' && !settingsToggles.securityAlerts) return false;
+      if ((n.type === 'system' || n.type === 'security') && !settingsToggles.securityAlerts) return false;
 
       // Match categories
       if (activeCategory === 'all') return true;
@@ -328,12 +328,12 @@ export default function NotificationsView({
       if (activeCategory === 'likes') return n.type === 'like' || n.type === 'spark';
       if (activeCategory === 'followers') return n.type === 'follow';
       if (activeCategory === 'profile_views') return n.type === 'profile_view';
-      if (activeCategory === 'system') return n.type === 'system';
+      if (activeCategory === 'system' || activeCategory === 'account') return n.type === 'system' || n.type === 'security';
       if (activeCategory === 'origin') return n.type === 'origin_attribution';
       if (activeCategory === 'communities') return n.type === 'community';
       if (activeCategory === 'live') return n.type === 'pulse_alert' && n.content.includes('LIVE');
       if (activeCategory === 'verification') return n.type === 'reputation_milestone' && n.content.includes('Verification');
-      if (activeCategory === 'creator') return n.type === 'reputation_milestone' && n.content.includes('Milestone');
+      if (activeCategory === 'creator') return n.type === 'reputation_milestone' || n.type === 'mission_milestone';
 
       return true;
     });
@@ -358,8 +358,9 @@ export default function NotificationsView({
       const bWeight = priorityWeight[b.priorityLevel] || 1;
       if (aWeight !== bWeight) return bWeight - aWeight;
 
-      // Treat as standard order
-      return 0; 
+      const aTime = Date.parse(a.timestamp) || 0;
+      const bTime = Date.parse(b.timestamp) || 0;
+      return bTime - aTime; 
     });
   };
 
@@ -397,7 +398,8 @@ export default function NotificationsView({
       case 'origin_attribution':
         return <Scale className="w-4 h-4 text-violet-300" />;
       case 'system':
-        return <ShieldAlert className="w-4 h-4 text-rose-400 animate-pulse" />;
+      case 'security':
+        return <ShieldAlert className="w-4 h-4 text-rose-400" />;
       case 'reputation_milestone':
         return <Award className="w-4 h-4 text-yellow-400" />;
       case 'community':
@@ -724,7 +726,7 @@ export default function NotificationsView({
             { id: 'communities', label: 'Communities' },
             { id: 'creator', label: 'Creator Milestones' },
             { id: 'origin', label: 'Origin & Attribution' },
-            { id: 'system', label: 'Security' }
+            { id: 'account', label: 'Account & Security' }
           ].map((tab) => {
             const isActive = activeCategory === tab.id;
             return (
@@ -889,6 +891,7 @@ export default function NotificationsView({
                             {/* Description Copy */}
                             <div className="flex-1 overflow-hidden pr-2">
                               <div className="text-xs text-violet-100 font-sans leading-relaxed">
+                                {notif.title && <p className="mb-1 text-sm font-bold text-white">{notif.title}</p>}
                                 {notif.userId !== 'system' && notif.userId !== 'multiple' && (
                                   <button
                                     type="button"
