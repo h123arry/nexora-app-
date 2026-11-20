@@ -99,10 +99,10 @@ export function createNotificationPushDelivery(db: Firestore, app: App) {
       for (const tokenChunk of chunkPushTokens(tokenValues)) {
         const response = await messaging.sendEachForMulticast({
           tokens: tokenChunk,
-          notification: { title, body: detail },
-          data,
+          // Data-only messages are rendered by NEXORA's root service worker,
+          // giving every alert one predictable click/deep-link handler.
+          data: { ...data, title, body: detail },
           webpush: {
-            fcmOptions: { link: data.url },
             notification: { icon: '/nexora-mark.png', badge: '/icons/icon-48.png' },
           },
         });
