@@ -6,6 +6,7 @@ import { onCallWithSession as onCall } from './callableSession.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { directCallRoomName, createDirectCallVideoGrant, validateDirectCallRequest } from './directCallPolicy.js';
 import { createLiveKitJwt } from './liveKitTokenPolicy.js';
+import { createIncomingDirectCallPush } from './directCallPushPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const apiKey = defineSecret('LIVEKIT_API_KEY');
@@ -81,8 +82,45 @@ async function sendIncomingCallPush(recipientId: string, payload: Record<string,
     await messaging.sendEachForMulticast({
       tokens: tokenValues.slice(i, i + 500),
       data: payload,
-      android: { priority: 'high', ttl: CALL_RING_SECONDS * 1000 },
-      webpush: { headers: { Urgency: 'high', TTL: String(CALL_RING_SECONDS) } },
+      notification: {
+        title: payload.callerName + ' is calling',
+        body: 'Incoming ' + (payload.callType === 'video' ? 'video' : 'voice') + ' call on NEXORA',
+      },
+      android: {
+        priority: 'high',
+        ttl: CALL_RING_SECONDS * 1000,
+        notification: {
+          channelId: 'nexora_calls',
+          sound: 'default',
+          priority: 'max',
+          defaultVibrateTimings: true,
+          visibility: 'public',
+          tag: 'nexora-call-' + payload.callId,
+        },
+      },
+      apns: {
+        headers: { 'apns-priority': '10', 'apns-push-type': 'alert' },
+        payload: { aps: {
+          alert: {
+            title: payload.callerName + ' is calling',
+            body: 'Incoming ' + (payload.callType === 'video' ? 'video' : 'voice') + ' call on NEXORA',
+          },
+          sound: 'default',
+          category: 'NEXORA_INCOMING_CALL',
+          'interruption-level': 'time-sensitive',
+        } },
+      },
+      webpush: {
+        headers: { Urgency: 'high', TTL: String(CALL_RING_SECONDS) },
+        notification: {
+          title: payload.callerName + ' is calling',
+          body: 'Incoming ' + (payload.callType === 'video' ? 'video' : 'voice') + ' call on NEXORA',
+          icon: '/nexora-mark.png',
+          tag: 'nexora-call-' + payload.callId,
+          requireInteraction: true,
+        },
+        fcmOptions: { link: payload.url },
+      },
     });
   }
 }
@@ -137,15 +175,14 @@ export const startDirectCall = onCall({ region: 'europe-west1', maxInstances: 30
     tx.set(recipientActiveRef, { callId: checked.callId, status: 'ringing', expiresAt: callRecord.expiresAt });
   });
   try {
-    await sendIncomingCallPush(recipientId, {
-      type: 'incoming_call',
+    const incomingPush = createIncomingDirectCallPush({
       callId: checked.callId,
       chatId: checked.chatId,
       callerId,
       callerName: names.callerName,
       callType: checked.type,
-      url: '/#inbox',
     });
+    await sendIncomingCallPush(recipientId, incomingPush.data);
   } catch (error) {
     console.error('[NEXORA calls] Incoming call push delivery failed.', error);
   }
