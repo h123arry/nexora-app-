@@ -44,7 +44,7 @@ import VoiceRecorder from './VoiceRecorder';
 import EmojiPicker from './EmojiPicker';
 import MediaGallery from './MediaGallery';
 import CallScreen from './CallScreen';
-import { startDirectCall, watchDirectCalls } from '../services/directCallService';
+import { startDirectCall } from '../services/directCallService';
 import CirclesView from './CirclesView';
 
 interface NewInboxViewProps {
@@ -189,26 +189,6 @@ export default function NewInboxView({
       console.warn('[NEXORA inbox] Your chat list could not be loaded:', error.message);
     });
   }, [currentUser.id, isServerBackedInbox]);
-
-  // Incoming direct calls are delivered through the authenticated, participant-scoped call stream.
-  useEffect(() => {
-    if (!isServerBackedInbox) return;
-    return watchDirectCalls(currentUser.id, calls => {
-      if (activeCall) return;
-      const incoming = calls
-        .filter(call => call.recipientId === currentUser.id && call.status === 'ringing' && call.expiresAt > Date.now())
-        .sort((a, b) => b.createdAt - a.createdAt)[0];
-      if (!incoming) return;
-      const caller = creatorsRef.current.find(user => user.id === incoming.callerId);
-      setActiveCall({
-        callId: incoming.id,
-        type: incoming.type,
-        partnerName: caller?.name || incoming.callerName || 'NEXORA member',
-        partnerAvatar: caller?.avatar || '',
-        incoming: true,
-      });
-    }, error => console.warn('[NEXORA calls] Incoming calls could not be loaded:', error.message));
-  }, [currentUser.id, isServerBackedInbox, activeCall]);
 
   const placeDirectCall = async (type: 'voice' | 'video') => {
     if (!activeChat || activeChat.isGroup || !isServerBackedInbox || activeCall) return;
