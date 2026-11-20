@@ -50,8 +50,13 @@ describe('profile editing Firestore permissions', () => {
 
     await assertSucceeds(updateDoc(doc(db, 'users', 'alice'), identity));
     await assertSucceeds(updateDoc(doc(db, 'publicProfiles', 'alice'), {
-      ...identity,
-      updatedAt: serverTimestamp()
+      name: identity.name,
+      username: identity.username,
+      pronouns: identity.pronouns,
+      profileCategory: identity.profileCategory,
+      creatorType: identity.creatorType,
+      socialTwitter: identity.socialTwitter,
+      socialInstagram: identity.socialInstagram
     }));
 
     const publicSnapshot = await getDoc(doc(db, 'publicProfiles', 'alice'));
