@@ -125,7 +125,16 @@ export class ProfileService {
     // rather than allowing one missing timestamp to block the entire save.
     updates = Object.fromEntries(Object.entries(updates).filter(([, value]) => value !== undefined)) as Partial<User>;
     if (updates.username) {
-      await this.reserveUsername(uid, updates.username);
+      // Profile saves include the current username for a complete form payload.
+      // Do not rewrite the canonical claim on photo-only or bio-only edits; only
+      // reserve a new claim when the handle actually changes.
+      const existingProfile = await getDoc(doc(db, 'users', uid));
+      const existingUsername = existingProfile.exists()
+        ? String(existingProfile.data().username || '')
+        : '';
+      if (updates.username !== existingUsername) {
+        await this.reserveUsername(uid, updates.username);
+      }
     }
 
     // Commit the private profile and its public projection together. A split
