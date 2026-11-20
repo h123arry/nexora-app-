@@ -1728,7 +1728,9 @@ export default function ProfileView({
                 <MediaGrid 
                   gridPosts={[...filteredTabPosts].sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
                   pinnedPostIds={pinnedPostIdsList} 
-                  onSelectPost={(post) => setSelectedGridPost(post)} 
+                  onSelectPost={(post) => setSelectedGridPost(post)}
+                  repairVideoPosters={isOwnProfile && isLoggedIn}
+                  ownerId={currentUser.id}
                 />
               </div>
             )}
