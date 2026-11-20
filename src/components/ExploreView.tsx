@@ -6,8 +6,7 @@ import { SettingsService } from '../services/firebase/settingsService';
 import { normalizeFeedPreferences } from '../services/discovery/feedPreferences';
 import { auth } from '../services/firebase/config';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
-import MiniServicesHub from './MiniServicesHub';
-import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics } from '../services/discovery/discoveryService';
+import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics, rankPosts } from '../services/discovery/discoveryService';
 import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
 import { getNexoraTrendingTopics, searchNexora, type NexoraSearchResult } from '../services/firebase/universalSearchService';
 import { getTranslations } from '../utils/translations';
@@ -240,6 +239,19 @@ export default function ExploreView({
     limit: 12,
   }).map(item => item.creator), [creators, followingIds, blockedCreatorIds, mutedCreatorIds, interestDNA]);
 
+  // Use the same quality, freshness, interest and safety ranking as the main feed,
+  // then diversify creators so Explore introduces people beyond the accounts you own.
+  const discoveryPosts = useMemo(() => rankPosts(posts, {
+    followingIds,
+    interestDNA,
+    blockedCreatorIds,
+    mutedCreatorIds,
+    mode: 'forYou',
+    maxPostsPerCreator: 2,
+    maxConsecutivePostsPerCreator: 1,
+  }).map(item => item.post).filter(post => post.userId !== currentUserId).slice(0, 18),
+  [posts, followingIds, interestDNA, blockedCreatorIds, mutedCreatorIds, currentUserId]);
+
   // Filtered lists for search
   const filteredPosts = useMemo(() => {
     return universalResults?.results.length ? [] : searchPosts(posts, debouncedSearch);
@@ -281,20 +293,20 @@ export default function ExploreView({
             : searchPeople.length + filteredPosts.length + filteredVideos.length + directoryEntryCount;
 
   return (
-    <div id="explore-view-master-panel" className="nx-page-shell space-y-6 pb-12 max-w-4xl mx-auto px-4 sm:px-6">
+    <div id="explore-view-master-panel" className="nx-page-shell space-y-5 pb-12 max-w-5xl mx-auto px-4 sm:px-6">
       
       {/* Search Header & Input */}
-      <div className="nx-page-header sticky top-0 z-30 pb-4 pt-3 px-3 sm:px-0 space-y-3 border-b">
+      <div className="nx-page-header sticky top-0 z-30 pb-3 pt-3 px-3 sm:px-0 space-y-3 border-b">
         <div className="flex items-baseline gap-2 px-1">
           <span className="text-lg sm:text-xl font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
-          <span className="nx-eyebrow">Discover</span>
+          <span className="nx-eyebrow">Explore</span>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400" />
             <input
               type="text"
-              placeholder={copy.searchPlaceholder}
+              placeholder="Search people, posts, videos and topics"
               aria-label="Search people, posts, videos, hashtags and communities"
               autoComplete="off"
               value={localSearch}
@@ -349,20 +361,18 @@ export default function ExploreView({
         </div>
       </div>
 
-      {!hasActiveSearch && <MiniServicesHub signedIn={Boolean(currentUserId)} onOpen={setActiveTab} onOpenVohAi={onOpenVohAi} locale={locale} />}
-
       {/* Recent Searches (shown when search is empty) */}
       {!hasActiveSearch && recentSearches.length > 0 && (
-        <div className="space-y-2.5 text-left">
+        <div className="space-y-2.5 text-left rounded-2xl nx-surface p-4">
           <div className="flex items-center justify-between px-1">
-            <span className="text-[10px] font-mono tracking-widest text-violet-400 font-bold uppercase flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" /> Recent Searches
+            <span className="text-xs tracking-wide text-violet-300 font-semibold flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" /> Recent searches
             </span>
             <button 
               onClick={clearAllRecentSearches}
               className="text-[10px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
             >
-              Clear All
+              Clear
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -658,16 +668,17 @@ export default function ExploreView({
         </div>
       ) : (
         /* DEFAULT DISCOVERY LANDING */
-        <div className="space-y-6">
+        <div className="space-y-7">
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-zinc-400 mr-1">Browse</span>
             <button
               type="button"
               onClick={() => setActiveTab('communities')}
-              className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:border-violet-300/30 hover:bg-violet-500/10"
+              className="group inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-4 py-2 text-left transition-colors hover:border-violet-300/30 hover:bg-violet-500/10"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Users className="h-5 w-5" aria-hidden="true" /></span>
-              <span><span className="block text-sm font-bold text-white">Communities</span><span className="mt-0.5 block text-[10px] text-zinc-400">Find your people</span></span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-200"><Users className="h-5 w-5" aria-hidden="true" /></span>
+              <span className="text-xs font-semibold text-white">Communities</span>
             </button>
             <button
               type="button"
@@ -675,14 +686,14 @@ export default function ExploreView({
               className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:border-violet-300/30 hover:bg-violet-500/10"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Radio className="h-5 w-5" aria-hidden="true" /></span>
-              <span><span className="block text-sm font-bold text-white">Trending</span><span className="mt-0.5 block text-[10px] text-zinc-400">Updates are not available yet</span></span>
+              <span className="text-xs font-semibold text-white">What's happening</span>
             </button>
           </div>
 
-          {/* Trending on Nexora: locally observed post topics, not network-wide aggregation */}
-          <div className="nx-surface rounded-3xl p-5 space-y-4 shadow-sm text-left">
+          {/* Trending topics: locally observed post topics, not network-wide aggregation */}
+          <div className="nx-surface rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm text-left">
             <div className="flex items-center justify-between border-b border-white/5 pb-3">
-              <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
+              <h3 className="text-sm font-sans font-semibold text-white flex items-center gap-2">
                 <Flame className="w-4 h-4 text-pink-500" /> Trending on Nexora
               </h3>
               <button 
@@ -694,7 +705,7 @@ export default function ExploreView({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase block">Popular topics this week</span>
+                <span className="text-xs font-sans text-zinc-400 block">Popular this week</span>
                 {trendingTags.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-white/10 p-4 text-xs leading-relaxed text-zinc-500">No trending hashtags yet. Start the next conversation from your feed.</div>
                 ) : trendingTags.slice(0, showAllPulse ? 6 : 4).map(([tag, count]) => (
@@ -713,8 +724,8 @@ export default function ExploreView({
                 ))}
               </div>
               <div className="space-y-2">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase block">Network activity</span>
-                <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">More activity will appear here soon.</p>
+                <span className="text-[10px] font-mono text-zinc-500 uppercase block">More from NEXORA</span>
+                <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">Discover new posts, creators and conversations below.</p>
               </div>
             </div>
           </div>
@@ -722,7 +733,7 @@ export default function ExploreView({
           {/* Suggested Accounts (Real Creators from DB) */}
           <div className="space-y-3 text-left">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest">People to follow</h3>
+              <h3 className="text-sm font-sans font-semibold text-white">People you may like</h3>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
               {suggestedCreators.length === 0 ? (
@@ -759,6 +770,48 @@ export default function ExploreView({
               ))}
             </div>
           </div>
+
+          {/* Recommended posts: a visual, varied grid that opens into the main feed. */}
+          <section className="space-y-3 text-left" aria-labelledby="explore-posts-heading">
+            <div className="flex items-center justify-between px-1">
+              <div>
+                <h3 id="explore-posts-heading" className="text-sm font-semibold text-white">Posts you might like</h3>
+                <p className="mt-0.5 text-xs text-zinc-400">A mix of new ideas, people and videos</p>
+              </div>
+              <button type="button" onClick={() => setActiveTab('feed')} className="text-xs font-semibold text-violet-300 hover:text-white">See feed</button>
+            </div>
+            {discoveryPosts.length === 0 ? (
+              <div className="nx-surface rounded-2xl p-6 text-center">
+                <p className="text-sm font-medium text-white">Your discovery feed is getting ready</p>
+                <p className="mt-1 text-xs text-zinc-400">New public posts will appear here as people share them.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                {discoveryPosts.map(post => (
+                  <button key={post.id} type="button" onClick={() => {
+                    const topic = post.tags?.[0] || null;
+                    setSelectedTag(topic);
+                    setActiveTab('feed');
+                  }} aria-label={`Open post by @${post.username}`}
+                    className="group relative aspect-[4/5] min-w-0 overflow-hidden rounded-xl bg-[#0B1424] text-left focus-visible:outline-2 focus-visible:outline-violet-300">
+                    {post.image || post.videoUrl ? (
+                      <img src={post.image || post.videoUrl} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#24134e] to-[#080d1a] p-3">
+                        <p className="line-clamp-6 text-sm font-medium leading-relaxed text-white">{post.content}</p>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/5 to-transparent" />
+                    {post.videoUrl && <span className="absolute right-2 top-2 rounded-full bg-black/55 p-1.5 text-white"><Play className="h-3.5 w-3.5 fill-current" /></span>}
+                    <div className="absolute inset-x-0 bottom-0 p-2.5">
+                      <span className="block truncate text-[11px] font-semibold text-white">@{post.username}</span>
+                      <span className="mt-0.5 block line-clamp-2 text-[10px] leading-snug text-white/80">{post.content}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
 
         </div>
       )}
