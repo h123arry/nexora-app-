@@ -1007,9 +1007,11 @@ vohRouter.post('/chat', async (req, res) => {
         ].join('\n')
       : 'Authenticated account profile is unavailable. Do not infer account-specific facts.';
 
-    const circlesStr = context.circles.length > 0
-      ? context.circles.map((c: any) => `Circle: "${c.name}" - ${c.description} (Creator: @${c.creatorId}, Members: ${c.membersCount})`).join('\n')
-      : 'No community snapshot was included in this request.';
+    const circlesStr = !includeCircles
+      ? 'Circle context was not selected for this request.'
+      : context.circles.length > 0
+        ? context.circles.map((c: any) => `Circle: "${c.name}" - ${c.description} (Role: ${c.role}, Type: ${c.type}, Creator: @${c.creatorId}, Members: ${c.membersCount ?? 'unavailable'})`).join('\\n')
+        : 'No active Circles were found for this account.';
 
     const notificationsStr = context.notifications.length > 0
       ? context.notifications.slice(0, 5).map((n: any) => `Notification: "${n.content}" (${n.timestamp})`).join('\n')
