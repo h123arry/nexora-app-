@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Users, Wand2, Check, X, Send, FileText, Calendar, Shield, Megaphone, BarChart2 } from 'lucide-react';
 import { Circle, User } from '../types';
@@ -13,6 +13,27 @@ import CircleGovernancePanel from './CircleGovernancePanel';
 import CircleReportsPanel from './CircleReportsPanel';
 import SaveToCollectionButton from './SaveToCollectionButton';
 import { getCreatorCommunityAsset, getCreatorCommunityAssets } from '../content/creatorCommunityAssets';
+
+
+function safeCircleAvatar(value: string): string {
+  return /^https:\/\//i.test(value) || value === '/nexora-mark.png' ? value : '/nexora-mark.png';
+}
+
+function CirclePlainText({ value, className }: { value: string; className: string }) {
+  const elementRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (elementRef.current) elementRef.current.textContent = value;
+  }, [value]);
+  return <span ref={elementRef} className={className} />;
+}
+
+function CircleMessageBody({ value, className }: { value: string; className: string }) {
+  const elementRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (elementRef.current) elementRef.current.textContent = value;
+  }, [value]);
+  return <p ref={elementRef} className={className} />;
+}
 
 interface CirclesViewProps {
   currentUser: User;
@@ -582,10 +603,10 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                         {chatMessages.length === 0 && !chatError && <p className="py-12 text-center text-xs text-violet-200/55">No messages yet. Say hello and start the conversation.</p>}
                         {chatMessages.map((msg, i) => (
                           <div key={i} className="flex items-start gap-2.5">
-                            <img src={msg.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+                            <img src={safeCircleAvatar(msg.avatar)} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
                             <div className="max-w-[85%] rounded-2xl rounded-tl-md border border-white/10 bg-white/[0.045] px-3 py-2.5">
-                              <div className="mb-1 flex items-center gap-2"><span className="text-[11px] font-semibold text-violet-200">{msg.sender}</span><span className="text-[9px] text-white/35">{msg.time}</span></div>
-                              <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-white/90">{msg.text}</p>
+                              <div className="mb-1 flex items-center gap-2"><CirclePlainText value={msg.sender} className="text-[11px] font-semibold text-violet-200" /><CirclePlainText value={msg.time} className="text-[9px] text-white/35" /></div>
+                              <CircleMessageBody value={msg.text} className="whitespace-pre-wrap break-words text-xs leading-relaxed text-white/90" />
                             </div>
                           </div>
                         ))}
@@ -600,7 +621,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                       <p className="text-[10px] text-white/40">{circlePeople.length} active members · owner and trusted admins are marked below.</p>
                       {circlePeople.slice(0, 8).map(person => (
                         <div key={person.userId} className="flex items-center gap-2.5">
-                          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-violet-500/15">{person.avatar && <img src={person.avatar} alt="" className="h-full w-full object-cover" />}</div>
+                          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-violet-500/15">{person.avatar && <img src={safeCircleAvatar(person.avatar)} alt="" className="h-full w-full object-cover" />}</div>
                           <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-medium text-white">{person.name}</p><p className="truncate text-[9px] text-white/40">{person.username ? `@${person.username}` : 'NEXORA member'}</p></div>
                           {person.role === 'owner' && <span className="text-[9px] text-amber-300">Owner</span>}
                           {person.role === 'admin' && <span className="text-[9px] text-violet-300">Admin</span>}
