@@ -1048,7 +1048,7 @@ When answering:
     }
     const chatContents: any[] = [...chatHistoryParts, { role: 'user', parts: [{ text: contextPrompt }] }];
     const result = await runVohIntelligence({
-      provider: createGeminiVohProvider(ai),
+      provider: createGeminiVohProvider(ai as any),
       model,
       contents: chatContents,
       systemInstruction: replaceTerminology(systemInstruction),
