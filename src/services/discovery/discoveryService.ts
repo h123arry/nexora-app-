@@ -124,7 +124,7 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
         : mode === 'following'
           ? freshness + followBoost + unseenBoost
           : mode === 'trending'
-            ? Math.min(60, engagementScore(post) * RANKING_WEIGHTS.popularity * freshnessMultiplier(age, 24)) + Math.max(0, 72 - age) * 1.8
+            ? engagementScore(post) * RANKING_WEIGHTS.popularity * freshnessMultiplier(age, 72) + Math.max(0, 48 - age) * 0.025
             : interestScore + freshness + followBoost + unseenBoost
               + engagementScore(post) * RANKING_WEIGHTS.popularity * freshnessMultiplier(age, 36)
               + (post.isVerified ? RANKING_WEIGHTS.verifiedTrust : 0)

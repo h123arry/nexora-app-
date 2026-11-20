@@ -11,6 +11,15 @@ const post = (overrides: Partial<Post>): Post => ({
 });
 
 describe('discovery service', () => {
+  it('ranks the strongest engaged post first in Trending without a high-like threshold', () => {
+    const now = Date.parse('2026-11-20T00:00:00.000Z');
+    const ranked = rankPosts([
+      post({ id: 'small-network-hit', userId: 'creator-a', likes: 10, timestamp: new Date(now - 24 * 60 * 60 * 1000).toISOString(), videoUrl: 'https://example.test/hit.mp4' }),
+      post({ id: 'new-low-engagement', userId: 'creator-b', likes: 1, timestamp: new Date(now).toISOString(), videoUrl: 'https://example.test/new.mp4' }),
+    ], { mode: 'trending', now });
+    assert.equal(ranked[0].post.id, 'small-network-hit');
+  });
+
   it('keeps the Following feed strictly limited to followed creators', () => {
     const ranked = rankPosts([
       post({ id: 'followed-old', userId: 'followed', timestamp: '2025-01-01T00:00:00.000Z' }),

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, MessageSquare, Send, Bookmark, MoreVertical, Check, Music, Search, Edit3, Archive, Trash, UserPlus, EyeOff, Download, ImageOff } from 'lucide-react';
+import { Zap, MessageSquare, Send, Bookmark, MoreVertical, Edit3, Archive, Trash, UserPlus, EyeOff, Download, ImageOff } from 'lucide-react';
 import VideoBottomSheet from './VideoBottomSheet';
 import { resolveMediaUrl } from '../utils/indexedDbStorage';
 import NexoraWatermark from './branding/NexoraWatermark';
@@ -48,12 +48,6 @@ interface NexoraImagePlayerProps {
   onViewSound?: (soundId: string) => void;
 }
 
-const VerificationBadge = () => (
-  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center border border-white/10 shadow-lg ml-1 shrink-0">
-    <Check className="w-2.5 h-2.5 text-white" />
-  </div>
-);
-
 export default function NexoraImagePlayer({
   post,
   image,
@@ -65,16 +59,20 @@ export default function NexoraImagePlayer({
   onCommentToggle,
   onNotInterested,
   onViewProfile,
-  onViewSound
 }: NexoraImagePlayerProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [downloadingState, setDownloadingState] = useState<string | null>(null);
   const [isResolvingMedia, setIsResolvingMedia] = useState(true);
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [hasImageLoadError, setHasImageLoadError] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState(() => {
+    try { return localStorage.getItem('nexora_photo_swipe_hint_seen') !== 'true'; } catch { return false; }
+  });
+  const touchStartX = useRef<number | null>(null);
+  const suppressImageClick = useRef(false);
 
   const handleDownloadWatermarkedImage = async () => {
     const imgSrc = displayImages[currentImageIndex];
@@ -288,13 +286,51 @@ export default function NexoraImagePlayer({
     setHasImageLoadError(false);
   }, [currentImageIndex]);
 
+  useEffect(() => {
+    if (rawImages.length < 2 || !showSwipeHint) return;
+    const timer = window.setTimeout(() => {
+      setShowSwipeHint(false);
+      try { localStorage.setItem('nexora_photo_swipe_hint_seen', 'true'); } catch { /* Storage may be unavailable in private mode. */ }
+    }, 3600);
+    return () => window.clearTimeout(timer);
+  }, [rawImages.length, showSwipeHint]);
+
+  const handlePhotoTouchStart = (event: React.TouchEvent) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+    suppressImageClick.current = false;
+  };
+
+  const handlePhotoTouchEnd = (event: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const deltaX = (event.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(deltaX) < 45 || rawImages.length < 2) return;
+    suppressImageClick.current = true;
+    setCurrentImageIndex(index => Math.max(0, Math.min(rawImages.length - 1, index + (deltaX < 0 ? 1 : -1))));
+    if (showSwipeHint) {
+      setShowSwipeHint(false);
+      try { localStorage.setItem('nexora_photo_swipe_hint_seen', 'true'); } catch { /* Storage may be unavailable in private mode. */ }
+    }
+    window.setTimeout(() => { suppressImageClick.current = false; }, 350);
+  };
+
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const closeOnPopState = () => setIsFullscreen(false);
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') window.history.back(); };
+    window.history.pushState({ nexoraPhotoViewer: post.id }, '');
+    window.addEventListener('popstate', closeOnPopState);
+    window.addEventListener('keydown', closeOnEscape);
+    return () => { window.removeEventListener('popstate', closeOnPopState); window.removeEventListener('keydown', closeOnEscape); };
+  }, [isFullscreen, post.id]);
 
 
   return (
-    <div className="relative w-full overflow-hidden bg-black aspect-square sm:aspect-[4/3] md:aspect-[16/10] max-h-[580px] select-none group">
+    <div className="relative w-full overflow-hidden bg-black select-none group">
       {/* Background Image Display */}
-      <div className="w-full h-full relative overflow-hidden bg-[#080612] flex items-center justify-center">
+      <div className="w-full relative overflow-hidden bg-[#080612] flex items-center justify-center touch-pan-y" onTouchStart={handlePhotoTouchStart} onTouchEnd={handlePhotoTouchEnd}>
         {isResolvingMedia ? (
           <div role="status" aria-live="polite" className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#15102a] via-[#080612] to-[#1c0b20] p-6 text-center">
             <span className="w-8 h-8 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" aria-hidden="true" />
@@ -310,7 +346,8 @@ export default function NexoraImagePlayer({
               aria-hidden={hasImageLoadError}
               onLoad={() => { setIsImageLoading(false); setHasImageLoadError(false); }}
               onError={() => { setIsImageLoading(false); setHasImageLoadError(true); }}
-              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${hasImageLoadError ? 'opacity-0' : ''}`}
+              className={`block w-full h-auto max-h-[78vh] object-contain cursor-zoom-in ${hasImageLoadError ? 'opacity-0' : ''}`}
+              onClick={() => { if (!suppressImageClick.current) setIsFullscreen(true); }}
               referrerPolicy="no-referrer"
               style={{ filter: (post.imageFilters && post.imageFilters[currentImageIndex]) || post.imageFilter || 'none' }}
             />
@@ -339,71 +376,38 @@ export default function NexoraImagePlayer({
             <p className="text-xs text-zinc-400 max-w-xs">This image could not be loaded. The post caption and actions are still available.</p>
           </div>
         )}
-        {/* Subtle top and bottom dark gradient overlays for legibility */}
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none z-10" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none z-10" />
+
       </div>
 
-      {/* Carousel navigation controls if multiple images */}
       {rawImages.length > 1 && (
-        <>
-          <div className="absolute top-4 right-4 z-20 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-mono text-white font-bold border border-white/10 shadow-lg">
-            {currentImageIndex + 1} / {rawImages.length}
-          </div>
-          {currentImageIndex > 0 && (
+        <div className="relative flex items-center justify-center gap-1.5 py-3 bg-[#080612]" aria-label={`Photo ${currentImageIndex + 1} of ${rawImages.length}`}>
+          {rawImages.map((_, index) => (
             <button
-              onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev - 1); }}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-90"
+              key={`${post.id}-photo-${index}`}
+              type="button"
+              onClick={() => setCurrentImageIndex(index)}
+              aria-label={`Show photo ${index + 1}`}
+              aria-current={currentImageIndex === index ? 'true' : undefined}
+              className={`h-1.5 rounded-full transition-all duration-200 ${currentImageIndex === index ? 'w-4 bg-violet-400' : 'w-1.5 bg-white/35 hover:bg-white/65'}`}
+            />
+          ))}
+          {showSwipeHint && currentImageIndex === 0 && (
+            <motion.div
+              aria-hidden="true"
+              className="absolute left-1/2 top-1/2 -translate-y-1/2 pointer-events-none"
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: [0, 1, 1, 0], x: [12, -24, 12, -24] }}
+              transition={{ duration: 3.2, ease: 'easeInOut' }}
             >
-              ‹
-            </button>
+              <span className="text-2xl drop-shadow-lg">👆</span>
+            </motion.div>
           )}
-          {currentImageIndex < rawImages.length - 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev + 1); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-90"
-            >
-              ›
-            </button>
-          )}
-        </>
+          <span className="sr-only">{currentImageIndex + 1} of {rawImages.length} photos</span>
+        </div>
       )}
 
-      {/* 1. TOP-LEFT CREATOR INFORMATION OVERLAY (NO PROFILE PICTURE) */}
-      <div 
-        className="absolute top-4 left-4 sm:top-5 sm:left-5 z-20 flex flex-col items-start gap-1 text-left pointer-events-auto max-w-[calc(100%-120px)] cursor-pointer group/creator"
-        onClick={(e) => { e.stopPropagation(); onViewProfile?.(post.userId || ''); }}
-      >
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="font-sans font-extrabold text-white text-base sm:text-lg tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] group-hover/creator:underline">
-            {post.name}
-          </span>
-          <span className="font-mono text-xs sm:text-sm text-zinc-300 font-medium drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] group-hover/creator:text-white">
-            @{post.username}
-          </span>
-          {post.isVerified && <VerificationBadge />}
-        </div>
-
-        {/* Audio / Source Info */}
-        <div 
-          onClick={(e) => { e.stopPropagation(); onViewSound?.(post.id); }}
-          className="flex items-center gap-1.5 mt-0.5 text-xs font-mono text-zinc-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] cursor-pointer hover:text-violet-300 transition-colors"
-        >
-          <Music className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-          <span className="truncate max-w-[220px]">
-            {post.soundTitle || `Original Sound - ${post.name}`}
-          </span>
-        </div>
-      </div>
-
       {/* 2. RIGHT-SIDE ACTION RAIL */}
-      <div 
-        className="absolute z-20 flex flex-col items-center gap-4 sm:gap-5"
-        style={{
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
-          right: 'calc(env(safe-area-inset-right, 0px) + 14px)'
-        }}
-      >
+      <div className="relative z-20 flex flex-row items-center justify-around gap-5 px-4 py-3 bg-[#080612] border-t border-white/10">
         {/* Spark Button */}
         <button 
           onClick={(e) => { e.stopPropagation(); onSpark(); }}
@@ -581,96 +585,6 @@ export default function NexoraImagePlayer({
         </div>
       </div>
 
-      {/* 3. BOTTOM-LEFT INFORMATION OVERLAY */}
-      <div 
-        className="absolute z-20 flex flex-col items-start gap-1.5 text-left pointer-events-auto max-w-[70%] sm:max-w-[75%]"
-        style={{
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
-          left: 'calc(env(safe-area-inset-left, 0px) + 16px)'
-        }}
-      >
-        {/* Search Suggestion if available */}
-        {post.searchSuggestion && (
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              window.dispatchEvent(new CustomEvent('toast', { detail: `🔍 Searching: ${post.searchSuggestion}` }));
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1 mb-0.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors pointer-events-auto cursor-pointer"
-          >
-            <Search className="w-3 h-3 text-violet-300" />
-            <span className="text-[10px] font-mono text-white tracking-wider">Search • {post.searchSuggestion}</span>
-          </button>
-        )}
-
-        {/* Caption & Read More Toggle */}
-        {post.content && (
-          <div className="text-xs sm:text-sm text-zinc-100 font-sans leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] pointer-events-auto">
-            <p className={isExpanded ? "" : "line-clamp-2"}>
-              {post.content}
-            </p>
-            {post.content.length > 50 && (
-              <button 
-                onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} 
-                className="text-[11px] font-mono font-bold text-violet-300 hover:text-white mt-0.5 cursor-pointer"
-              >
-                {isExpanded ? "Show less" : "More"}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Audio / Source Info beneath caption */}
-        <div 
-          className="flex items-center gap-2 text-xs font-mono text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] mt-0.5 cursor-pointer hover:text-violet-300 transition-colors pointer-events-auto" 
-          onClick={(e) => { e.stopPropagation(); onViewSound?.(post.id); }}
-        >
-          <div className="w-5 h-5 rounded-full bg-black/40 border border-white/20 flex items-center justify-center shrink-0">
-            <Music className="w-3 h-3 text-violet-400" />
-          </div>
-          <span className="truncate max-w-[200px]">
-            {post.soundTitle || `Original Sound - ${post.name}`}
-          </span>
-        </div>
-
-        {/* Hashtags */}
-        {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pointer-events-auto mt-0.5">
-            {post.tags.slice(0, 4).map(tag => (
-              <span
-                key={tag}
-                className="text-[11px] font-mono text-violet-300 hover:text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] font-semibold cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.dispatchEvent(new CustomEvent('toast', { detail: `🏷️ Filter: #${tag}` }));
-                }}
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Post details */}
-        {post.location && (
-          <div className="flex items-center gap-1 text-[11px] font-mono text-zinc-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]">
-            <span className="text-violet-300">📍</span>
-            <span>{post.location}</span>
-          </div>
-        )}
-        {post.taggedUsernames && post.taggedUsernames.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[10px] font-medium text-violet-200" aria-label="Mentioned accounts">
-            {post.taggedUsernames.map(username => (
-              <button key={username} type="button" onClick={(event) => { event.stopPropagation(); onViewProfile?.(username); }} className="hover:text-white hover:underline focus-visible:outline focus-visible:outline-violet-300">
-                @{username}
-              </button>
-            ))}
-          </div>
-        )}
-
-
-      </div>
-
       <VideoBottomSheet
         isOpen={showShareSheet}
         onClose={() => setShowShareSheet(false)}
@@ -684,6 +598,12 @@ export default function NexoraImagePlayer({
         onFollowToggle={() => onToggleFollow?.()}
         isFollowing={isFollowing}
       />
+
+      {isFullscreen && displayImages[currentImageIndex] && (
+        <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center touch-pan-y" role="dialog" aria-modal="true" aria-label="Photo viewer" onTouchStart={handlePhotoTouchStart} onTouchEnd={handlePhotoTouchEnd}>
+          <img src={displayImages[currentImageIndex]} alt={post.imageAltText || post.content || "Post photo"} className="w-full h-full object-contain select-none" draggable={false} />
+        </div>
+      )}
 
       {/* Downloading Export State Overlay */}
       {downloadingState && (

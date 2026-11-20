@@ -117,7 +117,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   const reduceMotion = useReducedMotion();
   const isCommentsOpen = activeCommentsPostId === post.id;
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
-  const hasMediaCaptionOverlay = Boolean(post.videoUrl || ((post.image || (post.images && post.images.length > 0)) && !post.opportunityType));
+  const hasMediaCaptionOverlay = Boolean(post.videoUrl);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const impressionTimerRef = useRef<number | null>(null);
   const impressionRecordedRef = useRef(false);

@@ -190,18 +190,39 @@ async function allowChatMediaUpload(uid: string): Promise<boolean> {
 }
 
 async function allowChatMediaPlayback(uid: string): Promise<boolean> {
+  // Use a rolling window rather than a wall-clock minute bucket. Fixed buckets
+  // can reset halfway through a burst and let a client exceed the intended limit.
   const windowMs = 60_000;
-  const windowStart = Math.floor(Date.now() / windowMs) * windowMs;
+  const limit = 60;
   const ref = serverDb.collection('chatMediaPlaybackRateLimits').doc(createHash('sha256').update(uid).digest('hex'));
   return serverDb.runTransaction(async transaction => {
     const snapshot = await transaction.get(ref);
     const previous = snapshot.data();
-    const count = previous?.windowStart === windowStart ? Number(previous.count) || 0 : 0;
-    if (count >= 60) return false;
+    const now = Date.now();
+    const cutoff = now - windowMs;
+    const storedTimestamps = Array.isArray(previous?.requestTimestamps)
+      ? previous.requestTimestamps.filter((value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > cutoff)
+      : [];
+
+    // Gracefully carry forward counters written by the previous fixed-window
+    // implementation during its active window while the new rolling format
+    // takes over.
+    const legacyCount = storedTimestamps.length === 0
+      && typeof previous?.windowStart === 'number'
+      && now - previous.windowStart < windowMs
+      ? Math.min(limit, Math.max(0, Number(previous.count) || 0))
+      : 0;
+    const requestTimestamps = storedTimestamps.length > 0
+      ? storedTimestamps
+      : Array.from({ length: legacyCount }, () => Math.max(cutoff + 1, Number(previous?.windowStart) || now));
+
+    if (requestTimestamps.length >= limit) return false;
+    requestTimestamps.push(now);
     transaction.set(ref, {
-      windowStart,
-      count: count + 1,
-      expiresAt: new Date(windowStart + windowMs * 10),
+      requestTimestamps,
+      count: requestTimestamps.length,
+      windowStart: requestTimestamps[0],
+      expiresAt: new Date(now + windowMs * 10),
       updatedAt: FieldValue.serverTimestamp(),
     });
     return true;
