@@ -44,6 +44,7 @@ import VoiceRecorder from './VoiceRecorder';
 import EmojiPicker from './EmojiPicker';
 import MediaGallery from './MediaGallery';
 import CallScreen from './CallScreen';
+import { startDirectCall, watchDirectCalls } from '../services/directCallService';
 import CirclesView from './CirclesView';
 
 interface NewInboxViewProps {
@@ -113,7 +114,7 @@ export default function NewInboxView({
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const audioInputRef = useRef<HTMLInputElement | null>(null);
-  const [activeCall, setActiveCall] = useState<{ type: 'voice' | 'video'; partnerName: string; partnerAvatar: string } | null>(null);
+  const [activeCall, setActiveCall] = useState<{ callId: string; type: 'voice' | 'video'; partnerName: string; partnerAvatar: string; incoming: boolean } | null>(null);
   
   // Message context / reply / edit
   const [activeContextMessageId, setActiveContextMessageId] = useState<string | null>(null);
@@ -188,6 +189,43 @@ export default function NewInboxView({
       console.warn('[NEXORA inbox] Your chat list could not be loaded:', error.message);
     });
   }, [currentUser.id, isServerBackedInbox]);
+
+  // Incoming direct calls are delivered through the authenticated, participant-scoped call stream.
+  useEffect(() => {
+    if (!isServerBackedInbox) return;
+    return watchDirectCalls(currentUser.id, calls => {
+      if (activeCall) return;
+      const incoming = calls
+        .filter(call => call.recipientId === currentUser.id && call.status === 'ringing' && call.expiresAt > Date.now())
+        .sort((a, b) => b.createdAt - a.createdAt)[0];
+      if (!incoming) return;
+      const caller = creatorsRef.current.find(user => user.id === incoming.callerId);
+      setActiveCall({
+        callId: incoming.id,
+        type: incoming.type,
+        partnerName: caller?.name || incoming.callerName || 'NEXORA member',
+        partnerAvatar: caller?.avatar || '',
+        incoming: true,
+      });
+    }, error => console.warn('[NEXORA calls] Incoming calls could not be loaded:', error.message));
+  }, [currentUser.id, isServerBackedInbox, activeCall]);
+
+  const placeDirectCall = async (type: 'voice' | 'video') => {
+    if (!activeChat || activeChat.isGroup || !isServerBackedInbox || activeCall) return;
+    try {
+      const started = await startDirectCall(activeChat.id, activeChat.partnerId, type);
+      setActiveCall({
+        callId: started.callId,
+        type,
+        partnerName: activeChat.partnerName,
+        partnerAvatar: activeChat.partnerAvatar || '',
+        incoming: false,
+      });
+    } catch (error: any) {
+      const message = error?.message || 'The call could not be started. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+    }
+  };
 
   // Firestore real-time listener
   useEffect(() => {
@@ -864,11 +902,21 @@ export default function NewInboxView({
                 <button
                   type="button"
                   aria-label={`Start a voice call with ${activeChat.partnerName}`}
-                  onClick={() => setActiveCall({ type: 'voice', partnerName: activeChat.partnerName, partnerAvatar: activeChat.partnerAvatar })}
+                  onClick={() => void placeDirectCall('voice')}
                   className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
                   title="Voice Call"
                 >
                   <Phone className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Start a video call with ${activeChat.partnerName}`}
+                  onClick={() => void placeDirectCall('video')}
+                  disabled={Boolean(activeChat.isGroup) || !isServerBackedInbox || Boolean(activeCall)}
+                  className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Video Call"
+                >
+                  <Video className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
@@ -1203,6 +1251,10 @@ export default function NewInboxView({
           isOpen={Boolean(activeCall)}
           type={activeCall.type}
           partnerName={activeCall.partnerName}
+          partnerAvatar={activeCall.partnerAvatar}
+          callId={activeCall.callId}
+          currentUserId={currentUser.id}
+          incoming={activeCall.incoming}
           onClose={() => setActiveCall(null)}
         />
       )}
