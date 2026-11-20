@@ -1040,19 +1040,48 @@ export default function MediaCreationEngine({
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera disconnected before recording started. Please retry.' }));
                 return null;
               }
+              let recordingStream = stream;
+              let cleanupZoomRecording = () => {};
+              const previewVideo = videoPreviewRef.current;
+              if (cameraZoom > 1 && previewVideo && previewVideo.videoWidth > 0) {
+                const canvas = document.createElement('canvas');
+                canvas.width = previewVideo.videoWidth;
+                canvas.height = previewVideo.videoHeight;
+                const context = canvas.getContext('2d');
+                if (context && typeof canvas.captureStream === 'function') {
+                  const zoomStream = canvas.captureStream(30);
+                  recordingStream = new MediaStream([...zoomStream.getVideoTracks(), ...stream.getAudioTracks()]);
+                  let frameId = 0;
+                  const drawZoomedFrame = () => {
+                    const cropWidth = previewVideo.videoWidth / cameraZoom;
+                    const cropHeight = previewVideo.videoHeight / cameraZoom;
+                    const sourceX = (previewVideo.videoWidth - cropWidth) / 2;
+                    const sourceY = (previewVideo.videoHeight - cropHeight) / 2;
+                    context.drawImage(previewVideo, sourceX, sourceY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+                    frameId = requestAnimationFrame(drawZoomedFrame);
+                  };
+                  drawZoomedFrame();
+                  cleanupZoomRecording = () => {
+                    cancelAnimationFrame(frameId);
+                    zoomStream.getTracks().forEach(track => track.stop());
+                  };
+                }
+              }
               const mimeType = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
-              const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+              const recorder = new MediaRecorder(recordingStream, mimeType ? { mimeType } : undefined);
               videoChunksRef.current = [];
               mediaRecorderVideoRef.current = recorder;
               recorder.ondataavailable = event => {
                 if (event.data.size > 0) videoChunksRef.current.push(event.data);
               };
               recorder.onerror = () => {
+                cleanupZoomRecording();
                 setIsRecording(false);
                 setIsSavingRecordedVideo(false);
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Video recording failed. Check available storage and camera permissions, then retry.' }));
               };
               recorder.onstop = () => {
+                cleanupZoomRecording();
                 const chunks = videoChunksRef.current;
                 const blob = new Blob(chunks, { type: recorder.mimeType || chunks[0]?.type || 'video/webm' });
                 if (!blob.size) {
@@ -2149,6 +2178,11 @@ export default function MediaCreationEngine({
                             {countdownTimer !== null ? <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span> : recordedVideoUrl ? <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" /> : <video ref={videoPreviewRef} autoPlay muted playsInline style={{ transform: `scale(${cameraZoom})` }} className="h-full w-full bg-[#120E2B] object-cover" />}
                           </div>
                           <div className="z-10 flex flex-col items-center gap-2">
+                             <div className="mx-auto flex w-full max-w-xs items-center gap-3 rounded-full border border-white/10 bg-[#050914]/65 px-4 py-2 text-[10px] font-semibold text-white backdrop-blur-xl">
+                               <span>Zoom · {cameraZoom.toFixed(1)}×</span>
+                               <input aria-label="Video camera zoom" type="range" min="1" max="3" step="0.1" value={cameraZoom} onChange={event => handleCameraZoomChange(Number(event.target.value))} className="min-w-0 flex-1 accent-[#8A78D6]" />
+                             </div>
+                             
                             <label className="flex items-center gap-2 rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[10px] font-semibold text-white">
                               Video length
                               <select aria-label="Video recording length" value={recordingLimitSecs} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onChange={event => setRecordingLimitSecs(Number(event.target.value))} className="bg-transparent text-white outline-none">
