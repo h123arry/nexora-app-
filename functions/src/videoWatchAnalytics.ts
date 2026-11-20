@@ -64,13 +64,31 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
     }
 
     let creditedSeconds = 0;
-    let started = false;
+    const started = !previous;
     let viewCounted = false;
     const postViewerRef = db.collection('postVideoDailyViewers').doc(digest(postId + ':' + day + ':' + uid));
     const viewerRef = db.collection('creatorVideoDailyViewers').doc(digest(creatorId + ':' + day + ':' + uid));
-    const viewerSnap = !previous ? await tx.get(viewerRef) : null;
+
+    if (previous) {
+      const elapsed = previous.lastHeartbeatAt instanceof Timestamp
+        ? Math.max(0, (now.toMillis() - previous.lastHeartbeatAt.toMillis()) / 1000)
+        : 0;
+      creditedSeconds = acceptedWatchCredit({
+        elapsedSeconds: elapsed,
+        previousPositionSeconds: Number(previous.lastPositionSeconds || 0),
+        nextPositionSeconds: position,
+      });
+    }
+
+    const shouldCountPublicView = creditedSeconds > 0
+      && uid !== creatorId
+      && post.audience === 'public';
+    const [viewerSnap, postViewerSnapshot] = await Promise.all([
+      !previous ? tx.get(viewerRef) : Promise.resolve(null),
+      shouldCountPublicView ? tx.get(postViewerRef) : Promise.resolve(null),
+    ]);
+
     if (!previous) {
-      started = true;
       tx.create(sessionRef, {
         viewerId: uid, postId, creatorId, day,
         lastPositionSeconds: position,
@@ -81,14 +99,6 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
         updatedAt: FieldValue.serverTimestamp(),
       });
     } else {
-      const elapsed = previous.lastHeartbeatAt instanceof Timestamp
-        ? Math.max(0, (now.toMillis() - previous.lastHeartbeatAt.toMillis()) / 1000)
-        : 0;
-      creditedSeconds = acceptedWatchCredit({
-        elapsedSeconds: elapsed,
-        previousPositionSeconds: Number(previous.lastPositionSeconds || 0),
-        nextPositionSeconds: position,
-      });
       tx.update(sessionRef, {
         lastPositionSeconds: position,
         lastHeartbeatAt: now,
@@ -97,11 +107,6 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
-
-    const shouldCountPublicView = creditedSeconds > 0
-      && uid !== creatorId
-      && post.audience === 'public';
-    const postViewerSnapshot = shouldCountPublicView ? await tx.get(postViewerRef) : null;
 
     if (started || creditedSeconds > 0) {
       const aggregateRef = db.collection('creatorVideoDaily').doc(digest(creatorId + ':' + day));
