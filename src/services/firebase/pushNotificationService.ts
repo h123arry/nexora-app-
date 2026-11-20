@@ -103,11 +103,13 @@ export class PushNotificationService {
 
     this.unsubscribeMessage?.();
     this.unsubscribeMessage = onMessage(this.messaging, payload => {
-      if (!payload.notification) return;
+      const data = payload.data || {};
+      const title = payload.notification?.title || data.title || 'NEXORA';
+      const body = payload.notification?.body || data.body || data.content || 'You have a new update.';
       this.displayNativeNotification({
-        title: payload.notification.title || 'NEXORA',
-        body: payload.notification.body || '',
-        data: payload.data as PushNotificationPayload['data'],
+        title,
+        body,
+        data: data as PushNotificationPayload['data'],
       });
     });
 
