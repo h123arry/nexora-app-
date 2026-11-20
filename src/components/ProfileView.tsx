@@ -94,6 +94,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
                       alt={post.content || 'Video thumbnail'}
                       referrerPolicy="no-referrer"
+                      onError={(event) => { event.currentTarget.style.display = 'none'; }}
                     />
                   ) : (
                     <NexoraVideo 
@@ -1114,7 +1115,7 @@ export default function ProfileView({
 
     switch (profileTab) {
       case 'media':
-        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.videoUrl));
+        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.images?.length || !!p.videoUrl));
       case 'voice':
         return userMyPosts.filter(p => !p.isArchived && (p.isVoice || p.voiceDuration || (p as any).audioUrl || p.content.includes('🎙')));
       case 'reposts':
@@ -1126,11 +1127,18 @@ export default function ProfileView({
       case 'archive':
         return isOwnProfile ? userMyPosts.filter(p => p.isArchived) : [];
       default:
-        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.videoUrl));
+        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.images?.length || !!p.videoUrl));
     }
   };
 
   const filteredTabPosts = getTabContent();
+
+  // Keep the open viewer bound to the latest profile post snapshot so creator view totals stay current.
+  useEffect(() => {
+    if (!selectedGridPost) return;
+    const latestPost = posts.find(post => post.id === selectedGridPost.id);
+    if (latestPost && latestPost.views !== selectedGridPost.views) setSelectedGridPost(latestPost);
+  }, [posts, selectedGridPost?.id, selectedGridPost?.views]);
 
   const formatSecondaryStat = (num: number) => {
     if (num === undefined || num === null || isNaN(num)) return '0';
@@ -1300,7 +1308,7 @@ export default function ProfileView({
       </div>
 
       {/* 2. PROFILE HEADER (COMPRESSED) */}
-      <div className="nx-profile-main w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left" aria-busy={isLoadingProfile}>
+      <div className="nx-profile-main w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
         
           {/* Profile Completion Prompts */}
           {false && isOwnProfile && (
