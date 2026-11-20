@@ -13,6 +13,7 @@ interface MessageBubbleProps {
   partnerName?: string;
   partnerAvatar?: string;
   onReply: (msg: ExtendedMessage) => void;
+  onRetry?: (msg: ExtendedMessage) => void;
   onReact: (msgId: string, emoji: string) => void;
   onDelete: (msgId: string, forEveryone: boolean) => void;
   onEdit: (msg: ExtendedMessage) => void;
@@ -46,6 +47,7 @@ export default function MessageBubble({
   partnerName,
   partnerAvatar,
   onReply,
+  onRetry,
   onReact,
   onDelete,
   onEdit,
@@ -450,7 +452,7 @@ export default function MessageBubble({
               {isMe && (
                 <div className="flex items-center">
                   {message.isOfflineUnsent || message.status === 'failed' ? (
-                    <WifiOff className="w-3 h-3 text-orange-400" />
+                    <button type="button" onClick={() => onRetry?.(message)} className="ml-1 rounded-md border border-orange-300/20 bg-orange-400/10 px-1.5 py-0.5 text-[8px] font-bold text-orange-200">Retry</button>
                   ) : message.status === 'sending' ? (
                     <Check className="w-3 h-3 text-white/30 animate-pulse" />
                   ) : message.status === 'sent' ? (
