@@ -416,7 +416,7 @@ export default function MediaCreationEngine({
   const [pollOptionsList, setPollOptionsList] = useState<string[]>(['', '']);
 
   // UI state
-  const [permissionTarget, setPermissionTarget] = useState<'camera' | 'gallery' | 'mic' | null>(null);
+  const [permissionTarget, setPermissionTarget] = useState<'camera' | 'gallery' | 'mic' | null>(() => initialMode === 'photo' || initialMode === 'reel' ? 'camera' : null);
   // Browser/OS permissions are authoritative. Never restore a locally cached
   // "granted" value because users can revoke camera or microphone access later.
   const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
@@ -1635,7 +1635,7 @@ export default function MediaCreationEngine({
   const isAltTextMissing = selectedImages.length > 0 && !imageAltText.trim();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 backdrop-blur-md bg-black/75 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-stretch backdrop-blur-md bg-[#050914] overflow-hidden">
       
       {/* ⚠️ Exit Confirmation Overlay */}
       <AnimatePresence>
@@ -1753,7 +1753,7 @@ export default function MediaCreationEngine({
         initial={{ scale: 0.98, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.98, opacity: 0, y: 10 }}
-        className={`relative w-full max-w-2xl rounded-3xl p-5 md:p-6 border shadow-md flex flex-col max-h-[92vh] ${getModalBg()}`}
+        className={`relative h-[100dvh] w-full max-w-none rounded-none p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] border-0 shadow-none flex flex-col min-h-0 overflow-hidden ${getModalBg()}`}
         id="creation-studio-frame"
       >
         {/* Header toolbar */}
@@ -1814,7 +1814,7 @@ export default function MediaCreationEngine({
         )}
 
         {/* Dynamic Core Body */}
-        <div className="flex-1 overflow-y-auto pr-1 space-y-4 text-left font-sans custom-scrollbar">
+        <div className={`flex-1 min-h-0 pr-1 space-y-4 text-left font-sans ${currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel') ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
           
           {activeTab === 'drafts' ? (
             /* Draft Organizer Screen */
@@ -1893,7 +1893,7 @@ export default function MediaCreationEngine({
 
               {currentStep === 2 && (
                 /* STEP 2: MEDIA IMPORT & RECORDING */
-                <div className="space-y-4 animate-fadeIn">
+                <div className="flex h-full min-h-0 flex-col space-y-4 animate-fadeIn">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-semibold text-[#B69BFF]">{activeMode === 'photo' ? 'Choose a photo or take one' : activeMode === 'reel' ? 'Record a video or choose one' : activeMode === 'video' ? 'Choose a video' : 'Add your content'}</span>
                     <button 
@@ -1905,9 +1905,9 @@ export default function MediaCreationEngine({
                   </div>
 
                   {activeMode === 'photo' && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-3xl bg-[#050914]">
                       {/* Drag upload zone */}
-                      <div className="border border-[#292244] border-dashed rounded-2xl p-6 text-center space-y-3 bg-[#120E2B]/45 hover:border-white/10 transition-all flex flex-col items-center justify-center">
+                      <div className="hidden">
                         <FileImage className="w-8 h-8 text-[#8E88A7] animate-bounce" />
                         <div className="space-y-1">
                           <p className="text-xs text-[#D1CBE3] font-bold">Add a photo</p>
@@ -1920,20 +1920,21 @@ export default function MediaCreationEngine({
                       </div>
 
                       {/* Snap device simulation */}
-                      <div className="border border-[#292244] rounded-2xl p-4 text-center space-y-4 bg-[#120E2B]/70 flex flex-col justify-between">
-                        <div className="space-y-1">
-                          <span className="text-sm font-semibold text-white block">Take a photo</span>
-                          <p className="text-[10px] text-[#8E88A7]">Use your camera to take a photo.</p>
+                      <div className="absolute inset-0 flex flex-col justify-between p-4 text-center">
+                        <div className="relative z-10 self-start rounded-2xl border border-white/15 bg-black/45 px-4 py-2 text-left backdrop-blur-xl">
+                          <span className="text-sm font-semibold text-white block">NEXORA Camera</span>
+                          <p className="text-[10px] text-white/70">Your moment, your space.</p>
                         </div>
-                        <video ref={photoPreviewRef} autoPlay muted playsInline className="w-full aspect-video rounded-xl object-cover bg-[#120E2B]" aria-label="Live camera preview" />
+                        <video ref={photoPreviewRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full rounded-3xl object-cover bg-[#050914]" aria-label="Live camera preview" />
                         {permissionState !== 'granted' && (
                           <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
                         )}
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="flex-1 rounded-xl border border-[#292244] bg-[#120E2B] py-2.5 text-xs font-semibold text-white disabled:opacity-40">Switch camera</button>
-                          <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="flex-1 rounded-xl bg-[#120E2B] py-2.5 text-xs font-semibold text-white transition-all hover:bg-[#19143A] disabled:cursor-not-allowed disabled:opacity-50">Take photo</button>
+                        <div className="relative z-10 flex items-center justify-center gap-3 rounded-3xl border border-white/15 bg-black/45 p-3 backdrop-blur-xl">
+                          <label className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white">Gallery<input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /></label>
+                          <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Flip</button>
+                          <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="rounded-full bg-gradient-to-br from-[#A855F7] to-[#4B10F2] px-7 py-4 text-sm font-black text-white shadow-[0_0_35px_rgba(113,56,255,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">Capture</button>
                         </div>
-                        <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="w-full rounded-xl bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] py-2.5 text-xs font-mono font-bold text-white shadow-lg transition-all hover:brightness-110"><Sparkles className="mr-1 inline h-3.5 w-3.5" /> Open Filters & Lenses</button>
+                        <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="relative z-10 self-center rounded-full border border-violet-300/40 bg-violet-600/80 px-5 py-2.5 text-xs font-bold text-white shadow-lg backdrop-blur-xl transition-all hover:brightness-110"><Sparkles className="mr-1 inline h-3.5 w-3.5" /> Open Filters & Lenses</button>
                         <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                           {selectedImages.map((img, i) => (
                             <div key={i} className="relative w-12 h-12 rounded-lg border border-[#44376F] overflow-hidden shrink-0">
