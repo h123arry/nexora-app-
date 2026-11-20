@@ -1480,24 +1480,6 @@ export default function App() {
       });
     };
 
-    const handleIncrementView = (e: Event) => {
-      const { postId } = (e as CustomEvent).detail || {};
-      if (!postId) return;
-      setPosts(prev => {
-        const next = prev.map(p => {
-          if (p.id === postId) {
-            return {
-              ...p,
-              views: (p.views || 0) + 1
-            };
-          }
-          return p;
-        });
-        localStorage.setItem('nexora_posts', JSON.stringify(next));
-        return next;
-      });
-    };
-
     const handleArchivePost = (e: Event) => {
       const { postId, archiveState } = (e as CustomEvent).detail || {};
       if (!postId) return;
@@ -1536,7 +1518,6 @@ export default function App() {
     window.addEventListener('nexora-delete-comment', handleDeleteComment);
     window.addEventListener('nexora-spark-comment', handleSparkComment);
     window.addEventListener('nexora-add-reply', handleAddReply);
-    window.addEventListener('nexora-increment-view', handleIncrementView);
     window.addEventListener('nexora-archive-post', handleArchivePost);
 
     return () => {
@@ -1546,7 +1527,6 @@ export default function App() {
       window.removeEventListener('nexora-delete-comment', handleDeleteComment);
       window.removeEventListener('nexora-spark-comment', handleSparkComment);
       window.removeEventListener('nexora-add-reply', handleAddReply);
-      window.removeEventListener('nexora-increment-view', handleIncrementView);
       window.removeEventListener('nexora-archive-post', handleArchivePost);
     };
   }, []);
