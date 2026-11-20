@@ -16,6 +16,7 @@ import CreateGroupChatModal from './CreateGroupChatModal';
 import { getTranslations } from '../utils/translations';
 import { uploadPrivateChatMediaFile, resolvePrivateChatMedia } from '../services/firebase/storageService';
 import { aggregateMessageReactions, isSupportedOutgoingMediaType, serializeOutgoingMessage, toggleMessageReaction } from '../utils/messageSerialization';
+import { normalizeChatAttachmentContentType, voiceRecordingExtension } from '../utils/chatMediaPolicy';
 import { 
   collection, 
   doc, 
@@ -108,6 +109,7 @@ export default function NewInboxView({
   const sendingMessageRef = useRef(false);
   const attachmentUploadRef = useRef(false);
   const [attachmentProgress, setAttachmentProgress] = useState(0);
+  const [pendingAttachmentRetry, setPendingAttachmentRetry] = useState<{ files: File[]; forcedType?: 'image' | 'video' | 'audio' | 'document'; error: string } | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -402,7 +404,7 @@ export default function NewInboxView({
       mediaType: mediaData?.type === 'voice' ? 'audio' : (mediaData?.type as 'image' | 'video' | 'audio' | 'document' | undefined),
       mediaContentType: mediaData?.contentType,
       fileSize: typeof mediaData?.size === 'number' ? String(mediaData.size) : undefined,
-      voiceAudioUrl: undefined,
+      voiceAudioUrl: mediaData?.type === 'voice' ? mediaData.url : undefined,
       voiceDuration: mediaData?.type === 'voice' && typeof mediaData.duration === 'number' ? `${mediaData.duration}s` : undefined,
       fileName: mediaData?.name
     };
@@ -477,42 +479,50 @@ export default function NewInboxView({
     }
   };
 
-  const sendAttachmentFiles = async (fileList: FileList | null, forcedType?: 'image' | 'video' | 'audio' | 'document') => {
+  const sendAttachmentFiles = async (fileList: FileList | File[] | null, forcedType?: 'image' | 'video' | 'audio' | 'document') => {
     if (!fileList?.length || !activeChatId || attachmentUploadRef.current) return;
     attachmentUploadRef.current = true;
     const files = Array.from(fileList);
+    let currentIndex = 0;
+    let uploadInProgress = false;
+    setPendingAttachmentRetry(null);
     setIsUploadingAttachment(true);
     try {
-      for (const file of files) {
-        const detectedType = forcedType || (file.type.startsWith('image/') ? 'image'
-          : file.type.startsWith('video/') ? 'video'
-          : file.type.startsWith('audio/') ? 'audio' : 'document');
+      for (let index = 0; index < files.length; index += 1) {
+        currentIndex = index;
+        const file = files[index];
+        const contentType = normalizeChatAttachmentContentType(file.name, file.type);
+        const detectedType = forcedType || (contentType.startsWith('image/') ? 'image'
+          : contentType.startsWith('video/') ? 'video'
+          : contentType.startsWith('audio/') ? 'audio' : 'document');
         setAttachmentProgress(0);
-        const extension = file.name.split('.').pop()?.toLowerCase() || '';
-        const mimeByExtension: Record<string, string> = {
-          jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif',
-          mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', ogg: 'audio/ogg', aac: 'audio/aac', opus: 'audio/opus', flac: 'audio/flac',
-          pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-          txt: 'text/plain', csv: 'text/csv', rtf: 'application/rtf',
-        };
-        const normalizedFile = !file.type || file.type === 'application/octet-stream'
-          ? new File([file], file.name, { type: mimeByExtension[extension] || file.type || 'application/octet-stream' })
+        const normalizedFile = file.type !== contentType
+          ? new File([file], file.name, { type: contentType, lastModified: file.lastModified })
           : file;
+        uploadInProgress = true;
         const uploaded = await uploadPrivateChatMediaFile({
           file: normalizedFile, userId: currentUser.id, chatId: activeChatId, fileName: file.name,
           onProgress: setAttachmentProgress,
         });
+        uploadInProgress = false;
         const sent = await handleSendMessage('', {
           type: detectedType, url: uploaded.storagePath, name: file.name,
           contentType: uploaded.contentType, size: uploaded.size,
         });
-        if (!sent) throw new Error('The attachment uploaded, but its message was not saved. Tap Retry on the pending message.');
+        currentIndex = index + 1;
+        if (!sent) throw new Error('The attachment uploaded, but its message could not be saved. Use Retry on that message.');
       }
+      setPendingAttachmentRetry(null);
       window.dispatchEvent(new CustomEvent('toast', { detail: files.length > 1 ? 'Attachments sent.' : 'Attachment sent.' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Attachment could not be sent. Please retry.' }));
+      const message = error instanceof Error ? error.message : 'Attachment could not be sent. Please retry.';
+      const remainingFiles = files.slice(uploadInProgress ? currentIndex : currentIndex);
+      if (uploadInProgress && remainingFiles.length) {
+        setPendingAttachmentRetry({ files: remainingFiles, forcedType, error: message });
+      } else if (remainingFiles.length > 0) {
+        setPendingAttachmentRetry({ files: remainingFiles, forcedType, error: message });
+      }
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     } finally {
       attachmentUploadRef.current = false;
       setIsUploadingAttachment(false);
@@ -948,6 +958,17 @@ export default function NewInboxView({
               <div ref={messagesEndRef} />
             </div>
 
+            {pendingAttachmentRetry && (
+              <div className="mx-3 mb-2 flex items-center gap-3 rounded-xl border border-rose-400/20 bg-rose-500/[0.06] px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11px] font-medium text-white">Couldn't send {pendingAttachmentRetry.files.length === 1 ? pendingAttachmentRetry.files[0].name : `${pendingAttachmentRetry.files.length} attachments`}</p>
+                  <p className="truncate text-[10px] text-zinc-400">{pendingAttachmentRetry.error}</p>
+                </div>
+                <button type="button" onClick={() => { const retry = pendingAttachmentRetry; setPendingAttachmentRetry(null); void sendAttachmentFiles(retry.files, retry.forcedType); }} className="rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-semibold text-white">Retry</button>
+                <button type="button" onClick={() => setPendingAttachmentRetry(null)} className="rounded-lg p-2 text-zinc-400 hover:text-white" aria-label="Dismiss attachment retry"><X className="h-4 w-4" /></button>
+              </div>
+            )}
+
             {/* Reply Preview Bar */}
             {replyQuoteText && (
               <div className="px-4 py-2 bg-violet-950/40 border-t border-white/10 flex items-center justify-between">
@@ -1148,23 +1169,23 @@ export default function NewInboxView({
       {showVoiceRecorder && (
         <VoiceRecorder
           onSendMessage={async (audioBlob, duration) => {
-            try {
-              if (!activeChatId) throw new Error('Open a conversation before sending a voice note.');
-              const uploaded = await uploadPrivateChatMediaFile({
-                file: audioBlob,
-                userId: currentUser.id,
-                chatId: activeChatId,
-                fileName: `voice-note-${Date.now()}.webm`,
-              });
-              await handleSendMessage('', {
-                type: 'voice', url: uploaded.storagePath,
-                name: `Voice Note (${duration}s)`, duration, contentType: uploaded.contentType, size: uploaded.size
-              });
-              setShowVoiceRecorder(false);
-            } catch {
-              console.warn('[Inbox] Voice note could not be sent.');
-              window.dispatchEvent(new CustomEvent('toast', { detail: 'Voice note could not be sent. Check your connection and try again.' }));
-            }
+            if (!activeChatId) throw new Error('Open a conversation before sending a voice note.');
+            const contentType = normalizeChatAttachmentContentType(`voice.${voiceRecordingExtension(audioBlob.type)}`, audioBlob.type);
+            const uploadBlob = audioBlob.type.split(';')[0].trim().toLowerCase() === contentType
+              ? audioBlob
+              : new Blob([audioBlob], { type: contentType });
+            const uploaded = await uploadPrivateChatMediaFile({
+              file: uploadBlob,
+              userId: currentUser.id,
+              chatId: activeChatId,
+              fileName: `voice-note-${Date.now()}.${voiceRecordingExtension(contentType)}`,
+            });
+            const sent = await handleSendMessage('', {
+              type: 'voice', url: uploaded.storagePath,
+              name: `Voice Note (${duration}s)`, duration, contentType: uploaded.contentType, size: uploaded.size
+            });
+            if (!sent) throw new Error('Your voice note uploaded, but the message could not be saved. Please retry.');
+            setShowVoiceRecorder(false);
           }}
           onCancel={() => setShowVoiceRecorder(false)}
         />
