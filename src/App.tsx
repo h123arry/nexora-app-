@@ -105,6 +105,7 @@ import PublicAccountSetup from './components/PublicAccountSetup';
 import UsernameLoginModal from './components/UsernameLoginModal';
 import OfflineBanner from './components/OfflineBanner';
 import PwaUpdatePrompt from './components/PwaUpdatePrompt';
+import IncomingDirectCallListener from './components/IncomingDirectCallListener';
 
 export default function App() {
   const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, retryProfileLoad, logout, loginWithUsername } = useFirebase();
@@ -2375,6 +2376,11 @@ export default function App() {
       )}
       <OfflineBanner />
       <PwaUpdatePrompt />
+      <IncomingDirectCallListener
+        currentUser={getRichUser(currentUser)}
+        creators={(Object.values(globalUsersMap) as User[]).filter(user => user.id !== currentUser.id)}
+        enabled={isLoggedIn && firebaseUser?.uid === currentUser.id}
+      />
       {isLoggedIn && activeTab === 'feed' && (
         <Suspense fallback={null}>
           <RetentionWelcomePanel userId={currentUser.id} notifications={notifications} />
