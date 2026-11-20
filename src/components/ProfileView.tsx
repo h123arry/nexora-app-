@@ -110,19 +110,19 @@ function createRemoteVideoPoster(videoUrl: string): Promise<Blob | null> {
 const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVideoPosters = false, ownerId }: MediaGridProps) => {
   const attemptedPosterRepairs = useRef(new Set<string>());
   const [repairedPosters, setRepairedPosters] = useState<Record<string, string>>({});
+  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.image || post.images?.find(Boolean) || ''}:${post.videoUrl || ''}`).join('|');
 
   useEffect(() => {
     if (!repairVideoPosters || !ownerId || auth.currentUser?.uid !== ownerId) return;
-    let cancelled = false;
+    let active = true;
     const repairMissingPosters = async () => {
       for (const post of gridPosts) {
-        if (cancelled) return;
         const existingPoster = post.image || post.images?.find(Boolean);
         if (!post.videoUrl || existingPoster || post.userId !== ownerId || attemptedPosterRepairs.current.has(post.id)) continue;
         attemptedPosterRepairs.current.add(post.id);
         try {
           const posterBlob = await createRemoteVideoPoster(post.videoUrl);
-          if (!posterBlob || cancelled || auth.currentUser?.uid !== ownerId) continue;
+          if (!posterBlob || auth.currentUser?.uid !== ownerId) continue;
           const uploaded = await uploadMediaFile({
             file: new File([posterBlob], `profile-poster-${post.id}.jpg`, { type: 'image/jpeg' }),
             userId: ownerId,
@@ -133,7 +133,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
           // Firestore rules permit the owner to update the existing image field;
           // keep poster metadata out of the public post document.
           await updateDoc(doc(db, 'posts', post.id), { image: uploaded.downloadUrl });
-          if (!cancelled) setRepairedPosters(current => ({ ...current, [post.id]: uploaded.downloadUrl }));
+          if (active) setRepairedPosters(current => ({ ...current, [post.id]: uploaded.downloadUrl }));
         } catch (error) {
           // A CORS-blocked or unavailable source should not break profile browsing.
           console.warn('[ProfileMedia] Could not repair video poster for post:', post.id, error);
@@ -141,8 +141,8 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
       }
     };
     void repairMissingPosters();
-    return () => { cancelled = true; };
-  }, [gridPosts, ownerId, repairVideoPosters]);
+    return () => { active = false; };
+  }, [posterRepairSignature, ownerId, repairVideoPosters]);
   if (gridPosts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-20 px-6 w-full col-span-full">
