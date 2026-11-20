@@ -8,8 +8,10 @@ export function serializeOutgoingMessage<T extends { status: string }>(value: T)
   return omitUndefinedFields({ ...value, status: 'sent' } as T);
 }
 
-export function isSupportedOutgoingMediaType(type: string): type is 'voice' {
-  return type === 'voice';
+export type OutgoingMediaType = 'voice' | 'image' | 'video' | 'audio' | 'document';
+
+export function isSupportedOutgoingMediaType(type: string): type is OutgoingMediaType {
+  return ['voice', 'image', 'video', 'audio', 'document'].includes(type);
 }
 
 
