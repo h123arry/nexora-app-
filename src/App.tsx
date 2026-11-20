@@ -1117,7 +1117,19 @@ export default function App() {
         if (profileId) handleViewProfile(profileId);
         return;
       }
-      navigateTo(data.type === 'message' || data.type === 'chat' ? 'inbox' : 'activity', null);
+      if (data.type === 'message' || data.type === 'chat') {
+        navigateTo('inbox', null);
+        if (data.targetId) window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-chat', { detail: { chatId: data.targetId } })), 500);
+        return;
+      }
+      if (['comment', 'comment_reply', 'mention', 'spark', 'like', 'repost'].includes(data.type) && data.targetId) {
+        navigateTo('feed', null);
+        window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-post', {
+          detail: { postId: data.targetId, focusComment: data.type === 'comment' || data.type === 'comment_reply' || data.type === 'mention' },
+        })), 650);
+        return;
+      }
+      navigateTo('activity', null);
     };
     navigator.serviceWorker?.addEventListener('message', handleServiceWorkerPushOpen);
     return () => {
@@ -1191,12 +1203,21 @@ export default function App() {
     params.delete('nxPushType');
     params.delete('nxPushUser');
     params.delete('nxPushTarget');
+    params.delete('nxPushNotification');
     const remaining = params.toString();
     window.history.replaceState({}, '', `${window.location.pathname}${remaining ? `?${remaining}` : ''}${window.location.hash}`);
     if ((pushType === 'follow' || pushType === 'profile_view') && userId) {
       window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userId } }));
+    } else if (pushType === 'message' || pushType === 'chat') {
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox' } }));
+      if (targetId) window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-chat', { detail: { chatId: targetId } })), 500);
+    } else if (['comment', 'comment_reply', 'mention', 'spark', 'like', 'repost'].includes(pushType) && targetId) {
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'feed' } }));
+      window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-post', {
+        detail: { postId: targetId, focusComment: pushType === 'comment' || pushType === 'comment_reply' || pushType === 'mention' },
+      })), 650);
     } else {
-      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: pushType === 'message' || pushType === 'chat' ? 'inbox' : 'activity' } }));
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'activity' } }));
     }
   }, [isLoggedIn, currentUser.id]);
 
