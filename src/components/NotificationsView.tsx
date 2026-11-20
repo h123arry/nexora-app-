@@ -79,6 +79,7 @@ export default function NotificationsView({
     likes: true,
     comments: true,
     followers: true,
+    reposts: true,
     mentions: true,
     communities: true,
     events: true,
@@ -364,6 +365,7 @@ export default function NotificationsView({
       if ((n.type === 'like' || n.type === 'spark') && !settingsToggles.likes) return false;
       if ((n.type === 'comment' || n.type === 'comment_reply') && !settingsToggles.comments) return false;
       if (n.type === 'follow' && !settingsToggles.followers) return false;
+      if (n.type === 'repost' && !settingsToggles.reposts) return false;
       if (n.type === 'mention' && !settingsToggles.mentions) return false;
       if (n.type === 'community' && !settingsToggles.communities) return false;
       if ((n.type === 'system' || n.type === 'security') && !settingsToggles.securityAlerts) return false;
