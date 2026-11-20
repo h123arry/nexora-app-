@@ -244,7 +244,7 @@ export async function resolvePrivateChatMedia(storagePath: string): Promise<stri
   const user = auth.currentUser;
   if (!match || !user) throw new Error('Sign in to access this private attachment.');
   const [, chatId, uploaderId, mediaId] = match;
-  const token = await user.getIdToken(true);
+  const token = await user.getIdToken();
   const route = storagePath.includes('/media/')
     ? `/api/private-chat-media/chat/${encodeURIComponent(chatId)}/media/${encodeURIComponent(uploaderId)}/${encodeURIComponent(mediaId)}`
     : `/api/private-chat-media/chat/${encodeURIComponent(chatId)}/audio/${encodeURIComponent(uploaderId)}/${encodeURIComponent(mediaId)}`;
