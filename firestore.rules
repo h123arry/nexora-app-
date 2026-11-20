@@ -231,7 +231,8 @@ service cloud.firestore {
     // Direct-call records are server-owned. Participants may read call state only;
     // all invitations, decisions, status transitions and room credentials use callables.
     match /directCalls/{callId} {
-      allow get, list: if signedIn() && request.auth.uid in resource.data.participants;
+      allow get: if signedIn() && request.auth.uid in resource.data.participants;
+      allow list: if signedIn() && (resource.data.callerId == request.auth.uid || resource.data.recipientId == request.auth.uid);
       allow create, update, delete: if false;
     }
 
