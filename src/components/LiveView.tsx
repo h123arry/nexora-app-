@@ -30,6 +30,18 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   const [roomSearch,setRoomSearch] = useState('');
   const [roomSort,setRoomSort] = useState<'trending'|'popular'|'newest'>('trending');
   const [selectedId,setSelectedId] = useState<string|null>(null);
+
+  useEffect(() => {
+    const handlePushOpenLive = (event: Event) => {
+      const sessionId = (event as CustomEvent<{ sessionId?: string }>).detail?.sessionId;
+      if (typeof sessionId === 'string' && sessionId.trim()) {
+        setIsHost(false);
+        setSelectedId(sessionId);
+      }
+    };
+    window.addEventListener('nexora-open-live', handlePushOpenLive as EventListener);
+    return () => window.removeEventListener('nexora-open-live', handlePushOpenLive as EventListener);
+  }, []);
   const [session,setSession] = useState<LiveSessionSummary|null>(null);
   const [messages,setMessages] = useState<LiveChatMessage[]>([]);
   const [title,setTitle] = useState('');
