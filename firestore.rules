@@ -94,8 +94,9 @@ service cloud.firestore {
         && (!data.keys().hasAny(['mediaContentType']) || (data.mediaContentType is string && data.mediaContentType.size() <= 128))
         && (!data.keys().hasAny(['fileSize']) || (data.fileSize is string && data.fileSize.size() <= 24))
         && (!data.keys().hasAny(['mediaStoragePath'])
-          || (data.mediaStoragePath is string && data.mediaStoragePath.size() <= 400
-            && data.mediaStoragePath.matches('^chats/' + chatId + '/media/' + request.auth.uid + '/[A-Za-z0-9_-]{1,128}
+          || (data.mediaStoragePath is string
+            && data.mediaStoragePath.size() <= 400
+            && data.mediaStoragePath.matches('^chats/' + chatId + '/media/' + request.auth.uid + '/[A-Za-z0-9_-]{1,128}$')))
         && (!data.keys().hasAny(['voiceDuration'])
           || (data.voiceDuration is string && data.voiceDuration.size() <= 24))
         && (!data.keys().hasAny(['fileName'])
