@@ -43,7 +43,7 @@ function safeText(value: unknown, maxLength: number): string {
 
 function timestampText(value: unknown): string {
   if (typeof value === 'string') return value.slice(0, 80);
-  if (typeof value === 'number' && Number.isFinite(value)) return new Date(value).toISOString();
+  if (typeof value === 'number' && Number.isFinite(value)) { const date = new Date(value); return Number.isNaN(date.getTime()) ? '' : date.toISOString(); }
   if (value && typeof value === 'object' && 'toDate' in value
     && typeof (value as { toDate?: unknown }).toDate === 'function') {
     const date = (value as { toDate: () => Date }).toDate();
@@ -59,7 +59,7 @@ export async function loadVohOwnNotifications(db: VohFirestoreReader, uid: strin
   const snapshot = await db.collection('users').doc(uid)
     .collection('notifications').orderBy('timestamp', 'desc').limit(5).get();
   return snapshot.docs.map(document => {
-    const data = document.data();
+    const data = document.data() || {};
     return {
       content: safeText(data.content || data.title, 300),
       timestamp: timestampText(data.timestamp || data.createdAt),
@@ -85,7 +85,7 @@ export async function loadVohJoinedCommunities(db: VohFirestoreReader, uid: stri
     if (!communityRef || !communityRef.path || !/^communities\/[^/]+$/.test(communityRef.path)) return null;
     const community = await communityRef.get();
     if (!community) return null;
-    const data = community.data();
+    const data = community.data() || {};
     const name = safeText(data.name, 120);
     if (!name) return null;
     const rawCount = data.membersCount;
