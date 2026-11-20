@@ -93,10 +93,13 @@ export default function CallScreen({
       await room.connect(credentials.wsUrl, credentials.token, { autoSubscribe: true });
       await room.localParticipant.setMicrophoneEnabled(true);
       if (type === 'video') {
-        await room.localParticipant.setCameraEnabled(true);
-        const publications = room.localParticipant.videoTrackPublications;
-        const publication = publications ? Array.from(publications.values()).find((item: any) => item.track) as any : null;
-        if (publication?.track && localRef.current) publication.track.attach(localRef.current);
+        try {
+          await room.localParticipant.setCameraEnabled(true);
+          setCameraOn(true);
+        } catch {
+          setCameraOn(false);
+          setError('Camera access was denied. You can continue with voice or turn the camera on later.');
+        }
       }
       setConnected(true);
       setElapsed(0);
