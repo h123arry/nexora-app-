@@ -48,6 +48,16 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
     if (!creatorId || !(post.videoUrl || post.mediaType === 'video')) {
       throw new HttpsError('failed-precondition', 'This post is not a playable video.');
     }
+    const [viewerUserSnapshot, creatorUserSnapshot] = await Promise.all([
+      tx.get(db.collection('users').doc(uid)),
+      tx.get(db.collection('users').doc(creatorId)),
+    ]);
+    const viewerBlocks = viewerUserSnapshot.get('messaging')?.blockedUserIds;
+    const creatorBlocks = creatorUserSnapshot.get('messaging')?.blockedUserIds;
+    if ((Array.isArray(viewerBlocks) && viewerBlocks.includes(creatorId))
+      || (Array.isArray(creatorBlocks) && creatorBlocks.includes(uid))) {
+      throw new HttpsError('permission-denied', 'This video is unavailable to this account.');
+    }
     const previous = sessionSnap.data();
     if (previous && (previous.viewerId !== uid || previous.postId !== postId || previous.creatorId !== creatorId)) {
       throw new HttpsError('permission-denied', 'This viewing session is not valid.');
@@ -55,6 +65,8 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
 
     let creditedSeconds = 0;
     let started = false;
+    let viewCounted = false;
+    const postViewerRef = db.collection('postVideoDailyViewers').doc(digest(postId + ':' + day + ':' + uid));
     const viewerRef = db.collection('creatorVideoDailyViewers').doc(digest(creatorId + ':' + day + ':' + uid));
     const viewerSnap = !previous ? await tx.get(viewerRef) : null;
     if (!previous) {
@@ -86,6 +98,11 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
       });
     }
 
+    const shouldCountPublicView = creditedSeconds > 0
+      && uid !== creatorId
+      && post.audience === 'public';
+    const postViewerSnapshot = shouldCountPublicView ? await tx.get(postViewerRef) : null;
+
     if (started || creditedSeconds > 0) {
       const aggregateRef = db.collection('creatorVideoDaily').doc(digest(creatorId + ':' + day));
       tx.set(aggregateRef, {
@@ -97,8 +114,24 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
       if (started && !viewerSnap?.exists) tx.create(viewerRef, { creatorId, day, viewerHash: digest(uid), createdAt: FieldValue.serverTimestamp() });
+      if (shouldCountPublicView && !postViewerSnapshot?.exists) {
+        const currentViews = post.views;
+        const safeViews = Number.isSafeInteger(currentViews) && (currentViews as number) >= 0 ? currentViews as number : 0;
+        tx.create(postViewerRef, {
+          postId,
+          creatorId,
+          day,
+          viewerHash: digest(uid),
+          countedAt: FieldValue.serverTimestamp(),
+        });
+        tx.update(postRef, {
+          views: safeViews + 1,
+          viewsUpdatedAt: FieldValue.serverTimestamp(),
+        });
+        viewCounted = true;
+      }
     }
-    return { accepted: true, started, creditedSeconds, serverTime: now.toDate().toISOString() };
+    return { accepted: true, started, creditedSeconds, viewCounted, serverTime: now.toDate().toISOString() };
   });
   return result;
 });
