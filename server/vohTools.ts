@@ -5,6 +5,7 @@ export interface VohToolContext {
   notifications: Record<string, unknown>[];
   drafts: Record<string, unknown>[];
   studio: Record<string, unknown> | null;
+  discovery: Record<string, unknown> | null;
   pulse?: unknown;
 }
 
@@ -15,6 +16,7 @@ export const VOH_CONTEXT_TOOL_DECLARATIONS = [
   { name: 'get_recent_notifications', description: 'Read a bounded snapshot of the authenticated user’s own recent notifications.', parameters: { type: 'OBJECT', properties: {} } },
   { name: 'get_my_drafts', description: 'Read a bounded summary of the authenticated user’s saved post drafts. Media URLs are not included.', parameters: { type: 'OBJECT', properties: {} } },
   { name: 'get_my_studio_project', description: 'Read a summary of the authenticated user’s cloud Studio project without loading source media or asset paths.', parameters: { type: 'OBJECT', properties: {} } },
+  { name: 'get_public_discovery_snapshot', description: 'Read a small, privacy-filtered sample of public NEXORA posts and topics. This is a limited sample, not a complete or live platform-wide index.', parameters: { type: 'OBJECT', properties: {} } },
   { name: 'get_world_pulse_snapshot', description: 'Read the current World Pulse sample snapshot supplied for this request. It is a limited loaded sample, not platform-wide activity.', parameters: { type: 'OBJECT', properties: {} } },
 ] as const;
 
@@ -27,6 +29,7 @@ export function runVohContextTool(name: string, context: VohToolContext): { ok: 
     case 'get_recent_notifications': return { ok: true, data: context.notifications };
     case 'get_my_drafts': return { ok: true, data: context.drafts };
     case 'get_my_studio_project': return { ok: true, data: context.studio };
+    case 'get_public_discovery_snapshot': return context.discovery ? { ok: true, data: context.discovery } : { ok: false, error: 'A public discovery snapshot was not included in this request.' };
     case 'get_world_pulse_snapshot': return context.pulse ? { ok: true, data: context.pulse } : { ok: false, error: 'A World Pulse snapshot was not included in this request.' };
     default: return { ok: false, error: 'This VOH tool is not available.' };
   }
