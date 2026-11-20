@@ -552,11 +552,11 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
       interestDNA: interestDNAObj
     };
 
+    let persistedAvatar = finalUser.avatar;
+    let persistedCover = selectedCover || finalUser.coverImage || '';
     setIsPending(true);
     setErrorMsg('');
     try {
-      let persistedAvatar = finalUser.avatar;
-      let persistedCover = selectedCover || finalUser.coverImage || '';
       if (persistedAvatar.startsWith('data:image/')) {
         const avatarBlob = await fetch(persistedAvatar).then(response => {
           if (!response.ok) throw new Error('NEXORA could not prepare your profile photo.');
@@ -582,7 +582,6 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
         });
         persistedCover = uploadedCover.downloadUrl;
       }
-      const persistedUser = { ...finalUser, avatar: persistedAvatar, coverImage: persistedCover };
       await AuthService.updateUserProfile(finalUser.id, {
         username: finalUser.username,
         avatar: persistedAvatar,
