@@ -56,8 +56,8 @@ export default function MatrixView({
   };
 
   const menuItems = [
-    { id: 'studio' as MatrixSubTab, label: 'Post Studio', desc: 'Write posts and share updates', icon: Paintbrush, color: 'text-fuchsia-400' },
-    { id: 'missions' as MatrixSubTab, label: 'Missions', desc: 'Things to try and achieve', icon: Target, color: 'text-yellow-400' },
+    { id: 'studio' as MatrixSubTab, label: 'Create a post', desc: 'Write posts and share updates', icon: Paintbrush, color: 'text-fuchsia-400' },
+    { id: 'missions' as MatrixSubTab, label: 'Challenges', desc: 'Things to try and achieve', icon: Target, color: 'text-yellow-400' },
     { id: 'messages' as MatrixSubTab, label: 'Messages', desc: 'Your private conversations', icon: MessageSquare, color: 'text-sky-400' }
   ];
 
@@ -176,7 +176,7 @@ export default function MatrixView({
 
                   <form onSubmit={handleStudioDeploy} className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-mono tracking-wider text-current/60 uppercase font-bold">What is on your mind?</label>
+                      <label className="text-[11px] font-mono tracking-wider text-current/60 uppercase font-bold">What would you like to share?</label>
                       <textarea
                         value={customPostContent}
                         onChange={(e) => setCustomPostContent(e.target.value)}
