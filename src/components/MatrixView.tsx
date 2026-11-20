@@ -29,6 +29,7 @@ export default function MatrixView({
   onClose
 }: MatrixViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<MatrixSubTab>(initialSubTab === 'circles' ? 'messages' : initialSubTab || 'ai');
+  const [showMatrixMenu, setShowMatrixMenu] = useState(false);
 
   useEffect(() => {
     if (initialSubTab) {
@@ -73,6 +74,16 @@ export default function MatrixView({
               <h1 className="truncate text-sm font-semibold text-white">VOH AI</h1>
               <p className="text-[11px] text-zinc-400">Your personal AI assistant</p>
             </div>
+          </div>
+          <div className="relative ml-auto">
+            <button type="button" aria-expanded={showMatrixMenu} onClick={() => setShowMatrixMenu(value => !value)} className="rounded-full border border-white/10 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-white/5">More</button>
+            {showMatrixMenu && (
+              <div className="absolute right-0 top-12 z-[100] min-w-44 rounded-xl border border-white/10 bg-[#0B1424] p-1.5 shadow-2xl">
+                {menuItems.map(item => (
+                  <button key={item.id} type="button" onClick={() => { setActiveSubTab(item.id); setShowMatrixMenu(false); }} className="block w-full rounded-lg px-3 py-2.5 text-left text-xs font-medium text-zinc-200 hover:bg-violet-500/10 hover:text-white">{item.label}</button>
+                ))}
+              </div>
+            )}
           </div>
         </header>
         <div className="min-h-0 flex-1 overflow-hidden">
