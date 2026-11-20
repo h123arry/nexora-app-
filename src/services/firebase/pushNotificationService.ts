@@ -107,9 +107,10 @@ export class PushNotificationService {
           });
         });
         await FirebaseMessaging.addListener('notificationActionPerformed', action => {
-          if (action.notification.data?.type === 'incoming_call') {
+          const notificationData = action.notification.data as Record<string, unknown> | undefined;
+          if (notificationData?.type === 'incoming_call') {
             window.dispatchEvent(new CustomEvent('NEXORA_INCOMING_CALL_PUSH_OPENED', {
-              detail: action.notification.data,
+              detail: notificationData,
             }));
             window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox' } }));
           }
