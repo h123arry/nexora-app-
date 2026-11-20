@@ -145,3 +145,97 @@ export async function loadVohOwnStudioProject(db: VohFirestoreReader, uid: strin
     assetCount, updatedAt: timestampText(projectRecord.updatedAt || data.updatedAt),
     hasSoundtrack: Boolean(projectRecord.soundtrack), hasVoiceover: Boolean(projectRecord.voiceover) };
 }
+
+/**
+ * Build a small, privacy-filtered sample of public NEXORA discovery activity.
+ * Only public-audience posts are considered; account restrictions, private
+ * profiles, bilateral blocks and deleted/archived content are rechecked here.
+ * Media URLs, private identifiers and unbounded source documents are omitted.
+ */
+export async function loadVohPublicDiscovery(db: VohFirestoreReader, viewerUid: string) {
+  if (!viewerUid) throw new Error('A verified account is required.');
+  const [snapshot, viewerSettingsSnapshot] = await Promise.all([
+    db.collection('posts').where('audience', '==', 'public').orderBy('timestamp', 'desc').limit(30).get(),
+    db.collection('users').doc(viewerUid).collection('settings').doc('preferences').get(),
+  ]);
+  const viewerSettings = viewerSettingsSnapshot.data() || {};
+  const viewerBlocks = new Set([
+    ...(Array.isArray((viewerSettings as any).privacy?.blockedUserIds) ? (viewerSettings as any).privacy.blockedUserIds : []),
+    ...(Array.isArray((viewerSettings as any).messaging?.blockedUserIds) ? (viewerSettings as any).messaging.blockedUserIds : []),
+  ].filter((value): value is string => typeof value === 'string'));
+
+  const visible = await Promise.all(snapshot.docs.map(async document => {
+    const data = document.data() || {};
+    if (data.audience !== 'public' || data.isArchived === true || data.deleted === true
+      || ['deleted', 'removed', 'suspended', 'draft'].includes(safeText(data.status, 40).toLowerCase())) return null;
+    const ownerId = safeText(data.userId || data.authorId || data.ownerId, 150);
+    if (!ownerId || viewerBlocks.has(ownerId)) return null;
+    const [profileSnapshot, settingsSnapshot, statusSnapshot] = await Promise.all([
+      db.collection('users').doc(ownerId).get(),
+      db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
+      db.collection('accountStatus').doc(ownerId).get(),
+    ]);
+    if (!profileSnapshot || profileSnapshot.exists === false) return null;
+    const profile = profileSnapshot.data() || {};
+    const settings = settingsSnapshot.data() || {};
+    const accountStatus = statusSnapshot.data() || {};
+    if (profile.isSeedProfile === true || profile.isBanned === true || profile.isSuspended === true) return null;
+    const expiryValue = (accountStatus as any).expiresAt;
+    const expiryDate = expiryValue && typeof expiryValue === 'object' && 'toDate' in expiryValue
+      && typeof (expiryValue as {toDate?: unknown}).toDate === 'function'
+      ? (expiryValue as {toDate: () => Date}).toDate()
+      : expiryValue instanceof Date ? expiryValue : typeof expiryValue === 'string' || typeof expiryValue === 'number' ? new Date(expiryValue) : null;
+    const hasActiveRestriction = (accountStatus as any).banned === true || (accountStatus as any).suspended === true;
+    if (hasActiveRestriction && (!expiryDate || !Number.isFinite(expiryDate.getTime()) || expiryDate.getTime() > Date.now())) return null;
+    const ownerBlocks = [
+      ...((settings as any).privacy?.blockedUserIds || []),
+      ...((settings as any).messaging?.blockedUserIds || []),
+    ];
+    if (Array.isArray(ownerBlocks) && ownerBlocks.includes(viewerUid)) return null;
+    const isPrivate = (settings as any).privacy?.isPrivate === true || (settings as any).privacy?.isPrivateAccount === true;
+    if (isPrivate) {
+      const follow = await db.collection('follows').doc(viewerUid + '_' + ownerId).get();
+      if (!follow || follow.exists === false) return null;
+    }
+    const content = safeText(data.content || data.caption, 500);
+    if (!content) return null;
+    const tags = Array.isArray(data.tags)
+      ? [...new Set(data.tags.filter((tag): tag is string => typeof tag === 'string').map(tag => safeText(tag.replace(/^#/, ''), 40)).filter(Boolean))].slice(0, 6)
+      : [];
+    const likes = typeof data.likes === 'number' && Number.isFinite(data.likes) ? Math.max(0, Math.min(1_000_000, Math.floor(data.likes))) : 0;
+    const comments = typeof data.commentsCount === 'number' && Number.isFinite(data.commentsCount) ? Math.max(0, Math.min(1_000_000, Math.floor(data.commentsCount))) : 0;
+    return {
+      id: safeText(document.id, 128),
+      username: safeText(profile.username || data.username || 'NEXORA creator', 80),
+      content,
+      tags,
+      timestamp: timestampText(data.timestamp || data.createdAt),
+      likes,
+      comments,
+      creatorKey: ownerId,
+    };
+  }));
+
+  const posts = visible.filter((item): item is NonNullable<typeof item> => item !== null);
+  const groups = new Map<string, { posts: Set<string>; creators: Set<string> }>();
+  for (const post of posts) {
+    for (const tag of post.tags) {
+      const key = tag.toLocaleLowerCase();
+      const group = groups.get(key) || { posts: new Set<string>(), creators: new Set<string>() };
+      group.posts.add(post.id);
+      group.creators.add(post.creatorKey);
+      groups.set(key, group);
+    }
+  }
+  const trendingTopics = [...groups.entries()]
+    .filter(([, group]) => group.posts.size >= 2 && group.creators.size >= 2)
+    .map(([tag, group]) => ({ tag, postCount: group.posts.size, creatorCount: group.creators.size }))
+    .sort((a, b) => b.postCount - a.postCount || b.creatorCount - a.creatorCount || a.tag.localeCompare(b.tag))
+    .slice(0, 8);
+  return {
+    sampleSize: posts.length,
+    sampledAt: new Date().toISOString(),
+    posts: posts.slice(0, 12).map(({ creatorKey: _creatorKey, ...post }) => post),
+    trendingTopics,
+  };
+}
