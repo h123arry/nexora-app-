@@ -303,7 +303,7 @@ export async function searchNexoraContent(
     if (score === null || !Array.isArray(data.tags)) continue;
     for (const rawTag of data.tags) {
       if (typeof rawTag !== 'string') continue;
-      const tag = normalizeSearchText(rawTag.replace(/^#/, '')).replace(/\\s+/g, ' ').slice(0, 40);
+      const tag = normalizeSearchText(rawTag.replace(/^#/, '')).replace(/\s+/g, ' ').slice(0, 40);
       if (!tag || !queryWords.some(word => tag.includes(word) || editDistanceAtMostOne(tag.split(' ')[0] || tag, word))) continue;
       const entry = hashtagGroups.get(tag) || {count:0,creators:new Set<string>(),score:0,createdAt:''};
       entry.count += 1;
@@ -366,7 +366,7 @@ export async function getNexoraTrending(db: Firestore): Promise<Array<{
     const tags = Array.isArray(data.tags) ? [...new Set(data.tags)] : [];
     for (const raw of tags) {
       if (typeof raw !== 'string') continue;
-      const tag = normalizeSearchText(raw.replace(/^#/,'')).replace(/\\s+/g,' ').slice(0,40);
+      const tag = normalizeSearchText(raw.replace(/^#/,'')).replace(/\s+/g,' ').slice(0,40);
       if (!tag || tag.length < 2) continue;
       const entry = groups.get(tag) || {
         posts:new Set<string>(),currentPosts:new Set<string>(),previousPosts:new Set<string>(),
