@@ -183,7 +183,7 @@ async function allowChatMediaUpload(uid: string): Promise<boolean> {
     const snapshot = await transaction.get(ref);
     const previous = snapshot.data();
     const count = previous?.windowStart === windowStart ? Number(previous.count) || 0 : 0;
-    if (count >= 6) return false;
+    if (count >= 30) return false;
     transaction.set(ref, { windowStart, count: count + 1, expiresAt: new Date(windowStart + windowMs * 10), updatedAt: FieldValue.serverTimestamp() });
     return true;
   });
@@ -530,6 +530,28 @@ privateChatMediaRouter.post('/chat/:chatId/upload-intent', async (req, res) => {
   } catch (error) {
     console.error('[PrivateChatMedia] Could not create upload intent.', error instanceof Error ? error.name : 'unknown');
     return res.status(503).json({ error: 'NEXORA could not prepare this attachment. Please retry.' });
+  }
+});
+privateChatMediaRouter.post('/chat/:chatId/:mediaId/abort', async (req, res) => {
+  if (!r2Config) return res.status(503).end();
+  const uid = res.locals.userId as string;
+  const { chatId, mediaId } = req.params;
+  if (!/^[A-Za-z0-9_-]{1,150}$/.test(chatId) || !/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) return res.status(400).end();
+  try {
+    const [chat, assetRef] = await Promise.all([
+      serverDb.collection('chats').doc(chatId).get(),
+      Promise.resolve(serverDb.collection('privateChatMediaAssets').doc(mediaId)),
+    ]);
+    const asset = await assetRef.get();
+    if (!chat.exists || !Array.isArray(chat.get('participants')) || !chat.get('participants').includes(uid)
+      || !asset.exists || asset.get('ownerId') !== uid || asset.get('chatId') !== chatId
+      || asset.get('status') !== 'pending_upload') return res.status(404).end();
+    const deleteUrl = createR2PresignedUrl(r2Config, 'DELETE', asset.get('storagePath'), 120);
+    await fetch(deleteUrl, { method: 'DELETE' }).catch(() => undefined);
+    await assetRef.delete();
+    return res.status(204).end();
+  } catch {
+    return res.status(503).json({ error: 'NEXORA could not clean up this incomplete upload.' });
   }
 });
 privateChatMediaRouter.post('/chat/:chatId/:mediaId/complete', async (req, res) => {
