@@ -39,7 +39,6 @@ interface FeedPostCardProps {
   onViewProfile?: (userId: string) => void;
   onViewSound?: (soundId: string) => void;
   setActiveVideoFullscreen: (post: Post) => void;
-  onOpenReels?: (post: Post) => void;
   setContextualMenuPost: (post: Post) => void;
   setMutedUserIds: React.Dispatch<React.SetStateAction<string[]>>;
   setBlockedUserIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -90,7 +89,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   onToggleFollow,
   onViewProfile,
   setActiveVideoFullscreen,
-  onOpenReels,
   setContextualMenuPost,
   setMutedUserIds,
   setBlockedUserIds,
@@ -557,13 +555,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       {/* Media Players (Photo or Video) */}
       {post.videoUrl ? (
         <div className="nx-feed-media mb-3 w-full overflow-hidden bg-black">
-          {onOpenReels ? (
-            <button type="button" onClick={() => onOpenReels(post)} aria-label={`Open ${post.name}'s video in Reels`} className="relative block w-full aspect-video overflow-hidden bg-[#090714] text-white focus-visible:outline-2 focus-visible:outline-violet-400">
-              {(post.image || post.images?.[0]) ? <img src={post.image || post.images?.[0]} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" /> : <div className="absolute inset-0 bg-gradient-to-br from-[#17103b] via-[#090714] to-black" />}
-              <span className="absolute inset-0 flex items-center justify-center bg-black/15"><span className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-black/55 shadow-xl backdrop-blur-sm"><Play className="ml-1 h-6 w-6 fill-white text-white" /></span></span>
-              <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-bold text-white backdrop-blur">PLAY REEL</span>
-            </button>
-          ) : <NexoraVideoPlayer
+          <NexoraVideoPlayer
             post={post}
             videoUrl={post.videoUrl}
             onOpenFullscreen={() => setActiveVideoFullscreen(post)}
@@ -581,7 +573,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Not interested. Creator muted.' }));
             }}
             onViewProfile={(userId) => onViewProfile?.(userId)}
-          />}
+          />
           {typeof post.views === 'number' && Number.isFinite(post.views) && post.views >= 0 && (
             <div className="flex items-center gap-1.5 border-t border-white/10 bg-[#070914] px-3 py-2 text-[11px] font-medium text-slate-300">
               <Eye className="h-3.5 w-3.5 text-violet-300" />
