@@ -58,7 +58,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const [editMsgText, setEditMsgText] = useState('');
 
   // Attached Context Awareness States
-  const [attachedContextType, setAttachedContextType] = useState<'feed' | 'profile' | 'feed_profile' | 'circles' | 'notifications' | 'drafts' | 'studio' | 'inbox' | 'none'>('feed');
+  const [attachedContextType, setAttachedContextType] = useState<'feed' | 'profile' | 'feed_profile' | 'circles' | 'notifications' | 'drafts' | 'studio' | 'discovery' | 'inbox' | 'none'>('feed');
   const [memoryDNA, setMemoryDNA] = useState<string[]>(() => {
     const memory = MemoryEngine.getMemory();
     return memory.memoryEnabled
@@ -456,13 +456,15 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         contextualMessage = `[SYSTEM CONTEXT: The user selected their saved post drafts. Use only the bounded draft summaries supplied for their authenticated account; media URLs are not available.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'studio') {
         contextualMessage = `[SYSTEM CONTEXT: The user selected their cloud Studio project. Use only the project summary supplied for their authenticated account; source media and private asset paths are not accessible.]\n\nUser query: ${message}`;
+      } else if (attachedContextType === 'discovery') {
+        contextualMessage = `[SYSTEM CONTEXT: The user selected Public Discovery. Use only the bounded, privacy-filtered sample of public posts and topics supplied by NEXORA. It is not a complete or live platform-wide index.]\\n\\nUser query: ${message}`;
       } else if (attachedContextType === 'inbox') {
         contextualMessage = `[SYSTEM CONTEXT: The user is viewing the inbox. Private message contents are not included; do not claim access to them.]\n\nUser query: ${message}`;
       }
 
-      const selectedScopes: Array<'feed' | 'profile' | 'circles' | 'notifications' | 'drafts' | 'studio'> = attachedContextType === 'feed_profile'
+      const selectedScopes: Array<'feed' | 'profile' | 'circles' | 'notifications' | 'drafts' | 'studio' | 'public_discovery'> = attachedContextType === 'feed_profile'
         ? ['feed', 'profile']
-        : attachedContextType === 'feed' || attachedContextType === 'profile' || attachedContextType === 'circles' || attachedContextType === 'notifications' || attachedContextType === 'drafts' || attachedContextType === 'studio' ? [attachedContextType] : [];
+        : attachedContextType === 'feed' || attachedContextType === 'profile' || attachedContextType === 'circles' || attachedContextType === 'notifications' || attachedContextType === 'drafts' || attachedContextType === 'studio' ? [attachedContextType] : attachedContextType === 'discovery' ? ['public_discovery'] : [];
       const legacyScope: 'feed' | 'profile' | 'none' = selectedScopes.includes('feed') ? 'feed' : selectedScopes.includes('profile') ? 'profile' : 'none';
       const response = await ChatEngine.sendChatMessage(contextualMessage, mappedHistory, currentUser, selectedScopes.includes('feed') ? posts : [], legacyScope, selectedScopes);
 
@@ -1072,7 +1074,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                           circles: 'notifications',
                           notifications: 'drafts',
                           drafts: 'studio',
-                          studio: 'inbox',
+                          studio: 'discovery',
+                          discovery: 'inbox',
                           inbox: 'none',
                           none: 'feed'
                         };
@@ -1088,6 +1091,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {attachedContextType === 'notifications' && <Sparkles className="w-3 h-3 text-amber-400" />}
                       {attachedContextType === 'drafts' && <Layers className="w-3 h-3 text-violet-300" />}
                       {attachedContextType === 'studio' && <Layers className="w-3 h-3 text-purple-300" />}
+                      {attachedContextType === 'discovery' && <Compass className="w-3 h-3 text-violet-300" />}
                       {attachedContextType === 'inbox' && <MessageSquare className="w-3 h-3 text-fuchsia-400" />}
                       {attachedContextType === 'none' && <Sparkle className="w-3 h-3 text-amber-400" />}
                       <span>Change shared information</span>
