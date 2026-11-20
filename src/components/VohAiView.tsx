@@ -228,7 +228,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   useEffect(() => {
     const viewport = messagesViewportRef.current;
     if (!viewport) return;
-    viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'auto' });
   }, [activeSessionId, activeSession?.messages.length, activeSession?.messages[activeSession.messages.length - 1]?.text, typingIndicator]);
 
   const createNewSession = (initialPrompt?: string, title?: string) => {
