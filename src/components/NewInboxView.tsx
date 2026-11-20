@@ -520,7 +520,7 @@ export default function NewInboxView({
       if (uploadInProgress && remainingFiles.length) {
         setPendingAttachmentRetry({ chatId: activeChatId, files: remainingFiles, forcedType, error: message });
       } else if (remainingFiles.length > 0) {
-        setPendingAttachmentRetry({ files: remainingFiles, forcedType, error: message });
+        setPendingAttachmentRetry({ chatId: activeChatId, files: remainingFiles, forcedType, error: message });
       }
       window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     } finally {
