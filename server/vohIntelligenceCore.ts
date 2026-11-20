@@ -48,7 +48,7 @@ export class VohToolRegistry {
   }
 
   declarations(): unknown[] {
-    return [...this.tools.values()].map(tool => tool.declaration);
+    return [...this.tools.values()].filter(tool => tool.access === 'read').map(tool => tool.declaration);
   }
 
   async execute(name: string, context: VohToolContext, args: Record<string, unknown> = {}): Promise<VohToolResult> {
