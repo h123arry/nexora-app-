@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Zap, MessageSquare, Send, Bookmark, MoreVertical, Edit3, Archive, Trash, UserPlus, EyeOff, Download, ImageOff } from 'lucide-react';
 import VideoBottomSheet from './VideoBottomSheet';
@@ -68,6 +68,11 @@ export default function NexoraImagePlayer({
   const [isResolvingMedia, setIsResolvingMedia] = useState(true);
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [hasImageLoadError, setHasImageLoadError] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState(() => {
+    try { return localStorage.getItem('nexora_photo_swipe_hint_seen') !== 'true'; } catch { return false; }
+  });
+  const touchStartX = useRef<number | null>(null);
+  const suppressImageClick = useRef(false);
 
   const handleDownloadWatermarkedImage = async () => {
     const imgSrc = displayImages[currentImageIndex];
@@ -281,6 +286,34 @@ export default function NexoraImagePlayer({
     setHasImageLoadError(false);
   }, [currentImageIndex]);
 
+  useEffect(() => {
+    if (rawImages.length < 2 || !showSwipeHint) return;
+    const timer = window.setTimeout(() => {
+      setShowSwipeHint(false);
+      try { localStorage.setItem('nexora_photo_swipe_hint_seen', 'true'); } catch { /* Storage may be unavailable in private mode. */ }
+    }, 3600);
+    return () => window.clearTimeout(timer);
+  }, [rawImages.length, showSwipeHint]);
+
+  const handlePhotoTouchStart = (event: React.TouchEvent) => {
+    touchStartX.current = event.touches[0]?.clientX ?? null;
+    suppressImageClick.current = false;
+  };
+
+  const handlePhotoTouchEnd = (event: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const deltaX = (event.changedTouches[0]?.clientX ?? touchStartX.current) - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(deltaX) < 45 || rawImages.length < 2) return;
+    suppressImageClick.current = true;
+    setCurrentImageIndex(index => Math.max(0, Math.min(rawImages.length - 1, index + (deltaX < 0 ? 1 : -1))));
+    if (showSwipeHint) {
+      setShowSwipeHint(false);
+      try { localStorage.setItem('nexora_photo_swipe_hint_seen', 'true'); } catch { /* Storage may be unavailable in private mode. */ }
+    }
+    window.setTimeout(() => { suppressImageClick.current = false; }, 350);
+  };
+
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
 
   useEffect(() => {
@@ -297,7 +330,7 @@ export default function NexoraImagePlayer({
   return (
     <div className="relative w-full overflow-hidden bg-black select-none group">
       {/* Background Image Display */}
-      <div className="w-full h-full relative overflow-hidden bg-[#080612] flex items-center justify-center">
+      <div className="w-full relative overflow-hidden bg-[#080612] flex items-center justify-center touch-pan-y" onTouchStart={handlePhotoTouchStart} onTouchEnd={handlePhotoTouchEnd}>
         {isResolvingMedia ? (
           <div role="status" aria-live="polite" className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#15102a] via-[#080612] to-[#1c0b20] p-6 text-center">
             <span className="w-8 h-8 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" aria-hidden="true" />
@@ -314,7 +347,7 @@ export default function NexoraImagePlayer({
               onLoad={() => { setIsImageLoading(false); setHasImageLoadError(false); }}
               onError={() => { setIsImageLoading(false); setHasImageLoadError(true); }}
               className={`block w-full h-auto max-h-[78vh] object-contain cursor-zoom-in ${hasImageLoadError ? 'opacity-0' : ''}`}
-              onClick={() => setIsFullscreen(true)}
+              onClick={() => { if (!suppressImageClick.current) setIsFullscreen(true); }}
               referrerPolicy="no-referrer"
               style={{ filter: (post.imageFilters && post.imageFilters[currentImageIndex]) || post.imageFilter || 'none' }}
             />
@@ -346,29 +379,31 @@ export default function NexoraImagePlayer({
 
       </div>
 
-      {/* Carousel navigation controls if multiple images */}
       {rawImages.length > 1 && (
-        <>
-          <div className="absolute top-4 right-4 z-20 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-mono text-white font-bold border border-white/10 shadow-lg">
-            {currentImageIndex + 1} / {rawImages.length}
-          </div>
-          {currentImageIndex > 0 && (
+        <div className="relative flex items-center justify-center gap-1.5 py-3 bg-[#080612]" aria-label={`Photo ${currentImageIndex + 1} of ${rawImages.length}`}>
+          {rawImages.map((_, index) => (
             <button
-              onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev - 1); }}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-90"
+              key={`${post.id}-photo-${index}`}
+              type="button"
+              onClick={() => setCurrentImageIndex(index)}
+              aria-label={`Show photo ${index + 1}`}
+              aria-current={currentImageIndex === index ? 'true' : undefined}
+              className={`h-1.5 rounded-full transition-all duration-200 ${currentImageIndex === index ? 'w-4 bg-violet-400' : 'w-1.5 bg-white/35 hover:bg-white/65'}`}
+            />
+          ))}
+          {showSwipeHint && currentImageIndex === 0 && (
+            <motion.div
+              aria-hidden="true"
+              className="absolute left-1/2 top-1/2 -translate-y-1/2 pointer-events-none"
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: [0, 1, 1, 0], x: [12, -24, 12, -24] }}
+              transition={{ duration: 3.2, ease: 'easeInOut' }}
             >
-              ‹
-            </button>
+              <span className="text-2xl drop-shadow-lg">👆</span>
+            </motion.div>
           )}
-          {currentImageIndex < rawImages.length - 1 && (
-            <button
-              onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev + 1); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-90"
-            >
-              ›
-            </button>
-          )}
-        </>
+          <span className="sr-only">{currentImageIndex + 1} of {rawImages.length} photos</span>
+        </div>
       )}
 
       {/* 2. RIGHT-SIDE ACTION RAIL */}
