@@ -3,7 +3,7 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { onCallWithSession as onCall } from './callableSession.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { acceptedWatchCredit } from './videoWatchAnalyticsPolicy.js';
+import { acceptedWatchCredit, shouldCountPublicVideoView } from './videoWatchAnalyticsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 
@@ -80,12 +80,16 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
       });
     }
 
-    const shouldCountPublicView = creditedSeconds > 0
-      && uid !== creatorId
-      && post.audience === 'public';
+    const shouldEvaluatePublicView = shouldCountPublicVideoView({
+      viewerId: uid,
+      creatorId,
+      audience: post.audience,
+      creditedSeconds,
+      alreadyCounted: false,
+    });
     const [viewerSnap, postViewerSnapshot] = await Promise.all([
       !previous ? tx.get(viewerRef) : Promise.resolve(null),
-      shouldCountPublicView ? tx.get(postViewerRef) : Promise.resolve(null),
+      shouldEvaluatePublicView ? tx.get(postViewerRef) : Promise.resolve(null),
     ]);
 
     if (!previous) {
@@ -119,7 +123,13 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
       if (started && !viewerSnap?.exists) tx.create(viewerRef, { creatorId, day, viewerHash: digest(uid), createdAt: FieldValue.serverTimestamp() });
-      if (shouldCountPublicView && !postViewerSnapshot?.exists) {
+      if (shouldCountPublicVideoView({
+        viewerId: uid,
+        creatorId,
+        audience: post.audience,
+        creditedSeconds,
+        alreadyCounted: postViewerSnapshot?.exists === true,
+      })) {
         const currentViews = post.views;
         const safeViews = Number.isSafeInteger(currentViews) && (currentViews as number) >= 0 ? currentViews as number : 0;
         tx.create(postViewerRef, {
