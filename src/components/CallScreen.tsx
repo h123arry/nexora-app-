@@ -31,6 +31,7 @@ export default function CallScreen({
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState('');
+  const [audioBlocked, setAudioBlocked] = useState(false);
   const remoteRef = useRef<HTMLDivElement | null>(null);
   const localRef = useRef<HTMLVideoElement | null>(null);
   const roomRef = useRef<any>(null);
@@ -77,14 +78,16 @@ export default function CallScreen({
         element.playsInline = true;
         element.className = track.kind === 'video' ? 'h-full w-full object-cover bg-black' : 'hidden';
         remoteRef.current.appendChild(element);
-        if (track.kind === 'audio') void element.play().catch(() => setError('Tap your device volume or check audio playback permissions.'));
+        if (track.kind === 'audio') void element.play().catch(() => setAudioBlocked(true));
       });
       room.on(sdk.RoomEvent.TrackUnsubscribed, (track: any) => {
         track.detach().forEach((element: HTMLElement) => element.remove());
       });
       room.on(sdk.RoomEvent.Reconnecting, () => setError('Connection interrupted. Reconnecting…'));
       room.on(sdk.RoomEvent.Reconnected, () => setError(''));
+      room.on(sdk.RoomEvent.AudioPlaybackStatusChanged, () => setAudioBlocked(!room.canPlaybackAudio));
       room.on(sdk.RoomEvent.Disconnected, () => {
+        setError('Call connection ended. Check your network and try reconnecting.');
         setConnected(false);
         if (roomRef.current === room) roomRef.current = null;
       });
@@ -161,6 +164,18 @@ export default function CallScreen({
     try { await respondToDirectCall(callId, 'accept'); }
     catch (cause: any) { setError(cause?.message || 'Could not answer this call.'); }
     finally { setBusy(false); }
+  };
+
+  const enableAudio = async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      await room.startAudio();
+      setAudioBlocked(false);
+      setError('');
+    } catch {
+      setError('Audio playback is still blocked. Check your device sound settings and try again.');
+    }
   };
 
   const toggleMic = async () => {
@@ -245,6 +260,11 @@ export default function CallScreen({
       </main>
 
       <footer className="shrink-0 border-t border-white/10 bg-[#080d1b] px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-5">
+        {audioBlocked && (
+          <button type="button" onClick={() => void enableAudio()} className="mx-auto mb-4 flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold text-white">
+            <Video className="h-4 w-4" /> Tap to enable call audio
+          </button>
+        )}
         {waiting && incoming ? (
           <div className="mx-auto flex max-w-sm items-center justify-center gap-8">
             <button type="button" disabled={busy} onClick={() => void closeCall()} className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-full bg-rose-600 text-white disabled:opacity-50" aria-label="Decline call"><PhoneOff className="h-6 w-6" /><span className="text-[10px]">Decline</span></button>
