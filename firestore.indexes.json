@@ -615,8 +615,22 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "participants",
-          "arrayConfig": "CONTAINS"
+          "fieldPath": "callerId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "directCalls",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "recipientId",
+          "order": "ASCENDING"
         },
         {
           "fieldPath": "status",
