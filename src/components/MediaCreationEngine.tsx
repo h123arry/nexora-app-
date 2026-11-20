@@ -851,29 +851,43 @@ export default function MediaCreationEngine({
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+    const files = Array.from(e.target.files || []).filter(file => file.type.startsWith('image/'));
+    e.target.value = '';
+    if (!files.length) return;
+
     requestPermission('gallery', () => {
-      void Promise.all(Array.from(files).filter((file: File) => file.type.startsWith('image/')).slice(0, 20).map(async (file: File) => {
-        try {
-          await validateMediaFile(file, 'image');
-        } catch (error) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This photo could not be checked.'}` }));
+      void (async () => {
+        const remaining = Math.max(0, 20 - selectedImages.length);
+        if (remaining === 0) {
+          window.dispatchEvent(new CustomEvent('toast', { detail: 'You can add up to 20 photos to one NEXORA post.' }));
           return;
         }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          if (ev.target?.result) {
-            setSelectedImages(prev => [
-              ...prev,
-              { url: ev.target!.result as string, fileName: file.name, capturedAt: file.lastModified || Date.now(), rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }
-            ]);
+        const chosen = files.slice(0, remaining);
+        if (files.length > remaining) {
+          window.dispatchEvent(new CustomEvent('toast', { detail: `Only ${remaining} more photo${remaining === 1 ? '' : 's'} can be added to this post.` }));
+        }
+        const imported = await Promise.all(chosen.map(async file => {
+          try {
+            await validateMediaFile(file, 'image');
+            const url = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Photo could not be read.'));
+              reader.onerror = () => reject(new Error('Photo could not be read from your device.'));
+              reader.readAsDataURL(file);
+            });
+            return { url, fileName: file.name, capturedAt: file.lastModified || Date.now(), rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } } satisfies SelectedImage;
+          } catch (error) {
+            window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'This photo could not be imported.' }));
+            return null;
           }
-        };
-        reader.readAsDataURL(file);
-      }));
+        }));
+        const valid = imported.filter((item): item is SelectedImage => item !== null);
+        if (valid.length) {
+          setSelectedImages(previous => [...previous, ...valid].slice(0, 20));
+          setActiveEditIndex(previous => previous === null ? 0 : previous);
+        }
+      })();
     });
-    e.target.value = '';
   };
 
   const openVideoInStudio = () => {
