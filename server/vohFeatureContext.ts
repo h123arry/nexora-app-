@@ -162,6 +162,7 @@ export async function loadVohPublicDiscovery(db: VohFirestoreReader, viewerUid: 
   const viewerBlocks = new Set([
     ...(Array.isArray((viewerSettings as any).privacy?.blockedUserIds) ? (viewerSettings as any).privacy.blockedUserIds : []),
     ...(Array.isArray((viewerSettings as any).messaging?.blockedUserIds) ? (viewerSettings as any).messaging.blockedUserIds : []),
+    ...(Array.isArray((viewerSettings as any).feed?.blockedCreatorIds) ? (viewerSettings as any).feed.blockedCreatorIds : []),
   ].filter((value): value is string => typeof value === 'string'));
 
   const visible = await Promise.all(snapshot.docs.map(async document => {
@@ -190,6 +191,7 @@ export async function loadVohPublicDiscovery(db: VohFirestoreReader, viewerUid: 
     const ownerBlocks = [
       ...((Array.isArray((settings as any).privacy?.blockedUserIds) ? (settings as any).privacy.blockedUserIds : [])),
       ...((Array.isArray((settings as any).messaging?.blockedUserIds) ? (settings as any).messaging.blockedUserIds : [])),
+      ...((Array.isArray((settings as any).feed?.blockedCreatorIds) ? (settings as any).feed.blockedCreatorIds : [])),
     ];
     if (ownerBlocks.includes(viewerUid)) return null;
     const isPrivate = (settings as any).privacy?.isPrivate === true || (settings as any).privacy?.isPrivateAccount === true;
