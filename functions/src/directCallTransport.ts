@@ -229,6 +229,7 @@ export const getDirectCallToken = onCall({ region: 'europe-west1', secrets: [api
     throw new HttpsError('permission-denied', 'You are not part of this call.');
   }
   if (call.status !== 'accepted') throw new HttpsError('failed-precondition', 'The other person has not answered yet.');
+  if (Number(call.expiresAt || 0) <= Date.now()) throw new HttpsError('deadline-exceeded', 'This call has expired.');
   const [callerStatus, recipientStatus] = await Promise.all([
     db.collection('accountStatus').doc(call.callerId).get(),
     db.collection('accountStatus').doc(call.recipientId).get(),
