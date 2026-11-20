@@ -3,6 +3,7 @@ import {
   signInAnonymously,
   signInWithEmailAndPassword, 
   browserLocalPersistence,
+  indexedDBLocalPersistence,
   browserSessionPersistence,
   sendEmailVerification, 
   sendPasswordResetEmail, 
@@ -50,7 +51,7 @@ export class AuthService {
   }
 
   static getLoginPersistence(rememberDevice: boolean) {
-    return rememberDevice ? browserLocalPersistence : browserSessionPersistence;
+    return rememberDevice ? indexedDBLocalPersistence : browserSessionPersistence;
   }
 
   private static publicAuthError(error: unknown): Error & { code?: string } {
