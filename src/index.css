@@ -2387,7 +2387,7 @@ body {
   padding-inline: 0 !important;
   overflow: visible;
 }
-.nx-profile-shell .nx-profile-content > div:has(> .nx-profile-media-grid) {
+.nx-profile-shell .nx-profile-media-grid-bleed {
   width: 100vw !important;
   max-width: 100vw !important;
   margin-left: calc(50% - 50vw) !important;
