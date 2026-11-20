@@ -328,12 +328,12 @@ export default function NotificationsView({
       if (activeCategory === 'likes') return n.type === 'like' || n.type === 'spark';
       if (activeCategory === 'followers') return n.type === 'follow';
       if (activeCategory === 'profile_views') return n.type === 'profile_view';
-      if (activeCategory === 'system' || activeCategory === 'account') return n.type === 'system' || n.type === 'security';
+      if (activeCategory === 'system' || activeCategory === 'account') return n.category === 'account' || n.type === 'system' || n.type === 'security';
       if (activeCategory === 'origin') return n.type === 'origin_attribution';
       if (activeCategory === 'communities') return n.type === 'community';
       if (activeCategory === 'live') return n.type === 'pulse_alert' && n.content.includes('LIVE');
       if (activeCategory === 'verification') return n.type === 'reputation_milestone' && n.content.includes('Verification');
-      if (activeCategory === 'creator') return n.type === 'reputation_milestone' || n.type === 'mission_milestone';
+      if (activeCategory === 'creator') return (n.type === 'reputation_milestone' && n.category !== 'account') || n.category === 'creator' || n.type === 'mission_milestone';
 
       return true;
     });
