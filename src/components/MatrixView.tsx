@@ -152,15 +152,6 @@ export default function MatrixView({
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.08, ease: "easeOut" }}
           >
-            {activeSubTab === 'ai' && (
-              <VohAiView 
-                currentUser={currentUser} 
-                posts={posts} 
-                onAddPost={onAddPost} 
-                setActiveTab={() => {}}
-              />
-            )}
-
             {activeSubTab === 'studio' && (
               <div className="space-y-6">
                 <div className="p-5 rounded-3xl bg-[#03010b] border border-white/10 relative overflow-hidden">
