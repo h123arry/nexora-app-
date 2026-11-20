@@ -2710,6 +2710,7 @@ export default function App() {
                       theme={theme}
                       setTheme={setTheme}
                       initialSection={securityReminderStep > 0 ? 'connected' : settingsInitialSection}
+                      onOpenProfile={() => navigateTo('profile', null)}
                     />
                   )}
                     </motion.div>

@@ -19,6 +19,7 @@ interface SettingsViewProps {
   theme: ThemeMood;
   setTheme: (theme: ThemeMood) => void;
   onUpdateProfile?: (updatedData: Partial<UserType>) => void;
+  onOpenProfile?: () => void;
   initialSection?: 'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta' | 'origin';
 }
 
@@ -27,6 +28,7 @@ export default function SettingsView({
   theme,
   setTheme,
   onUpdateProfile,
+  onOpenProfile,
   initialSection = 'account'
 }: SettingsViewProps) {
   const [activeSection, setActiveSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta' | 'origin'>(initialSection);
@@ -328,33 +330,28 @@ export default function SettingsView({
 
           {activeSection === 'account' && (
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Account Overview</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-mono text-zinc-400 block mb-1">Display Name</label>
-                  <input
-                    type="text"
-                    defaultValue={currentUser.name}
-                    className="w-full nx-field px-4 py-2.5 text-xs"
-                  />
+              <div>
+                <h3 className="text-sm font-bold text-white">Your account</h3>
+                <p className="mt-1 text-xs text-zinc-400">Your profile details and the information people see on NEXORA.</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center gap-3">
+                  <img src={currentUser.avatar || '/nexora-mark.png'} alt="" className="h-12 w-12 rounded-full object-cover" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">{currentUser.name}</p>
+                    <p className="truncate text-xs text-violet-300">@{currentUser.username}</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-mono text-zinc-400 block mb-1">Username</label>
-                  <input
-                    type="text"
-                    defaultValue={`@${currentUser.username}`}
-                    className="w-full nx-field px-4 py-2.5 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-mono text-zinc-400 block mb-1">Bio</label>
-                  <textarea
-                    rows={3}
-                    defaultValue={currentUser.bio}
-                    className="w-full nx-field px-4 py-2.5 text-xs"
-                  />
+                <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                  <div><p className="text-zinc-500">Email</p><p className="mt-1 break-all text-zinc-200">{currentUser.email || 'Not added'}</p></div>
+                  <div><p className="text-zinc-500">Profile</p><p className="mt-1 text-zinc-200">Name, photo, bio and links</p></div>
                 </div>
               </div>
+              <button type="button" onClick={() => onOpenProfile?.()}
+                className="w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-violet-500">
+                Edit profile
+              </button>
+              <p className="text-[11px] leading-relaxed text-zinc-500">To change your email, password or sign-in methods, use the Security section.</p>
             </div>
           )}
 

@@ -3181,236 +3181,121 @@ export default function ProfileView({
         )}
       </AnimatePresence>
 
-      {/* 10. EDIT PROFILE MODAL SCREEN (With live preview) */}
+      {/* Fixed, one-screen profile editor */}
       <AnimatePresence>
         {activePanel === 'edit-profile' && (
-          <div className="fixed inset-0 z-50 bg-[#04020f] overflow-y-auto">
-            <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 text-left">
-              
-              <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                <button
-                  onClick={handleCancelEditProfile}
-                  disabled={isSavingProfile || showSavedFeedback}
-                  className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white uppercase font-black cursor-pointer disabled:opacity-50"
-                >
-                  <ArrowLeft className="w-4 h-4" /> Discard changes
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 h-[100dvh] overflow-hidden bg-[#090714]"
+            role="dialog" aria-modal="true" aria-label="Edit profile"
+          >
+            <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))] text-left">
+              <header className="flex shrink-0 items-center justify-between border-b border-white/10 pb-2.5">
+                <button type="button" onClick={handleCancelEditProfile} disabled={isSavingProfile || showSavedFeedback}
+                  className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/5 disabled:opacity-50">
+                  <ArrowLeft className="h-4 w-4" /> Cancel
                 </button>
-                <span className="text-xs font-mono text-zinc-400 font-extrabold uppercase">Edit Profile Settings</span>
-              </div>
+                <h2 className="text-base font-bold text-white">Edit profile</h2>
+                <button type="button" onClick={handleSaveProfile} disabled={isSavingProfile || showSavedFeedback}
+                  className="min-w-[76px] rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+                  {isSavingProfile ? 'Saving…' : showSavedFeedback ? 'Saved' : 'Save'}
+                </button>
+              </header>
 
-              {/* Two columns: Form on left, live preview on right */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Left: Input Form */}
-                <div className="space-y-4">
-                  <div className="bg-[#0b081c] p-6 rounded-3xl border border-white/10 space-y-4">
-                    <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block border-b border-white/5 pb-2">✏️ PROFILE DETAILS</span>
-                    
-                    {/* Display name */}
-                    <div className="space-y-1 text-xs">
-                      <label className="text-zinc-400 font-mono text-[10px] uppercase">Display Name</label>
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        disabled={isSavingProfile || showSavedFeedback}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
+              <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 py-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#120E2B] p-2.5">
+                    <img src={editAvatar} alt="Profile photo" className="h-14 w-14 shrink-0 rounded-full border border-white/10 object-cover" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-white">Profile photo</p>
+                      <button type="button" disabled={isSavingProfile || showSavedFeedback}
+                        onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
+                        className="mt-1 text-xs font-semibold text-violet-300 hover:text-violet-200">Change photo</button>
                     </div>
-
-                    {/* Username */}
-                    <div className="space-y-1 text-xs">
-                      <label className="text-zinc-400 font-mono text-[10px] uppercase">Username</label>
-                      <input
-                        type="text"
-                        value={editUsername}
-                        onChange={(e) => setEditUsername(e.target.value)}
-                        disabled={isSavingProfile || showSavedFeedback}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white font-mono focus:outline-hidden focus:border-violet-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
-                    </div>
-
-                    {/* Pronouns */}
-                    <div className="space-y-1 text-xs">
-                      <label className="text-zinc-400 font-mono text-[10px] uppercase">Pronouns</label>
-                      <input
-                        type="text"
-                        value={editPronouns}
-                        onChange={(e) => setEditPronouns(e.target.value)}
-                        disabled={isSavingProfile || showSavedFeedback}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                        placeholder="e.g. they/them"
-                      />
-                    </div>
-
-                    {/* Bio */}
-                    <div className="space-y-1 text-xs">
-                      <label className="text-zinc-400 font-mono text-[10px] uppercase">Bio Summary</label>
-                      <textarea
-                        value={editBio}
-                        onChange={(e) => setEditBio(e.target.value)}
-                        disabled={isSavingProfile || showSavedFeedback}
-                        rows={3}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
-                    </div>
-
-                    {/* Website */}
-                    <div className="space-y-1 text-xs">
-                      <label className="text-zinc-400 font-mono text-[10px] uppercase">Website Link</label>
-                      <input
-                        type="text"
-                        value={editWebsite}
-                        onChange={(e) => setEditWebsite(e.target.value)}
-                        disabled={isSavingProfile || showSavedFeedback}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
-                    </div>
-
-                    {/* Location */}
-                    <div className="space-y-1 text-xs">
-                      <label className="text-zinc-400 font-mono text-[10px] uppercase">Physical Location</label>
-                      <input
-                        type="text"
-                        value={editLocation}
-                        onChange={(e) => setEditLocation(e.target.value)}
-                        disabled={isSavingProfile || showSavedFeedback}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      />
-                    </div>
-
-                    {/* Custom Category selection */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1 text-xs">
-                        <label className="text-zinc-400 font-mono text-[10px] uppercase">Category</label>
-                        <select
-                          value={editCategory}
-                          onChange={(e) => setEditCategory(e.target.value)}
-                          disabled={isSavingProfile || showSavedFeedback}
-                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 disabled:opacity-50"
-                        >
-                          <option value="Digital Creator">Digital Creator</option>
-                          <option value="Founder Mindset">Founder Mindset</option>
-                          <option value="Community Leader">Community Leader</option>
-                          <option value="Technical Support">Technical Support</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1 text-xs">
-                        <label className="text-zinc-400 font-mono text-[10px] uppercase">Creator Type</label>
-                        <select
-                          value={editCreatorType}
-                          onChange={(e) => setEditCreatorType(e.target.value)}
-                          disabled={isSavingProfile || showSavedFeedback}
-                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 disabled:opacity-50"
-                        >
-                          <option value="Premium creator">Premium</option>
-                          <option value="Creator">Standard</option>
-                          <option value="Collaborator">Collaborator</option>
-                        </select>
-                      </div>
-                    </div>
-
                   </div>
-
-                  {/* Optional profile cover photo */}
-                  <div className="space-y-3 rounded-3xl border border-white/10 bg-[#0b081c] p-5">
-                    <div className="flex items-center justify-between"><span className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-violet-300">Profile cover</span><span className="text-[9px] text-zinc-500">Optional · wide image</span></div>
-                    <div className="relative h-28 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]">{editCover ? <img src={editCover} alt="Cover preview" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-zinc-500">Your cover photo preview</div>}</div>
-                    <div className="flex flex-wrap gap-2"><button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => coverInputRef.current?.click()} className="rounded-xl bg-violet-600 px-4 py-2 text-[10px] font-bold uppercase text-white hover:bg-violet-500 disabled:opacity-50"><Camera className="mr-1.5 inline h-3.5 w-3.5" /> {editCover ? 'Change cover' : 'Add cover photo'}</button>{editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => setEditCover('')} className="rounded-xl border border-white/10 px-4 py-2 text-[10px] font-bold uppercase text-zinc-300 hover:bg-white/5 disabled:opacity-50">Remove cover</button>}</div>
-                    <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (!file) return; if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) { window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a JPG, PNG or WebP image under 8 MB.' })); return; } const reader = new FileReader(); reader.onload = () => { if (typeof reader.result === 'string') setEditCover(reader.result); }; reader.onerror = () => window.dispatchEvent(new CustomEvent('toast', { detail: 'The cover photo could not be read. Please try again.' })); reader.readAsDataURL(file); }} />
-                  </div>
-                  {/* Avatar photo editor trigger */}
-                  <div className="bg-[#0b081c] p-6 rounded-3xl border border-white/10 space-y-4">
-                    <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block border-b border-white/5 pb-2">📸 PROFILE PHOTO</span>
-                    
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                      <div className="relative group cursor-pointer shrink-0" onClick={() => { if (!isSavingProfile && !showSavedFeedback) { setAvatarSourceType('select'); setIsAvatarModalOpen(true); } }}>
-                        <img src={editAvatar} className="w-16 h-16 rounded-xl object-cover border border-white/10 group-hover:brightness-75 transition-all" alt="avatar editor" />
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-xl">
-                          <Camera className="w-4 h-4 text-white" />
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2 text-left">
-                        <button
-                          disabled={isSavingProfile || showSavedFeedback}
-                          onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
-                          className="px-4 py-2 bg-linear-to-r from-violet-600 to-violet-500 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" /> Configure Avatar
-                        </button>
-                        <p className="text-[9px] font-mono text-zinc-500">Supports Camera capture, Device gallery, Rotation, and Zoom controls</p>
-                      </div>
+                  <div className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#120E2B] p-2.5">
+                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#211B49]">
+                      {editCover ? <img src={editCover} alt="Cover photo" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><ImageIcon className="h-5 w-5 text-violet-300" /></div>}
                     </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-white">Cover photo</p>
+                      <button type="button" disabled={isSavingProfile || showSavedFeedback}
+                        onClick={() => coverInputRef.current?.click()}
+                        className="mt-1 text-xs font-semibold text-violet-300">{editCover ? 'Change photo' : 'Add photo'}</button>
+                      {editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => setEditCover('')}
+                        className="ml-2 text-xs text-zinc-400">Remove</button>}
+                    </div>
+                    <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={event => {
+                      const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
+                      if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) {
+                        window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a JPG, PNG or WebP photo under 8 MB.' })); return;
+                      }
+                      const reader = new FileReader(); reader.onload = () => { if (typeof reader.result === 'string') setEditCover(reader.result); };
+                      reader.onerror = () => window.dispatchEvent(new CustomEvent('toast', { detail: 'This photo could not be opened. Please try another one.' }));
+                      reader.readAsDataURL(file);
+                    }} />
                   </div>
                 </div>
 
-                {/* Right: Real-time live preview */}
-                <div className="space-y-4">
-                  <div className="sticky top-6 space-y-4">
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest pl-2">🔴 LIVE PREVIEW</span>
-                    
-                    {/* Simplified Profile Header simulation */}
-                    <div className="bg-[#0b0922] border border-white/10 rounded-2xl p-4 text-center space-y-4">
-                      <div className="relative h-24 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]">{editCover ? <img src={editCover} alt="Cover photo preview" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-[10px] text-zinc-500">Optional cover photo</div>}</div>
-                      <div className="relative w-20 h-20 rounded-full bg-black overflow-hidden mx-auto border-2 border-white/10">
-                        <img src={editAvatar} className="w-full h-full object-cover" alt="live preview avatar" />
-                      </div>
-                      <div className="leading-tight">
-                        <h4 className="text-sm font-sans font-black text-white flex items-center justify-center gap-1">
-                          {editName || 'Your profile'} {identityVerification && <PurpleVerifiedBadge className="w-4 h-4" type={identityBadgeType} />}
-                        </h4>
-                        <p className="text-[10px] font-mono text-violet-400">@{editUsername || 'username'}</p>
-                      </div>
-                      <p className="text-xs text-zinc-300 italic bg-black/30 p-3 rounded-xl border border-white/5 whitespace-pre-wrap leading-relaxed max-w-xs mx-auto">
-                        "{editBio || 'Write something creative about yourself...'}"
-                      </p>
-                      <div className="flex flex-wrap items-center justify-center gap-x-3 text-[10px] font-mono text-zinc-400">
-                        {editLocation && <span>📍 {editLocation}</span>}
-                        {editWebsite && <span className="text-violet-300">🔗 {editWebsite}</span>}
-                        {editPronouns && <span>👥 {editPronouns}</span>}
-                      </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+                  <label className="min-w-0 text-xs text-zinc-300">Name
+                    <input value={editName} onChange={e => setEditName(e.target.value)} maxLength={80} disabled={isSavingProfile || showSavedFeedback}
+                      className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-50" placeholder="Your name" />
+                  </label>
+                  <label className="min-w-0 text-xs text-zinc-300">Username
+                    <div className="mt-1 flex h-10 items-center rounded-xl border border-white/10 bg-[#120E2B] px-3 focus-within:border-violet-500">
+                      <span className="text-violet-300">@</span>
+                      <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} maxLength={30} disabled={isSavingProfile || showSavedFeedback}
+                        className="min-w-0 w-full bg-transparent pl-1 text-sm text-white outline-none disabled:opacity-50" placeholder="username" />
                     </div>
-
-                    <div className="flex gap-3">
-                      <button
-                        disabled={isSavingProfile || showSavedFeedback}
-                        onClick={handleCancelEditProfile}
-                        className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-300 rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        Discard changes
-                      </button>
-                      <button
-                        disabled={isSavingProfile || showSavedFeedback}
-                        onClick={handleSaveProfile}
-                        className={`flex-1 py-3.5 rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 ${
-                          showSavedFeedback 
-                            ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30' 
-                            : 'bg-linear-to-r from-violet-600 to-violet-500 hover:brightness-110 text-white shadow-violet-500/15 disabled:opacity-50 disabled:cursor-not-allowed'
-                        }`}
-                      >
-                        {isSavingProfile && (
-                          <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                        )}
-                        {showSavedFeedback ? (
-                          <span className="flex items-center gap-1">✓ Profile updated successfully</span>
-                        ) : isSavingProfile ? (
-                          'Saving...'
-                        ) : (
-                          'Save Changes'
-                        )}
-                      </button>
-                    </div>
+                  </label>
+                  <label className="min-w-0 text-xs text-zinc-300">Website
+                    <input value={editWebsite} onChange={e => setEditWebsite(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                      className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="yourwebsite.com" />
+                  </label>
+                  <label className="min-w-0 text-xs text-zinc-300">Location
+                    <input value={editLocation} onChange={e => setEditLocation(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                      className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="City, country" />
+                  </label>
+                  <label className="min-w-0 text-xs text-zinc-300">Pronouns
+                    <input value={editPronouns} onChange={e => setEditPronouns(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                      className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="Optional" />
+                  </label>
+                  <label className="min-w-0 text-xs text-zinc-300">Profile type
+                    <select value={editCategory} onChange={e => setEditCategory(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                      className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
+                      <option value="Digital Creator">Digital creator</option><option value="Founder Mindset">Founder</option><option value="Community Leader">Community leader</option><option value="Technical Support">Technical support</option>
+                    </select>
+                  </label>
+                  <label className="col-span-2 min-w-0 text-xs text-zinc-300">Bio
+                    <textarea value={editBio} onChange={e => setEditBio(e.target.value)} maxLength={160} rows={2} disabled={isSavingProfile || showSavedFeedback}
+                      className="mt-1 block w-full resize-none rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2 text-sm text-white outline-none focus:border-violet-500" placeholder="Tell people a little about yourself." />
+                  </label>
+                  <div className="col-span-2 flex items-center justify-between text-[11px] text-zinc-500">
+                    <span>{editBio.length}/160</span>
+                    <span>Keep it simple. You can update this anytime.</span>
                   </div>
                 </div>
-
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="min-w-0 text-xs text-zinc-300">Creator type
+                    <select value={editCreatorType} onChange={e => setEditCreatorType(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                      className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
+                      <option value="Premium creator">Premium</option><option value="Creator">Creator</option><option value="Collaborator">Collaborator</option>
+                    </select>
+                  </label>
+                  <label className="min-w-0 text-xs text-zinc-300">X profile
+                    <input value={editSocialTwitter} onChange={e => setEditSocialTwitter(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                      className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
+                  </label>
+                  <label className="col-span-2 min-w-0 text-xs text-zinc-300">Instagram
+                    <input value={editSocialInsta} onChange={e => setEditSocialInsta(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                      className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
+                  </label>
+                </div>
               </div>
-
+              <p className="shrink-0 pb-1 text-center text-[10px] text-zinc-500">Your changes will appear on your profile after you save.</p>
             </div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -3426,7 +3311,7 @@ export default function ProfileView({
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
                 <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest">
-                  Avatar Configuration
+                  Profile photo
                 </span>
                 <button
                   onClick={() => {
@@ -3458,7 +3343,7 @@ export default function ProfileView({
                     }}
                     className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 font-mono text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <ImageIcon className="w-4 h-4" /> Choose From Gallery
+                    <ImageIcon className="w-4 h-4" /> Choose from your photos
                   </button>
 
                   <button
@@ -3469,7 +3354,7 @@ export default function ProfileView({
                     }}
                     className="w-full py-3 bg-red-950/40 hover:bg-red-900/50 border border-red-900/25 text-red-400 font-mono text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
-                    <Trash2 className="w-4 h-4" /> Remove Photo
+                    <Trash2 className="w-4 h-4" /> Remove photo
                   </button>
 
                   <button
@@ -3489,7 +3374,7 @@ export default function ProfileView({
                     <div className="relative aspect-square rounded-2xl bg-black overflow-hidden border border-white/10 max-w-xs mx-auto">
                       <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" />
                       <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/60 rounded-full animate-pulse text-red-500 text-[10px] font-mono">
-                        🔴 LIVE
+                        🔴 Camera is on
                       </div>
                     </div>
                   ) : (
@@ -3548,7 +3433,7 @@ export default function ProfileView({
                   {/* Zoom Slider */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-[10px] font-mono text-zinc-400 uppercase">
-                      <span>Zoom / Scale</span>
+                      <span>Zoom</span>
                       <span>{avatarZoom.toFixed(1)}x</span>
                     </div>
                     <input
@@ -3564,7 +3449,7 @@ export default function ProfileView({
 
                   {/* Rotate Control */}
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-zinc-400 uppercase">Rotation Angle</span>
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase">Rotate photo</span>
                     <button
                       onClick={() => setAvatarRotation(prev => (prev + 90) % 360)}
                       className="px-3 py-1.5 bg-white/5 border border-white/10 text-white font-mono text-[9px] uppercase font-bold rounded-lg hover:bg-white/10 cursor-pointer flex items-center gap-1"

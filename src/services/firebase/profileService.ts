@@ -121,6 +121,9 @@ export class ProfileService {
     if (Object.prototype.hasOwnProperty.call(updates, 'isVerified')) {
       throw new Error('Contact verification status is managed by Firebase Authentication and cannot be changed from profile settings.');
     }
+    // Firestore rejects undefined values. Optional profile fields are omitted
+    // rather than allowing one missing timestamp to block the entire save.
+    updates = Object.fromEntries(Object.entries(updates).filter(([, value]) => value !== undefined)) as Partial<User>;
     if (updates.username) {
       await this.reserveUsername(uid, updates.username);
     }
