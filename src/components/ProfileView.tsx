@@ -63,12 +63,37 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
   return (
     <div className="nx-profile-media-grid grid w-full grid-cols-[repeat(3,minmax(0,1fr))] gap-px bg-[#090714]">
       {gridPosts.map(post => {
-        const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
+        const isVoice = post.isVoice || !!post.voiceAudioUrl || !!(post as any).audioUrl || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
         const thumbnail = post.image || post.images?.find(Boolean);
+        const voiceAudioUrl = post.voiceAudioUrl || (post as any).audioUrl;
         const isMultiImage = !isVideo && (post.images?.filter(Boolean).length || 0) > 1;
         const isPinned = pinnedPostIds.includes(post.id);
         
+        if (isVoice && !isVideo) {
+          return (
+            <motion.div
+              key={post.id}
+              layout
+              className="aspect-square min-w-0 overflow-hidden bg-gradient-to-br from-[#1d1242] to-[#050314] p-2.5 flex flex-col justify-between text-left"
+            >
+              <div className="flex items-center justify-between gap-1">
+                <Mic className="h-4 w-4 shrink-0 text-violet-300" />
+                <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-violet-200">Voice</span>
+              </div>
+              {thumbnail && <img src={thumbnail} alt="" loading="lazy" decoding="async" className="h-10 w-10 rounded-lg object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />}
+              <div className="min-w-0 space-y-1.5">
+                {voiceAudioUrl ? (
+                  <audio controls preload="none" src={voiceAudioUrl} className="h-8 w-full max-w-full" aria-label="Play voice post" />
+                ) : (
+                  <p className="text-[9px] leading-tight text-amber-200/80">Audio file unavailable</p>
+                )}
+                <p className="line-clamp-2 text-[9px] leading-snug text-zinc-200">{post.voiceTranscript || post.content}</p>
+              </div>
+            </motion.div>
+          );
+        }
+
         return (
           <motion.button
             type="button"
@@ -1117,7 +1142,7 @@ export default function ProfileView({
       case 'media':
         return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.images?.length || !!p.videoUrl));
       case 'voice':
-        return userMyPosts.filter(p => !p.isArchived && (p.isVoice || p.voiceDuration || (p as any).audioUrl || p.content.includes('🎙')));
+        return userMyPosts.filter(p => !p.isArchived && (p.isVoice || p.voiceAudioUrl || p.voiceDuration || (p as any).audioUrl || p.content.includes('🎙')));
       case 'reposts':
         return allActive.filter(p => !p.isArchived && ((p as any).isRepost && ((p as any).repostedBy === currentUser.username || (p as any).repostedBy === currentUser.id || p.userId === currentUser.id)));
       case 'sparks':
