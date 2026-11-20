@@ -141,11 +141,14 @@ it('trending requires recent multi-creator activity and reports rising-topic mom
   await db.doc('posts/trend-old').set({ id:'trend-old', userId:'public-user', audience:'public', timestamp:new Date(now-36*3600000), tags:['momentum-check'], likes:10 });
   await db.doc('posts/trend-new-a').set({ id:'trend-new-a', userId:'public-user', audience:'public', timestamp:new Date(now-2*3600000), tags:['momentum-check'], likes:30 });
   await db.doc('posts/trend-new-b').set({ id:'trend-new-b', userId:'creator-two', audience:'public', timestamp:new Date(now-1*3600000), tags:['momentum-check'], likes:20 });
+  await db.doc('posts/trend-archived').set({ id:'trend-archived', userId:'public-user', audience:'public', timestamp:new Date(now-30*60*1000), tags:['archived-only'], isArchived:true });
+  await db.doc('posts/trend-archived-two').set({ id:'trend-archived-two', userId:'creator-two', audience:'public', timestamp:new Date(now-20*60*1000), tags:['archived-only'] });
   const topics=await getNexoraTrending(db);
+  assert.equal(topics.some(item=>item.tag==='archived-only'),false);
   const topic=topics.find(item=>item.tag==='momentum-check');
   assert.ok(topic);
   assert.equal(topic?.currentPosts,2);
   assert.equal(topic?.previousPosts,1);
   assert.equal(topic?.status,'rising');
-  for(const id of ['trend-old','trend-new-a','trend-new-b']) await db.doc('posts/'+id).delete();
+  for(const id of ['trend-old','trend-new-a','trend-new-b','trend-archived','trend-archived-two']) await db.doc('posts/'+id).delete();
 });
