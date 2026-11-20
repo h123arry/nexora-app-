@@ -2017,7 +2017,7 @@ export default function MediaCreationEngine({
                          <div className="relative z-10 w-full space-y-3">
                            <div className="mx-auto flex w-full max-w-xs items-center gap-3 rounded-full border border-white/10 bg-[#050914]/55 px-4 py-2 backdrop-blur-xl">
                              <span className="text-[10px] font-medium text-white/75">Zoom</span>
-                             <input aria-label="Camera zoom" type="range" min="1" max="3" step="0.1" value={cameraZoom} onChange={event => handleCameraZoomChange(Number(event.target.value))} className="min-w-0 flex-1 accent-[#8A78D6]" />
+                             <input aria-label="Camera zoom" type="range" min="1" max="3" step="0.1" value={cameraZoom} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onChange={event => handleCameraZoomChange(Number(event.target.value))} className="min-w-0 flex-1 accent-[#8A78D6] disabled:opacity-40" />
                              <span className="w-8 text-right text-[10px] tabular-nums text-white/75">{cameraZoom.toFixed(1)}×</span>
                            </div>
                            <div className="flex items-center justify-between gap-3">
