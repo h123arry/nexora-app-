@@ -2,6 +2,8 @@ import { getMessaging, getToken, onMessage, Messaging, deleteToken } from 'fireb
 import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, app, db } from './config';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
+import { Capacitor } from '@capacitor/core';
+import { PushNotifications } from '@capacitor/push-notifications';
 
 export interface PushNotificationPayload {
   title: string;
@@ -33,13 +35,13 @@ export class PushNotificationService {
     return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
   }
 
-  private static async persistToken(token: string): Promise<void> {
+  private static async persistToken(token: string, platform: 'web' | 'android' | 'ios' = 'web'): Promise<void> {
     const uid = auth.currentUser?.uid;
     if (!uid) throw new Error('Sign in before registering a push device.');
     const tokenId = await this.tokenDocumentId(token);
     await setDoc(doc(db, 'users', uid, 'pushTokens', tokenId), {
       token,
-      platform: 'web',
+      platform,
       updatedAt: serverTimestamp(),
     }, { merge: true });
     this.tokenOwnerUid = uid;
@@ -50,8 +52,58 @@ export class PushNotificationService {
    */
   static async init(): Promise<string | null> {
     if (isNativeRuntime()) {
-      console.info('Native push is not configured in this build; Web Push registration is intentionally disabled inside Capacitor.');
-      return null;
+      const uid = auth.currentUser?.uid;
+      if (!uid) return null;
+      if (this.token && this.tokenOwnerUid && this.tokenOwnerUid !== uid) {
+        const previousTokenId = await this.tokenDocumentId(this.token);
+        await deleteDoc(doc(db, 'users', this.tokenOwnerUid, 'pushTokens', previousTokenId));
+        this.token = null;
+        this.tokenOwnerUid = null;
+        this.isInitialized = false;
+      }
+      if (this.isInitialized && this.token && this.tokenOwnerUid === uid) return this.token;
+
+      try {
+        const permission = await PushNotifications.checkPermissions();
+        if (permission.receive !== 'granted') {
+          console.info('Native push is not enabled. The user can enable notifications in NEXORA settings.');
+          return null;
+        }
+        if (Capacitor.getPlatform() === 'android') {
+          await PushNotifications.createChannel({
+            id: 'nexora_calls',
+            name: 'NEXORA calls',
+            description: 'Incoming NEXORA voice and video calls',
+            importance: 5,
+            sound: 'default',
+            vibration: true,
+          });
+        }
+        await PushNotifications.addListener('registration', registration => {
+          const platform = Capacitor.getPlatform();
+          if (platform !== 'android' && platform !== 'ios') return;
+          void this.persistToken(registration.value, platform).then(() => {
+            this.token = registration.value;
+          }).catch(error => console.warn('[NEXORA push] Device token could not be saved:', error));
+        });
+        await PushNotifications.addListener('registrationError', error => {
+          console.warn('[NEXORA push] Native device registration failed:', error);
+        });
+        await PushNotifications.addListener('pushNotificationActionPerformed', action => {
+          if (action.notification.data?.type === 'incoming_call') {
+            window.dispatchEvent(new CustomEvent('NEXORA_INCOMING_CALL_PUSH_OPENED', {
+              detail: action.notification.data,
+            }));
+            window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox' } }));
+          }
+        });
+        await PushNotifications.register();
+        this.isInitialized = true;
+        return this.token;
+      } catch (error) {
+        console.warn('[NEXORA push] Native push registration is unavailable:', error);
+        return null;
+      }
     }
     const uid = auth.currentUser?.uid;
     if (!uid) return null;
@@ -128,6 +180,10 @@ export class PushNotificationService {
     if (!uid || !token) return;
     const tokenId = await this.tokenDocumentId(token);
     await deleteDoc(doc(db, 'users', uid, 'pushTokens', tokenId));
+    if (isNativeRuntime()) {
+      await PushNotifications.unregister().catch(() => undefined);
+      await PushNotifications.removeAllListeners();
+    }
     if (this.messaging) await deleteToken(this.messaging);
     this.token = null;
     this.tokenOwnerUid = null;
