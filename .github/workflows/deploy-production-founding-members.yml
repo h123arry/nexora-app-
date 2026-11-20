@@ -1,10 +1,10 @@
-name: Deploy NEXORA Production Core and GiftVerse Functions
+name: Deploy NEXORA Production Core, Social Activity and Notification Functions
 
 on:
   workflow_dispatch:
     inputs:
       confirm_production_deploy:
-        description: Confirm deployment of Founding 300, beta access and GiftVerse purchase/delivery functions plus Firestore and Storage security rules to NEXORA production
+        description: Confirm deployment of core, social activity, notification and GiftVerse functions plus Firestore rules to NEXORA production
         required: true
         type: boolean
         default: false
@@ -20,6 +20,15 @@ on:
       - 'functions/src/giftDelivery.ts'
       - 'functions/src/giftInventoryTransfers.ts'
       - 'functions/src/giftFriendPurchases.ts'
+      - 'functions/src/pushDelivery.ts'
+      - 'functions/src/followNotificationDelivery.ts'
+      - 'functions/src/liveNotificationDelivery.ts'
+      - 'functions/src/messageNotificationDelivery.ts'
+      - 'functions/src/commentNotificationPolicy.ts'
+      - 'functions/src/postComments.ts'
+      - 'functions/src/postEngagement.ts'
+      - 'functions/src/postReplies.ts'
+      - 'functions/src/postReposts.ts'
 
 permissions:
   contents: read
@@ -102,13 +111,26 @@ jobs:
             "$NEXORA_PRODUCTION_PROJECT_ID" "$FIRESTORE_DATABASE_ID" "$FIREBASE_STORAGE_BUCKET" \
             > "functions/.env.$NEXORA_PRODUCTION_PROJECT_ID"
 
-      - name: Deploy reviewed Founding 300, beta access and GiftVerse functions and security rules
+      - name: Deploy reviewed core, social activity, notification and GiftVerse Functions with Firestore rules
         run: |
           npx --yes firebase-tools@15.33.0 deploy \
-            --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,firestore:rules,storage \
+            --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,firestore:rules \
             --config firebase.json \
             --project "$NEXORA_PRODUCTION_PROJECT_ID" \
             --non-interactive
+
+      - name: Deploy Storage rules only when the production bucket is provisioned
+        run: |
+          gcloud storage buckets list --project "$NEXORA_PRODUCTION_PROJECT_ID" --format='value(name)' > /tmp/nexora-storage-buckets.txt
+          if grep -Fxq "$FIREBASE_STORAGE_BUCKET" /tmp/nexora-storage-buckets.txt; then
+            npx --yes firebase-tools@15.33.0 deploy \
+              --only storage \
+              --config firebase.json \
+              --project "$NEXORA_PRODUCTION_PROJECT_ID" \
+              --non-interactive
+          else
+            echo "::notice::Firebase Storage bucket is not provisioned in the production project; Storage rules were not changed."
+          fi
 
       - name: Record deployment target
         run: |
