@@ -127,7 +127,6 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
             file: new File([posterBlob], `profile-poster-${post.id}.jpg`, { type: 'image/jpeg' }),
             userId: ownerId,
             fileName: `profile-poster-${post.id}.jpg`,
-            metadata: { purpose: 'profile-video-poster', postId: post.id },
           });
           if (auth.currentUser?.uid !== ownerId) continue;
           // Firestore rules permit the owner to update the existing image field;
