@@ -15,7 +15,7 @@ import GiftVerseView from './GiftVerseView';
 import { validateUsername } from '../utils/username';
 import ReportModal from './ReportModal';
 import { auth, db } from '../services/firebase/config';
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
 import { uploadMediaFile } from '../services/firebase/storageService';
 import { SettingsService } from '../services/firebase/settingsService';
 import { subscribeToFollows } from '../services/dataService';
@@ -43,9 +43,105 @@ interface MediaGridProps {
   gridPosts: Post[];
   pinnedPostIds: string[];
   onSelectPost: (post: Post) => void;
+  repairVideoPosters?: boolean;
+  ownerId?: string;
 }
 
-const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) => {
+/**
+ * Extract a representative frame from a remote video. The source must permit
+ * anonymous canvas access; otherwise we leave the post untouched and retry
+ * only after a later profile visit.
+ */
+function createRemoteVideoPoster(videoUrl: string): Promise<Blob | null> {
+  return new Promise(resolve => {
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.preload = 'auto';
+    video.muted = true;
+    video.playsInline = true;
+    let settled = false;
+    const finish = (blob: Blob | null) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      video.onloadedmetadata = null;
+      video.onseeked = null;
+      video.onerror = null;
+      video.removeAttribute('src');
+      video.load();
+      resolve(blob);
+    };
+    const timeout = window.setTimeout(() => finish(null), 12000);
+    video.onerror = () => finish(null);
+    video.onloadedmetadata = () => {
+      if (!Number.isFinite(video.duration) || video.duration <= 0) {
+        finish(null);
+        return;
+      }
+      try {
+        video.currentTime = Math.min(0.5, Math.max(0.08, video.duration * 0.08));
+      } catch {
+        finish(null);
+      }
+    };
+    video.onseeked = () => {
+      try {
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+        if (!width || !height) return finish(null);
+        const scale = Math.min(1, 1280 / Math.max(width, height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(width * scale));
+        canvas.height = Math.max(1, Math.round(height * scale));
+        const context = canvas.getContext('2d');
+        if (!context) return finish(null);
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(blob => finish(blob && blob.size > 0 ? blob : null), 'image/jpeg', 0.86);
+      } catch {
+        // Tainted canvas / cross-origin restrictions: never persist a fake poster.
+        finish(null);
+      }
+    };
+    video.src = videoUrl;
+    video.load();
+  });
+}
+
+const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVideoPosters = false, ownerId }: MediaGridProps) => {
+  const attemptedPosterRepairs = useRef(new Set<string>());
+  const [repairedPosters, setRepairedPosters] = useState<Record<string, string>>({});
+  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.image || post.images?.find(Boolean) || ''}:${post.videoUrl || ''}`).join('|');
+
+  useEffect(() => {
+    if (!repairVideoPosters || !ownerId || auth.currentUser?.uid !== ownerId) return;
+    let active = true;
+    const repairMissingPosters = async () => {
+      for (const post of gridPosts) {
+        const existingPoster = post.image || post.images?.find(Boolean);
+        if (!post.videoUrl || existingPoster || post.userId !== ownerId || attemptedPosterRepairs.current.has(post.id)) continue;
+        attemptedPosterRepairs.current.add(post.id);
+        try {
+          const posterBlob = await createRemoteVideoPoster(post.videoUrl);
+          if (!posterBlob || auth.currentUser?.uid !== ownerId) continue;
+          const uploaded = await uploadMediaFile({
+            file: new File([posterBlob], `profile-poster-${post.id}.jpg`, { type: 'image/jpeg' }),
+            userId: ownerId,
+            fileName: `profile-poster-${post.id}.jpg`,
+          });
+          if (auth.currentUser?.uid !== ownerId) continue;
+          // Firestore rules permit the owner to update the existing image field;
+          // keep poster metadata out of the public post document.
+          await updateDoc(doc(db, 'posts', post.id), { image: uploaded.downloadUrl });
+          if (active) setRepairedPosters(current => ({ ...current, [post.id]: uploaded.downloadUrl }));
+        } catch (error) {
+          // A CORS-blocked or unavailable source should not break profile browsing.
+          console.warn('[ProfileMedia] Could not repair video poster for post:', post.id, error);
+        }
+      }
+    };
+    void repairMissingPosters();
+    return () => { active = false; };
+  }, [posterRepairSignature, ownerId, repairVideoPosters]);
   if (gridPosts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-20 px-6 w-full col-span-full">
@@ -65,7 +161,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
       {gridPosts.map(post => {
         const isVoice = post.isVoice || !!post.voiceAudioUrl || !!(post as any).audioUrl || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
-        const thumbnail = post.image || post.images?.find(Boolean);
+        const thumbnail = post.image || post.images?.find(Boolean) || repairedPosters[post.id];
         const voiceAudioUrl = post.voiceAudioUrl || (post as any).audioUrl;
         const isMultiImage = !isVideo && (post.images?.filter(Boolean).length || 0) > 1;
         const isPinned = pinnedPostIds.includes(post.id);
@@ -1631,7 +1727,9 @@ export default function ProfileView({
                 <MediaGrid 
                   gridPosts={[...filteredTabPosts].sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
                   pinnedPostIds={pinnedPostIdsList} 
-                  onSelectPost={(post) => setSelectedGridPost(post)} 
+                  onSelectPost={(post) => setSelectedGridPost(post)}
+                  repairVideoPosters={isOwnProfile && isLoggedIn}
+                  ownerId={currentUser.id}
                 />
               </div>
             )}
