@@ -2799,7 +2799,7 @@ export default function MediaCreationEngine({
                 <button 
                   onClick={nextStep}
                   disabled={currentStep === 2 && !activeMode}
-                  className="px-5 py-2.5 bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all"
+                  className="px-5 py-2.5 border border-[#4B3D75] bg-[#17132B] hover:bg-[#211B3A] disabled:opacity-40 text-[#E6DDFB] font-sans font-semibold text-xs rounded-xl cursor-pointer transition-colors"
                 >
                   Continue →
                 </button>
