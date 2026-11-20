@@ -79,6 +79,52 @@ No production environment variable changes, Render GPU migration or paid hosting
 - Hardware/quantization recommendation and monthly cost estimate.
 - Go / no-go decision for Phase 3.3 private inference deployment.
 
+
+## Candidate and licence screen (research snapshot: 20 November 2026)
+
+The initial shortlist is deliberately limited to two Apache-2.0 candidates and one conditional comparison:
+
+| Candidate | Published model size | Licence screen | Why it is in the test |
+| --- | ---: | --- | --- |
+| Qwen/Qwen3-8B | 8B | Apache-2.0 on the model card | Lower-memory baseline; model card describes reasoning/non-thinking modes and multilingual support. |
+| mistralai/Mistral-Small-3.2-24B-Instruct-2506 | 24B | Apache-2.0 on the official model card | Stronger instruction-following and tool/function-calling candidate; model card publishes its architecture and large checkpoint size. |
+| Gemma 3 12B | 12B | Google Gemma Terms of Use, not Apache-2.0 | Optional comparator only after legal/product review of hosted-service and redistribution obligations; do not treat it as an unrestricted open-source licence. |
+
+The benchmark must pin each candidate to an exact immutable model revision before execution. The current shortlist is not a quality ranking and does not mean any candidate has passed NEXORA's task suite. Sources: [Qwen3-8B model card](https://huggingface.co/Qwen/Qwen3-8B), [Mistral Small 3.2 model card](https://huggingface.co/mistralai/Mistral-Small-3.2-24B-Instruct-2506), [Gemma Terms of Use](https://ai.google.dev/gemma/terms/).
+
+## Hardware and cost screen
+
+A rough weight-only estimate for 4-bit quantisation is approximately 0.5 bytes per parameter before runtime overhead: about 4 GB for 8B and 12 GB for 24B. This is not a deployment sizing promise. Add KV cache, context length, batch/concurrency, framework buffers, vision components (where applicable), and system headroom. BF16/FP16 weights are roughly twice the 4-bit storage estimate. The Mistral 24B published checkpoint is 48 GB, so full-precision deployment requires a substantially larger memory budget.
+
+Practical experiment order:
+1. Qwen3-8B at a modest context on a 24 GB GPU, with a 4-bit quantisation.
+2. Mistral Small 3.2 24B at a modest context on a 48 GB GPU, first with a supported 4-bit quantisation. Try a 24 GB card only if the runtime's measured memory profile proves it fits with safe headroom.
+3. Increase context and concurrency only after single-request measurements are stable.
+
+RunPod's published Secure Cloud on-demand rates currently list RTX 4090 24 GB at $0.89/GPU-hour and L40S 48 GB at $1.09/GPU-hour. At 730 hours/month these are approximately $649.70 and $795.70 per month respectively, before persistent storage, taxes, bandwidth, monitoring and any extra services. Ten hours of isolated experiments would be approximately $8.90 or $10.90 at those listed rates, before those extras. Prices and availability can change; confirm at checkout. Source: [RunPod official pricing](https://www.runpod.io/pricing).
+
+These figures show why we should benchmark in short approved sessions, not leave a GPU running continuously. Community Cloud may be cheaper, but it is not the default recommendation for private production workloads. No GPU has been rented and no cost has been incurred by this work.
+
+## Runner usage
+
+Validate the fixture without contacting a model:
+
+```bash
+npm run voh:benchmark:validate
+```
+
+Run only against an approved private OpenAI-compatible endpoint (HTTPS required except localhost for local development):
+
+```bash
+VOH_BENCHMARK_BASE_URL=https://your-private-host/v1 \
+VOH_BENCHMARK_API_KEY=your-secret \
+VOH_BENCHMARK_MODELS=Qwen/Qwen3-8B,mistralai/Mistral-Small-3.2-24B-Instruct-2506 \
+VOH_BENCHMARK_REPETITIONS=3 \
+npm run voh:benchmark
+```
+
+The runner sends only the versioned synthetic fixture, captures raw responses and timing/token metadata, and writes a local report with restrictive file permissions. Human reviewers must score the written rubric and inspect every critical case. The runner deliberately does not self-certify model safety or quality. Do not commit reports containing endpoint details or credentials; do not run it against production traffic.
+
 ## Current status
 
 Phase 3.2 is kicked off. No model has been selected, benchmarked on NEXORA tasks, or deployed yet. The next implementation step is to add the fixed synthetic benchmark fixtures and an isolated runner that targets the Phase 3.1 OpenAI-compatible adapter without touching production traffic.
