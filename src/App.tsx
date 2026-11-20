@@ -3261,7 +3261,7 @@ export default function App() {
                 </div>
 
                 <button type="button" onClick={() => { setIsCreateMenuOpen(false); setIsNexoraStudioOpen(true); }} className="group flex w-full shrink-0 items-center gap-3 rounded-2xl border border-[#9A76FF]/35 bg-[linear-gradient(105deg,rgba(113,56,255,.20),rgba(22,0,163,.10))] p-3.5 text-left transition hover:border-[#B69BFF]/70 hover:brightness-110">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#7138FF]/25 text-[#E0D4FF]"><Clapperboard className="h-5 w-5" /></span>
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#7138FF]/25 text-[#E0D4FF]"><Sparkles className="h-5 w-5" /></span>
                   <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white">NEXORA Studio</span><span className="mt-0.5 block text-[10px] leading-relaxed text-[#B8AED4]">Multi-clip editing, sound, titles, layers and cinematic exports.</span></span>
                   <ChevronRight className="h-5 w-5 shrink-0 text-[#B69BFF] transition group-hover:translate-x-1" />
                 </button>
