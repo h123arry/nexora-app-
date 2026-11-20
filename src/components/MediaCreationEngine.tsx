@@ -28,6 +28,7 @@ type PhotoExportOptions = {
   sticker?: string | null;
   text?: string;
   textColor?: string;
+  cropRatio?: 'original' | '1:1' | '4:5' | '9:16';
 };
 
 /** Load a local image safely, attaching handlers before src to avoid cached-load races. */
@@ -89,25 +90,43 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
     context.restore();
     context.filter = 'none';
 
+    let exportCanvas = canvas;
+    let exportContext = context;
+    if (options.cropRatio && options.cropRatio !== 'original') {
+      const targetRatio = options.cropRatio === '1:1' ? 1 : options.cropRatio === '4:5' ? 4 / 5 : 9 / 16;
+      const currentRatio = canvas.width / canvas.height;
+      let sx = 0, sy = 0, sw = canvas.width, sh = canvas.height;
+      if (currentRatio > targetRatio) { sw = canvas.height * targetRatio; sx = (canvas.width - sw) / 2; }
+      else { sh = canvas.width / targetRatio; sy = (canvas.height - sh) / 2; }
+      const croppedCanvas = document.createElement('canvas');
+      croppedCanvas.width = Math.max(1, Math.round(Math.min(canvas.width, canvas.height * targetRatio)));
+      croppedCanvas.height = Math.max(1, Math.round(croppedCanvas.width / targetRatio));
+      const croppedContext = croppedCanvas.getContext('2d');
+      if (!croppedContext) throw new Error('Photo cropping is not available in this browser.');
+      croppedContext.drawImage(canvas, sx, sy, sw, sh, 0, 0, croppedCanvas.width, croppedCanvas.height);
+      exportCanvas = croppedCanvas;
+      exportContext = croppedContext;
+    }
+
     if (options.sticker) {
-      context.font = `bold ${Math.max(48, Math.round(canvas.width * 0.12))}px sans-serif`;
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      context.fillText(options.sticker, canvas.width / 2, canvas.height / 2);
+      exportContext.font = `bold ${Math.max(48, Math.round(exportCanvas.width * 0.12))}px sans-serif`;
+      exportContext.textAlign = 'center';
+      exportContext.textBaseline = 'middle';
+      exportContext.fillText(options.sticker, exportCanvas.width / 2, exportCanvas.height / 2);
     }
     if (options.text?.trim()) {
-      const fontSize = Math.max(24, Math.round(canvas.width * 0.045));
+      const fontSize = Math.max(24, Math.round(exportCanvas.width * 0.045));
       const padding = Math.round(fontSize * 0.65);
-      context.font = `700 ${fontSize}px sans-serif`;
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      const maxWidth = canvas.width - padding * 2;
+      exportContext.font = `700 ${fontSize}px sans-serif`;
+      exportContext.textAlign = 'center';
+      exportContext.textBaseline = 'middle';
+      const maxWidth = exportCanvas.width - padding * 2;
       const words = options.text.trim().split(/\s+/);
       const lines: string[] = [];
       let line = '';
       for (const word of words) {
         const candidate = line ? `${line} ${word}` : word;
-        if (line && context.measureText(candidate).width > maxWidth) {
+        if (line && exportContext.measureText(candidate).width > maxWidth) {
           lines.push(line);
           line = word;
         } else line = candidate;
@@ -115,16 +134,16 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
       if (line) lines.push(line);
       const lineHeight = Math.round(fontSize * 1.25);
       const blockHeight = lines.length * lineHeight + padding;
-      const top = canvas.height - blockHeight - padding;
-      context.fillStyle = 'rgba(5, 9, 20, 0.72)';
-      context.fillRect(padding / 2, top, canvas.width - padding, blockHeight);
-      context.fillStyle = options.textColor || '#ffffff';
-      lines.forEach((item, index) => context.fillText(item, canvas.width / 2, top + padding / 2 + index * lineHeight + lineHeight / 2, maxWidth));
+      const top = exportCanvas.height - blockHeight - padding;
+      exportContext.fillStyle = 'rgba(5, 9, 20, 0.72)';
+      exportContext.fillRect(padding / 2, top, exportCanvas.width - padding, blockHeight);
+      exportContext.fillStyle = options.textColor || '#ffffff';
+      lines.forEach((item, index) => exportContext.fillText(item, exportCanvas.width / 2, top + padding / 2 + index * lineHeight + lineHeight / 2, maxWidth));
     }
 
     return await new Promise<Blob>((resolve, reject) => {
       const timeout = window.setTimeout(() => reject(new Error('Photo preparation took too long. Please try again with a smaller photo.')), 12000);
-      canvas.toBlob(blob => {
+      exportCanvas.toBlob(blob => {
         clearTimeout(timeout);
         if (blob) resolve(blob);
         else reject(new Error('Your edited photo could not be exported. Please try again.'));
@@ -300,6 +319,7 @@ interface SelectedImage {
   cropOffset: { x: number; y: number };
   filterName?: string;
   filterStyle?: string;
+  cropRatio?: 'original' | '1:1' | '4:5' | '9:16';
 }
 
 interface DraftItem {
@@ -444,6 +464,7 @@ export default function MediaCreationEngine({
         rotation: initialAutosave.imageEdits?.[index]?.rotation ?? 0,
         zoom: initialAutosave.imageEdits?.[index]?.zoom ?? 1,
         cropOffset: initialAutosave.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+        cropRatio: initialAutosave.imageEdits?.[index]?.cropRatio || 'original',
         filterName: initialAutosave.imageEdits?.[index]?.filterName,
         filterStyle: initialAutosave.imageEdits?.[index]?.filterStyle,
       }));
@@ -621,7 +642,7 @@ export default function MediaCreationEngine({
           activeMode,
           currentStep,
           images: selectedImages.map(img => img.url),
-          imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, filterName, filterStyle })),
+          imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle, cropRatio }) => ({ rotation, zoom, cropOffset, filterName, filterStyle, cropRatio })),
           videoUrl: videoFileUrl,
           recordedVideoUrl,
           voiceUrl: voiceFileUrl,
@@ -947,7 +968,7 @@ export default function MediaCreationEngine({
           if (ev.target?.result) {
             setSelectedImages(prev => [
               ...prev,
-              { url: ev.target!.result as string, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }
+              { url: ev.target!.result as string, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 }, cropRatio: 'original' }
             ]);
             setCurrentStep(3);
           }
@@ -1558,6 +1579,7 @@ export default function MediaCreationEngine({
             sticker: stickerOverlay,
             text: textOverlay,
             textColor: textOverlayColor,
+            cropRatio: selectedImage.cropRatio,
           }) : sourceBlob;
           storyFile = new File([finalBlob], `nexora-story-photo-${Date.now()}.jpg`, {
             type: finalBlob.type || 'image/jpeg',
@@ -1601,6 +1623,7 @@ export default function MediaCreationEngine({
         const imageUrl = selectedImage.url;
         const hasEdits = selectedImage.rotation !== 0
           || selectedImage.zoom !== 1
+          || Boolean(selectedImage.cropRatio && selectedImage.cropRatio !== 'original')
           || Boolean(selectedImage.filterStyle && selectedImage.filterStyle !== 'none')
           || brightness !== 100
           || contrast !== 100
@@ -2509,10 +2532,10 @@ export default function MediaCreationEngine({
 
                       {/* Crop/Rotate utilities */}
                       <div className={`${activePhotoTool === 'crop' ? 'grid' : 'hidden'} grid-cols-1 gap-2 pt-1 border-t border-[#292244]`}>
-                        <p className="text-[10px] text-[#A39BBF]">Frame your photo. Choose how much of the edges to crop.</p>
+                        <p className="text-[10px] text-[#A39BBF]">Choose the shape of your photo. The crop is applied to the saved image.</p>
                         <div className="grid grid-cols-4 gap-1.5">
-                          {[{ label: 'Original', zoom: 1 }, { label: 'Light', zoom: 1.15 }, { label: 'Closer', zoom: 1.35 }, { label: 'Tight', zoom: 1.6 }].map(option => (
-                            <button key={option.label} type="button" onClick={() => setSelectedImages(prev => prev.map((img, idx) => idx === (activeEditIndex || 0) ? { ...img, zoom: option.zoom } : img))} className={`rounded-lg border px-2 py-2 text-[10px] font-semibold transition-colors ${(selectedImages[activeEditIndex || 0]?.zoom || 1) === option.zoom ? 'border-[#8170B7] bg-[#211A38] text-white' : 'border-[#292244] bg-[#120E2B] text-[#A39BBF] hover:text-white'}`}>{option.label}</button>
+                          {([{ label: 'Original', value: 'original' }, { label: 'Square', value: '1:1' }, { label: 'Portrait', value: '4:5' }, { label: 'Story', value: '9:16' }] as const).map(option => (
+                            <button key={option.value} type="button" onClick={() => setSelectedImages(prev => prev.map((img, idx) => idx === (activeEditIndex || 0) ? { ...img, cropRatio: option.value } : img))} className={`rounded-lg border px-2 py-2 text-[10px] font-semibold transition-colors ${(selectedImages[activeEditIndex || 0]?.cropRatio || 'original') === option.value ? 'border-[#8170B7] bg-[#211A38] text-white' : 'border-[#292244] bg-[#120E2B] text-[#A39BBF] hover:text-white'}`}>{option.label}</button>
                           ))}
                         </div>
                         <button 
