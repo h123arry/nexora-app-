@@ -13,7 +13,7 @@ Make VOH's application intelligence independent of a model vendor while preservi
 - Empty model responses remain errors; VOH does not fabricate a successful answer.
 
 ## Current boundaries
-- Gemini is still the only implemented model adapter. This phase does not claim to train or host a VOH foundation model, and it does not remove the current provider dependency.
+- Gemini remains the default model adapter. Phase 3.1 adds a private OpenAI-compatible self-hosted adapter, but no GPU host or model weights have been provisioned yet. This does not claim that NEXORA has trained a foundation model or that the self-hosted runtime is live.
 - Existing specialised endpoints (Creator Tutor, post improvement, and other AI features) still use their existing provider calls; migrating them into the core is follow-on integration work.
 - The UI's existing context selector controls feed/profile/none. The profile details in the user's message are sent only when profile is selected; server-side profile context is independently fetched using the verified Firebase UID.
 - Tool execution is read-only. Publishing, messaging, gifting, payments, moderation and account changes are not exposed as AI actions.
