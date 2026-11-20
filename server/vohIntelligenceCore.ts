@@ -152,3 +152,172 @@ export type VohContextScope = 'feed' | 'profile' | 'none';
 export function resolveVohContextScope(value: unknown): VohContextScope {
   return value === 'feed' || value === 'profile' ? value : 'none';
 }
+
+
+export interface SelfHostedVohProviderConfig {
+  baseUrl: string;
+  apiKey: string;
+  timeoutMs?: number;
+  maxTokens?: number;
+}
+
+type OpenAiMessage = Record<string, unknown>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeOpenAiSchema(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizeOpenAiSchema);
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+    key,
+    key === 'type' && typeof item === 'string' ? item.toLowerCase() : normalizeOpenAiSchema(item),
+  ]));
+}
+
+function openAiTools(value: unknown[] | undefined): Array<Record<string, unknown>> | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const declarations = value.flatMap(item => isRecord(item) && Array.isArray(item.functionDeclarations) ? item.functionDeclarations : []);
+  const tools = declarations.flatMap(declaration => {
+    if (!isRecord(declaration) || typeof declaration.name !== 'string') return [];
+    return [{
+      type: 'function',
+      function: {
+        name: declaration.name,
+        description: typeof declaration.description === 'string' ? declaration.description : '',
+        parameters: normalizeOpenAiSchema(declaration.parameters || { type: 'object', properties: {} }),
+      },
+    }];
+  });
+  return tools.length ? tools : undefined;
+}
+
+function openAiMessages(contents: unknown[], systemInstruction: string): OpenAiMessage[] {
+  const messages: OpenAiMessage[] = [{ role: 'system', content: systemInstruction }];
+  const pendingToolIds = new Map<string, string[]>();
+  for (const item of contents) {
+    if (!isRecord(item)) continue;
+    const role = item.role === 'model' ? 'assistant' : item.role === 'assistant' ? 'assistant' : 'user';
+    if (role === 'assistant' && Array.isArray(item.tool_calls)) {
+      const calls = item.tool_calls.filter(isRecord);
+      for (const call of calls) {
+        const fn = isRecord(call.function) ? call.function : {};
+        if (typeof fn.name !== 'string' || typeof call.id !== 'string') continue;
+        const queue = pendingToolIds.get(fn.name) || [];
+        queue.push(call.id);
+        pendingToolIds.set(fn.name, queue);
+      }
+      messages.push({ role: 'assistant', tool_calls: calls });
+      continue;
+    }
+    const parts = Array.isArray(item.parts) ? item.parts : [];
+    const functionResponses = parts.flatMap(part => isRecord(part) && isRecord(part.functionResponse) ? [part.functionResponse] : []);
+    if (functionResponses.length) {
+      for (const response of functionResponses) {
+        const name = typeof response.name === 'string' ? response.name : 'unknown';
+        const queue = pendingToolIds.get(name) || [];
+        const toolCallId = queue.shift();
+        if (queue.length) pendingToolIds.set(name, queue);
+        else pendingToolIds.delete(name);
+        const payload = JSON.stringify(response.response ?? {});
+        if (toolCallId) messages.push({ role: 'tool', tool_call_id: toolCallId, name, content: payload });
+        else messages.push({ role: 'user', content: 'Tool result (' + name + '): ' + payload });
+      }
+      continue;
+    }
+    const textParts = parts.flatMap(part => isRecord(part) && typeof part.text === 'string' ? [part.text] : []);
+    const content = typeof item.content === 'string' ? item.content : textParts.join('\n');
+    if (content.trim()) messages.push({ role, content });
+  }
+  return messages;
+}
+
+/**
+ * Adapter for a privately hosted OpenAI-compatible inference server (for
+ * example vLLM or llama.cpp). No third-party model provider is contacted.
+ */
+export function createSelfHostedVohProvider(
+  config: SelfHostedVohProviderConfig,
+  fetchImpl: typeof fetch = fetch,
+): VohModelProvider {
+  let endpoint: string;
+  try {
+    const base = new URL(config.baseUrl);
+    if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password || base.search || base.hash) {
+      throw new Error('invalid');
+    }
+    const path = base.pathname.replace(/\/+$/, '');
+    base.pathname = path.endsWith('/chat/completions')
+      ? path
+      : path.endsWith('/v1') ? path + '/chat/completions' : path + '/v1/chat/completions';
+    endpoint = base.toString();
+  } catch {
+    throw new Error('VOH self-hosted inference URL is invalid.');
+  }
+  if (typeof config.apiKey !== 'string' || !config.apiKey.trim()) {
+    throw new Error('VOH self-hosted inference authentication is not configured.');
+  }
+  const timeoutMs = Number.isFinite(config.timeoutMs) ? Math.max(5_000, Math.min(120_000, Math.floor(config.timeoutMs!))) : 45_000;
+  const maxTokens = Number.isFinite(config.maxTokens) ? Math.max(128, Math.min(8_192, Math.floor(config.maxTokens!))) : 1_536;
+
+  return {
+    id: 'self_hosted',
+    async generate(request) {
+      let response: Response;
+      try {
+        response = await fetchImpl(endpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + config.apiKey,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: request.model,
+            messages: openAiMessages(request.contents, request.systemInstruction),
+            temperature: request.temperature,
+            max_tokens: maxTokens,
+            ...(openAiTools(request.tools) ? { tools: openAiTools(request.tools), tool_choice: 'auto' } : {}),
+          }),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      } catch {
+        throw new Error('VOH self-hosted inference service is unavailable or timed out.');
+      }
+      if (!response.ok) throw new Error('VOH self-hosted inference returned HTTP ' + response.status + '.');
+      let payload: Record<string, unknown>;
+      try {
+        payload = await response.json() as Record<string, unknown>;
+      } catch {
+        throw new Error('VOH self-hosted inference returned an invalid response.');
+      }
+      const choices = Array.isArray(payload.choices) ? payload.choices : [];
+      const choice = isRecord(choices[0]) ? choices[0] : {};
+      const message = isRecord(choice.message) ? choice.message : {};
+      const rawCalls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
+      const calls = rawCalls.flatMap(call => {
+        if (!isRecord(call) || !isRecord(call.function) || typeof call.function.name !== 'string') return [];
+        let args: Record<string, unknown> = {};
+        try {
+          const parsed = JSON.parse(typeof call.function.arguments === 'string' ? call.function.arguments : '{}');
+          if (isRecord(parsed)) args = parsed;
+        } catch { /* Invalid tool arguments fail closed to an empty object. */ }
+        return [{ id: typeof call.id === 'string' ? call.id : 'call_' + call.function.name, type: 'function', function: call.function, name: call.function.name, args }];
+      });
+      const textContent = typeof message.content === 'string'
+        ? message.content
+        : Array.isArray(message.content)
+          ? message.content.flatMap(part => isRecord(part) && typeof part.text === 'string' ? [part.text] : []).join('\n')
+          : '';
+      const functionCalls = calls.map(call => ({ name: call.name, args: call.args }));
+      const assistantContent = calls.length
+        ? { role: 'assistant', tool_calls: calls.map(call => ({ id: call.id, type: call.type, function: call.function })) }
+        : undefined;
+      return {
+        text: textContent,
+        functionCalls,
+        candidates: [{ content: assistantContent, finishReason: typeof choice.finish_reason === 'string' ? choice.finish_reason : 'unknown' }],
+      };
+    },
+  };
+}
