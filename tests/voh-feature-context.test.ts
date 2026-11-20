@@ -75,9 +75,8 @@ describe('VOH feature context loaders', () => {
     const result = await loadVohJoinedCommunities(db, 'verified-user');
     assert.deepEqual(query?.filters, [
       ['userId', '==', 'verified-user'],
-      ['status', '==', 'active'],
     ]);
-    assert.equal(query?.max, 12);
+    assert.equal(query?.max, 50);
     assert.deepEqual(result, [{
       id: 'circle-1', name: 'Builders', description: 'A creator community',
       creatorId: 'owner-1', membersCount: 24,
