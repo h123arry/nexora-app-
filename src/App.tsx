@@ -265,6 +265,10 @@ export default function App() {
     return true;
   };
 
+  useEffect(() => {
+    if (!authInitializing && !isLoggedIn && pendingAuthAction) setShowAuthChoice(true);
+  }, [authInitializing, isLoggedIn, pendingAuthAction]);
+
   const handleRequestLogout = () => {
     if (firebaseUser?.isAnonymous) {
       setActiveTab('settings');
