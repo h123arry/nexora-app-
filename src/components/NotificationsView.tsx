@@ -300,6 +300,10 @@ export default function NotificationsView({
       }
     } else if (notif.type === 'pulse_alert') {
       window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'pulse' } }));
+    } else if (notif.type === 'security' || notif.category === 'account') {
+      const section = notif.type === 'security' ? 'security' : 'account';
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'settings' } }));
+      window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-settings', { detail: { section } })), 250);
     } else if (notif.type === 'reputation_milestone' && notif.reputationAwarded) {
       triggerConfetti();
     }
