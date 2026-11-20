@@ -3760,7 +3760,7 @@ export default function ProfileView({
         {selectedGridPost && (
           <ImmersiveVideoViewer
             initialPost={selectedGridPost}
-            creatorPosts={myPosts}
+            creatorPosts={filteredTabPosts}
             currentUser={currentUser}
             onClose={() => setSelectedGridPost(null)}
             onLikePost={(postId) => {
