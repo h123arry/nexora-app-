@@ -165,39 +165,57 @@ export async function loadVohPublicDiscovery(db: VohFirestoreReader, viewerUid: 
     ...(Array.isArray((viewerSettings as any).feed?.blockedCreatorIds) ? (viewerSettings as any).feed.blockedCreatorIds : []),
   ].filter((value): value is string => typeof value === 'string'));
 
+  type OwnerPolicy = { visible: boolean; username: string; privateProfile: boolean; blocksViewer: boolean };
+  const ownerPolicyCache = new Map<string, Promise<OwnerPolicy>>();
+  const followCache = new Map<string, Promise<boolean>>();
   const visible = await Promise.all(snapshot.docs.map(async document => {
     const data = document.data() || {};
     if (data.audience !== 'public' || data.isArchived === true || data.deleted === true
       || ['deleted', 'removed', 'suspended', 'draft'].includes(safeText(data.status, 40).toLowerCase())) return null;
     const ownerId = safeText(data.userId || data.authorId || data.ownerId, 150);
     if (!ownerId || viewerBlocks.has(ownerId)) return null;
-    const [profileSnapshot, settingsSnapshot, statusSnapshot] = await Promise.all([
-      db.collection('users').doc(ownerId).get(),
-      db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
-      db.collection('accountStatus').doc(ownerId).get(),
-    ]);
-    if (!profileSnapshot || profileSnapshot.exists === false) return null;
-    const profile = profileSnapshot.data() || {};
-    const settings = settingsSnapshot.data() || {};
-    const accountStatus = statusSnapshot.data() || {};
-    if (profile.isSeedProfile === true || profile.isBanned === true || profile.isSuspended === true) return null;
-    const expiryValue = (accountStatus as any).expiresAt;
-    const expiryDate = expiryValue && typeof expiryValue === 'object' && 'toDate' in expiryValue
-      && typeof (expiryValue as {toDate?: unknown}).toDate === 'function'
-      ? (expiryValue as {toDate: () => Date}).toDate()
-      : expiryValue instanceof Date ? expiryValue : typeof expiryValue === 'string' || typeof expiryValue === 'number' ? new Date(expiryValue) : null;
-    const hasActiveRestriction = (accountStatus as any).banned === true || (accountStatus as any).suspended === true;
-    if (hasActiveRestriction && (!expiryDate || !Number.isFinite(expiryDate.getTime()) || expiryDate.getTime() > Date.now())) return null;
-    const ownerBlocks = [
-      ...((Array.isArray((settings as any).privacy?.blockedUserIds) ? (settings as any).privacy.blockedUserIds : [])),
-      ...((Array.isArray((settings as any).messaging?.blockedUserIds) ? (settings as any).messaging.blockedUserIds : [])),
-      ...((Array.isArray((settings as any).feed?.blockedCreatorIds) ? (settings as any).feed.blockedCreatorIds : [])),
-    ];
-    if (ownerBlocks.includes(viewerUid)) return null;
-    const isPrivate = (settings as any).privacy?.isPrivate === true || (settings as any).privacy?.isPrivateAccount === true;
-    if (isPrivate) {
-      const follow = await db.collection('follows').doc(viewerUid + '_' + ownerId).get();
-      if (!follow || follow.exists === false) return null;
+    let policyPromise = ownerPolicyCache.get(ownerId);
+    if (!policyPromise) {
+      policyPromise = Promise.all([
+        db.collection('users').doc(ownerId).get(),
+        db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
+        db.collection('accountStatus').doc(ownerId).get(),
+      ]).then(([profileSnapshot, settingsSnapshot, statusSnapshot]): OwnerPolicy => {
+        if (!profileSnapshot || profileSnapshot.exists === false) return { visible: false, username: '', privateProfile: false, blocksViewer: false };
+        const profile = profileSnapshot.data() || {};
+        const settings = settingsSnapshot.data() || {};
+        const accountStatus = statusSnapshot.data() || {};
+        const expiryValue = (accountStatus as any).expiresAt;
+        const expiryDate = expiryValue && typeof expiryValue === 'object' && 'toDate' in expiryValue
+          && typeof (expiryValue as {toDate?: unknown}).toDate === 'function'
+          ? (expiryValue as {toDate: () => Date}).toDate()
+          : expiryValue instanceof Date ? expiryValue : typeof expiryValue === 'string' || typeof expiryValue === 'number' ? new Date(expiryValue) : null;
+        const hasActiveRestriction = (accountStatus as any).banned === true || (accountStatus as any).suspended === true;
+        const restricted = profile.isSeedProfile === true || profile.isBanned === true || profile.isSuspended === true
+          || (hasActiveRestriction && (!expiryDate || !Number.isFinite(expiryDate.getTime()) || expiryDate.getTime() > Date.now()));
+        const ownerBlocks = [
+          ...((Array.isArray((settings as any).privacy?.blockedUserIds) ? (settings as any).privacy.blockedUserIds : [])),
+          ...((Array.isArray((settings as any).messaging?.blockedUserIds) ? (settings as any).messaging.blockedUserIds : [])),
+          ...((Array.isArray((settings as any).feed?.blockedCreatorIds) ? (settings as any).feed.blockedCreatorIds : [])),
+        ];
+        return {
+          visible: !restricted,
+          username: safeText(profile.username, 80),
+          privateProfile: (settings as any).privacy?.isPrivate === true || (settings as any).privacy?.isPrivateAccount === true,
+          blocksViewer: ownerBlocks.includes(viewerUid),
+        };
+      });
+      ownerPolicyCache.set(ownerId, policyPromise);
+    }
+    const ownerPolicy = await policyPromise;
+    if (!ownerPolicy.visible || ownerPolicy.blocksViewer) return null;
+    if (ownerPolicy.privateProfile) {
+      let followPromise = followCache.get(ownerId);
+      if (!followPromise) {
+        followPromise = db.collection('follows').doc(viewerUid + '_' + ownerId).get().then(follow => Boolean(follow && follow.exists !== false));
+        followCache.set(ownerId, followPromise);
+      }
+      if (!await followPromise) return null;
     }
     const content = safeText(data.content || data.caption, 500);
     if (!content) return null;
@@ -208,7 +226,7 @@ export async function loadVohPublicDiscovery(db: VohFirestoreReader, viewerUid: 
     const comments = typeof data.commentsCount === 'number' && Number.isFinite(data.commentsCount) ? Math.max(0, Math.min(1_000_000, Math.floor(data.commentsCount))) : 0;
     return {
       id: safeText(document.id, 128),
-      username: safeText(profile.username || data.username || 'NEXORA creator', 80),
+      username: ownerPolicy.username || safeText(data.username || 'NEXORA creator', 80),
       content,
       tags,
       timestamp: timestampText(data.timestamp || data.createdAt),
