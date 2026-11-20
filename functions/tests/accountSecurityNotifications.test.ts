@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildAccountSecurityEventMessage } from '../src/accountSecurityNotifications.js';
+import { buildAccountSecurityEventMessage } from '../src/accountSecurityNotifications.ts';
 
 test('account email changes are clear without exposing the full email address', () => {
   const message = buildAccountSecurityEventMessage('EMAIL_CHANGED', { newValue: 'harrison@example.com' });
