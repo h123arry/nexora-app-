@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, MessageSquare, Send, Bookmark, MoreVertical, Check, Music, Search, Edit3, Archive, Trash, UserPlus, EyeOff, Download, ImageOff } from 'lucide-react';
+import { Zap, MessageSquare, Send, Bookmark, MoreVertical, Edit3, Archive, Trash, UserPlus, EyeOff, Download, ImageOff } from 'lucide-react';
 import VideoBottomSheet from './VideoBottomSheet';
 import { resolveMediaUrl } from '../utils/indexedDbStorage';
 import NexoraWatermark from './branding/NexoraWatermark';
@@ -48,12 +48,6 @@ interface NexoraImagePlayerProps {
   onViewSound?: (soundId: string) => void;
 }
 
-const VerificationBadge = () => (
-  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center border border-white/10 shadow-lg ml-1 shrink-0">
-    <Check className="w-2.5 h-2.5 text-white" />
-  </div>
-);
-
 export default function NexoraImagePlayer({
   post,
   image,
@@ -65,10 +59,8 @@ export default function NexoraImagePlayer({
   onCommentToggle,
   onNotInterested,
   onViewProfile,
-  onViewSound
 }: NexoraImagePlayerProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isExpanded, setIsExpanded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
