@@ -176,12 +176,6 @@ export interface Post {
   mediaAssetIds?: string[];
   voiceTranscript?: string;
   voiceAudioUrl?: string;
-  mediaStoragePath?: string;
-  mediaType?: 'image' | 'video' | 'audio' | 'document';
-  mediaContentType?: string;
-  mediaStoragePath?: string;
-  mediaType?: 'image' | 'video' | 'audio' | 'document';
-  mediaContentType?: string;
   audience?: 'public' | 'circle' | 'community' | 'followers' | 'onlyme';
   communityName?: string;
   tags: string[];
@@ -260,6 +254,10 @@ export interface Message {
 export interface ExtendedMessage extends Message {
   voiceDuration?: string;
   voiceAudioUrl?: string;
+  mediaStoragePath?: string;
+  mediaType?: 'image' | 'video' | 'audio' | 'document';
+  mediaContentType?: string;
+
   isVoicePlaying?: boolean;
   videoUrl?: string;
   fileName?: string;
