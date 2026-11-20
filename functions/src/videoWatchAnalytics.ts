@@ -3,7 +3,7 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { onCallWithSession as onCall } from './callableSession.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { acceptedWatchCredit } from './videoWatchAnalyticsPolicy.js';
+import { acceptedWatchCredit, shouldCountPublicVideoView } from './videoWatchAnalyticsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 
@@ -44,9 +44,22 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
     const [postSnap, sessionSnap] = await Promise.all([tx.get(postRef), tx.get(sessionRef)]);
     if (!postSnap.exists) throw new HttpsError('not-found', 'This video is unavailable.');
     const post = postSnap.data()!;
+    if (post.isArchived === true || post.isDraft === true) {
+      throw new HttpsError('not-found', 'This video is no longer available.');
+    }
     const creatorId = typeof post.userId === 'string' ? post.userId : '';
     if (!creatorId || !(post.videoUrl || post.mediaType === 'video')) {
       throw new HttpsError('failed-precondition', 'This post is not a playable video.');
+    }
+    const [viewerUserSnapshot, creatorUserSnapshot] = await Promise.all([
+      tx.get(db.collection('users').doc(uid)),
+      tx.get(db.collection('users').doc(creatorId)),
+    ]);
+    const viewerBlocks = viewerUserSnapshot.get('messaging')?.blockedUserIds;
+    const creatorBlocks = creatorUserSnapshot.get('messaging')?.blockedUserIds;
+    if ((Array.isArray(viewerBlocks) && viewerBlocks.includes(creatorId))
+      || (Array.isArray(creatorBlocks) && creatorBlocks.includes(uid))) {
+      throw new HttpsError('permission-denied', 'This video is unavailable to this account.');
     }
     const previous = sessionSnap.data();
     if (previous && (previous.viewerId !== uid || previous.postId !== postId || previous.creatorId !== creatorId)) {
@@ -54,11 +67,35 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
     }
 
     let creditedSeconds = 0;
-    let started = false;
+    const started = !previous;
+    let viewCounted = false;
+    const postViewerRef = db.collection('postVideoViewers').doc(digest(postId + ':' + uid));
     const viewerRef = db.collection('creatorVideoDailyViewers').doc(digest(creatorId + ':' + day + ':' + uid));
-    const viewerSnap = !previous ? await tx.get(viewerRef) : null;
+
+    if (previous) {
+      const elapsed = previous.lastHeartbeatAt instanceof Timestamp
+        ? Math.max(0, (now.toMillis() - previous.lastHeartbeatAt.toMillis()) / 1000)
+        : 0;
+      creditedSeconds = acceptedWatchCredit({
+        elapsedSeconds: elapsed,
+        previousPositionSeconds: Number(previous.lastPositionSeconds || 0),
+        nextPositionSeconds: position,
+      });
+    }
+
+    const shouldEvaluatePublicView = shouldCountPublicVideoView({
+      viewerId: uid,
+      creatorId,
+      audience: post.audience,
+      creditedSeconds,
+      alreadyCounted: false,
+    });
+    const [viewerSnap, postViewerSnapshot] = await Promise.all([
+      !previous ? tx.get(viewerRef) : Promise.resolve(null),
+      shouldEvaluatePublicView ? tx.get(postViewerRef) : Promise.resolve(null),
+    ]);
+
     if (!previous) {
-      started = true;
       tx.create(sessionRef, {
         viewerId: uid, postId, creatorId, day,
         lastPositionSeconds: position,
@@ -69,14 +106,6 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
         updatedAt: FieldValue.serverTimestamp(),
       });
     } else {
-      const elapsed = previous.lastHeartbeatAt instanceof Timestamp
-        ? Math.max(0, (now.toMillis() - previous.lastHeartbeatAt.toMillis()) / 1000)
-        : 0;
-      creditedSeconds = acceptedWatchCredit({
-        elapsedSeconds: elapsed,
-        previousPositionSeconds: Number(previous.lastPositionSeconds || 0),
-        nextPositionSeconds: position,
-      });
       tx.update(sessionRef, {
         lastPositionSeconds: position,
         lastHeartbeatAt: now,
@@ -97,8 +126,32 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
       if (started && !viewerSnap?.exists) tx.create(viewerRef, { creatorId, day, viewerHash: digest(uid), createdAt: FieldValue.serverTimestamp() });
+      if (shouldCountPublicVideoView({
+        viewerId: uid,
+        creatorId,
+        audience: post.audience,
+        creditedSeconds,
+        alreadyCounted: postViewerSnapshot?.get('lastCountedDay') === day,
+      })) {
+        const currentViews = post.views;
+        const safeViews = Number.isSafeInteger(currentViews) && (currentViews as number) >= 0 ? currentViews as number : 0;
+        const viewMarker = {
+          postId,
+          creatorId,
+          lastCountedDay: day,
+          viewerHash: digest(uid),
+          lastCountedAt: FieldValue.serverTimestamp(),
+        };
+        if (postViewerSnapshot?.exists) tx.update(postViewerRef, viewMarker);
+        else tx.create(postViewerRef, viewMarker);
+        tx.update(postRef, {
+          views: safeViews + 1,
+          viewsUpdatedAt: FieldValue.serverTimestamp(),
+        });
+        viewCounted = true;
+      }
     }
-    return { accepted: true, started, creditedSeconds, serverTime: now.toDate().toISOString() };
+    return { accepted: true, started, creditedSeconds, viewCounted, serverTime: now.toDate().toISOString() };
   });
   return result;
 });

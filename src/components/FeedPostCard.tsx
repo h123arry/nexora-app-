@@ -5,7 +5,7 @@ import {
   Zap, Repeat, Quote, MessageCircle, Bookmark, Play, Pause, Volume2, Send, 
   Globe, CheckCircle, MoreHorizontal, EyeOff, FolderPlus, ShieldAlert, 
   Edit2, UserPlus, VolumeX, Pin, BookOpen, Archive, Trash, Sparkles, 
-  BarChart2, Sliders, X, Check, ShieldCheck
+  BarChart2, Sliders, X, Check, ShieldCheck, Eye
 } from 'lucide-react';
 import { Post, User } from '../types';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
@@ -574,6 +574,12 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             }}
             onViewProfile={(userId) => onViewProfile?.(userId)}
           />
+          {typeof post.views === 'number' && Number.isFinite(post.views) && post.views >= 0 && (
+            <div className="flex items-center gap-1.5 border-t border-white/10 bg-[#070914] px-3 py-2 text-[11px] font-medium text-slate-300">
+              <Eye className="h-3.5 w-3.5 text-violet-300" />
+              <span>{post.views.toLocaleString()} views</span>
+            </div>
+          )}
         </div>
       ) : (post.image || (post.images && post.images.length > 0)) && !post.opportunityType ? (
         <div className="mb-3 mx-4 sm:mx-6 overflow-hidden rounded-2xl border border-white/10 bg-black">

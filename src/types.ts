@@ -303,7 +303,7 @@ export interface Chat {
 
 export interface Notification {
   id: string;
-  type: 'like' | 'comment' | 'follow' | 'mention' | 'system' | 'mission_milestone' | 'pulse_alert' | 'message' | 'community' | 'spark' | 'ai_recommendation' | 'reputation_milestone' | 'profile_view' | 'origin_attribution';
+  type: 'like' | 'comment' | 'follow' | 'mention' | 'system' | 'security' | 'mission_milestone' | 'pulse_alert' | 'message' | 'community' | 'spark' | 'ai_recommendation' | 'reputation_milestone' | 'profile_view' | 'origin_attribution';
   userId: string;
   username: string;
   avatar: string;
@@ -314,7 +314,9 @@ export interface Notification {
   priority?: number; // 1 to 8 priority for sorting
   actionText?: string; // e.g. 'Follow Back', 'Reply', 'Join'
   actionType?: 'follow_back' | 'reply' | 'join_community' | 'view_post' | 'save' | 'open_chat' | 'view_profile';
-  category?: 'messages' | 'mentions' | 'followers' | 'communities' | 'world_pulse' | 'voh_ai' | 'comments' | 'sparks' | 'profile_views';
+  title?: string;
+  eventType?: string;
+  category?: 'account' | 'creator' | 'messages' | 'mentions' | 'followers' | 'communities' | 'world_pulse' | 'voh_ai' | 'comments' | 'sparks' | 'profile_views';
   actorName?: string;
   targetPostPreview?: string;
   targetPostImage?: string;

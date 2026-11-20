@@ -144,7 +144,7 @@ export default function NotificationsView({
       const resolvedProps = (propNotifications || []).map(n => ({
         ...n,
         timeSection: getNotificationTimeSection(n.timestamp),
-        priorityLevel: (n.type === 'mention' || n.type === 'system' ? 'high' : 'medium') as any,
+        priorityLevel: (n.type === 'mention' || n.type === 'system' || n.type === 'security' ? 'high' : 'medium') as any,
         isRead: n.isRead
       }));
 
@@ -300,8 +300,14 @@ export default function NotificationsView({
       }
     } else if (notif.type === 'pulse_alert') {
       window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'pulse' } }));
+    } else if (notif.type === 'security' || notif.category === 'account') {
+      const section = notif.type === 'security' ? 'security' : 'account';
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'settings' } }));
+      window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-settings', { detail: { section } })), 250);
     } else if (notif.type === 'reputation_milestone' && notif.reputationAwarded) {
       triggerConfetti();
+    } else if (notif.category === 'creator') {
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'creator' } }));
     }
   };
 
@@ -319,7 +325,7 @@ export default function NotificationsView({
       if (n.type === 'follow' && !settingsToggles.followers) return false;
       if (n.type === 'mention' && !settingsToggles.mentions) return false;
       if (n.type === 'community' && !settingsToggles.communities) return false;
-      if (n.type === 'system' && !settingsToggles.securityAlerts) return false;
+      if ((n.type === 'system' || n.type === 'security') && !settingsToggles.securityAlerts) return false;
 
       // Match categories
       if (activeCategory === 'all') return true;
@@ -328,12 +334,12 @@ export default function NotificationsView({
       if (activeCategory === 'likes') return n.type === 'like' || n.type === 'spark';
       if (activeCategory === 'followers') return n.type === 'follow';
       if (activeCategory === 'profile_views') return n.type === 'profile_view';
-      if (activeCategory === 'system') return n.type === 'system';
+      if (activeCategory === 'system' || activeCategory === 'account') return n.category === 'account' || n.type === 'system' || n.type === 'security';
       if (activeCategory === 'origin') return n.type === 'origin_attribution';
       if (activeCategory === 'communities') return n.type === 'community';
       if (activeCategory === 'live') return n.type === 'pulse_alert' && n.content.includes('LIVE');
       if (activeCategory === 'verification') return n.type === 'reputation_milestone' && n.content.includes('Verification');
-      if (activeCategory === 'creator') return n.type === 'reputation_milestone' && n.content.includes('Milestone');
+      if (activeCategory === 'creator') return (n.type === 'reputation_milestone' && n.category !== 'account') || n.category === 'creator' || n.type === 'mission_milestone';
 
       return true;
     });
@@ -342,8 +348,9 @@ export default function NotificationsView({
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(n => 
-        n.content.toLowerCase().includes(q) || 
-        n.username.toLowerCase().includes(q) ||
+        n.content.toLowerCase().includes(q) ||
+        (n.title && n.title.toLowerCase().includes(q)) ||
+        (n.username || '').toLowerCase().includes(q) ||
         (n.previewText && n.previewText.toLowerCase().includes(q))
       );
     }
@@ -353,14 +360,13 @@ export default function NotificationsView({
     const priorityWeight = { high: 3, medium: 2, low: 1 };
     
     return filtered.sort((a, b) => {
-      // Priority Level weighting
+      const aTime = Date.parse(a.timestamp) || 0;
+      const bTime = Date.parse(b.timestamp) || 0;
+      if (aTime !== bTime) return bTime - aTime;
       const aWeight = priorityWeight[a.priorityLevel] || 1;
       const bWeight = priorityWeight[b.priorityLevel] || 1;
-      if (aWeight !== bWeight) return bWeight - aWeight;
-
-      // Treat as standard order
-      return 0; 
-    });
+      return bWeight - aWeight;
+    });;
   };
 
   // Group notifications into Time Sections: Today, Yesterday, This Week, Earlier, Older
@@ -397,7 +403,8 @@ export default function NotificationsView({
       case 'origin_attribution':
         return <Scale className="w-4 h-4 text-violet-300" />;
       case 'system':
-        return <ShieldAlert className="w-4 h-4 text-rose-400 animate-pulse" />;
+      case 'security':
+        return <ShieldAlert className="w-4 h-4 text-rose-400" />;
       case 'reputation_milestone':
         return <Award className="w-4 h-4 text-yellow-400" />;
       case 'community':
@@ -409,16 +416,9 @@ export default function NotificationsView({
     }
   };
 
-  const getPriorityBadge = (priority: 'high' | 'medium' | 'low') => {
-    switch (priority) {
-      case 'high':
-        return <span className="px-1.5 py-0.5 rounded-sm bg-rose-500/10 border border-rose-500/20 text-[8px] font-mono font-extrabold text-rose-400 uppercase tracking-widest">HIGH PRIORITY</span>;
-      case 'medium':
-        return <span className="px-1.5 py-0.5 rounded-sm bg-amber-500/10 border border-amber-500/20 text-[8px] font-mono font-extrabold text-amber-400 uppercase tracking-widest">MEDIUM</span>;
-      case 'low':
-        return <span className="px-1.5 py-0.5 rounded-sm bg-zinc-500/10 border border-zinc-500/20 text-[8px] font-mono font-extrabold text-zinc-400 uppercase tracking-widest">LOW PRIORITY</span>;
-    }
-  };
+  const getPriorityBadge = (type: string) => type === 'security'
+    ? <span className="px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-[9px] font-sans font-semibold text-rose-300">Account security</span>
+    : null;
 
   const activeGroupedNotifications = getFilteredAndSortedNotifications();
   const timeGroupedNotifications = groupNotificationsByTime(activeGroupedNotifications.slice(0, visibleCount));
@@ -724,7 +724,7 @@ export default function NotificationsView({
             { id: 'communities', label: 'Communities' },
             { id: 'creator', label: 'Creator Milestones' },
             { id: 'origin', label: 'Origin & Attribution' },
-            { id: 'system', label: 'Security' }
+            { id: 'account', label: 'Account & Security' }
           ].map((tab) => {
             const isActive = activeCategory === tab.id;
             return (
@@ -822,7 +822,7 @@ export default function NotificationsView({
                         >
                           {/* Top Tag detail and Drag Swipe quick visual hints */}
                           <div className="absolute top-2.5 right-4 flex items-center gap-2">
-                            {getPriorityBadge(notif.priorityLevel)}
+                            {getPriorityBadge(notif.type)}
                           </div>
 
                           {/* Main Row layout with checkbox if multiselect is on */}
@@ -889,6 +889,7 @@ export default function NotificationsView({
                             {/* Description Copy */}
                             <div className="flex-1 overflow-hidden pr-2">
                               <div className="text-xs text-violet-100 font-sans leading-relaxed">
+                                {notif.title && <p className="mb-1 text-sm font-bold text-white">{notif.title}</p>}
                                 {notif.userId !== 'system' && notif.userId !== 'multiple' && (
                                   <button
                                     type="button"

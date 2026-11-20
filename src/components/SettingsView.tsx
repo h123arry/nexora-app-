@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Bug, Scale } from 'lucide-react';
 import { User as UserType, ThemeMood } from '../types';
 import { SettingsService } from '../services/firebase/settingsService';
+import { SecurityNotificationService } from '../services/firebase/securityNotificationService';
 import { AuthService } from '../services/firebase/authService';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
@@ -56,6 +57,17 @@ export default function SettingsView({
   const [creatingBetaInvite, setCreatingBetaInvite] = useState(false);
   const [betaInviteLink, setBetaInviteLink] = useState('');
   const [betaInviteError, setBetaInviteError] = useState('');
+
+  useEffect(() => {
+    const handleOpenSettingsSection = (event: Event) => {
+      const section = (event as CustomEvent<{ section?: string }>).detail?.section;
+      if (section && ['account', 'privacy', 'notifications', 'appearance', 'security', 'connected', 'about', 'beta', 'origin'].includes(section)) {
+        setActiveSection(section as typeof activeSection);
+      }
+    };
+    window.addEventListener('nexora-open-settings', handleOpenSettingsSection);
+    return () => window.removeEventListener('nexora-open-settings', handleOpenSettingsSection);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -174,6 +186,8 @@ export default function SettingsView({
     setLinkedAccountMessage('');
     try {
       await AuthService.linkEmailAccount(securityEmail, securityPassword);
+      try { await SecurityNotificationService.notifySecurityEvent(currentUser.id, currentUser.email || securityEmail, currentUser.name || currentUser.username, 'EMAIL_LINKED'); }
+      catch { console.warn('Email connection succeeded; its account notification could not be delivered.'); }
       setLinkedProviders(AuthService.getLinkedProviders());
       setSecurityEmail('');
       setSecurityPassword('');
@@ -209,6 +223,8 @@ export default function SettingsView({
     setLinkedAccountMessage('');
     try {
       await AuthService.confirmPhoneLink(phoneLinkConfirmation, securityOtp);
+      try { await SecurityNotificationService.notifySecurityEvent(currentUser.id, currentUser.email || '', currentUser.name || currentUser.username, 'PHONE_LINKED'); }
+      catch { console.warn('Phone verification succeeded; its account notification could not be delivered.'); }
       setLinkedProviders(AuthService.getLinkedProviders());
       setPhoneLinkConfirmation(null);
       setSecurityOtp('');

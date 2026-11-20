@@ -1,12 +1,15 @@
-import { db } from './config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../../lib/firebase';
 import { EmailService, EmailTemplateType } from './emailService';
 
 export type SecurityEventType = 
   | 'NEW_LOGIN'
   | 'PASSWORD_CHANGED'
   | 'EMAIL_CHANGED'
+  | 'EMAIL_LINKED'
   | 'PHONE_CHANGED'
+  | 'PHONE_LINKED'
+  | 'SESSIONS_REVOKED'
   | 'SUSPICIOUS_SIGNIN'
   | 'TWO_FACTOR_TOGGLED'
   | 'VERIFICATION_APPROVED';
@@ -55,6 +58,24 @@ export class SecurityNotificationService {
         emailTemplate = 'SECURITY_ALERT_EMAIL';
         break;
 
+      case 'EMAIL_LINKED':
+        title = 'Email Sign-in Connected';
+        body = 'An email sign-in method was connected to your NEXORA account.';
+        emailTemplate = 'SECURITY_ALERT_EMAIL';
+        break;
+
+      case 'PHONE_LINKED':
+        title = 'Phone Number Verified';
+        body = 'A phone number was verified and connected to your NEXORA account.';
+        emailTemplate = 'SECURITY_ALERT_PHONE';
+        break;
+
+      case 'SESSIONS_REVOKED':
+        title = 'All Other Sessions Signed Out';
+        body = 'Your account sessions were revoked. Sign in again on devices you still use.';
+        emailTemplate = 'SECURITY_ALERT_LOGIN';
+        break;
+
       case 'PHONE_CHANGED':
         title = 'Phone Number Updated';
         body = `Your verified phone number was changed to ${details.newValue || 'new number'}.`;
@@ -80,32 +101,12 @@ export class SecurityNotificationService {
         break;
     }
 
-    // 1. Store in Firestore under user's security log collection
+    // Store the security audit record and inbox notification atomically on the server.
     try {
-      if (db && userId) {
-        await addDoc(collection(db, 'users', userId, 'securityLogs'), {
-          eventType,
-          title,
-          body,
-          details,
-          timestamp: serverTimestamp(),
-          ip: details.ip || 'Recorded',
-          browser: details.browser || 'Browser'
-        });
-
-        // Store as in-app notification
-        await addDoc(collection(db, 'users', userId, 'notifications'), {
-          type: 'security',
-          title,
-          content: body,
-          timestamp: new Date().toISOString(),
-          isRead: false,
-          priority: 'high',
-          iconType: 'shield'
-        });
-      }
+      const recordAccountEvent = httpsCallable(functions, 'recordAccountSecurityEvent');
+      await recordAccountEvent({ eventType, details });
     } catch {
-      console.warn('Firestore security notification was unavailable; authentication remains authoritative in Firebase Auth.');
+      console.warn('Server-side account notification was unavailable; authentication remains authoritative in Firebase Auth.');
     }
 
     // 2. Trigger native OS Push Notification without loading Firebase

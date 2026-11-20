@@ -3,6 +3,7 @@ import { setGlobalOptions } from 'firebase-functions/v2';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
 import { revokeAllSessions } from './accountSecurity.js';
+import { recordAccountSecurityNotification } from './accountSecurityNotifications.js';
 import { FieldPath, getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
 import { createPublicPostRepost } from './postReposts.js';
@@ -30,6 +31,7 @@ import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageC
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { assertCallableSessionActive } from './callableSession.js';
 import { createDailySessionRecorder } from './retention.js';
+import { issueCreatorMilestones } from './creatorMilestoneNotifications.js';
 export { saveCreatorStudioTemplate, listCreatorStudioTemplates, deleteCreatorStudioTemplate } from './creatorStudio.js';
 export { saveCreatorLens, submitCreatorLensForReview, reviewCreatorLens, listMyCreatorLenses, listPublishedCreatorLenses } from './creatorLenses.js';
 export { getCreatorEarningsSnapshot, getPendingGiftEarningsForFinance, settleGiftCreatorEarning } from './giftEarnings.js';
@@ -93,6 +95,23 @@ const adminDb = getFirestore(adminApp, firestoreDatabaseId);
 export const deliverNotificationPush = createNotificationPushDelivery(adminDb, adminApp);
 export const deliverFollowInboxNotification = createFollowInboxNotification(adminDb);
 
+export const recordAccountSecurityEvent = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to record this account event.');
+  try {
+    return await recordAccountSecurityNotification(
+      adminDb,
+      request.auth.uid,
+      request.data?.eventType,
+      request.data?.details,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid account security event')) throw new HttpsError('invalid-argument', message);
+    console.error('[Account security] Notification could not be recorded.', error);
+    throw new HttpsError('internal', 'This account event could not be recorded. Please retry.');
+  }
+});
+
 const syncSearch = (kind: Parameters<typeof syncUniversalSearchRecord>[1], id: string, path: string, data: Record<string, unknown> | null, parent?: Record<string, unknown>) =>
   syncUniversalSearchRecord(adminDb, kind, id, path, data, parent);
 
@@ -123,6 +142,44 @@ export const indexPublicProfileForSearch = onDocumentWritten('users/{userId}', a
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
   if (before && data && !searchFieldsChanged(before, data, ['username','name','avatar','bio','isVerified','isBanned','isSuspended','isSeedProfile'])) return;
   await syncSearch('person', event.params.userId, 'users/' + event.params.userId, data);
+});
+ 
+export const notifyCreatorMilestonesFromPost = onDocumentWritten('posts/{postId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const post = event.data?.after.exists ? event.data.after.data() : null;
+  if (before && post && !searchFieldsChanged(before, post as Record<string, unknown>, ['likes', 'views', 'viewCount', 'commentsCount', 'comments', 'shares', 'saves', 'bookmarksCount', 'isArchived', 'isDraft', 'audience', 'userId'])) return;
+  if (!post || post.isArchived === true || post.isDraft === true) return;
+  const creatorId = typeof post.userId === 'string' ? post.userId : typeof post.authorId === 'string' ? post.authorId : '';
+  if (!creatorId) return;
+  try { await issueCreatorMilestones(adminDb, creatorId); }
+  catch (error) { console.error('[Creator milestones] Post milestone evaluation failed.', error); }
+});
+
+export const notifyCreatorMilestonesFromAccount = onDocumentWritten('users/{userId}', async event => {
+  if (!event.data?.after.exists) return;
+  const before = event.data.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const after = event.data.after.data() as Record<string, unknown>;
+  if (before && !searchFieldsChanged(before, after, ['followers', 'isVerified', 'totalEarnedNex'])) return;
+  try { await issueCreatorMilestones(adminDb, event.params.userId); }
+  catch (error) { console.error('[Creator milestones] Account milestone evaluation failed.', error); }
+});
+
+export const notifyCreatorMilestonesFromPublicProfile = onDocumentWritten('publicProfiles/{userId}', async event => {
+  if (!event.data?.after.exists) return;
+  const before = event.data.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const after = event.data.after.data() as Record<string, unknown>;
+  if (before && !searchFieldsChanged(before, after, ['followers', 'isVerified'])) return;
+  try { await issueCreatorMilestones(adminDb, event.params.userId); }
+  catch (error) { console.error('[Creator milestones] Public profile milestone evaluation failed.', error); }
+});
+
+export const notifyCreatorMilestonesFromGiftEarning = onDocumentWritten('creatorEarnings/{earningId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const earning = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (!earning || typeof earning.creatorId !== 'string') return;
+  if (before && !searchFieldsChanged(before, earning, ['status', 'creatorShareNex'])) return;
+  try { await issueCreatorMilestones(adminDb, earning.creatorId, true); }
+  catch (error) { console.error('[Creator milestones] Gift earnings milestone evaluation failed.', error); }
 });
 export const indexPageForSearch = onDocumentWritten('pages/{pageId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
