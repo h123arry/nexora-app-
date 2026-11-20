@@ -1097,7 +1097,7 @@ export default function NexoraVideoPlayer({
               onStalled={() => setIsBuffering(true)}
               onAbort={() => setIsBuffering(false)}
               onEnded={handleVideoEnded}
-              className="relative z-[2] w-full h-full max-h-[85dvh] object-contain cursor-pointer"
+              className="nx-video-element relative z-[2] block w-full h-full max-h-none object-cover cursor-pointer"
               style={{ filter: `brightness(${brightnessLevel}%)` }}
             />
             <audio ref={sonicAudioRef} src="/sounds/nexora-sonic-logo.mp3" preload="auto" aria-hidden="true" />
