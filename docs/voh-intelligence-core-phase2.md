@@ -5,7 +5,7 @@ Connect VOH to NEXORA features through explicit, request-scoped permissions. Thi
 
 ## Implemented
 - Explicit `feed`, `profile`, and `world_pulse` feature scopes, while preserving legacy single-scope clients.
-- The chat context control now lets users select Feed, Profile, or both together. The server fetches the authenticated profile itself; client-supplied profile values are not used as profile authority.
+- The chat context control now lets users select Feed, Profile, both together, or joined Circles. The server fetches the authenticated profile itself and loads Circles only from active membership records tied to the verified Firebase UID; client-supplied profile or membership values are not used as authority.
 - Missing, malformed, or unknown scopes grant no feature tools.
 - The model only receives tool declarations for explicitly selected scopes.
 - A read-only World Pulse snapshot tool returns only the bounded, shaped snapshot supplied for the request. If no snapshot is supplied, the tool reports that honestly.
