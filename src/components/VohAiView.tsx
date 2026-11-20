@@ -58,7 +58,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const [editMsgText, setEditMsgText] = useState('');
 
   // Attached Context Awareness States
-  const [attachedContextType, setAttachedContextType] = useState<'feed' | 'profile' | 'feed_profile' | 'inbox' | 'none'>('feed');
+  const [attachedContextType, setAttachedContextType] = useState<'feed' | 'profile' | 'feed_profile' | 'circles' | 'notifications' | 'inbox' | 'none'>('feed');
   const [memoryDNA, setMemoryDNA] = useState<string[]>(() => {
     const memory = MemoryEngine.getMemory();
     return memory.memoryEnabled
@@ -448,14 +448,18 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         contextualMessage = `[SYSTEM CONTEXT: The user has selected their profile for context. Use only the authenticated profile details loaded by the server.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'feed_profile') {
         contextualMessage = `[SYSTEM CONTEXT: The user has explicitly selected both their feed and profile for this request. Use only the recent feed posts and authenticated profile details supplied by the server.]\n\nUser query: ${message}`;
+      } else if (attachedContextType === 'circles') {
+        contextualMessage = `[SYSTEM CONTEXT: The user has selected their joined Circles. Use only the active memberships loaded for their authenticated account. ]\n\nUser query: ${message}`;
+      } else if (attachedContextType === 'notifications') {
+        contextualMessage = `[SYSTEM CONTEXT: The user has selected their recent notifications. Use only the bounded notifications loaded for their authenticated account. ]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'inbox') {
         contextualMessage = `[SYSTEM CONTEXT: The user is viewing the inbox. Private message contents are not included; do not claim access to them.]\n\nUser query: ${message}`;
       }
 
-      const selectedScopes: Array<'feed' | 'profile'> = attachedContextType === 'feed_profile'
+      const selectedScopes: Array<'feed' | 'profile' | 'circles' | 'notifications'> = attachedContextType === 'feed_profile'
         ? ['feed', 'profile']
-        : attachedContextType === 'feed' || attachedContextType === 'profile' ? [attachedContextType] : [];
-      const legacyScope = selectedScopes.length === 1 ? selectedScopes[0] : 'none';
+        : attachedContextType === 'feed' || attachedContextType === 'profile' || attachedContextType === 'circles' || attachedContextType === 'notifications' ? [attachedContextType] : [];
+      const legacyScope: 'feed' | 'profile' | 'none' = selectedScopes.includes('feed') ? 'feed' : selectedScopes.includes('profile') ? 'profile' : 'none';
       const response = await ChatEngine.sendChatMessage(contextualMessage, mappedHistory, currentUser, selectedScopes.includes('feed') ? posts : [], legacyScope, selectedScopes);
 
       const responseText = response.text;
@@ -1060,7 +1064,9 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                         const cycle: Record<typeof attachedContextType, typeof attachedContextType> = {
                           feed: 'profile',
                           profile: 'feed_profile',
-                          feed_profile: 'inbox',
+                          feed_profile: 'circles',
+                          circles: 'notifications',
+                          notifications: 'inbox',
                           inbox: 'none',
                           none: 'feed'
                         };
@@ -1072,6 +1078,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {attachedContextType === 'feed' && <Layers className="w-3 h-3 text-violet-400" />}
                       {attachedContextType === 'profile' && <UserCheck className="w-3 h-3 text-cyan-400" />}
                       {attachedContextType === 'feed_profile' && <><Layers className="w-3 h-3 text-violet-400" /><UserCheck className="w-3 h-3 text-cyan-400" /></>}
+                      {attachedContextType === 'circles' && <Users className="w-3 h-3 text-violet-400" />}
+                      {attachedContextType === 'notifications' && <Sparkles className="w-3 h-3 text-amber-400" />}
                       {attachedContextType === 'inbox' && <MessageSquare className="w-3 h-3 text-fuchsia-400" />}
                       {attachedContextType === 'none' && <Sparkle className="w-3 h-3 text-amber-400" />}
                       <span>Change shared information</span>
@@ -1081,6 +1089,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {attachedContextType === 'feed' && "Uses posts from your feed"}
                       {attachedContextType === 'profile' && `Uses your profile details`}
                       {attachedContextType === 'feed_profile' && "Uses your feed and profile details"}
+                      {attachedContextType === 'circles' && "Uses your active Circle memberships"}
+                      {attachedContextType === 'notifications' && "Uses your recent notifications"}
                       {attachedContextType === 'inbox' && "Private messages are never shared"}
                       {attachedContextType === 'none' && "No extra information shared"}
                     </span>
@@ -1088,6 +1098,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {attachedContextType === 'feed' && "Feed information"}
                       {attachedContextType === 'profile' && "Profile information"}
                       {attachedContextType === 'feed_profile' && "Feed + profile"}
+                      {attachedContextType === 'circles' && "Your Circles"}
+                      {attachedContextType === 'notifications' && "Your notifications"}
                       {attachedContextType === 'inbox' && "Private messages stay private"}
                       {attachedContextType === 'none' && "No extra information"}
                     </span>
