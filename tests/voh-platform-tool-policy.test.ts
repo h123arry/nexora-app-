@@ -21,7 +21,11 @@ describe('VOH feature-scoped tool access', () => {
     const combined = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['profile', 'world_pulse']));
     assert.deepEqual(combined.map(tool => tool.name), ['get_my_profile_summary', 'get_world_pulse_snapshot']);
   });
-  it('never exposes community, notification, inbox or write tools without an explicit integration', () => {
+  it('exposes Circle and notification tools only when their own scopes are selected', () => {
+    assert.deepEqual(selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['circles'])).map(tool => tool.name), ['get_my_communities']);
+    assert.deepEqual(selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['notifications'])).map(tool => tool.name), ['get_recent_notifications']);
+  });
+  it('never exposes inbox or write tools without an explicit integration', () => {
     const names = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['feed', 'profile', 'world_pulse'])).map(tool => tool.name);
     assert.equal(names.some(name => /inbox|message|send|publish|delete|community|notification/i.test(name)), false);
   });
