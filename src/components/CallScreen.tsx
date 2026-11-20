@@ -49,6 +49,14 @@ export default function CallScreen({
     }, () => setError('Call status could not be updated. Check your connection.'));
   }, [isOpen, callId, onClose]);
 
+  useEffect(() => {
+    if (!call || call.status !== 'ringing' || !Number.isFinite(call.expiresAt)) return;
+    const timeout = window.setTimeout(() => {
+      void endDirectCall(callId).finally(() => onClose());
+    }, Math.max(0, call.expiresAt - Date.now()));
+    return () => window.clearTimeout(timeout);
+  }, [call?.status, call?.expiresAt, callId, onClose]);
+
   const connectRoom = useCallback(async () => {
     if (connectingRef.current || roomRef.current || !callId) return;
     connectingRef.current = true;
@@ -208,7 +216,7 @@ export default function CallScreen({
             </div>
             <h2 className="text-xl font-bold">{partnerName}</h2>
             <p className="mt-2 text-sm text-zinc-400">
-              {connected ? formatTime(elapsed) : waiting ? (incoming ? 'Calling you…' : 'Calling…') : connecting ? 'Connecting…' : call?.status === 'accepted' ? 'Reconnecting…' : 'Preparing call…'}
+              {connected ? formatTime(elapsed) : waiting ? (incoming ? (type === 'video' ? 'Incoming video call' : 'Incoming voice call') : 'Calling…') : connecting ? 'Connecting…' : call?.status === 'accepted' ? 'Reconnecting…' : 'Preparing call…'}
             </p>
           </div>
         )}
