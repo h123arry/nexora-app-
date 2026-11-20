@@ -9,8 +9,8 @@ export interface VohToolContext {
 export const VOH_CONTEXT_TOOL_DECLARATIONS = [
   { name: 'get_my_profile_summary', description: 'Read the authenticated user profile summary and creator status supplied by NEXORA.', parameters: { type: 'OBJECT', properties: {} } },
   { name: 'get_visible_feed', description: 'Read only the posts currently supplied as visible in the authenticated user feed.', parameters: { type: 'OBJECT', properties: {} } },
-  { name: 'get_my_communities', description: 'Read the joined community snapshot supplied for this request.', parameters: { type: 'OBJECT', properties: {} } },
-  { name: 'get_recent_notifications', description: 'Read the recent notification snapshot supplied for this request.', parameters: { type: 'OBJECT', properties: {} } },
+  { name: 'get_my_communities', description: 'Read the authenticated user’s active Circle memberships supplied for this request.', parameters: { type: 'OBJECT', properties: {} } },
+  { name: 'get_recent_notifications', description: 'Read a bounded snapshot of the authenticated user’s own recent notifications.', parameters: { type: 'OBJECT', properties: {} } },
   { name: 'get_world_pulse_snapshot', description: 'Read the current World Pulse sample snapshot supplied for this request. It is a limited loaded sample, not platform-wide activity.', parameters: { type: 'OBJECT', properties: {} } },
 ] as const;
 
