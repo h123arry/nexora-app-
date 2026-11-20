@@ -102,9 +102,6 @@ export function createNotificationPushDelivery(db: Firestore, app: App) {
           // Data-only messages are rendered by NEXORA's root service worker,
           // giving every alert one predictable click/deep-link handler.
           data: { ...data, title, body: detail },
-          webpush: {
-            notification: { icon: '/nexora-mark.png', badge: '/icons/icon-48.png' },
-          },
         });
         const staleTokenIds: string[] = [];
         response.responses.forEach((result, index) => {
