@@ -69,6 +69,7 @@ export default function NexoraImagePlayer({
 }: NexoraImagePlayerProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [downloadingState, setDownloadingState] = useState<string | null>(null);
@@ -290,9 +291,19 @@ export default function NexoraImagePlayer({
 
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
 
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const closeOnPopState = () => setIsFullscreen(false);
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') window.history.back(); };
+    window.history.pushState({ nexoraPhotoViewer: post.id }, '');
+    window.addEventListener('popstate', closeOnPopState);
+    window.addEventListener('keydown', closeOnEscape);
+    return () => { window.removeEventListener('popstate', closeOnPopState); window.removeEventListener('keydown', closeOnEscape); };
+  }, [isFullscreen, post.id]);
+
 
   return (
-    <div className="relative w-full overflow-hidden bg-black aspect-square sm:aspect-[4/3] md:aspect-[16/10] max-h-[580px] select-none group">
+    <div className="relative w-full overflow-hidden bg-black select-none group">
       {/* Background Image Display */}
       <div className="w-full h-full relative overflow-hidden bg-[#080612] flex items-center justify-center">
         {isResolvingMedia ? (
@@ -310,7 +321,8 @@ export default function NexoraImagePlayer({
               aria-hidden={hasImageLoadError}
               onLoad={() => { setIsImageLoading(false); setHasImageLoadError(false); }}
               onError={() => { setIsImageLoading(false); setHasImageLoadError(true); }}
-              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${hasImageLoadError ? 'opacity-0' : ''}`}
+              className={`block w-full h-auto max-h-[78vh] object-contain cursor-zoom-in ${hasImageLoadError ? 'opacity-0' : ''}`}
+              onClick={() => setIsFullscreen(true)}
               referrerPolicy="no-referrer"
               style={{ filter: (post.imageFilters && post.imageFilters[currentImageIndex]) || post.imageFilter || 'none' }}
             />
@@ -339,9 +351,7 @@ export default function NexoraImagePlayer({
             <p className="text-xs text-zinc-400 max-w-xs">This image could not be loaded. The post caption and actions are still available.</p>
           </div>
         )}
-        {/* Subtle top and bottom dark gradient overlays for legibility */}
-        <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none z-10" />
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none z-10" />
+
       </div>
 
       {/* Carousel navigation controls if multiple images */}
@@ -397,13 +407,7 @@ export default function NexoraImagePlayer({
       </div>
 
       {/* 2. RIGHT-SIDE ACTION RAIL */}
-      <div 
-        className="absolute z-20 flex flex-col items-center gap-4 sm:gap-5"
-        style={{
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
-          right: 'calc(env(safe-area-inset-right, 0px) + 14px)'
-        }}
-      >
+      <div className="relative z-20 flex flex-row items-center justify-around gap-5 px-4 py-3 bg-[#080612] border-t border-white/10">
         {/* Spark Button */}
         <button 
           onClick={(e) => { e.stopPropagation(); onSpark(); }}
@@ -684,6 +688,12 @@ export default function NexoraImagePlayer({
         onFollowToggle={() => onToggleFollow?.()}
         isFollowing={isFollowing}
       />
+
+      {isFullscreen && displayImages[currentImageIndex] && (
+        <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Photo viewer">
+          <img src={displayImages[currentImageIndex]} alt={post.imageAltText || post.content || "Post photo"} className="w-full h-full object-contain select-none" draggable={false} />
+        </div>
+      )}
 
       {/* Downloading Export State Overlay */}
       {downloadingState && (
