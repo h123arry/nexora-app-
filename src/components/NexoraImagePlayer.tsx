@@ -379,33 +379,6 @@ export default function NexoraImagePlayer({
         </>
       )}
 
-      {/* 1. TOP-LEFT CREATOR INFORMATION OVERLAY (NO PROFILE PICTURE) */}
-      <div 
-        className="absolute top-4 left-4 sm:top-5 sm:left-5 z-20 flex flex-col items-start gap-1 text-left pointer-events-auto max-w-[calc(100%-120px)] cursor-pointer group/creator"
-        onClick={(e) => { e.stopPropagation(); onViewProfile?.(post.userId || ''); }}
-      >
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="font-sans font-extrabold text-white text-base sm:text-lg tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] group-hover/creator:underline">
-            {post.name}
-          </span>
-          <span className="font-mono text-xs sm:text-sm text-zinc-300 font-medium drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] group-hover/creator:text-white">
-            @{post.username}
-          </span>
-          {post.isVerified && <VerificationBadge />}
-        </div>
-
-        {/* Audio / Source Info */}
-        <div 
-          onClick={(e) => { e.stopPropagation(); onViewSound?.(post.id); }}
-          className="flex items-center gap-1.5 mt-0.5 text-xs font-mono text-zinc-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] cursor-pointer hover:text-violet-300 transition-colors"
-        >
-          <Music className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-          <span className="truncate max-w-[220px]">
-            {post.soundTitle || `Original Sound - ${post.name}`}
-          </span>
-        </div>
-      </div>
-
       {/* 2. RIGHT-SIDE ACTION RAIL */}
       <div className="relative z-20 flex flex-row items-center justify-around gap-5 px-4 py-3 bg-[#080612] border-t border-white/10">
         {/* Spark Button */}
@@ -583,96 +556,6 @@ export default function NexoraImagePlayer({
             )}
           </AnimatePresence>
         </div>
-      </div>
-
-      {/* 3. BOTTOM-LEFT INFORMATION OVERLAY */}
-      <div 
-        className="absolute z-20 flex flex-col items-start gap-1.5 text-left pointer-events-auto max-w-[70%] sm:max-w-[75%]"
-        style={{
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
-          left: 'calc(env(safe-area-inset-left, 0px) + 16px)'
-        }}
-      >
-        {/* Search Suggestion if available */}
-        {post.searchSuggestion && (
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              window.dispatchEvent(new CustomEvent('toast', { detail: `🔍 Searching: ${post.searchSuggestion}` }));
-            }}
-            className="flex items-center gap-1.5 px-2.5 py-1 mb-0.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors pointer-events-auto cursor-pointer"
-          >
-            <Search className="w-3 h-3 text-violet-300" />
-            <span className="text-[10px] font-mono text-white tracking-wider">Search • {post.searchSuggestion}</span>
-          </button>
-        )}
-
-        {/* Caption & Read More Toggle */}
-        {post.content && (
-          <div className="text-xs sm:text-sm text-zinc-100 font-sans leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] pointer-events-auto">
-            <p className={isExpanded ? "" : "line-clamp-2"}>
-              {post.content}
-            </p>
-            {post.content.length > 50 && (
-              <button 
-                onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} 
-                className="text-[11px] font-mono font-bold text-violet-300 hover:text-white mt-0.5 cursor-pointer"
-              >
-                {isExpanded ? "Show less" : "More"}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Audio / Source Info beneath caption */}
-        <div 
-          className="flex items-center gap-2 text-xs font-mono text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] mt-0.5 cursor-pointer hover:text-violet-300 transition-colors pointer-events-auto" 
-          onClick={(e) => { e.stopPropagation(); onViewSound?.(post.id); }}
-        >
-          <div className="w-5 h-5 rounded-full bg-black/40 border border-white/20 flex items-center justify-center shrink-0">
-            <Music className="w-3 h-3 text-violet-400" />
-          </div>
-          <span className="truncate max-w-[200px]">
-            {post.soundTitle || `Original Sound - ${post.name}`}
-          </span>
-        </div>
-
-        {/* Hashtags */}
-        {post.tags && post.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pointer-events-auto mt-0.5">
-            {post.tags.slice(0, 4).map(tag => (
-              <span
-                key={tag}
-                className="text-[11px] font-mono text-violet-300 hover:text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] font-semibold cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.dispatchEvent(new CustomEvent('toast', { detail: `🏷️ Filter: #${tag}` }));
-                }}
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Post details */}
-        {post.location && (
-          <div className="flex items-center gap-1 text-[11px] font-mono text-zinc-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]">
-            <span className="text-violet-300">📍</span>
-            <span>{post.location}</span>
-          </div>
-        )}
-        {post.taggedUsernames && post.taggedUsernames.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[10px] font-medium text-violet-200" aria-label="Mentioned accounts">
-            {post.taggedUsernames.map(username => (
-              <button key={username} type="button" onClick={(event) => { event.stopPropagation(); onViewProfile?.(username); }} className="hover:text-white hover:underline focus-visible:outline focus-visible:outline-violet-300">
-                @{username}
-              </button>
-            ))}
-          </div>
-        )}
-
-
       </div>
 
       <VideoBottomSheet
