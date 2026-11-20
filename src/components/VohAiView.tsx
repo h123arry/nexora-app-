@@ -443,11 +443,11 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       // Smart dynamic context inject based on attachedContextType
       let contextualMessage = message;
       if (attachedContextType === 'feed') {
-        contextualMessage = `[SYSTEM CONTEXT: The user has attached their feed for context. Use only the recent post data included in the request; do not assume additional activity or regional trends.]\\n\\nUser query: ${message}`;
+        contextualMessage = `[SYSTEM CONTEXT: The user has attached their feed for context. Use only the recent post data included in the request; do not assume additional activity or regional trends.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'profile') {
-        contextualMessage = `[SYSTEM CONTEXT: The user has selected their profile for context. Use only the authenticated profile details loaded by the server.]\\n\\nUser query: ${message}`;
+        contextualMessage = `[SYSTEM CONTEXT: The user has selected their profile for context. Use only the authenticated profile details loaded by the server.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'feed_profile') {
-        contextualMessage = `[SYSTEM CONTEXT: The user has explicitly selected both their feed and profile for this request. Use only the recent feed posts and authenticated profile details supplied by the server.]\\n\\nUser query: ${message}`;
+        contextualMessage = `[SYSTEM CONTEXT: The user has explicitly selected both their feed and profile for this request. Use only the recent feed posts and authenticated profile details supplied by the server.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'inbox') {
         contextualMessage = `[SYSTEM CONTEXT: The user is viewing the inbox. Private message contents are not included; do not claim access to them.]\n\nUser query: ${message}`;
       }
