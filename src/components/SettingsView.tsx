@@ -175,7 +175,8 @@ export default function SettingsView({
     setLinkedAccountMessage('');
     try {
       await AuthService.linkEmailAccount(securityEmail, securityPassword);
-      await SecurityNotificationService.notifySecurityEvent(currentUser.id, currentUser.email || securityEmail, currentUser.name || currentUser.username, 'EMAIL_LINKED');
+      try { await SecurityNotificationService.notifySecurityEvent(currentUser.id, currentUser.email || securityEmail, currentUser.name || currentUser.username, 'EMAIL_LINKED'); }
+      catch { console.warn('Email connection succeeded; its account notification could not be delivered.'); }
       setLinkedProviders(AuthService.getLinkedProviders());
       setSecurityEmail('');
       setSecurityPassword('');
@@ -211,7 +212,8 @@ export default function SettingsView({
     setLinkedAccountMessage('');
     try {
       await AuthService.confirmPhoneLink(phoneLinkConfirmation, securityOtp);
-      await SecurityNotificationService.notifySecurityEvent(currentUser.id, currentUser.email || '', currentUser.name || currentUser.username, 'PHONE_LINKED');
+      try { await SecurityNotificationService.notifySecurityEvent(currentUser.id, currentUser.email || '', currentUser.name || currentUser.username, 'PHONE_LINKED'); }
+      catch { console.warn('Phone verification succeeded; its account notification could not be delivered.'); }
       setLinkedProviders(AuthService.getLinkedProviders());
       setPhoneLinkConfirmation(null);
       setSecurityOtp('');
