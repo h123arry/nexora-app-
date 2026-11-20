@@ -2417,9 +2417,9 @@ export default function App() {
               setTheme={setTheme}
               onOpenCreatePost={() => {
                 requireAuth(() => {
-                  setCreationInitialMode(null);
+                  setCreationInitialMode('photo');
                   setCreationInitialTab(undefined);
-                  setIsCreateMenuOpen(true);
+                  setIsCreatePostModalOpen(true);
                 });
               }}
               onLogout={handleRequestLogout}
