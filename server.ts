@@ -1054,12 +1054,34 @@ When answering:
       toolContents.push({ role: 'user', parts: functionResponses });
       response = await ai.models.generateContent({ model, contents: toolContents, config: toolConfig as any });
     }
-    const rawText = response.text || 'I could not complete that request with the available NEXORA context. Please try again.';
-    res.json({ text: replaceTerminology(rawText) });
+    const rawText = typeof response.text === 'string' ? response.text.trim() : '';
+    if (!rawText) {
+      const finishReason = response.candidates?.[0]?.finishReason;
+      console.warn('VOH AI returned no text response:', { finishReason: finishReason || 'unknown' });
+      return res.status(502).json({
+        error: finishReason === 'SAFETY'
+          ? 'I could not answer that request. Please try asking in a different way.'
+          : 'VOH AI did not return an answer. Please try again.',
+      });
+    }
+    return res.json({ text: replaceTerminology(rawText) });
 
   } catch (error: any) {
-    console.error('VOH AI Chat Error:', error instanceof Error ? error.name : 'unknown');
-    res.status(500).json({ error: 'VOH AI could not complete that request. Please try again.' });
+    const safeMessage = error instanceof Error
+      ? error.message.replace(/\b(api[_-]?key|access[_-]?token)=([^\s&]+)/gi, '$1=[redacted]').slice(0, 240)
+      : 'unknown';
+    console.error('VOH AI Chat Error:', {
+      name: error instanceof Error ? error.name : 'unknown',
+      message: safeMessage,
+      status: Number.isFinite(error?.status) ? error.status : undefined,
+      code: typeof error?.code === 'string' ? error.code : undefined,
+    });
+    const providerBusy = error?.status === 429 || error?.status === 503;
+    return res.status(providerBusy ? 503 : 500).json({
+      error: providerBusy
+        ? 'VOH AI is busy right now. Please wait a moment and try again.'
+        : 'VOH AI could not complete that request. Please try again.',
+    });
   }
 });
 
