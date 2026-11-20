@@ -15,6 +15,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
   const [waveform, setWaveform] = useState<number[]>([]);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isTrashAnimating, setIsTrashAnimating] = useState(false);
+  const discardRef = useRef(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedTenthsRef = useRef(0);
@@ -52,6 +53,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream);
       audioChunksRef.current = [];
+      discardRef.current = false;
       
       mediaRecorderRef.current.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
@@ -61,7 +63,8 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
         const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current?.mimeType || 'audio/webm' });
         mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
         const finalSeconds = Math.ceil(recordedTenthsRef.current / 10);
-        if (audioBlob.size > 0) onSendMessage(audioBlob, finalSeconds);
+        if (discardRef.current) { discardRef.current = false; return; }
+        if (audioBlob.size > 0) void Promise.resolve(onSendMessage(audioBlob, finalSeconds)).catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Voice note could not be sent. Please retry.' })));
         else window.dispatchEvent(new CustomEvent('toast', { detail: 'No audio was recorded. Please try again.' }));
       };
 
@@ -105,13 +108,10 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
 
   const stopAndSend = () => {
     stopTimer();
+    discardRef.current = true;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-    } else {
-      // simulated send
-      const finalSeconds = Math.ceil(timer / 10);
-      onSendMessage(new Blob(), finalSeconds);
     }
     setIsRecording(false);
     setIsLocked(false);
