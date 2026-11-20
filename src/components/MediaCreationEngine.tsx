@@ -28,6 +28,7 @@ type PhotoExportOptions = {
   sticker?: string | null;
   text?: string;
   textColor?: string;
+  cropRatio?: 'original' | '1:1' | '4:5' | '9:16';
 };
 
 /** Load a local image safely, attaching handlers before src to avoid cached-load races. */
@@ -89,25 +90,43 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
     context.restore();
     context.filter = 'none';
 
+    let exportCanvas = canvas;
+    let exportContext = context;
+    if (options.cropRatio && options.cropRatio !== 'original') {
+      const targetRatio = options.cropRatio === '1:1' ? 1 : options.cropRatio === '4:5' ? 4 / 5 : 9 / 16;
+      const currentRatio = canvas.width / canvas.height;
+      let sx = 0, sy = 0, sw = canvas.width, sh = canvas.height;
+      if (currentRatio > targetRatio) { sw = canvas.height * targetRatio; sx = (canvas.width - sw) / 2; }
+      else { sh = canvas.width / targetRatio; sy = (canvas.height - sh) / 2; }
+      const croppedCanvas = document.createElement('canvas');
+      croppedCanvas.width = Math.max(1, Math.round(Math.min(canvas.width, canvas.height * targetRatio)));
+      croppedCanvas.height = Math.max(1, Math.round(croppedCanvas.width / targetRatio));
+      const croppedContext = croppedCanvas.getContext('2d');
+      if (!croppedContext) throw new Error('Photo cropping is not available in this browser.');
+      croppedContext.drawImage(canvas, sx, sy, sw, sh, 0, 0, croppedCanvas.width, croppedCanvas.height);
+      exportCanvas = croppedCanvas;
+      exportContext = croppedContext;
+    }
+
     if (options.sticker) {
-      context.font = `bold ${Math.max(48, Math.round(canvas.width * 0.12))}px sans-serif`;
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      context.fillText(options.sticker, canvas.width / 2, canvas.height / 2);
+      exportContext.font = `bold ${Math.max(48, Math.round(exportCanvas.width * 0.12))}px sans-serif`;
+      exportContext.textAlign = 'center';
+      exportContext.textBaseline = 'middle';
+      exportContext.fillText(options.sticker, exportCanvas.width / 2, exportCanvas.height / 2);
     }
     if (options.text?.trim()) {
-      const fontSize = Math.max(24, Math.round(canvas.width * 0.045));
+      const fontSize = Math.max(24, Math.round(exportCanvas.width * 0.045));
       const padding = Math.round(fontSize * 0.65);
-      context.font = `700 ${fontSize}px sans-serif`;
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      const maxWidth = canvas.width - padding * 2;
+      exportContext.font = `700 ${fontSize}px sans-serif`;
+      exportContext.textAlign = 'center';
+      exportContext.textBaseline = 'middle';
+      const maxWidth = exportCanvas.width - padding * 2;
       const words = options.text.trim().split(/\s+/);
       const lines: string[] = [];
       let line = '';
       for (const word of words) {
         const candidate = line ? `${line} ${word}` : word;
-        if (line && context.measureText(candidate).width > maxWidth) {
+        if (line && exportContext.measureText(candidate).width > maxWidth) {
           lines.push(line);
           line = word;
         } else line = candidate;
@@ -115,16 +134,16 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
       if (line) lines.push(line);
       const lineHeight = Math.round(fontSize * 1.25);
       const blockHeight = lines.length * lineHeight + padding;
-      const top = canvas.height - blockHeight - padding;
-      context.fillStyle = 'rgba(5, 9, 20, 0.72)';
-      context.fillRect(padding / 2, top, canvas.width - padding, blockHeight);
-      context.fillStyle = options.textColor || '#ffffff';
-      lines.forEach((item, index) => context.fillText(item, canvas.width / 2, top + padding / 2 + index * lineHeight + lineHeight / 2, maxWidth));
+      const top = exportCanvas.height - blockHeight - padding;
+      exportContext.fillStyle = 'rgba(5, 9, 20, 0.72)';
+      exportContext.fillRect(padding / 2, top, exportCanvas.width - padding, blockHeight);
+      exportContext.fillStyle = options.textColor || '#ffffff';
+      lines.forEach((item, index) => exportContext.fillText(item, exportCanvas.width / 2, top + padding / 2 + index * lineHeight + lineHeight / 2, maxWidth));
     }
 
     return await new Promise<Blob>((resolve, reject) => {
       const timeout = window.setTimeout(() => reject(new Error('Photo preparation took too long. Please try again with a smaller photo.')), 12000);
-      canvas.toBlob(blob => {
+      exportCanvas.toBlob(blob => {
         clearTimeout(timeout);
         if (blob) resolve(blob);
         else reject(new Error('Your edited photo could not be exported. Please try again.'));
@@ -132,6 +151,90 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
     });
   } finally {
     URL.revokeObjectURL(objectUrl);
+  }
+}
+
+
+/** Re-encode a video through a canvas so the selected crop is part of the exported file. */
+async function renderCroppedVideoBlob(source: Blob, ratio: number): Promise<Blob> {
+  if (typeof MediaRecorder === 'undefined' || typeof HTMLCanvasElement.prototype.captureStream !== 'function') {
+    throw new Error('Video cropping is not supported by this browser. Your original video has not changed.');
+  }
+  const sourceUrl = URL.createObjectURL(source);
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = 'auto';
+  video.src = sourceUrl;
+  let sourceStream: MediaStream | null = null;
+  let outputStream: MediaStream | null = null;
+  let activeRecorder: MediaRecorder | null = null;
+  let frameRequest = 0;
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error('This video could not be opened for cropping.'));
+      video.load();
+    });
+    const sourceWidth = video.videoWidth;
+    const sourceHeight = video.videoHeight;
+    if (!sourceWidth || !sourceHeight) throw new Error('The video dimensions could not be read.');
+    const outputWidth = 1080;
+    const outputHeight = Math.max(1, Math.round(outputWidth / ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = outputWidth;
+    canvas.height = outputHeight;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Video cropping is not available on this device.');
+    const sourceRatio = sourceWidth / sourceHeight;
+    let sx = 0, sy = 0, sw = sourceWidth, sh = sourceHeight;
+    if (sourceRatio > ratio) { sw = sourceHeight * ratio; sx = (sourceWidth - sw) / 2; }
+    else { sh = sourceWidth / ratio; sy = (sourceHeight - sh) / 2; }
+    outputStream = canvas.captureStream(30);
+    const captureVideo = video as HTMLVideoElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream; audioTracks?: { length: number } };
+    const capture = captureVideo.captureStream || captureVideo.mozCaptureStream;
+    if (!capture) {
+      throw new Error('This browser cannot crop video while keeping its audio. Your original video has not changed.');
+    }
+    sourceStream = capture.call(video);
+    const audioTracks = sourceStream.getAudioTracks();
+    if (captureVideo.audioTracks?.length && audioTracks.length === 0) {
+      throw new Error('The video audio could not be carried into the cropped file. Your original video has not changed.');
+    }
+    audioTracks.forEach(track => outputStream!.addTrack(track));
+    const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
+    const recorder = activeRecorder = new MediaRecorder(outputStream, mimeType ? { mimeType } : undefined);
+    const chunks: Blob[] = [];
+    const finished = new Promise<Blob>((resolve, reject) => {
+      recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+      recorder.onerror = () => reject(new Error('The cropped video could not be encoded.'));
+      recorder.onstop = () => chunks.length ? resolve(new Blob(chunks, { type: recorder.mimeType || 'video/webm' })) : reject(new Error('The cropped video was empty.'));
+    });
+    const drawFrame = () => {
+      if (video.readyState >= 2) context.drawImage(video, sx, sy, sw, sh, 0, 0, outputWidth, outputHeight);
+      if (!video.ended && !video.paused) frameRequest = requestAnimationFrame(drawFrame);
+    };
+    context.fillStyle = '#000';
+    context.fillRect(0, 0, outputWidth, outputHeight);
+    recorder.start(250);
+    await video.play();
+    drawFrame();
+    await new Promise<void>((resolve, reject) => {
+      const timeout = window.setTimeout(() => { video.pause(); reject(new Error('Video cropping took too long. Please try again.')); }, Math.max(30000, (video.duration + 10) * 1000));
+      video.onended = () => { clearTimeout(timeout); resolve(); };
+      video.onerror = () => { clearTimeout(timeout); reject(new Error('Video playback stopped while cropping.')); };
+    });
+    if (recorder.state !== 'inactive') recorder.stop();
+    return await finished;
+  } finally {
+    cancelAnimationFrame(frameRequest);
+    if (activeRecorder && activeRecorder.state !== 'inactive') activeRecorder.stop();
+    sourceStream?.getTracks().forEach(track => track.stop());
+    outputStream?.getTracks().forEach(track => track.stop());
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    URL.revokeObjectURL(sourceUrl);
   }
 }
 
@@ -223,13 +326,14 @@ interface SelectedImage {
   cropOffset: { x: number; y: number };
   filterName?: string;
   filterStyle?: string;
+  cropRatio?: 'original' | '1:1' | '4:5' | '9:16';
 }
 
 interface DraftItem {
   id: string;
   caption: string;
   images: string[];
-  imageEdits?: Pick<SelectedImage, 'rotation' | 'zoom' | 'cropOffset' | 'filterName' | 'filterStyle'>[];
+  imageEdits?: Pick<SelectedImage, 'rotation' | 'zoom' | 'cropOffset' | 'filterName' | 'filterStyle' | 'cropRatio'>[];
   videoUrl?: string;
   voiceUrl?: string;
   transcript?: string;
@@ -367,6 +471,7 @@ export default function MediaCreationEngine({
         rotation: initialAutosave.imageEdits?.[index]?.rotation ?? 0,
         zoom: initialAutosave.imageEdits?.[index]?.zoom ?? 1,
         cropOffset: initialAutosave.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+        cropRatio: initialAutosave.imageEdits?.[index]?.cropRatio || 'original',
         filterName: initialAutosave.imageEdits?.[index]?.filterName,
         filterStyle: initialAutosave.imageEdits?.[index]?.filterStyle,
       }));
@@ -383,6 +488,8 @@ export default function MediaCreationEngine({
   const [videoCoverBlob, setVideoCoverBlob] = useState<Blob | null>(null);
   const [videoCoverTime, setVideoCoverTime] = useState(0);
   const [isTrimmingVideo, setIsTrimmingVideo] = useState(false);
+  const [videoCropRatio, setVideoCropRatio] = useState<'original' | '1:1' | '4:5' | '9:16'>('original');
+  const [isCroppingVideo, setIsCroppingVideo] = useState(false);
   const trimVideoRef = useRef<HTMLVideoElement>(null);
   const [mentionSuggestions, setMentionSuggestions] = useState<Array<{ username: string; name: string; avatar: string }>>([]);
   const [mentionValidation, setMentionValidation] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
@@ -422,6 +529,11 @@ export default function MediaCreationEngine({
   const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
   const pendingPermissionActionRef = useRef<(() => void) | null>(null);
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
+  const [isCaptureMenuOpen, setIsCaptureMenuOpen] = useState(false);
+  const [cameraZoom, setCameraZoom] = useState(1);
+  const cameraZoomRef = useRef(1);
+  const pinchStartRef = useRef<{ distance: number; zoom: number } | null>(null);
+  const [activePhotoTool, setActivePhotoTool] = useState<'filters' | 'adjust' | 'text' | 'crop'>('filters');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [draftsList, setDraftsList] = useState<DraftItem[]>(() => readLocalDrafts(draftsKey));
   const [composerStateOwnerId, setComposerStateOwnerId] = useState(currentUser.id);
@@ -510,6 +622,7 @@ export default function MediaCreationEngine({
           rotation: nextAutosave?.imageEdits?.[index]?.rotation ?? 0,
           zoom: nextAutosave?.imageEdits?.[index]?.zoom ?? 1,
           cropOffset: nextAutosave?.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+          cropRatio: nextAutosave?.imageEdits?.[index]?.cropRatio || 'original',
           filterName: nextAutosave?.imageEdits?.[index]?.filterName,
           filterStyle: nextAutosave?.imageEdits?.[index]?.filterStyle,
         }))
@@ -538,7 +651,7 @@ export default function MediaCreationEngine({
           activeMode,
           currentStep,
           images: selectedImages.map(img => img.url),
-          imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, filterName, filterStyle })),
+          imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle, cropRatio }) => ({ rotation, zoom, cropOffset, filterName, filterStyle, cropRatio })),
           videoUrl: videoFileUrl,
           recordedVideoUrl,
           voiceUrl: voiceFileUrl,
@@ -864,14 +977,59 @@ export default function MediaCreationEngine({
           if (ev.target?.result) {
             setSelectedImages(prev => [
               ...prev,
-              { url: ev.target!.result as string, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }
+              { url: ev.target!.result as string, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 }, cropRatio: 'original' }
             ]);
+            setCurrentStep(3);
           }
         };
         reader.readAsDataURL(file);
       }));
     });
     e.target.value = '';
+  };
+
+  const handleCameraZoomChange = (value: number) => {
+    const nextZoom = Math.max(1, Math.min(3, value));
+    cameraZoomRef.current = nextZoom;
+    setCameraZoom(nextZoom);
+  };
+
+  const handleCameraPinchStart = (event: React.TouchEvent<HTMLVideoElement>) => {
+    if (event.touches.length !== 2) return;
+    const dx = event.touches[0].clientX - event.touches[1].clientX;
+    const dy = event.touches[0].clientY - event.touches[1].clientY;
+    pinchStartRef.current = { distance: Math.hypot(dx, dy), zoom: cameraZoom };
+  };
+
+  const handleCameraPinchMove = (event: React.TouchEvent<HTMLVideoElement>) => {
+    if (event.touches.length !== 2 || !pinchStartRef.current) return;
+    event.preventDefault();
+    const dx = event.touches[0].clientX - event.touches[1].clientX;
+    const dy = event.touches[0].clientY - event.touches[1].clientY;
+    const distance = Math.hypot(dx, dy);
+    if (pinchStartRef.current.distance > 0) {
+      handleCameraZoomChange(pinchStartRef.current.zoom * distance / pinchStartRef.current.distance);
+    }
+  };
+
+  const handleCameraPinchEnd = (event: React.TouchEvent<HTMLVideoElement>) => {
+    if (event.touches.length < 2) pinchStartRef.current = null;
+  };
+
+  const openSelectedImagesInStudio = async () => {
+    if (!onOpenStudio) return;
+    if (selectedImages.length === 0) { onOpenStudio([]); return; }
+    try {
+      const files = await Promise.all(selectedImages.map(async (image, index) => {
+        const response = await fetch(image.url);
+        if (!response.ok) throw new Error('A selected photo could not be opened.');
+        const blob = await response.blob();
+        return new File([blob], `nexora-photo-${index + 1}.jpg`, { type: blob.type || 'image/jpeg' });
+      }));
+      onOpenStudio(files);
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Could not open these photos in NEXORA Studio.' }));
+    }
   };
 
   const openVideoInStudio = () => {
@@ -896,9 +1054,14 @@ export default function MediaCreationEngine({
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not capture the frame. Please try again.' }));
         return;
       }
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      context.save();
+      context.translate(canvas.width / 2, canvas.height / 2);
+      context.scale(cameraZoom, cameraZoom);
+      context.drawImage(video, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+      context.restore();
       const snapUrl = canvas.toDataURL('image/jpeg', 0.92);
       setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+      setCurrentStep(3);
       window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Photo captured.' }));
     });
   };
@@ -921,6 +1084,7 @@ export default function MediaCreationEngine({
           setVideoTrimStart(0);
           setVideoTrimEnd(Math.min(15, Math.max(1, Math.round(metadata.duration || 15))));
           setVideoDuration(metadata.duration || 15);
+          setCurrentStep(3);
         } catch (error) {
           window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
         }
@@ -974,6 +1138,28 @@ export default function MediaCreationEngine({
     finally { stream?.getTracks().forEach(track => track.stop()); setIsTrimmingVideo(false); }
   };
 
+  const applyVideoCrop = async () => {
+    if (!videoRawBlob || videoCropRatio === 'original') return;
+    const ratio = videoCropRatio === '1:1' ? 1 : videoCropRatio === '4:5' ? 4 / 5 : 9 / 16;
+    setIsCroppingVideo(true);
+    setErrorMessage('');
+    try {
+      const cropped = await renderCroppedVideoBlob(videoRawBlob, ratio);
+      const nextUrl = trackObjectUrl(URL.createObjectURL(cropped));
+      revokeTrackedObjectUrl(videoFileUrl);
+      revokeTrackedObjectUrl(recordedVideoUrl);
+      setVideoFileUrl(nextUrl);
+      setRecordedVideoUrl(null);
+      setVideoRawBlob(cropped);
+      setVideoCropRatio('original');
+      setVideoCoverBlob(null);
+      setVideoCoverTime(0);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Video crop applied. The exported video now uses this frame.' }));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Video cropping failed. Your original video is unchanged.');
+    } finally { setIsCroppingVideo(false); }
+  };
+
   const captureVideoCover = async () => {
     const video = trimVideoRef.current; if (!video) return;
     try {
@@ -1004,25 +1190,61 @@ export default function MediaCreationEngine({
         setCountdownTimer(prev => {
           if (prev !== null && prev <= 1) {
             window.clearInterval(counter);
+            let cleanupZoomRecording = () => {};
             try {
               const stream = videoStreamRef.current;
               if (!stream || !stream.getVideoTracks().some(track => track.readyState === 'live')) {
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera disconnected before recording started. Please retry.' }));
                 return null;
               }
+              let recordingStream = stream;
+              const previewVideo = videoPreviewRef.current;
+              if (previewVideo && previewVideo.videoWidth > 0 && typeof HTMLCanvasElement.prototype.captureStream === 'function') {
+                // Always record through a canvas so pinch changes made while recording
+                // are reflected in the saved video, not only in the live preview.
+                const canvas = document.createElement('canvas');
+                canvas.width = previewVideo.videoWidth;
+                canvas.height = previewVideo.videoHeight;
+                const context = canvas.getContext('2d');
+                if (context) {
+                  const zoomStream = canvas.captureStream(30);
+                  recordingStream = new MediaStream([...zoomStream.getVideoTracks(), ...stream.getAudioTracks()]);
+                  let frameId = 0;
+                  const drawZoomedFrame = () => {
+                    const currentZoom = cameraZoomRef.current;
+                    const cropWidth = previewVideo.videoWidth / currentZoom;
+                    const cropHeight = previewVideo.videoHeight / currentZoom;
+                    const sourceX = (previewVideo.videoWidth - cropWidth) / 2;
+                    const sourceY = (previewVideo.videoHeight - cropHeight) / 2;
+                    if (previewVideo.readyState >= 2) {
+                      context.drawImage(previewVideo, sourceX, sourceY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+                    }
+                    frameId = requestAnimationFrame(drawZoomedFrame);
+                  };
+                  drawZoomedFrame();
+                  cleanupZoomRecording = () => {
+                    cancelAnimationFrame(frameId);
+                    zoomStream.getTracks().forEach(track => track.stop());
+                  };
+                }
+              } else if (cameraZoomRef.current > 1) {
+                window.dispatchEvent(new CustomEvent('toast', { detail: 'This device can zoom the preview, but cannot include pinch zoom in the recording.' }));
+              }
               const mimeType = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
-              const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+              const recorder = new MediaRecorder(recordingStream, mimeType ? { mimeType } : undefined);
               videoChunksRef.current = [];
               mediaRecorderVideoRef.current = recorder;
               recorder.ondataavailable = event => {
                 if (event.data.size > 0) videoChunksRef.current.push(event.data);
               };
               recorder.onerror = () => {
+                cleanupZoomRecording();
                 setIsRecording(false);
                 setIsSavingRecordedVideo(false);
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Video recording failed. Check available storage and camera permissions, then retry.' }));
               };
               recorder.onstop = () => {
+                cleanupZoomRecording();
                 const chunks = videoChunksRef.current;
                 const blob = new Blob(chunks, { type: recorder.mimeType || chunks[0]?.type || 'video/webm' });
                 if (!blob.size) {
@@ -1050,6 +1272,7 @@ export default function MediaCreationEngine({
               });
               setVideoRawBlob(null);
             } catch (error) {
+              cleanupZoomRecording();
               setIsRecording(false);
               window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Could not start video recording. Please retry.' }));
             }
@@ -1199,7 +1422,7 @@ export default function MediaCreationEngine({
       id: `draft-${Date.now()}`,
       caption,
       images: selectedImages.map(img => img.url),
-      imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, filterName, filterStyle })),
+      imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle, cropRatio }) => ({ rotation, zoom, cropOffset, filterName, filterStyle, cropRatio })),
       videoUrl: videoFileUrl || recordedVideoUrl || undefined,
       voiceUrl: voiceFileUrl || undefined,
       transcript: voiceTranscript || undefined,
@@ -1261,6 +1484,7 @@ export default function MediaCreationEngine({
         rotation: draft.imageEdits?.[index]?.rotation ?? 0,
         zoom: draft.imageEdits?.[index]?.zoom ?? 1,
         cropOffset: draft.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+        cropRatio: draft.imageEdits?.[index]?.cropRatio || 'original',
         filterName: draft.imageEdits?.[index]?.filterName,
         filterStyle: draft.imageEdits?.[index]?.filterStyle,
       })));
@@ -1374,6 +1598,7 @@ export default function MediaCreationEngine({
             sticker: stickerOverlay,
             text: textOverlay,
             textColor: textOverlayColor,
+            cropRatio: selectedImage.cropRatio,
           }) : sourceBlob;
           storyFile = new File([finalBlob], `nexora-story-photo-${Date.now()}.jpg`, {
             type: finalBlob.type || 'image/jpeg',
@@ -1417,6 +1642,7 @@ export default function MediaCreationEngine({
         const imageUrl = selectedImage.url;
         const hasEdits = selectedImage.rotation !== 0
           || selectedImage.zoom !== 1
+          || Boolean(selectedImage.cropRatio && selectedImage.cropRatio !== 'original')
           || Boolean(selectedImage.filterStyle && selectedImage.filterStyle !== 'none')
           || brightness !== 100
           || contrast !== 100
@@ -1596,6 +1822,9 @@ export default function MediaCreationEngine({
     }
   };
 
+  // Camera-first Create uses the full viewport; the familiar composer chrome returns for editing and publishing.
+  const immersiveCameraMode = activeTab !== 'drafts' && currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel') && !isLensStudioOpen;
+
   // Dynamic Styles
   const getModalBg = () => 'bg-[#090714]/98 border-[#44376F]/70 text-white';
 
@@ -1698,8 +1927,8 @@ export default function MediaCreationEngine({
                 <Camera className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Allow {permissionTarget === 'mic' ? 'microphone' : 'camera'} access</h3>
-                <p className="text-xs text-[#A39BBF] leading-relaxed mt-1">Your browser or device will ask for permission. NEXORA only uses {permissionTarget === 'mic' ? 'the microphone' : 'the camera'} when you choose to record or capture media.</p>
+                <h3 className="text-sm font-bold text-white">Allow {permissionTarget === 'mic' ? 'microphone' : activeMode === 'reel' ? 'camera and microphone' : 'camera'} access</h3>
+                <p className="text-xs text-[#A39BBF] leading-relaxed mt-1">Your browser or device will ask for permission. NEXORA only uses {permissionTarget === 'mic' ? 'the microphone when you record a voice note' : activeMode === 'reel' ? 'your camera and microphone when you record a video' : 'the camera when you take a photo'}.</p>
               </div>
               <div className="flex gap-2">
                 <button 
@@ -1710,7 +1939,7 @@ export default function MediaCreationEngine({
                 </button>
                 <button 
                   onClick={() => { void handlePermissionContinue(); }}
-                  className="flex-1 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-bold cursor-pointer transition-all"
+                  className="flex-1 py-2 rounded-xl border border-[#554778] bg-[#211A38] hover:bg-[#2A2145] text-[#E6DDFB] text-xs font-sans font-semibold cursor-pointer transition-colors"
                 >
                   Continue
                 </button>
@@ -1753,11 +1982,11 @@ export default function MediaCreationEngine({
         initial={{ scale: 0.98, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.98, opacity: 0, y: 10 }}
-        className={`relative h-[100dvh] w-full max-w-none rounded-none p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] border-0 shadow-none flex flex-col min-h-0 overflow-hidden ${getModalBg()}`}
+        className={`relative h-[100dvh] w-full max-w-none rounded-none ${immersiveCameraMode ? 'p-0' : 'p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]'} border-0 shadow-none flex flex-col min-h-0 overflow-hidden ${getModalBg()}`}
         id="creation-studio-frame"
       >
         {/* Header toolbar */}
-        <div className="flex justify-between items-start border-b border-white/10 pb-3 mb-4 shrink-0">
+        <div className={`${immersiveCameraMode ? 'hidden' : 'flex'} justify-between items-start border-b border-white/10 pb-3 mb-4 shrink-0`}>
           <div>
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-violet-600/10 border border-white/10 rounded-lg text-violet-400">
@@ -1783,7 +2012,7 @@ export default function MediaCreationEngine({
         </div>
 
         {/* Global Tab Navigation */}
-        <div className="flex gap-1.5 p-1 bg-[#070511]/80 border border-[#292244] rounded-xl mb-4 shrink-0">
+        <div className={`${immersiveCameraMode ? 'hidden' : 'flex'} gap-1.5 p-1 bg-[#070511]/80 border border-[#292244] rounded-xl mb-4 shrink-0`}>
           <button 
             onClick={() => { setActiveTab('feed'); setCurrentStep(1); }}
             className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'feed' ? 'bg-[#19143A] text-white' : 'text-[#8E88A7] hover:text-[#D1CBE3]'}`}
@@ -1805,7 +2034,7 @@ export default function MediaCreationEngine({
         </div>
 
         {/* A quiet progress line keeps the focus on creating, not on navigating a dashboard. */}
-        {activeTab !== 'drafts' && (
+        {activeTab !== 'drafts' && !immersiveCameraMode && (
           <div className="mb-4 shrink-0 px-1" aria-label={`Creation step ${currentStep} of 6`}>
             <div className="h-1 overflow-hidden rounded-full bg-[#292244]">
               <div className="h-full rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] transition-all duration-300" style={{ width: `${(currentStep / 6) * 100}%` }} />
@@ -1814,7 +2043,7 @@ export default function MediaCreationEngine({
         )}
 
         {/* Dynamic Core Body */}
-        <div className={`flex-1 min-h-0 pr-1 space-y-4 text-left font-sans ${currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel') ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
+        <div className={`${immersiveCameraMode ? 'absolute inset-0 z-10' : 'flex-1 min-h-0 pr-1 space-y-4'} text-left font-sans ${currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel') ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
           
           {activeTab === 'drafts' ? (
             /* Draft Organizer Screen */
@@ -1854,7 +2083,7 @@ export default function MediaCreationEngine({
             </div>
           ) : (
             /* WIZARD SCREENS */
-            <div className="space-y-4">
+            <div className={immersiveCameraMode ? 'h-full w-full' : 'space-y-4'}>
               
               {currentStep === 1 && (
                 /* STEP 1: CHOOSE CONTENT TYPE */
@@ -1893,8 +2122,8 @@ export default function MediaCreationEngine({
 
               {currentStep === 2 && (
                 /* STEP 2: MEDIA IMPORT & RECORDING */
-                <div className="flex h-full min-h-0 flex-col space-y-4 animate-fadeIn">
-                  <div className="flex justify-between items-center">
+                <div className={`flex h-full min-h-0 flex-col ${immersiveCameraMode ? 'space-y-0' : 'space-y-4'} animate-fadeIn`}>
+                  <div className={`${immersiveCameraMode ? 'hidden' : 'flex'} justify-between items-center`}>
                     <span className="text-xs font-semibold text-[#B69BFF]">{activeMode === 'photo' ? 'Choose a photo or take one' : activeMode === 'reel' ? 'Record a video or choose one' : activeMode === 'video' ? 'Choose a video' : 'Add your content'}</span>
                     <button 
                       onClick={() => setCurrentStep(1)} 
@@ -1905,7 +2134,7 @@ export default function MediaCreationEngine({
                   </div>
 
                   {activeMode === 'photo' && (
-                    <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-3xl bg-[#050914]">
+                    <div className={`relative flex-1 min-h-0 w-full overflow-hidden ${immersiveCameraMode ? 'fixed inset-0 z-20 h-[100dvh] w-full rounded-none bg-[#050914]' : 'rounded-3xl bg-[#050914]'}`}>
                       {/* Drag upload zone */}
                       <div className="hidden">
                         <FileImage className="w-8 h-8 text-[#8E88A7] animate-bounce" />
@@ -1920,22 +2149,48 @@ export default function MediaCreationEngine({
                       </div>
 
                       {/* Snap device simulation */}
-                      <div className="absolute inset-0 flex flex-col justify-between p-4 text-center">
-                        <div className="relative z-10 self-start rounded-2xl border border-white/15 bg-black/45 px-4 py-2 text-left backdrop-blur-xl">
-                          <span className="text-sm font-semibold text-white block">NEXORA Camera</span>
-                          <p className="text-[10px] text-white/70">Your moment, your space.</p>
-                        </div>
-                        <video ref={photoPreviewRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full rounded-3xl object-cover bg-[#050914]" aria-label="Live camera preview" />
-                        {permissionState !== 'granted' && (
-                          <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
-                        )}
-                        <div className="relative z-10 flex items-center justify-center gap-3 rounded-3xl border border-white/15 bg-black/45 p-3 backdrop-blur-xl">
-                          <label className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white">Gallery<input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /></label>
-                          <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Flip</button>
-                          <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="rounded-full bg-gradient-to-br from-[#A855F7] to-[#4B10F2] px-7 py-4 text-sm font-black text-white shadow-[0_0_35px_rgba(113,56,255,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">Capture</button>
-                        </div>
-                        <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="relative z-10 self-center rounded-full border border-violet-300/40 bg-violet-600/80 px-5 py-2.5 text-xs font-bold text-white shadow-lg backdrop-blur-xl transition-all hover:brightness-110"><Sparkles className="mr-1 inline h-3.5 w-3.5" /> Open Filters & Lenses</button>
-                        <div className="flex flex-wrap gap-1.5 justify-center mt-2">
+                      <div className="absolute inset-0 flex flex-col justify-between px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] text-center">
+                         <div className="relative z-10 flex items-start justify-between gap-3 text-left">
+                           <div className="rounded-2xl border border-white/10 bg-[#050914]/55 px-3 py-2 backdrop-blur-xl">
+                             <span className="block text-sm font-semibold tracking-tight text-white">NEXORA</span>
+                             <p className="text-[10px] text-white/65">Create</p>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <button type="button" onClick={() => setIsCaptureMenuOpen(value => !value)} aria-expanded={isCaptureMenuOpen} className="rounded-full border border-white/15 bg-[#050914]/60 px-3 py-2 text-xs font-semibold text-white backdrop-blur-xl">More</button>
+                             <button type="button" onClick={handleExitClick} aria-label="Close camera" className="grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-[#050914]/60 text-white backdrop-blur-xl"><X className="h-4 w-4" /></button>
+                           </div>
+                         </div>
+                         {isCaptureMenuOpen && (
+                           <div className="absolute right-4 top-[max(4.75rem,calc(env(safe-area-inset-top)+3.5rem))] z-30 max-h-[min(72dvh,540px)] w-60 overflow-y-auto rounded-2xl border border-[#44376F]/80 bg-[#090714]/95 p-1.5 text-left shadow-xl backdrop-blur-xl">
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveTab('feed'); setCameraZoom(1); setActiveMode('reel'); setCurrentStep(2); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Record a video</button>
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveTab('feed'); setCameraZoom(1); setActiveMode('video'); setCurrentStep(2); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Choose a video</button>
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setCurrentStep(3); }} disabled={selectedImages.length === 0} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15 disabled:opacity-40">Edit photo</button>
+                             {onOpenStudio && <button type="button" onClick={() => { setIsCaptureMenuOpen(false); void openSelectedImagesInStudio(); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Open NEXORA Studio</button>}
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Filters & lenses</button>
+                             <div className="my-1 border-t border-white/10" />
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveTab('feed'); setActiveMode('text'); setCurrentStep(4); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Write a post</button>
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveTab('story'); setActiveMode('photo'); setCurrentStep(2); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Create a story</button>
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveTab('feed'); setActiveMode('voice'); setCurrentStep(2); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Record a voice note</button>
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveTab('feed'); setActiveMode('poll'); setCurrentStep(2); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Create a poll</button>
+                             <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveTab('drafts'); setCurrentStep(1); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Open drafts</button>
+                           </div>
+                         )}
+                         <video ref={photoPreviewRef} autoPlay muted playsInline onTouchStart={handleCameraPinchStart} onTouchMove={handleCameraPinchMove} onTouchEnd={handleCameraPinchEnd} onTouchCancel={handleCameraPinchEnd} style={{ transform: `scale(${cameraZoom})`, touchAction: "none" }} className="absolute inset-0 h-full w-full object-cover bg-[#050914]" aria-label="Live camera preview. Pinch with two fingers to zoom" />
+                         {permissionState !== 'granted' && (
+                           <button type="button" onClick={() => setPermissionTarget('camera')} className="relative z-10 mx-auto rounded-xl border border-[#44376F] bg-[#120E2B] px-5 py-3 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
+                         )}
+                         <div className="relative z-10 w-full space-y-3">
+                           <div className="flex justify-center gap-5 text-xs font-semibold text-white/70"><button type="button" aria-pressed="true" className="border-b-2 border-[#A99AE8] px-3 py-2 text-white">Photo</button><button type="button" onClick={() => { setCameraZoom(1); setActiveMode("reel"); }} className="px-3 py-2 hover:text-white">Video</button></div>
+                           <p className="text-center text-[10px] font-medium text-white/65">Pinch with two fingers to zoom</p>
+                           <div className="flex items-center justify-between gap-3">
+                             <label className="grid h-12 min-w-12 place-items-center rounded-full border border-white/15 bg-[#050914]/60 px-4 text-xs font-semibold text-white backdrop-blur-xl">Gallery<input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /></label>
+                             <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="grid h-[76px] w-[76px] shrink-0 place-items-center rounded-full border-[5px] border-white/90 bg-[#8B79D4] text-xs font-bold text-white shadow-[0_0_0_5px_rgba(5,9,20,.45)] transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">Capture</button>
+                             <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} aria-label="Flip camera" className="grid h-12 min-w-12 place-items-center rounded-full border border-white/15 bg-[#050914]/60 px-4 text-xs font-semibold text-white backdrop-blur-xl disabled:opacity-40"><RefreshCw className="h-4 w-4" /></button>
+                           </div>
+                           <div className="flex items-center justify-center gap-2 text-[10px] text-white/60"><Sparkles className="h-3 w-3" /> NEXORA camera</div>
+                         </div>
+                       </div>
+                       <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                           {selectedImages.map((img, i) => (
                             <div key={i} className="relative w-12 h-12 rounded-lg border border-[#44376F] overflow-hidden shrink-0">
                               <img src={img.url} className="w-full h-full object-cover" />
@@ -1948,7 +2203,6 @@ export default function MediaCreationEngine({
                             </div>
                           ))}
                         </div>
-                      </div>
                       {isLensStudioOpen && (
                         <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3 sm:col-span-2">
                           <div className="flex items-center justify-between">
@@ -2029,6 +2283,16 @@ export default function MediaCreationEngine({
                           <p className="text-[10px] text-emerald-300 font-semibold">✓ Video ready · {Math.round(videoDuration)} seconds</p>
                           <video ref={trimVideoRef} src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" onLoadedMetadata={event => { const duration = Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : videoDuration; setVideoDuration(duration); setVideoTrimEnd(previous => Math.min(previous, duration)); }} className="w-full rounded-lg bg-black" />
                            {videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-lg border border-violet-400/40 bg-violet-500/10 px-3 py-2.5 text-xs font-semibold text-violet-100 hover:bg-violet-500/20">Edit video</button>}
+                          <div className="space-y-2 rounded-xl border border-[#292244] bg-[#0B0918] p-3">
+                            <div className="flex items-center justify-between"><p className="text-xs font-semibold text-white">Crop video</p><span className="text-[10px] text-[#8E88A7]">Centre frame</span></div>
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {([{ label: 'Original', value: 'original' }, { label: 'Square', value: '1:1' }, { label: 'Portrait', value: '4:5' }, { label: 'Full screen', value: '9:16' }] as const).map(option => (
+                                <button key={option.value} type="button" onClick={() => setVideoCropRatio(option.value)} className={`rounded-lg border px-2 py-2 text-[10px] font-semibold ${videoCropRatio === option.value ? 'border-[#8170B7] bg-[#211A38] text-white' : 'border-[#292244] bg-[#120E2B] text-[#A39BBF]'}`}>{option.label}</button>
+                              ))}
+                            </div>
+                            <p className="text-[10px] leading-relaxed text-[#8E88A7]">This crops the actual video file, not just its preview. The original is kept if your browser cannot export the crop.</p>
+                            <button type="button" onClick={applyVideoCrop} disabled={isCroppingVideo || videoCropRatio === 'original' || !videoRawBlob} className="w-full rounded-lg border border-violet-500/30 bg-violet-600/20 px-3 py-2 text-xs font-bold text-violet-200 disabled:opacity-40">{isCroppingVideo ? 'Cropping video…' : 'Apply video crop'}</button>
+                          </div>
                           <div className="space-y-2">
                             <div className="flex justify-between text-[10px] text-[#A39BBF]"><label htmlFor="video-trim-start">Start · {videoTrimStart.toFixed(1)}s</label><span>End · {videoTrimEnd.toFixed(1)}s</span></div>
                             <input id="video-trim-start" aria-label="Video trim start" type="range" min="0" max={Math.max(0, videoDuration - 1)} step="0.1" value={Math.min(videoTrimStart, Math.max(0, videoDuration - 1))} onChange={event => { const value = Number(event.target.value); setVideoTrimStart(value); if (value >= videoTrimEnd) setVideoTrimEnd(Math.min(videoDuration, value + 1)); }} className="w-full accent-violet-500" />
@@ -2036,7 +2300,7 @@ export default function MediaCreationEngine({
                             <p className="text-[10px] text-[#8E88A7]">The selected section is re-encoded in your browser. Audio is retained when media capture is supported.</p>
                             <button type="button" onClick={applyVideoTrim} disabled={isTrimmingVideo || videoTrimEnd <= videoTrimStart} className="w-full rounded-lg bg-violet-600/20 border border-violet-500/30 px-3 py-2 text-xs font-bold text-violet-200 disabled:opacity-50">{isTrimmingVideo ? 'Trimming video…' : 'Apply trim'}</button>
                           </div>
-                          <div className="space-y-2 border-t border-[#292244] pt-3">
+                          <div className={`${activePhotoTool === 'adjust' ? 'space-y-2' : 'hidden'} border-t border-[#292244] pt-3`}>
                             <p className="text-[10px] font-semibold text-white">Choose your cover</p>
                             <input aria-label="Cover frame time" type="range" min="0" max={Math.max(0, videoDuration - 0.1)} step="0.1" value={Math.min(videoCoverTime, Math.max(0, videoDuration - 0.1))} onChange={event => { const value = Number(event.target.value); setVideoCoverTime(value); if (trimVideoRef.current) trimVideoRef.current.currentTime = value; }} className="w-full accent-violet-500" />
                             <button type="button" onClick={captureVideoCover} className="w-full rounded-lg border border-[#44376F] px-3 py-2 text-xs font-semibold text-[#D1CBE3]">Use this frame as cover</button>
@@ -2080,19 +2344,32 @@ export default function MediaCreationEngine({
                           </div>
                         </div>
                       ) : (
-                        <div className="relative mx-auto flex aspect-[4/5] w-full max-w-[320px] flex-col justify-between overflow-hidden rounded-2xl border border-[#44376F] bg-black p-3.5 shadow-md">
-                          <div className="z-10 flex items-center justify-between text-[8px] font-mono text-[#A39BBF]">
-                            <span className="rounded border border-white/5 bg-black/70 px-2 py-0.5">Camera</span>
+                        <div className={`relative mx-auto flex w-full flex-col justify-between overflow-hidden bg-black ${immersiveCameraMode ? "fixed inset-0 z-20 h-[100dvh] rounded-none border-0 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]" : "aspect-[4/5] max-w-[320px] rounded-2xl border border-[#44376F] p-3.5 shadow-md"}`}>
+                          <div className="z-10 flex items-center justify-between gap-2 text-[10px] text-[#D8D1EA]">
+                            <span className="rounded-full border border-white/10 bg-[#050914]/65 px-3 py-1.5 font-semibold">NEXORA camera</span>
                             <button type="button" onClick={() => { setActiveMode('video'); setIsLensStudioOpen(false); }} className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[9px] font-semibold text-white">Choose from gallery</button>
                             <div className="flex items-center gap-2">
-                              <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="rounded-full border border-[#A78BFA]/40 bg-[#7138FF]/25 px-3 py-1.5 text-[9px] font-bold text-white"><Sparkles className="mr-1 inline h-3 w-3" /> Filters & Lenses</button>
-                              <button disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button>
+                              <button type="button" onClick={() => setIsCaptureMenuOpen(value => !value)} aria-expanded={isCaptureMenuOpen} className="rounded-full border border-white/15 bg-[#050914]/70 px-3 py-1.5 text-[9px] font-semibold text-white">More</button>
+                              <button disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button><button type="button" onClick={handleExitClick} aria-label="Close camera" className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-[#050914]/65 text-white"><X className="h-4 w-4" /></button>
                             </div>
                           </div>
+                          {isCaptureMenuOpen && (
+                            <div className="absolute right-4 top-14 z-30 max-h-[min(65dvh,480px)] w-56 overflow-y-auto rounded-2xl border border-[#44376F]/80 bg-[#090714]/95 p-1.5 text-left shadow-xl backdrop-blur-xl">
+                              <button type="button" onClick={() => { setIsCaptureMenuOpen(false); if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">NEXORA lenses</button>
+                              <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveMode('photo'); setCameraZoom(1); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Take a photo</button>
+                              <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveMode('video'); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Choose a video</button>
+                              <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveTab('feed'); setActiveMode('text'); setCurrentStep(4); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Write a post</button>
+                              <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveTab('story'); setActiveMode('photo'); setCurrentStep(2); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Create a story</button>
+                              <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveMode('poll'); setCurrentStep(2); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Create a poll</button>
+                              <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveTab('drafts'); setCurrentStep(1); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Open drafts</button>
+                            </div>
+                          )}
                           <div className="absolute inset-0 z-0 flex items-center justify-center">
-                            {countdownTimer !== null ? <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span> : recordedVideoUrl ? <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" /> : <video ref={videoPreviewRef} autoPlay muted playsInline className="h-full w-full bg-[#120E2B] object-cover" />}
+                            {countdownTimer !== null ? <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span> : recordedVideoUrl ? <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" /> : <video ref={videoPreviewRef} autoPlay muted playsInline onTouchStart={handleCameraPinchStart} onTouchMove={handleCameraPinchMove} onTouchEnd={handleCameraPinchEnd} onTouchCancel={handleCameraPinchEnd} style={{ transform: `scale(${cameraZoom})`, touchAction: "none" }} className="h-full w-full bg-[#120E2B] object-cover" aria-label="Live video preview. Pinch with two fingers to zoom" />}
                           </div>
                           <div className="z-10 flex flex-col items-center gap-2">
+                             <p className="text-center text-[10px] font-medium text-white/65">Pinch with two fingers to zoom</p>
+                             
                             <label className="flex items-center gap-2 rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[10px] font-semibold text-white">
                               Video length
                               <select aria-label="Video recording length" value={recordingLimitSecs} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onChange={event => setRecordingLimitSecs(Number(event.target.value))} className="bg-transparent text-white outline-none">
@@ -2101,7 +2378,9 @@ export default function MediaCreationEngine({
                             </label>
                             {isRecording ? <button onClick={handleStopReelRecord} className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-rose-600 text-[10px] font-bold text-white">Stop</button> : <button onClick={startReelRecording} className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-black bg-gradient-to-tr from-[#8A3FFC] to-[#1600A3] text-[10px] font-black text-white shadow-md">{recordedVideoUrl ? 'Again' : 'Record'}</button>}
                             {isRecording && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-mono text-white">Recording: {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')} / {Math.floor(recordingLimitSecs / 60)}:{String(recordingLimitSecs % 60).padStart(2, '0')}</span>}
+                            {!isRecording && <div className="flex justify-center gap-5 text-xs font-semibold text-white/70"><button type="button" onClick={() => { setCameraZoom(1); setActiveMode("photo"); }} className="px-3 py-2 hover:text-white">Photo</button><button type="button" aria-pressed="true" className="border-b-2 border-[#A99AE8] px-3 py-2 text-white">Video</button></div>}
                             {!isRecording && recordedVideoUrl && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] text-white">Video ready</span>}
+                             {!isRecording && recordedVideoUrl && <button type="button" onClick={() => setCurrentStep(3)} className="rounded-full border border-[#554778] bg-[#211A38] px-4 py-2 text-[10px] font-semibold text-[#E6DDFB]">Use video</button>}
                              {!isRecording && videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="rounded-full border border-violet-300/40 bg-violet-500/15 px-4 py-2 text-[10px] font-semibold text-violet-100">Edit in NEXORA Studio</button>}
                           </div>
                         </div>
@@ -2198,9 +2477,12 @@ export default function MediaCreationEngine({
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Media render wrapper */}
-                    <div className="aspect-square rounded-2xl border border-[#292244] bg-black flex items-center justify-center relative overflow-hidden">
+                    <div className="aspect-[4/5] rounded-2xl border border-[#292244] bg-black flex items-center justify-center relative overflow-hidden">
                       {selectedImages.length > 0 ? (
                         <div className="relative w-full h-full">
+                          <div className="absolute right-2 top-2 z-20 flex flex-col gap-1.5">
+                            {([{ id: "filters", label: "Filters", icon: Sparkles }, { id: "adjust", label: "Adjust", icon: SlidersHorizontal }, { id: "text", label: "Text", icon: FileText }, { id: "crop", label: "Crop", icon: Crop }] as const).map((tool, index) => <motion.button key={tool.id} type="button" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.18, delay: index * 0.06 }} onClick={() => setActivePhotoTool(tool.id)} className={`flex items-center gap-1.5 rounded-full border px-2.5 py-2 text-[10px] font-semibold backdrop-blur-md transition-colors ${activePhotoTool === tool.id ? "border-[#8170B7]/70 bg-[#211A38]/95 text-white" : "border-white/15 bg-[#050914]/70 text-white/75"}`}><tool.icon className="h-3.5 w-3.5" />{tool.label}</motion.button>)}
+                          </div>
                           <img 
                             src={selectedImages[activeEditIndex || 0]?.url} 
                             style={{ 
@@ -2239,7 +2521,7 @@ export default function MediaCreationEngine({
                       <span className="text-[10px] font-mono text-[#A39BBF] uppercase block tracking-wider pt-1">Photo adjustments</span>
                       
                       {/* Interactive CSS filters row */}
-                      {selectedImages.length > 0 && (
+                      {selectedImages.length > 0 && activePhotoTool === 'filters' && (
                         <div className="space-y-1.5">
                           <span className="text-[9px] font-mono text-[#8E88A7] block uppercase">Choose a NEXORA look · {FILTER_PRESETS.length} original styles</span>
                           <div className="flex gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
@@ -2268,7 +2550,13 @@ export default function MediaCreationEngine({
                       )}
 
                       {/* Crop/Rotate utilities */}
-                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#292244]">
+                      <div className={`${activePhotoTool === 'crop' ? 'grid' : 'hidden'} grid-cols-1 gap-2 pt-1 border-t border-[#292244]`}>
+                        <p className="text-[10px] text-[#A39BBF]">Choose the shape of your photo. The crop is applied to the saved image.</p>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {([{ label: 'Original', value: 'original' }, { label: 'Square', value: '1:1' }, { label: 'Portrait', value: '4:5' }, { label: 'Story', value: '9:16' }] as const).map(option => (
+                            <button key={option.value} type="button" onClick={() => setSelectedImages(prev => prev.map((img, idx) => idx === (activeEditIndex || 0) ? { ...img, cropRatio: option.value } : img))} className={`rounded-lg border px-2 py-2 text-[10px] font-semibold transition-colors ${(selectedImages[activeEditIndex || 0]?.cropRatio || 'original') === option.value ? 'border-[#8170B7] bg-[#211A38] text-white' : 'border-[#292244] bg-[#120E2B] text-[#A39BBF] hover:text-white'}`}>{option.label}</button>
+                          ))}
+                        </div>
                         <button 
                           onClick={() => {
                             setSelectedImages(prev => prev.map((img, idx) => {
@@ -2282,19 +2570,10 @@ export default function MediaCreationEngine({
                         >
                           <RotateCw className="w-3.5 h-3.5" /> Rotate photo
                         </button>
-                        <button 
-                          onClick={() => {
-                            setSelectedImages(prev => prev.map((img, idx) => {
-                              if (idx === (activeEditIndex || 0)) {
-                                return { ...img, zoom: img.zoom === 1 ? 1.5 : 1 };
-                              }
-                              return img;
-                            }));
-                          }}
-                          className="py-1.5 bg-[#120E2B] hover:bg-[#19143A] text-[10px] font-mono text-[#D1CBE3] rounded-lg flex items-center justify-center gap-1"
-                        >
-                          <Crop className="w-3.5 h-3.5" /> Zoom photo
-                        </button>
+                        <div className="space-y-1.5 rounded-xl border border-[#292244] bg-[#0B0918] p-3">
+                          <div className="flex items-center justify-between text-[10px] text-[#D1CBE3]"><span>Zoom</span><span>{(selectedImages[activeEditIndex || 0]?.zoom || 1).toFixed(1)}×</span></div>
+                          <input aria-label="Photo zoom" type="range" min="1" max="3" step="0.1" value={selectedImages[activeEditIndex || 0]?.zoom || 1} onChange={event => setSelectedImages(previous => previous.map((img, idx) => idx === (activeEditIndex || 0) ? { ...img, zoom: Number(event.target.value) } : img))} className="w-full accent-[#8A78D6]" />
+                        </div>
                       </div>
 
                       {/* Adjust Sliders */}
@@ -2314,7 +2593,7 @@ export default function MediaCreationEngine({
                       </div>
 
                       {/* Stickers Overlay & Text Overlays */}
-                      <div className="space-y-2 border-t border-[#292244] pt-3 text-left">
+                      <div className={`${activePhotoTool === 'text' ? 'space-y-2' : 'hidden'} border-t border-[#292244] pt-3 text-left`}>
                         <span className="text-[9px] font-mono text-[#8E88A7] uppercase block">Stickers and text</span>
                         <div className="flex gap-2">
                           {['🔥', '⚡', '✨', '🏆', '👾', '🚀', '💯'].map((emo) => (
@@ -2487,8 +2766,8 @@ export default function MediaCreationEngine({
                     {selectedImages.length > 0 && (
                       <div className={`grid gap-2 ${selectedImages.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                         {selectedImages.map((photo, index) => (
-                          <div key={`preview-photo-${index}`} className="relative aspect-square overflow-hidden rounded-xl border border-[#292244] bg-black">
-                            <img src={photo.url} alt={index === 0 ? imageAltText || 'Selected post photo' : `Selected post photo ${index + 1}`} className="h-full w-full object-contain" style={{ filter: `${photo.filterStyle || 'none'} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`, transform: `rotate(${photo.rotation}deg) scale(${photo.zoom})` }} />
+                          <div key={`preview-photo-${index}`} className="relative overflow-hidden rounded-xl border border-[#292244] bg-black" style={{ aspectRatio: photo.cropRatio === '9:16' ? '9 / 16' : photo.cropRatio === '4:5' ? '4 / 5' : '1 / 1' }}>
+                            <img src={photo.url} alt={index === 0 ? imageAltText || 'Selected post photo' : `Selected post photo ${index + 1}`} className="h-full w-full object-cover" style={{ filter: `${photo.filterStyle || 'none'} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`, transform: `rotate(${photo.rotation}deg) scale(${photo.zoom})` }} />
                             {stickerOverlay && <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl">{stickerOverlay}</span>}
                             {textOverlay.trim() && <span className="pointer-events-none absolute bottom-3 inset-x-3 rounded-lg bg-black/70 px-2 py-2 text-center text-xs font-bold" style={{ color: textOverlayColor }}>{textOverlay}</span>}
                           </div>
@@ -2684,7 +2963,7 @@ export default function MediaCreationEngine({
         </div>
 
         {/* Publishing controls */}
-        {activeTab !== 'drafts' && postingStatus === 'idle' && (
+        {activeTab !== 'drafts' && postingStatus === 'idle' && !immersiveCameraMode && (
           <div className="border-t border-[#292244]/60 pt-4 flex justify-between items-center shrink-0">
             <div>
               <button 
@@ -2707,7 +2986,7 @@ export default function MediaCreationEngine({
                 <button 
                   onClick={nextStep}
                   disabled={currentStep === 2 && !activeMode}
-                  className="px-5 py-2.5 bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all"
+                  className="px-5 py-2.5 border border-[#4B3D75] bg-[#17132B] hover:bg-[#211B3A] disabled:opacity-40 text-[#E6DDFB] font-sans font-semibold text-xs rounded-xl cursor-pointer transition-colors"
                 >
                   Continue →
                 </button>

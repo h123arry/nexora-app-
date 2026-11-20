@@ -2417,9 +2417,11 @@ export default function App() {
               setTheme={setTheme}
               onOpenCreatePost={() => {
                 requireAuth(() => {
-                  setCreationInitialMode(null);
+                  setIsCreateMenuOpen(false);
+                  setCreationInitialMode('photo');
                   setCreationInitialTab(undefined);
-                  setIsCreateMenuOpen(true);
+                  setCreationInitialCaption('');
+                  setIsCreatePostModalOpen(true);
                 });
               }}
               onLogout={handleRequestLogout}
@@ -3190,9 +3192,9 @@ export default function App() {
             style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-              <div className="absolute left-1/2 top-[38%] h-[min(82vw,520px)] w-[min(82vw,520px)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#7138FF]/16 blur-[100px]" />
-              <div className="absolute -right-24 bottom-[-8rem] h-72 w-72 rounded-full bg-[#4B10F2]/20 blur-[90px]" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.13),transparent_55%)]" />
+              <div className="absolute left-1/2 top-[38%] h-[min(72vw,420px)] w-[min(72vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#7138FF]/7 blur-[110px]" />
+              <div className="absolute -right-24 bottom-[-8rem] h-72 w-72 rounded-full bg-[#4B10F2]/8 blur-[110px]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.06),transparent_58%)]" />
             </div>
 
             <div className="relative mx-auto flex h-full w-full max-w-3xl flex-col px-4 pb-3 pt-3 sm:px-7 sm:pb-6 sm:pt-6">
@@ -3213,14 +3215,14 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('photo'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }}
-                  className="group relative mx-auto flex w-full max-w-md flex-1 min-h-[190px] max-h-[38dvh] flex-col items-center justify-center overflow-hidden rounded-[2rem] border border-[#9A76FF]/45 bg-[linear-gradient(145deg,rgba(113,56,255,.26),rgba(18,14,43,.92)_58%,rgba(7,5,17,.98))] px-5 text-center shadow-[0_20px_80px_rgba(65,31,150,.24)] transition hover:border-[#C5B2FF]/75"
+                  className="group relative mx-auto flex w-full max-w-md flex-1 min-h-[190px] max-h-[38dvh] flex-col items-center justify-center overflow-hidden rounded-[2rem] border border-[#44376F]/75 bg-[#0D0A1B] px-5 text-center transition-colors hover:border-[#7662A8]"
                 >
-                  <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(138,63,252,.25),transparent_52%)]" />
-                  <span className="relative grid h-20 w-20 place-items-center rounded-full border border-white/20 bg-[#7138FF]/25 text-white shadow-[0_0_55px_rgba(113,56,255,.38)] transition duration-300 group-hover:scale-105">
+                  <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(138,63,252,.08),transparent_58%)]" />
+                  <span className="relative grid h-20 w-20 place-items-center rounded-full border border-[#65548F]/55 bg-[#211A38] text-[#D8CBFF] transition duration-300 group-hover:scale-[1.03]">
                     <Camera className="h-9 w-9" />
                   </span>
                   <span className="relative mt-4 text-lg font-extrabold text-white sm:text-xl">Open camera</span>
-                  <span className="relative mt-1 max-w-xs text-xs leading-relaxed text-[#C7BCE4]">Capture a photo, record a moment or choose media from your gallery.</span>
+                  <span className="relative mt-1 max-w-xs text-xs leading-relaxed text-[#A39BBF]">Capture a photo, record a moment or choose media from your gallery.</span>
                   <span className="relative mt-3 rounded-full border border-white/15 bg-black/20 px-3 py-1 text-[10px] font-semibold tracking-wide text-[#D8CBFF]">CAMERA + GALLERY</span>
                 </button>
 
@@ -3251,8 +3253,8 @@ export default function App() {
                   </button>
                 </div>
 
-                <button type="button" onClick={() => { setIsCreateMenuOpen(false); setIsNexoraStudioOpen(true); }} className="group flex w-full shrink-0 items-center gap-3 rounded-2xl border border-[#9A76FF]/35 bg-[linear-gradient(105deg,rgba(113,56,255,.20),rgba(22,0,163,.10))] p-3.5 text-left transition hover:border-[#B69BFF]/70 hover:brightness-110">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#7138FF]/25 text-[#E0D4FF]"><Sparkles className="h-5 w-5" /></span>
+                <button type="button" onClick={() => { setIsCreateMenuOpen(false); setIsNexoraStudioOpen(true); }} className="group flex w-full shrink-0 items-center gap-3 rounded-2xl border border-[#44376F]/75 bg-[#0D0A1B] p-3.5 text-left transition-colors hover:border-[#7662A8] hover:bg-[#120E2B]">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#554778]/60 bg-[#211A38] text-[#C9B8F5]"><Sparkles className="h-5 w-5" /></span>
                   <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white">NEXORA Studio</span><span className="mt-0.5 block text-[10px] leading-relaxed text-[#B8AED4]">Multi-clip editing, sound, titles, layers and cinematic exports.</span></span>
                   <ChevronRight className="h-5 w-5 shrink-0 text-[#B69BFF] transition group-hover:translate-x-1" />
                 </button>
