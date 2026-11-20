@@ -252,7 +252,7 @@ export const getDirectCallToken = onCall({ region: 'europe-west1', secrets: [api
     iat: now,
     exp: now + TOKEN_TTL_SECONDS,
     name: uid === call.callerId ? call.callerName : call.recipientName,
-    video: createDirectCallVideoGrant(call.roomName || directCallRoomName(callId)),
+    video: createDirectCallVideoGrant(call.roomName || directCallRoomName(callId), call.type),
   }, secret);
   return { token, wsUrl, roomName: call.roomName || directCallRoomName(callId), expiresAt: (now + TOKEN_TTL_SECONDS) * 1000, callType: call.type };
 });
