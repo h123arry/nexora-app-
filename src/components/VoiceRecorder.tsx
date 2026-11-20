@@ -61,6 +61,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
 
       mediaRecorderRef.current.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current?.mimeType || 'audio/webm' });
+        mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
         const finalSeconds = Math.ceil(recordedTenthsRef.current / 10);
         if (discardRef.current) { discardRef.current = false; return; }
         if (audioBlob.size > 0) void Promise.resolve(onSendMessage(audioBlob, finalSeconds)).catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Voice note could not be sent. Please retry.' })));
