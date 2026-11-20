@@ -1,4 +1,4 @@
-import type { Firestore } from 'firebase-admin/firestore';
+import { AggregateField, type Firestore } from 'firebase-admin/firestore';
 
 export interface CreatorMilestoneStats {
   followers: number;
@@ -8,7 +8,6 @@ export interface CreatorMilestoneStats {
   totalShares: number;
   totalSaves: number;
   totalEarnedNex: number;
-  highestPostViews: number;
   publishedPosts: number;
   isVerified: boolean;
 }
@@ -54,10 +53,6 @@ export function buildCreatorMilestones(stats: CreatorMilestoneStats): CreatorMil
     add(`nex_earned_${threshold}`, `${threshold.toLocaleString()} NEX earned`,
       `Your creator activity has generated ${threshold.toLocaleString()} NEX in recorded earnings.`, stats.totalEarnedNex >= threshold);
   }
-  for (const threshold of [500, 1000]) {
-    add(`post_views_${threshold}`, `${threshold.toLocaleString()} views on one post`,
-      `One of your posts has reached ${threshold.toLocaleString()} recorded views.`, stats.highestPostViews >= threshold);
-  }
   for (const threshold of [3, 10]) {
     add(`published_posts_${threshold}`, `${threshold} posts published`,
       `You have published ${threshold} posts on NEXORA. Keep creating.`, stats.publishedPosts >= threshold);
@@ -77,26 +72,32 @@ export async function issueCreatorMilestones(db: Firestore, creatorId: string, i
   const userSnapshot = await userRef.get();
   if (!userSnapshot.exists) return;
 
-  const [profileSnapshot, postsSnapshot, earningsSnapshot] = await Promise.all([
+  const postsQuery = db.collection('posts').where('userId', '==', creatorId);
+  const [profileSnapshot, postAggregateSnapshot, earningsSnapshot] = await Promise.all([
     db.collection('publicProfiles').doc(creatorId).get(),
-    db.collection('posts').where('userId', '==', creatorId).limit(500).get(),
+    postsQuery.aggregate({
+      publishedPosts: AggregateField.count(),
+      totalLikes: AggregateField.sum('likes'),
+      totalViews: AggregateField.sum('views'),
+      totalComments: AggregateField.sum('commentsCount'),
+      totalShares: AggregateField.sum('shares'),
+      totalBookmarks: AggregateField.sum('bookmarksCount'),
+      totalSaves: AggregateField.sum('saves'),
+    }).get(),
     includeGiftEarnings
       ? db.collection('creatorEarnings').where('creatorId', '==', creatorId).limit(500).get()
       : Promise.resolve(null),
   ]);
   const user = userSnapshot.data() || {};
   const profile = profileSnapshot.data() || {};
-  const posts = postsSnapshot.docs.map(document => document.data()).filter(post =>
-    post.isArchived !== true && post.isDraft !== true && post.audience !== 'onlyme'
-  );
-  const views = posts.map(post => safeCount(post.views ?? post.viewCount));
+  const postTotals = postAggregateSnapshot.data();
   const stats: CreatorMilestoneStats = {
     followers: safeCount(profile.followers ?? user.followers),
-    totalLikes: posts.reduce((total, post) => total + safeCount(post.likes ?? post.likeCount), 0),
-    totalViews: views.reduce((total, value) => total + value, 0),
-    totalComments: posts.reduce((total, post) => total + safeCount(post.commentsCount ?? (Array.isArray(post.comments) ? post.comments.length : 0)), 0),
-    totalShares: posts.reduce((total, post) => total + safeCount(post.shares), 0),
-    totalSaves: posts.reduce((total, post) => total + safeCount(post.bookmarksCount ?? post.saves), 0),
+    totalLikes: safeCount(postTotals.totalLikes),
+    totalViews: safeCount(postTotals.totalViews),
+    totalComments: safeCount(postTotals.totalComments),
+    totalShares: safeCount(postTotals.totalShares),
+    totalSaves: Math.max(safeCount(postTotals.totalBookmarks), safeCount(postTotals.totalSaves)),
     totalEarnedNex: Math.max(
       safeCount(user.totalEarnedNex),
       earningsSnapshot?.docs.reduce((total, document) => {
@@ -104,8 +105,7 @@ export async function issueCreatorMilestones(db: Firestore, creatorId: string, i
         return total + (earning.status === 'available' ? safeCount(earning.creatorShareNex) : 0);
       }, 0) ?? 0,
     ),
-    highestPostViews: views.reduce((highest, value) => Math.max(highest, value), 0),
-    publishedPosts: posts.length,
+    publishedPosts: safeCount(postTotals.publishedPosts),
     isVerified: user.isVerified === true || profile.isVerified === true,
   };
 
