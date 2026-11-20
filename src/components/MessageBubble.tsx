@@ -74,20 +74,23 @@ export default function MessageBubble({
   const [privateMediaUrl, setPrivateMediaUrl] = useState('');
   const [loadingPrivateMedia, setLoadingPrivateMedia] = useState(false);
   const [privateMediaError, setPrivateMediaError] = useState('');
+  const attemptedMediaPathRef = useRef('');
   useEffect(() => () => {
     if (privateVoiceUrl) URL.revokeObjectURL(privateVoiceUrl);
   }, [privateVoiceUrl]);
   useEffect(() => () => { if (privateMediaUrl) URL.revokeObjectURL(privateMediaUrl); }, [privateMediaUrl]);
   useEffect(() => {
-    if (message.mediaType !== 'image' || !message.mediaStoragePath || privateMediaUrl || loadingPrivateMedia) return;
+    const path = message.mediaStoragePath || '';
+    if (message.mediaType !== 'image' || !path || attemptedMediaPathRef.current === path) return;
+    attemptedMediaPathRef.current = path;
     let active = true;
     setLoadingPrivateMedia(true);
-    void onResolveVoiceMedia(message.mediaStoragePath).then(url => {
+    void onResolveVoiceMedia(path).then(url => {
       if (active) setPrivateMediaUrl(url); else URL.revokeObjectURL(url);
     }).catch(() => { if (active) setPrivateMediaError('Image unavailable. Tap to retry.'); })
       .finally(() => { if (active) setLoadingPrivateMedia(false); });
     return () => { active = false; };
-  }, [message.id, message.mediaType, message.mediaStoragePath]);
+  }, [message.mediaStoragePath, message.mediaType, onResolveVoiceMedia]);
   const loadPrivateMedia = async () => {
     if (!message.mediaStoragePath || loadingPrivateMedia) return;
     setLoadingPrivateMedia(true); setPrivateMediaError('');
@@ -111,6 +114,7 @@ export default function MessageBubble({
   };
 
   const isVoice = message.customMediaType === 'voice' || !!message.voiceDuration;
+  const voiceStoragePath = message.voiceAudioUrl || message.videoUrl || message.mediaStoragePath || '';
 
   return (
     <motion.div 
@@ -227,21 +231,21 @@ export default function MessageBubble({
 
             {/* Content - Handle Voice */}
             {isVoice ? (
-              message.voiceAudioUrl || message.videoUrl ? (
+              voiceStoragePath ? (
                 <div className="min-w-[240px] max-w-[320px] rounded-xl border border-white/10 bg-black/25 p-2">
                   <p className="mb-1 text-[10px] font-medium text-[var(--nx-muted)]">Voice message{message.voiceDuration ? ` · ${message.voiceDuration}` : ''}</p>
-                  {(message.voiceAudioUrl || message.videoUrl || '').startsWith('chats/') && !privateVoiceUrl ? (
+                  {voiceStoragePath.startsWith('chats/') && !privateVoiceUrl ? (
                     <button type="button" disabled={loadingPrivateVoice} onClick={async () => {
                       setLoadingPrivateVoice(true);
                       setPrivateVoiceError('');
-                      try { setPrivateVoiceUrl(await onResolveVoiceMedia(message.voiceAudioUrl || message.videoUrl || '')); }
+                      try { setPrivateVoiceUrl(await onResolveVoiceMedia(voiceStoragePath)); }
                       catch (error) { setPrivateVoiceError(error instanceof Error ? error.message : 'Voice note unavailable.'); }
                       finally { setLoadingPrivateVoice(false); }
                     }} className="min-h-11 rounded-lg border border-white/10 px-3 text-xs text-violet-200 disabled:opacity-60">
                       {loadingPrivateVoice ? 'Loading securely…' : 'Load private voice note'}
                     </button>
                   ) : (
-                    <audio className="w-full" controls preload="none" src={privateVoiceUrl || message.voiceAudioUrl || message.videoUrl} aria-label="Play voice message">
+                    <audio className="w-full" controls preload="none" src={privateVoiceUrl || (voiceStoragePath.startsWith('chats/') ? '' : voiceStoragePath)} aria-label="Play voice message">
                       Your browser does not support audio playback.
                     </audio>
                   )}
