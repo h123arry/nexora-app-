@@ -860,9 +860,8 @@ function shapeVohContext(context: any, authenticatedUid: string) {
 
 // Helper to initialize Gemini safely (lazy loading)
 function getGeminiClient(): { ai: GoogleGenAI; model: string } | null {
-  // The app selects a provider by configuration; provider SDK details stay
-  // behind the VOH model adapter. Gemini remains the configured adapter until
-  // another provider is deliberately implemented and tested.
+  // This client is created only when Gemini is the explicitly selected provider.
+  // Other runtimes are created through their own provider-neutral adapters.
   const provider = (process.env.VOH_AI_PROVIDER || 'gemini').trim().toLowerCase();
   if (provider !== 'gemini') return null;
   const apiKey = process.env.GEMINI_API_KEY;
