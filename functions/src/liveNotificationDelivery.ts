@@ -66,7 +66,8 @@ export function createLiveStartNotificationDelivery(db: Firestore) {
           .map(edge => edge.data().followerId)
           .filter((followerId): followerId is string =>
             typeof followerId === 'string' && followerId.length > 0 && followerId !== hostId && !followerId.includes('/'));
-        const refs = recipients.map(recipientId =>
+        const uniqueRecipients = [...new Set(recipients)];
+        const refs = uniqueRecipients.map(recipientId =>
           db.collection('users').doc(recipientId).collection('notifications').doc(`live_${sessionId}`));
         if (refs.length) {
           const existing = await db.getAll(...refs);
