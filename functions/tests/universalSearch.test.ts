@@ -118,3 +118,34 @@ describe('NEXORA universal search', () => {
     await assert.rejects(searchNexoraContent(db,'viewer','nexora','invalid-cursor'),/cursor is invalid/);
   });
 });
+
+
+it('ranks exact multi-word search intent above a weaker term-only match', async () => {
+  await db.doc('posts/phrase-exact').set({ id:'phrase-exact', userId:'public-user', content:'Nexora design systems for creators', audience:'public', timestamp:new Date(), tags:['nexora'] });
+  await db.doc('posts/phrase-loose').set({ id:'phrase-loose', userId:'creator-two', content:'Nexora tools for creators who design systems', audience:'public', timestamp:new Date(), tags:['nexora'] });
+  await syncUniversalSearchRecord(db,'post','phrase-exact','posts/phrase-exact',(await db.doc('posts/phrase-exact').get()).data()!);
+  await syncUniversalSearchRecord(db,'post','phrase-loose','posts/phrase-loose',(await db.doc('posts/phrase-loose').get()).data()!);
+  const result=await searchNexoraContent(db,'viewer','design systems');
+  const exact=result.results.find(hit=>hit.targetId==='phrase-exact');
+  const loose=result.results.find(hit=>hit.targetId==='phrase-loose');
+  assert.ok(exact && loose);
+  assert.ok(exact.score>loose.score);
+  for(const id of ['phrase-exact','phrase-loose']) {
+    await db.doc('searchIndex/post_'+createHash('sha256').update('posts/'+id).digest('hex')).delete();
+    await db.doc('posts/'+id).delete();
+  }
+});
+
+it('trending requires recent multi-creator activity and reports rising-topic momentum', async () => {
+  const now=Date.now();
+  await db.doc('posts/trend-old').set({ id:'trend-old', userId:'public-user', audience:'public', timestamp:new Date(now-36*3600000), tags:['momentum-check'], likes:10 });
+  await db.doc('posts/trend-new-a').set({ id:'trend-new-a', userId:'public-user', audience:'public', timestamp:new Date(now-2*3600000), tags:['momentum-check'], likes:30 });
+  await db.doc('posts/trend-new-b').set({ id:'trend-new-b', userId:'creator-two', audience:'public', timestamp:new Date(now-1*3600000), tags:['momentum-check'], likes:20 });
+  const topics=await getNexoraTrending(db);
+  const topic=topics.find(item=>item.tag==='momentum-check');
+  assert.ok(topic);
+  assert.equal(topic?.currentPosts,2);
+  assert.equal(topic?.previousPosts,1);
+  assert.equal(topic?.status,'rising');
+  for(const id of ['trend-old','trend-new-a','trend-new-b']) await db.doc('posts/'+id).delete();
+});
