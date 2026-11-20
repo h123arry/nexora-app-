@@ -2325,3 +2325,32 @@ body {
   .nx-profile-shell *::before,
   .nx-profile-shell *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+
+/* Profile gallery: three stable square columns at every viewport size. */
+.nx-profile-shell .nx-profile-media-grid {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #090714;
+}
+.nx-profile-shell .nx-profile-media-grid > button {
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
+  overflow: hidden;
+}
+.nx-profile-shell .nx-profile-media-grid img,
+.nx-profile-shell .nx-profile-media-grid video {
+  width: 100%;
+  height: 100%;
+}
+@media (max-width: 360px) {
+  .nx-profile-shell .nx-profile-media-grid { gap: 1px; }
+}
