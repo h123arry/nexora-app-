@@ -855,7 +855,6 @@ export default function MediaCreationEngine({
     const files = e.target.files;
     if (!files) return;
     requestPermission('gallery', () => {
-      setCurrentStep(3);
       void Promise.all(Array.from(files).slice(0, 10).map(async (file: File) => {
         try {
           await validateMediaFile(file, 'image');
@@ -870,6 +869,7 @@ export default function MediaCreationEngine({
               ...prev,
               { url: ev.target!.result as string, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }
             ]);
+            setCurrentStep(3);
           }
         };
         reader.readAsDataURL(file);
