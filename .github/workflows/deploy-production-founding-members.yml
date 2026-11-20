@@ -120,6 +120,7 @@ jobs:
             --non-interactive
 
       - name: Deploy Storage rules when Firebase Storage is provisioned
+        id: storage
         run: |
           if npx --yes firebase-tools@15.33.0 deploy \
             --only storage \
@@ -127,8 +128,10 @@ jobs:
             --project "$NEXORA_PRODUCTION_PROJECT_ID" \
             --non-interactive > /tmp/nexora-storage-deploy.log 2>&1; then
             cat /tmp/nexora-storage-deploy.log
+            echo "deployed=true" >> "$GITHUB_OUTPUT"
           elif grep -Fq "Firebase Storage has not been set up" /tmp/nexora-storage-deploy.log; then
             cat /tmp/nexora-storage-deploy.log
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
             echo "::notice::Firebase Storage is not provisioned in production; Storage rules were not changed."
           else
             cat /tmp/nexora-storage-deploy.log
@@ -140,5 +143,10 @@ jobs:
           echo "## NEXORA production Functions deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "- Project: $NEXORA_PRODUCTION_PROJECT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "- Firestore database: $FIRESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Deployed callables: createFoundingMemberAccount, createBetaInviteLink, claimBetaInvite, getGiftCatalog, quoteNexGift, purchaseNexGift, getMyGiftInventory, sendNexGift, transferOwnedNexGift, buyNexGiftForFriend" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Deployed security rules: Firestore and Storage" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Deployed functions: Founding 300, GiftVerse, push delivery, follow inbox, live-start alerts, direct-message alerts, public comments, likes, replies and reposts" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Firestore rules: deployed" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.storage.outputs.deployed }}" = "true" ]; then
+            echo "- Storage rules: deployed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Storage rules: skipped because Firebase Storage is not provisioned" >> "$GITHUB_STEP_SUMMARY"
+          fi
