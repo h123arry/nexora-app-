@@ -735,8 +735,8 @@ export class AuthService {
     if (!auth.currentUser) throw new Error('Sign in before revoking active sessions.');
     const revoke = httpsCallable(functions, 'revokeAllSessions');
     try {
-      await revoke({});
       await this.unregisterPushForCurrentDevice();
+      await revoke({});
       await signOut(auth);
     } catch (error) {
       throw this.publicAuthError(error);
