@@ -16,7 +16,7 @@ import { shapeWorldPulseAiContext } from './server/vohPulseContext';
 import { shapeAuthenticatedVohAccountContext } from './server/vohAccountContext';
 import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, isCurrentPublicProfileMedia, buildR2OriginUploadRecords } from './server/r2Storage';
 import { runVohContextTool, VOH_CONTEXT_TOOL_DECLARATIONS } from './server/vohTools';
-import { createGeminiVohProvider, resolveVohContextScope, runVohIntelligence, VohEmptyModelResponseError, VohToolRegistry } from './server/vohIntelligenceCore';
+import { createGeminiVohProvider, createSelfHostedVohProvider, resolveVohContextScope, runVohIntelligence, VohEmptyModelResponseError, VohToolRegistry } from './server/vohIntelligenceCore';
 import { resolveVohFeatureScopes, selectVohToolsForScopes } from './server/vohToolScopes';
 import { loadVohJoinedCommunities, loadVohOwnNotifications, loadVohOwnDrafts, loadVohOwnStudioProject, loadVohPublicDiscovery } from './server/vohFeatureContext';
 
@@ -880,6 +880,33 @@ function getGeminiClient(): { ai: GoogleGenAI; model: string } | null {
   return { ai, model: process.env.VOH_AI_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-flash' };
 }
 
+/** Select an explicitly configured VOH runtime; never silently fall back between providers. */
+function getVohModelRuntime(): { provider: ReturnType<typeof createGeminiVohProvider>; model: string } | { provider: ReturnType<typeof createSelfHostedVohProvider>; model: string } | null {
+  const selected = (process.env.VOH_AI_PROVIDER || 'gemini').trim().toLowerCase();
+  if (selected === 'gemini') {
+    const gemini = getGeminiClient();
+    return gemini ? { provider: createGeminiVohProvider(gemini.ai as any), model: gemini.model } : null;
+  }
+  if (selected === 'self_hosted') {
+    const baseUrl = process.env.VOH_SELF_HOSTED_BASE_URL?.trim();
+    const apiKey = process.env.VOH_SELF_HOSTED_API_KEY?.trim();
+    const model = (process.env.VOH_SELF_HOSTED_MODEL || process.env.VOH_AI_MODEL || '').trim();
+    if (!baseUrl || !apiKey || !model) return null;
+    const timeoutMs = Number(process.env.VOH_SELF_HOSTED_TIMEOUT_MS);
+    const maxTokens = Number(process.env.VOH_SELF_HOSTED_MAX_TOKENS);
+    return {
+      provider: createSelfHostedVohProvider({
+        baseUrl,
+        apiKey,
+        ...(Number.isFinite(timeoutMs) && timeoutMs > 0 ? { timeoutMs } : {}),
+        ...(Number.isFinite(maxTokens) && maxTokens > 0 ? { maxTokens } : {}),
+      }),
+      model,
+    };
+  }
+  return null;
+}
+
 // ----------------- VOH AI API ENDPOINTS -----------------
 
 // User-owned VOH memory is stored under the authenticated Firebase UID only.
@@ -1023,7 +1050,7 @@ vohRouter.post('/chat', async (req, res) => {
       currentUser: includeProfile ? accountContext : null,
     }, res.locals.vohUid);
 
-    const clientInfo = getGeminiClient();
+    const runtime = getVohModelRuntime();
     
     // Construct rich context string for the prompt
     const postsStr = context.posts.length > 0
@@ -1094,10 +1121,9 @@ USER MESSAGE:
 "${message}"
 `;
 
-    if (!clientInfo) return res.status(503).json({ error: 'VOH AI is not configured on this server.' });
+    if (!runtime) return res.status(503).json({ error: 'The selected VOH model runtime is not configured on this server.' });
 
-    // AI is fully configured! Run the actual model call
-    const { ai, model } = clientInfo;
+    // Run the selected provider through the vendor-neutral intelligence core.
 
     const systemInstruction = `You are VOH AI, Nexora's helpful AI companion. Be accurate, warm, concise, and transparent about uncertainty.
 Your tone is warm, perceptive, clear and naturally conversational. Adapt to the user's communication style without imitating sensitive traits.
@@ -1133,8 +1159,8 @@ When answering:
     }
     const chatContents: any[] = [...chatHistoryParts, { role: 'user', parts: [{ text: contextPrompt }] }];
     const result = await runVohIntelligence({
-      provider: createGeminiVohProvider(ai as any),
-      model,
+      provider: runtime.provider,
+      model: runtime.model,
       contents: chatContents,
       systemInstruction: replaceTerminology(systemInstruction),
       temperature: 0.55,
