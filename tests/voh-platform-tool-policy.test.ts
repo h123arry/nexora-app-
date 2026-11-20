@@ -25,6 +25,10 @@ describe('VOH feature-scoped tool access', () => {
     assert.deepEqual(selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['circles'])).map(tool => tool.name), ['get_my_communities']);
     assert.deepEqual(selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['notifications'])).map(tool => tool.name), ['get_recent_notifications']);
   });
+  it('exposes draft and Studio tools only under their explicit scopes', () => {
+    assert.deepEqual(selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['drafts'])).map(tool => tool.name), ['get_my_drafts']);
+    assert.deepEqual(selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['studio'])).map(tool => tool.name), ['get_my_studio_project']);
+  });
   it('never exposes inbox or write tools without an explicit integration', () => {
     const names = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['feed', 'profile', 'world_pulse'])).map(tool => tool.name);
     assert.equal(names.some(name => /inbox|message|send|publish|delete|community|notification/i.test(name)), false);

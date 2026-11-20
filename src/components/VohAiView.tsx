@@ -58,7 +58,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const [editMsgText, setEditMsgText] = useState('');
 
   // Attached Context Awareness States
-  const [attachedContextType, setAttachedContextType] = useState<'feed' | 'profile' | 'feed_profile' | 'circles' | 'notifications' | 'inbox' | 'none'>('feed');
+  const [attachedContextType, setAttachedContextType] = useState<'feed' | 'profile' | 'feed_profile' | 'circles' | 'notifications' | 'drafts' | 'studio' | 'inbox' | 'none'>('feed');
   const [memoryDNA, setMemoryDNA] = useState<string[]>(() => {
     const memory = MemoryEngine.getMemory();
     return memory.memoryEnabled
@@ -452,13 +452,17 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         contextualMessage = `[SYSTEM CONTEXT: The user has selected their joined Circles. Use only the active memberships loaded for their authenticated account. ]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'notifications') {
         contextualMessage = `[SYSTEM CONTEXT: The user has selected their recent notifications. Use only the bounded notifications loaded for their authenticated account. ]\n\nUser query: ${message}`;
+      } else if (attachedContextType === 'drafts') {
+        contextualMessage = `[SYSTEM CONTEXT: The user selected their saved post drafts. Use only the bounded draft summaries supplied for their authenticated account; media URLs are not available.]\n\nUser query: ${message}`;
+      } else if (attachedContextType === 'studio') {
+        contextualMessage = `[SYSTEM CONTEXT: The user selected their cloud Studio project. Use only the project summary supplied for their authenticated account; source media and private asset paths are not accessible.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'inbox') {
         contextualMessage = `[SYSTEM CONTEXT: The user is viewing the inbox. Private message contents are not included; do not claim access to them.]\n\nUser query: ${message}`;
       }
 
-      const selectedScopes: Array<'feed' | 'profile' | 'circles' | 'notifications'> = attachedContextType === 'feed_profile'
+      const selectedScopes: Array<'feed' | 'profile' | 'circles' | 'notifications' | 'drafts' | 'studio'> = attachedContextType === 'feed_profile'
         ? ['feed', 'profile']
-        : attachedContextType === 'feed' || attachedContextType === 'profile' || attachedContextType === 'circles' || attachedContextType === 'notifications' ? [attachedContextType] : [];
+        : attachedContextType === 'feed' || attachedContextType === 'profile' || attachedContextType === 'circles' || attachedContextType === 'notifications' || attachedContextType === 'drafts' || attachedContextType === 'studio' ? [attachedContextType] : [];
       const legacyScope: 'feed' | 'profile' | 'none' = selectedScopes.includes('feed') ? 'feed' : selectedScopes.includes('profile') ? 'profile' : 'none';
       const response = await ChatEngine.sendChatMessage(contextualMessage, mappedHistory, currentUser, selectedScopes.includes('feed') ? posts : [], legacyScope, selectedScopes);
 
@@ -1066,7 +1070,9 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                           profile: 'feed_profile',
                           feed_profile: 'circles',
                           circles: 'notifications',
-                          notifications: 'inbox',
+                          notifications: 'drafts',
+                          drafts: 'studio',
+                          studio: 'inbox',
                           inbox: 'none',
                           none: 'feed'
                         };
@@ -1080,6 +1086,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {attachedContextType === 'feed_profile' && <><Layers className="w-3 h-3 text-violet-400" /><UserCheck className="w-3 h-3 text-cyan-400" /></>}
                       {attachedContextType === 'circles' && <Users className="w-3 h-3 text-violet-400" />}
                       {attachedContextType === 'notifications' && <Sparkles className="w-3 h-3 text-amber-400" />}
+                      {attachedContextType === 'drafts' && <Layers className="w-3 h-3 text-violet-300" />}
+                      {attachedContextType === 'studio' && <Layers className="w-3 h-3 text-purple-300" />}
                       {attachedContextType === 'inbox' && <MessageSquare className="w-3 h-3 text-fuchsia-400" />}
                       {attachedContextType === 'none' && <Sparkle className="w-3 h-3 text-amber-400" />}
                       <span>Change shared information</span>
@@ -1091,6 +1099,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {attachedContextType === 'feed_profile' && "Uses your feed and profile details"}
                       {attachedContextType === 'circles' && "Uses your active Circle memberships"}
                       {attachedContextType === 'notifications' && "Uses your recent notifications"}
+                      {attachedContextType === 'drafts' && "Uses your saved post drafts (without media links)"}
+                      {attachedContextType === 'studio' && "Uses a summary of your cloud Studio project"}
                       {attachedContextType === 'inbox' && "Private messages are never shared"}
                       {attachedContextType === 'none' && "No extra information shared"}
                     </span>
@@ -1100,6 +1110,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {attachedContextType === 'feed_profile' && "Feed + profile"}
                       {attachedContextType === 'circles' && "Your Circles"}
                       {attachedContextType === 'notifications' && "Your notifications"}
+                      {attachedContextType === 'drafts' && "Your drafts"}
+                      {attachedContextType === 'studio' && "Studio project"}
                       {attachedContextType === 'inbox' && "Private messages stay private"}
                       {attachedContextType === 'none' && "No extra information"}
                     </span>
