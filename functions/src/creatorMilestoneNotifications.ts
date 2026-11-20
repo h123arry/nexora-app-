@@ -73,31 +73,28 @@ export async function issueCreatorMilestones(db: Firestore, creatorId: string, i
   if (!userSnapshot.exists) return;
 
   const postsQuery = db.collection('posts').where('userId', '==', creatorId);
-  const [profileSnapshot, postAggregateSnapshot, earningsSnapshot] = await Promise.all([
+  const [profileSnapshot, postCountSnapshot, likesSnapshot, viewsSnapshot, commentsSnapshot, sharesSnapshot, bookmarksSnapshot, savesSnapshot, earningsSnapshot] = await Promise.all([
     db.collection('publicProfiles').doc(creatorId).get(),
-    postsQuery.aggregate({
-      publishedPosts: AggregateField.count(),
-      totalLikes: AggregateField.sum('likes'),
-      totalViews: AggregateField.sum('views'),
-      totalComments: AggregateField.sum('commentsCount'),
-      totalShares: AggregateField.sum('shares'),
-      totalBookmarks: AggregateField.sum('bookmarksCount'),
-      totalSaves: AggregateField.sum('saves'),
-    }).get(),
+    postsQuery.count().get(),
+    postsQuery.aggregate({ totalLikes: AggregateField.sum('likes') }).get(),
+    postsQuery.aggregate({ totalViews: AggregateField.sum('views') }).get(),
+    postsQuery.aggregate({ totalComments: AggregateField.sum('commentsCount') }).get(),
+    postsQuery.aggregate({ totalShares: AggregateField.sum('shares') }).get(),
+    postsQuery.aggregate({ totalBookmarks: AggregateField.sum('bookmarksCount') }).get(),
+    postsQuery.aggregate({ totalSaves: AggregateField.sum('saves') }).get(),
     includeGiftEarnings
       ? db.collection('creatorEarnings').where('creatorId', '==', creatorId).limit(500).get()
       : Promise.resolve(null),
   ]);
   const user = userSnapshot.data() || {};
   const profile = profileSnapshot.data() || {};
-  const postTotals = postAggregateSnapshot.data();
   const stats: CreatorMilestoneStats = {
     followers: safeCount(profile.followers ?? user.followers),
-    totalLikes: safeCount(postTotals.totalLikes),
-    totalViews: safeCount(postTotals.totalViews),
-    totalComments: safeCount(postTotals.totalComments),
-    totalShares: safeCount(postTotals.totalShares),
-    totalSaves: Math.max(safeCount(postTotals.totalBookmarks), safeCount(postTotals.totalSaves)),
+    totalLikes: safeCount(likesSnapshot.data().totalLikes),
+    totalViews: safeCount(viewsSnapshot.data().totalViews),
+    totalComments: safeCount(commentsSnapshot.data().totalComments),
+    totalShares: safeCount(sharesSnapshot.data().totalShares),
+    totalSaves: Math.max(safeCount(bookmarksSnapshot.data().totalBookmarks), safeCount(savesSnapshot.data().totalSaves)),
     totalEarnedNex: Math.max(
       safeCount(user.totalEarnedNex),
       earningsSnapshot?.docs.reduce((total, document) => {
@@ -105,7 +102,7 @@ export async function issueCreatorMilestones(db: Firestore, creatorId: string, i
         return total + (earning.status === 'available' ? safeCount(earning.creatorShareNex) : 0);
       }, 0) ?? 0,
     ),
-    publishedPosts: safeCount(postTotals.publishedPosts),
+    publishedPosts: safeCount(postCountSnapshot.data().count),
     isVerified: user.isVerified === true || profile.isVerified === true,
   };
 
