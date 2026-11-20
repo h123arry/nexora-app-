@@ -385,7 +385,7 @@ export default function NotificationsView({
       if (activeCategory === 'system' || activeCategory === 'account') return n.category === 'account' || n.type === 'system' || n.type === 'security';
       if (activeCategory === 'origin') return n.type === 'origin_attribution';
       if (activeCategory === 'communities') return n.type === 'community';
-      if (activeCategory === 'live') return n.type === 'pulse_alert' && n.content.includes('LIVE');
+      if (activeCategory === 'live') return n.type === 'pulse_alert';
       if (activeCategory === 'verification') return n.type === 'reputation_milestone' && n.content.includes('Verification');
       if (activeCategory === 'creator') return n.type === 'gift' || (n.type === 'reputation_milestone' && n.category !== 'account') || n.category === 'creator' || n.type === 'mission_milestone';
 
