@@ -4,6 +4,7 @@ export interface VohSnapshotDocument {
   ref?: {
     parent?: {
       parent?: {
+        path?: string;
         get(): Promise<VohSnapshotDocument>;
       };
     };
@@ -79,7 +80,7 @@ export async function loadVohJoinedCommunities(db: VohFirestoreReader, uid: stri
   const activeMemberships = memberships.docs.filter(membership => membership.data().status === 'active').slice(0, 12);
   const resolved = await Promise.all(activeMemberships.map(async membership => {
     const communityRef = membership.ref?.parent?.parent;
-    if (!communityRef) return null;
+    if (!communityRef || !communityRef.path || !/^communities\\/[^/]+$/.test(communityRef.path)) return null;
     const community = await communityRef.get();
     if (!community) return null;
     const data = community.data();
