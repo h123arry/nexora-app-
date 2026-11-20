@@ -416,7 +416,7 @@ export default function MediaCreationEngine({
   const [pollOptionsList, setPollOptionsList] = useState<string[]>(['', '']);
 
   // UI state
-  const [permissionTarget, setPermissionTarget] = useState<'camera' | 'gallery' | 'mic' | null>(null);
+  const [permissionTarget, setPermissionTarget] = useState<'camera' | 'gallery' | 'mic' | null>(() => initialMode === 'photo' || initialMode === 'reel' ? 'camera' : null);
   // Browser/OS permissions are authoritative. Never restore a locally cached
   // "granted" value because users can revoke camera or microphone access later.
   const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>('prompt');
@@ -1635,7 +1635,7 @@ export default function MediaCreationEngine({
   const isAltTextMissing = selectedImages.length > 0 && !imageAltText.trim();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 backdrop-blur-md bg-black/75 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-stretch backdrop-blur-md bg-[#050914] overflow-hidden">
       
       {/* ⚠️ Exit Confirmation Overlay */}
       <AnimatePresence>
@@ -1753,7 +1753,7 @@ export default function MediaCreationEngine({
         initial={{ scale: 0.98, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.98, opacity: 0, y: 10 }}
-        className={`relative w-full max-w-2xl rounded-3xl p-5 md:p-6 border shadow-md flex flex-col max-h-[92vh] ${getModalBg()}`}
+        className={`relative h-[100dvh] w-full max-w-none rounded-none p-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))] border-0 shadow-none flex flex-col min-h-0 overflow-hidden ${getModalBg()}`}
         id="creation-studio-frame"
       >
         {/* Header toolbar */}
@@ -1814,7 +1814,7 @@ export default function MediaCreationEngine({
         )}
 
         {/* Dynamic Core Body */}
-        <div className="flex-1 overflow-y-auto pr-1 space-y-4 text-left font-sans custom-scrollbar">
+        <div className={`flex-1 min-h-0 pr-1 space-y-4 text-left font-sans ${currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel') ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
           
           {activeTab === 'drafts' ? (
             /* Draft Organizer Screen */
