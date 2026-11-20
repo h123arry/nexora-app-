@@ -1,4 +1,5 @@
 import { getMessaging, getToken, onMessage, Messaging, deleteToken } from 'firebase/messaging';
+import { onIdTokenChanged } from 'firebase/auth';
 import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, app, db } from './config';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
@@ -31,6 +32,7 @@ export class PushNotificationService {
   private static tokenOwnerUid: string | null = null;
   private static initPromise: Promise<string | null> | null = null;
   private static unsubscribeAuth: (() => void) | null = null;
+  private static unsubscribeMessage: (() => void) | null = null;
 
   private static async tokenDocumentId(token: string): Promise<string> {
     const bytes = new TextEncoder().encode(token);
@@ -91,7 +93,7 @@ export class PushNotificationService {
     await this.persistToken(token, uid);
 
     if (!this.unsubscribeAuth) {
-      this.unsubscribeAuth = auth.onIdTokenChanged(user => {
+      this.unsubscribeAuth = onIdTokenChanged(auth, user => {
         const owner = this.tokenOwnerUid || this.readStoredRegistration()?.uid || null;
         if (owner && user?.uid !== owner) {
           void this.removeStoredRegistration();
@@ -99,7 +101,8 @@ export class PushNotificationService {
       });
     }
 
-    onMessage(this.messaging, payload => {
+    this.unsubscribeMessage?.();
+    this.unsubscribeMessage = onMessage(this.messaging, payload => {
       if (!payload.notification) return;
       this.displayNativeNotification({
         title: payload.notification.title || 'NEXORA',
@@ -119,6 +122,8 @@ export class PushNotificationService {
       localStorage.removeItem(REGISTRATION_STORAGE_KEY);
     }
     if (this.messaging) await deleteToken(this.messaging).catch(() => undefined);
+    this.unsubscribeMessage?.();
+    this.unsubscribeMessage = null;
     this.token = null;
     this.tokenOwnerUid = null;
     this.isInitialized = false;
