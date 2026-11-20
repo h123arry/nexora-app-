@@ -7,6 +7,10 @@ import { getNexoraTrending, searchNexoraContent, syncUniversalSearchRecord } fro
 
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-search' }, 'universal-search-tests');
 const db = getFirestore(app);
+// Isolate trend tests from the engagement suite's shared, heavily populated
+// Firestore project so the bounded 250-post sample remains deterministic.
+const trendingApp = initializeApp({ projectId: 'demo-nexora-trending-tests' }, 'universal-search-trending-tests');
+const trendingDb = getFirestore(trendingApp);
 const paths = ['viewer','public-user','private-user','blocked-user'];
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Universal search tests require the Firestore Emulator.');
@@ -27,8 +31,8 @@ before(async () => {
   await db.doc('posts/blocked-post').set({ id:'blocked-post', userId:'blocked-user', content:'Nexora blocked content', audience:'public', timestamp:new Date(), tags:['nexora'] });
   await db.doc('follows/viewer_creator-two').set({ followerId:'viewer', followingId:'creator-two', createdAt:new Date() });
   await db.doc('posts/followed-video').set({ id:'followed-video', userId:'creator-two', content:'Nexora video discovery', audience:'public', mediaType:'video', timestamp:new Date(), tags:['community'], likes:2 });
-  await db.doc('posts/trend-a').set({ id:'trend-a', userId:'public-user', content:'A trending design post', audience:'public', timestamp:new Date(), tags:['trending'], likes:20 });
-  await db.doc('posts/trend-b').set({ id:'trend-b', userId:'creator-two', content:'Another trending design post', audience:'public', timestamp:new Date(), tags:['trending'], likes:15 });
+  await trendingDb.doc('posts/trend-a').set({ id:'trend-a', userId:'public-user', content:'A trending design post', audience:'public', timestamp:new Date(), tags:['trending'], likes:20 });
+  await trendingDb.doc('posts/trend-b').set({ id:'trend-b', userId:'creator-two', content:'Another trending design post', audience:'public', timestamp:new Date(), tags:['trending'], likes:15 });
   await db.doc('posts/private-trend-a').set({ id:'private-trend-a', userId:'private-user', content:'Private-only trend', audience:'public', timestamp:new Date(), tags:['private-only'] });
   await db.doc('posts/private-trend-b').set({ id:'private-trend-b', userId:'private-user', content:'Private-only trend', audience:'public', timestamp:new Date(), tags:['private-only'] });
   await syncUniversalSearchRecord(db,'person','public-user','users/public-user',(await db.doc('users/public-user').get()).data()!);
@@ -65,6 +69,9 @@ after(async () => {
   await db.doc('verifiedIdentities/creator-two').delete().catch(() => undefined);
   await db.doc('communities/search-circle').delete().catch(() => undefined);
   await deleteApp(app);
+  await trendingDb.recursiveDelete(trendingDb.collection('posts')).catch(() => undefined);
+  await trendingDb.recursiveDelete(trendingDb.collection('users')).catch(() => undefined);
+  await deleteApp(trendingApp);
 });
 describe('NEXORA universal search', () => {
   it('indexes and returns public people and video content while respecting blocks and private profiles', async () => {
@@ -108,7 +115,15 @@ describe('NEXORA universal search', () => {
     assert.ok(result.results.some(hit => hit.targetId === 'public-video'));
   });
   it('calculates platform trends across distinct public creators and ignores private creators', async () => {
-    const trends = await getNexoraTrending(db);
+    await trendingDb.doc('users/public-user').set({ username:'public-user' });
+    await trendingDb.doc('users/creator-two').set({ username:'creator-two' });
+    await trendingDb.doc('users/private-user').set({ username:'private-user' });
+    await trendingDb.doc('users/private-user/settings/preferences').set({ privacy:{ isPrivateAccount:true } });
+    await trendingDb.doc('posts/trend-a').set({ id:'trend-a', userId:'public-user', audience:'public', timestamp:new Date(), tags:['trending'], likes:20 });
+    await trendingDb.doc('posts/trend-b').set({ id:'trend-b', userId:'creator-two', audience:'public', timestamp:new Date(), tags:['trending'], likes:15 });
+    await trendingDb.doc('posts/private-trend-a').set({ id:'private-trend-a', userId:'private-user', audience:'public', timestamp:new Date(), tags:['private-only'] });
+    await trendingDb.doc('posts/private-trend-b').set({ id:'private-trend-b', userId:'private-user', audience:'public', timestamp:new Date(), tags:['private-only'] });
+    const trends = await getNexoraTrending(trendingDb);
     assert.ok(trends.some(item => item.tag === 'trending' && item.postCount === 2 && item.creatorCount === 2));
     assert.ok(!trends.some(item => item.tag === 'private only'));
   });
@@ -117,4 +132,40 @@ describe('NEXORA universal search', () => {
     await assert.rejects(searchNexoraContent(db,'viewer','x'),/between 2 and 80/);
     await assert.rejects(searchNexoraContent(db,'viewer','nexora','invalid-cursor'),/cursor is invalid/);
   });
+});
+
+
+it('ranks exact multi-word search intent above a weaker term-only match', async () => {
+  await db.doc('posts/phrase-exact').set({ id:'phrase-exact', userId:'public-user', content:'Nexora design systems for creators', audience:'public', timestamp:new Date(), tags:['nexora'] });
+  await db.doc('posts/phrase-loose').set({ id:'phrase-loose', userId:'creator-two', content:'Nexora systems for creators who design content', audience:'public', timestamp:new Date(), tags:['nexora'] });
+  await syncUniversalSearchRecord(db,'post','phrase-exact','posts/phrase-exact',(await db.doc('posts/phrase-exact').get()).data()!);
+  await syncUniversalSearchRecord(db,'post','phrase-loose','posts/phrase-loose',(await db.doc('posts/phrase-loose').get()).data()!);
+  const result=await searchNexoraContent(db,'viewer','design systems');
+  const exact=result.results.find(hit=>hit.targetId==='phrase-exact');
+  const loose=result.results.find(hit=>hit.targetId==='phrase-loose');
+  assert.ok(exact && loose);
+  assert.ok(exact.score>loose.score);
+  for(const id of ['phrase-exact','phrase-loose']) {
+    await db.doc('searchIndex/post_'+createHash('sha256').update('posts/'+id).digest('hex')).delete();
+    await db.doc('posts/'+id).delete();
+  }
+});
+
+it('trending requires recent multi-creator activity and reports rising-topic momentum', async () => {
+  const now=Date.now();
+  await trendingDb.doc('users/public-user').set({ username:'public-user' });
+  await trendingDb.doc('users/creator-two').set({ username:'creator-two' });
+  await trendingDb.doc('posts/trend-old').set({ id:'trend-old', userId:'public-user', audience:'public', timestamp:new Date(now-36*3600000), tags:['momentumcheck'], likes:10 });
+  await trendingDb.doc('posts/trend-new-a').set({ id:'trend-new-a', userId:'public-user', audience:'public', timestamp:new Date(now-2*3600000), tags:['momentumcheck'], likes:30 });
+  await trendingDb.doc('posts/trend-new-b').set({ id:'trend-new-b', userId:'creator-two', audience:'public', timestamp:new Date(now-1*3600000), tags:['momentumcheck'], likes:20 });
+  await trendingDb.doc('posts/trend-archived').set({ id:'trend-archived', userId:'public-user', audience:'public', timestamp:new Date(now-30*60*1000), tags:['archivedonly'], isArchived:true });
+  await trendingDb.doc('posts/trend-archived-two').set({ id:'trend-archived-two', userId:'creator-two', audience:'public', timestamp:new Date(now-20*60*1000), tags:['archivedonly'] });
+  const topics=await getNexoraTrending(trendingDb);
+  assert.equal(topics.some(item=>item.tag==='archivedonly'),false);
+  const topic=topics.find(item=>item.tag==='momentumcheck');
+  assert.ok(topic);
+  assert.equal(topic?.currentPosts,2);
+  assert.equal(topic?.previousPosts,1);
+  assert.equal(topic?.status,'rising');
+  for(const id of ['trend-old','trend-new-a','trend-new-b','trend-archived','trend-archived-two']) await trendingDb.doc('posts/'+id).delete();
 });
