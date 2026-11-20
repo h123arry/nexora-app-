@@ -2607,112 +2607,96 @@ export default function FeedView({
 
 
 
-      {/* FULLSCREEN IMMERSIVE VIDEO PLAYER OVERLAY */}
+      {/* FULLSCREEN REEL PLAYER: video fills the viewport; actions and details overlay the media. */}
       <AnimatePresence>
         {activeVideoFullscreen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black z-50 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden touch-pan-y"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Video by ${activeVideoFullscreen.username}`}
+            className="fixed inset-0 z-[100] h-[100dvh] w-[100vw] overflow-hidden bg-black touch-pan-y"
           >
-            {/* Left Column: Full Immersive Video Player */}
-            <div className="flex-1 bg-black relative flex items-center justify-center touch-pan-y">
-              <NexoraVideo 
-                ref={fullscreenVideoRef}
-                src={activeVideoFullscreen.videoUrl}
-                autoPlay
-                muted={fullscreenVideoMuted}
-                loop
-                playsInline
+            <NexoraVideo
+              ref={fullscreenVideoRef}
+              src={activeVideoFullscreen.videoUrl}
+              autoPlay
+              muted={fullscreenVideoMuted}
+              loop
+              playsInline
+              onClick={handleToggleFullscreenPlay}
+              className="absolute inset-0 block h-full w-full max-h-none object-cover cursor-pointer touch-pan-y"
+            />
+
+            {!fullscreenPlaying && (
+              <button
+                type="button"
                 onClick={handleToggleFullscreenPlay}
-                className="w-full h-full max-h-screen object-contain cursor-pointer touch-pan-y"
-              />
-              
-              {/* Play/Pause state overlay indicator */}
-              {!fullscreenPlaying && (
-                <div 
-                  onClick={handleToggleFullscreenPlay}
-                  className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer z-10"
-                >
-                  <div className="p-5 rounded-full bg-black/60 border border-white/10 text-white animate-scale-up">
-                    <Play className="w-8 h-8 fill-current ml-1" />
-                  </div>
-                </div>
-              )}
-
-              <button 
-                onClick={handleToggleFullscreenMute}
-                className="absolute top-4 left-4 p-2.5 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-xl text-white border border-white/10 cursor-pointer z-20"
+                aria-label="Play video"
+                className="absolute inset-0 z-10 flex items-center justify-center bg-black/20"
               >
-                {fullscreenVideoMuted ? <VolumeX className="w-5 h-5 text-red-400" /> : <Volume2 className="w-5 h-5 text-emerald-400" />}
-              </button>
-
-              <button 
-                onClick={handleCloseFullscreen}
-                className="absolute top-4 right-4 p-2.5 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-xl text-white border border-white/10 cursor-pointer z-20"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              {/* Title & metadata bar at bottom inside video */}
-              <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/5 space-y-2.5 max-w-lg z-20">
-                <div className="flex items-center gap-2.5">
-                  <img src={activeVideoFullscreen.avatar} alt={activeVideoFullscreen.name} className="w-8 h-8 rounded-lg object-cover" />
-                  <div>
-                    <span className="font-sans font-black text-xs text-white">{activeVideoFullscreen.name}</span>
-                    <span className="text-[9.5px] font-mono text-violet-300 block">@{activeVideoFullscreen.username}</span>
-                  </div>
-                </div>
-                <p className="text-xs text-violet-100 font-sans leading-normal line-clamp-2">{activeVideoFullscreen.content}</p>
-                <span className="text-[8.5px] font-mono text-pink-400 block tracking-widest uppercase animate-pulse">
-                  Tap video to play/pause | Synced inline position
+                <span className="rounded-full border border-white/15 bg-black/55 p-5 text-white backdrop-blur-md">
+                  <Play className="ml-1 h-8 w-8 fill-current" />
                 </span>
-              </div>
+              </button>
+            )}
+
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-32 bg-gradient-to-b from-black/65 to-transparent" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-64 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
+
+            <button
+              type="button"
+              onClick={handleToggleFullscreenMute}
+              aria-label={fullscreenVideoMuted ? "Unmute video" : "Mute video"}
+              className="absolute left-4 top-[max(env(safe-area-inset-top),1rem)] z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/45 text-white backdrop-blur-md"
+            >
+              {fullscreenVideoMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </button>
+            <button
+              type="button"
+              onClick={handleCloseFullscreen}
+              aria-label="Close full-screen video"
+              className="absolute right-4 top-[max(env(safe-area-inset-top),1rem)] z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/45 text-white backdrop-blur-md"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="absolute right-3 z-30 flex flex-col items-center gap-5"
+              style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 116px)" }}>
+              <button type="button" onClick={() => handleSpark(activeVideoFullscreen.id)} className="flex flex-col items-center gap-1 text-white">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/40 backdrop-blur-md"><Zap className="h-5 w-5 fill-current" /></span>
+                <span className="text-xs font-bold drop-shadow">{activeVideoFullscreen.likes}</span>
+              </button>
+              <button type="button" onClick={() => { setActiveCommentsPostId(activeVideoFullscreen.id); handleCloseFullscreen(); }} className="flex flex-col items-center gap-1 text-white">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/40 backdrop-blur-md"><MessageCircle className="h-5 w-5" /></span>
+                <span className="text-xs font-bold drop-shadow">{activeVideoFullscreen.comments?.length || 0}</span>
+              </button>
+              <button type="button" onClick={() => handleSave(activeVideoFullscreen.id)} className="flex flex-col items-center gap-1 text-white">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/40 backdrop-blur-md"><Bookmark className="h-5 w-5" /></span>
+                <span className="text-[10px] font-semibold drop-shadow">Save</span>
+              </button>
+              <button type="button" onClick={() => onSharePost?.(activeVideoFullscreen.id)} className="flex flex-col items-center gap-1 text-white">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-black/40 backdrop-blur-md"><Send className="h-5 w-5" /></span>
+                <span className="text-[10px] font-semibold drop-shadow">Share</span>
+              </button>
             </div>
 
-            {/* Right Column: Mini Interaction Control Panel (Visible on Desktop, hidden on tight layouts) */}
-            <div className="w-full md:w-80 bg-[#09071a] border-t md:border-t-0 md:border-l border-white/10 p-5 flex flex-col justify-between shrink-0">
-              <div className="space-y-4">
-                <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block font-bold border-b border-white/5 pb-2">Post layout</span>
-                
-                <div className="flex gap-4 items-center">
-                  <button 
-                    onClick={() => handleSpark(activeVideoFullscreen.id)}
-                    className="flex-1 flex flex-col items-center p-3 rounded-2xl bg-slate-950/60 border border-white/5 hover:border-pink-500/25 text-pink-400 cursor-pointer"
-                  >
-                    <Zap className="w-5 h-5 fill-current mb-1" />
-                    <span className="text-xs font-mono font-bold">{activeVideoFullscreen.likes} Sparks</span>
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      setActiveCommentsPostId(activeVideoFullscreen.id);
-                      handleCloseFullscreen();
-                    }}
-                    className="flex-1 flex flex-col items-center p-3 rounded-2xl bg-slate-950/60 border border-white/5 hover:border-white/10 text-violet-300 cursor-pointer"
-                  >
-                    <MessageCircle className="w-5 h-5 mb-1" />
-                    <span className="text-xs font-mono font-bold">{activeVideoFullscreen.comments.length} Reply</span>
-                  </button>
-                </div>
-
-                <div className="p-3.5 bg-violet-950/20 rounded-2xl border border-white/10 space-y-1">
-                  <span className="text-[8.5px] font-mono text-violet-400 block uppercase font-bold tracking-widest">Active Hashtags</span>
-                  <div className="flex flex-wrap gap-1">
-                    {activeVideoFullscreen.tags.map(t => (
-                      <span key={t} className="text-[9.5px] font-mono text-cyan-400">#{t}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <button 
-                onClick={handleCloseFullscreen}
-                className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-xs uppercase rounded-xl transition-all tracking-wider cursor-pointer mt-4"
-              >
-                Close Narrative Grid
+            <div className="absolute bottom-0 left-0 z-30 max-w-[calc(100%-5.5rem)] px-4 pb-[max(env(safe-area-inset-bottom),1.25rem)] pt-8 text-left"
+              style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
+              <button type="button" onClick={() => onViewProfile?.(activeVideoFullscreen.userId)} className="mb-2 flex items-center gap-2 text-left">
+                <img src={activeVideoFullscreen.avatar} alt="" className="h-9 w-9 rounded-full border border-white/40 object-cover" />
+                <span className="text-sm font-bold text-white drop-shadow">{activeVideoFullscreen.name || activeVideoFullscreen.username}</span>
+                <span className="text-xs text-white/75 drop-shadow">@{activeVideoFullscreen.username}</span>
               </button>
+              {activeVideoFullscreen.content && (
+                <p className="mb-2 line-clamp-3 text-sm leading-snug text-white drop-shadow">{activeVideoFullscreen.content}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-2 text-[11px] text-white/85 drop-shadow">
+                <span>{Number(activeVideoFullscreen.views || 0).toLocaleString()} views</span>
+                {(activeVideoFullscreen.tags || []).slice(0, 4).map(tag => <span key={tag}>#{tag}</span>)}
+              </div>
             </div>
           </motion.div>
         )}
