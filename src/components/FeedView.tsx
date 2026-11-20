@@ -373,6 +373,7 @@ export default function FeedView({
   const [isScrollingFast, setIsScrollingFast] = useState(false);
   const [userSettled, setUserSettled] = useState(false);
   const [activeVideoFullscreen, setActiveVideoFullscreen] = useState<RefactoredPost | null>(null);
+  const [reelsStartPost, setReelsStartPost] = useState<RefactoredPost | null>(null);
   const [fullscreenVideoMuted, setFullscreenVideoMuted] = useState(() => globalVideoPlaybackManager.getMute());
   const [globalMutedState, setGlobalMutedState] = useState(() => globalVideoPlaybackManager.getMute());
   const [fullscreenPlaying, setFullscreenPlaying] = useState(true);
@@ -1739,10 +1740,10 @@ export default function FeedView({
       <AnimatePresence>
         {feedTab === 'reels' && (
           <ImmersiveVideoViewer
-            initialPost={currentDisplayList.find(p => p.videoUrl) || currentDisplayList[0]}
+            initialPost={reelsStartPost || currentDisplayList.find(p => p.videoUrl) || currentDisplayList[0]}
             creatorPosts={currentDisplayList}
             currentUser={currentUser}
-            onClose={() => setFeedTab('posts')}
+            onClose={() => { setReelsStartPost(null); setFeedTab('posts'); }}
             onLikePost={onLikePost}
             onToggleFollow={onToggleFollow}
             followingIds={followingIds}
@@ -2269,6 +2270,7 @@ export default function FeedView({
                 onToggleFollow={onToggleFollow}
                 onViewProfile={onViewProfile}
                 setActiveVideoFullscreen={setActiveVideoFullscreen}
+                onOpenReels={feedTab === 'reels' ? undefined : targetPost => { setReelsStartPost(targetPost as RefactoredPost); setFeedTab('reels'); }}
                 setContextualMenuPost={setContextualMenuPost}
                 setMutedUserIds={setMutedUserIds}
                 setBlockedUserIds={setBlockedUserIds}
