@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Play, Pause, Check, CheckCheck, WifiOff, Pin, Trash2, Edit, Globe, Quote, MapPin, FileText, Download, Loader2 } from 'lucide-react';
+import { Play, Pause, Check, CheckCheck, Pin, Trash2, Edit, Globe, Quote, MapPin, FileText, Download, Loader2 } from 'lucide-react';
 import { ExtendedMessage } from '../types';
 import RelativeTime from './RelativeTime';
 
