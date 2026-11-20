@@ -1,28 +1,31 @@
-importScripts('https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging-compat.js');
-
-firebase.initializeApp({
-  projectId: "nexora-prod-voiceharrison",
-  appId: "1:128918144717:web:1bf7a574fddb18bc3e0b84",
-  apiKey: "AIzaSyA8RyvP6crBpl4Zg_bgjlTqqgZkMA85NT4",
-  messagingSenderId: "128918144717"
-});
-
-const nexoraMessaging = firebase.messaging();
-nexoraMessaging.onBackgroundMessage(payload => {
-  // FCM displays notification-payload messages automatically. Only data-only
-  // messages need an explicit notification here.
-  if (payload.notification) return;
-  const data = payload.data || {};
-  const title = data.title || (data.username ? `@${data.username}` : 'NEXORA');
-  self.registration.showNotification(title, {
-    body: data.body || data.content || 'You have a new NEXORA update.',
-    icon: '/nexora-mark.png',
-    badge: '/icons/icon-48.png',
-    tag: data.notificationId || `nexora-${data.type || 'update'}-${data.targetId || 'general'}`,
-    data,
+let nexoraMessaging = null;
+try {
+  importScripts('https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js');
+  importScripts('https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging-compat.js');
+  firebase.initializeApp({
+    projectId: "nexora-prod-voiceharrison",
+    appId: "1:128918144717:web:1bf7a574fddb18bc3e0b84",
+    apiKey: "AIzaSyA8RyvP6crBpl4Zg_bgjlTqqgZkMA85NT4",
+    messagingSenderId: "128918144717"
   });
-});
+  nexoraMessaging = firebase.messaging();
+  nexoraMessaging.onBackgroundMessage(payload => {
+    // FCM displays notification-payload messages automatically.
+    if (payload.notification) return;
+    const data = payload.data || {};
+    const title = data.title || (data.username ? `@${data.username}` : 'NEXORA');
+    self.registration.showNotification(title, {
+      body: data.body || data.content || 'You have a new NEXORA update.',
+      icon: '/nexora-mark.png',
+      badge: '/icons/icon-48.png',
+      tag: data.notificationId || `nexora-${data.type || 'update'}-${data.targetId || 'general'}`,
+      data,
+    });
+  });
+} catch (error) {
+  // Push support must never prevent the core offline app worker from installing.
+  console.warn('[NEXORA] Firebase Messaging is unavailable in this browser.', error);
+}
 
 const CACHE_NAME = 'nexora-shell-cache-v3';
 const MAX_DYNAMIC_ENTRIES = 80;
