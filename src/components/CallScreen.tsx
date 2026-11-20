@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Camera, CameraOff, Check, Loader2, Mic, MicOff, PhoneOff, RefreshCw, Video, VideoOff, X } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, Mic, MicOff, PhoneOff, RefreshCw, Video, VideoOff, X } from 'lucide-react';
 import { endDirectCall, getDirectCallToken, respondToDirectCall, watchDirectCall, type DirectCall } from '../services/directCallService';
 
 declare global {
@@ -9,7 +9,6 @@ declare global {
 interface CallScreenProps {
   isOpen: boolean;
   callId: string;
-  currentUserId: string;
   type: 'voice' | 'video';
   partnerName: string;
   partnerAvatar?: string;
@@ -22,7 +21,7 @@ function initials(name: string): string {
 }
 
 export default function CallScreen({
-  isOpen, callId, currentUserId, type, partnerName, partnerAvatar, incoming = false, onClose,
+  isOpen, callId, type, partnerName, partnerAvatar, incoming = false, onClose,
 }: CallScreenProps) {
   const [call, setCall] = useState<DirectCall | null>(null);
   const [connecting, setConnecting] = useState(false);
@@ -198,11 +197,11 @@ export default function CallScreen({
       </header>
 
       <main className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden">
-        {type === 'video' && connected ? (
-          <div ref={remoteRef} className="absolute inset-0 grid place-items-center bg-black">
-            <video ref={localRef} autoPlay muted playsInline aria-label="Your camera preview" className="absolute bottom-5 right-5 z-10 aspect-[3/4] w-28 rounded-2xl border border-white/30 bg-[#111] object-cover shadow-xl" />
-          </div>
-        ) : (
+        <div ref={remoteRef} className={type === 'video' && connected ? 'absolute inset-0 grid place-items-center bg-black' : 'hidden'} />
+        {type === 'video' && connected && (
+          <video ref={localRef} autoPlay muted playsInline aria-label="Your camera preview" className="absolute bottom-5 right-5 z-10 aspect-[3/4] w-28 rounded-2xl border border-white/30 bg-[#111] object-cover shadow-xl" />
+        )}
+        {!(type === 'video' && connected) && (
           <div className="flex flex-col items-center px-6 text-center">
             <div className="relative mb-6 flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border border-violet-400/30 bg-violet-500/15 text-3xl font-bold text-violet-100 shadow-[0_0_70px_rgba(113,56,255,0.18)]">
               {partnerAvatar ? <img src={partnerAvatar} alt="" className="h-full w-full object-cover" /> : initials(partnerName)}
@@ -213,7 +212,6 @@ export default function CallScreen({
             </p>
           </div>
         )}
-
         {type === 'video' && connected && (
           <div className="absolute left-5 top-5 rounded-full bg-black/60 px-3 py-2 text-xs font-medium backdrop-blur">{formatTime(elapsed)}</div>
         )}
