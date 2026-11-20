@@ -136,12 +136,18 @@ function relevance(queryWords: string[], doc: FirebaseFirestore.DocumentData): n
     if (!exactTitle && !prefixTitle && !exactBody && !prefixBody && !typo) return null;
     score += exactTitle ? 18 : prefixTitle ? 14 : exactBody ? 10 : prefixBody ? 7 : 3;
   }
+  const phrase = queryWords.join(' ');
+  const phraseTitle = title.includes(phrase);
+  const phraseBody = text.includes(phrase);
   const ageHours = Math.max(0, (Date.now() - asDate(doc.createdAt).getTime()) / 3600000);
   const freshness = Math.max(0, 6 - Math.log2(1 + ageHours / 12));
   const signals = doc.scoreSignals || {};
   const engagement = Math.min(8, Math.log1p(Number(signals.likes || 0)) * 0.7
     + Math.log1p(Number(signals.comments || 0)) * 0.9 + Math.log1p(Number(signals.views || 0)) * 0.2);
-  return score + freshness + engagement + (doc.verified ? 1.5 : 0);
+  // Exact multi-word intent is a strong signal, but never overrides term coverage.
+  const phraseBoost = phraseTitle ? 9 : phraseBody ? 4 : 0;
+  const titleLeadBoost = title.startsWith(phrase) ? 3 : 0;
+  return score + phraseBoost + titleLeadBoost + freshness + engagement + (doc.verified ? 1.5 : 0);
 }
 function decodeCursor(raw: unknown, query: string, key: string): string | null {
   if (raw === undefined || raw === null || raw === '') return null;
@@ -321,7 +327,12 @@ export async function searchNexoraContent(
   return { results, nextCursor: encodeCursor(query,key,lastDoc), query };
 }
 
-export async function getNexoraTrending(db: Firestore): Promise<Array<{tag:string;score:number;postCount:number;creatorCount:number}>> {
+export async function getNexoraTrending(db: Firestore): Promise<Array<{
+  tag:string;score:number;postCount:number;creatorCount:number;
+  currentPosts:number;previousPosts:number;growthMultiplier:number|null;status:'new'|'rising'|'steady';
+}>> {
+  // A bounded recent sample keeps reads predictable. This is a live momentum
+  // signal, not a claim of a complete all-platform analytics index.
   const posts = await db.collection('posts').where('audience','==','public').orderBy('timestamp','desc').limit(250).get();
   const creatorIds = [...new Set(posts.docs.map(post => String(post.get('userId') || post.get('authorId') || '')).filter(Boolean))];
   const [profileSnapshots, privacySnapshots, statusSnapshots] = await Promise.all([
@@ -338,30 +349,64 @@ export async function getNexoraTrending(db: Firestore): Promise<Array<{tag:strin
     const privateProfile = privacy?.privacy?.isPrivate === true || privacy?.privacy?.isPrivateAccount === true;
     if (activeRestriction || privateProfile) hiddenCreators.add(id);
   });
-  const groups = new Map<string,{posts:Set<string>;creators:Map<string,number>}>();
+  const groups = new Map<string,{
+    posts:Set<string>;currentPosts:Set<string>;previousPosts:Set<string>;
+    creators:Set<string>;creatorContributions:Map<string,number>;engagement:number;newest:number;
+  }>();
   const now = Date.now();
+  const windowMs = 24 * 3600000;
+  const cutoff = now - windowMs * 2;
   for (const post of posts.docs) {
     const data = post.data();
     const creator = String(data.userId || data.authorId || '');
-    if (!creator || hiddenCreators.has(creator)) continue;
-    const ageHours = Math.max(0,(now-asDate(data.timestamp).getTime())/3600000);
+    const timestamp = asDate(data.timestamp).getTime();
+    if (!creator || hiddenCreators.has(creator) || !Number.isFinite(timestamp) || timestamp < cutoff || timestamp > now) continue;
+    const ageHours = Math.max(0,(now-timestamp)/3600000);
+    const current = timestamp >= now - windowMs;
     const tags = Array.isArray(data.tags) ? [...new Set(data.tags)] : [];
     for (const raw of tags) {
       if (typeof raw !== 'string') continue;
       const tag = normalizeSearchText(raw.replace(/^#/,'')).replace(/\\s+/g,' ').slice(0,40);
       if (!tag || tag.length < 2) continue;
-      const entry = groups.get(tag) || {posts:new Set<string>(),creators:new Map<string,number>()};
+      const entry = groups.get(tag) || {
+        posts:new Set<string>(),currentPosts:new Set<string>(),previousPosts:new Set<string>(),
+        creators:new Set<string>(),creatorContributions:new Map<string,number>(),engagement:0,newest:0,
+      };
+      if (entry.posts.has(post.id)) continue;
       entry.posts.add(post.id);
-      const contribution = Math.min(30,Math.log1p(Number(data.likes)||0)*2 + Math.log1p(Number(data.commentsCount)||0)*3)
-        * Math.pow(0.5,ageHours/12);
-      entry.creators.set(creator, Math.min(18, (entry.creators.get(creator) || 0) + contribution));
+      if (current) {
+        entry.currentPosts.add(post.id);
+        entry.creators.add(creator);
+        const contributionCount = entry.creatorContributions.get(creator) || 0;
+        if (contributionCount < 3) {
+          const contribution = Math.min(30,Math.log1p(Number(data.likes)||0)*2
+            + Math.log1p(Number(data.commentsCount)||0)*3 + Math.log1p(Number(data.shares)||0)*2)
+            * Math.pow(0.5,ageHours/12);
+          entry.engagement += contribution;
+          entry.creatorContributions.set(creator,contributionCount+1);
+        }
+      } else {
+        entry.previousPosts.add(post.id);
+      }
+      entry.newest = Math.max(entry.newest,timestamp);
       groups.set(tag,entry);
     }
   }
-  return [...groups.entries()].filter(([,entry])=>entry.posts.size>=2 && entry.creators.size>=2)
-    .map(([tag,entry])=>({
-      tag, score:Math.round([...entry.creators.values()].reduce((sum,value)=>sum+value,0)*100)/100,
-      postCount:entry.posts.size, creatorCount:entry.creators.size,
-    }))
-    .sort((a,b)=>b.score-a.score || b.creatorCount-a.creatorCount || a.tag.localeCompare(b.tag)).slice(0,20);
+  return [...groups.entries()]
+    .filter(([,entry])=>entry.currentPosts.size>=2 && entry.creators.size>=2)
+    .map(([tag,entry])=>{
+      const currentPosts=entry.currentPosts.size;
+      const previousPosts=entry.previousPosts.size;
+      const growthMultiplier=previousPosts===0?null:Math.round((currentPosts/previousPosts)*100)/100;
+      const acceleration=previousPosts===0?currentPosts+1:currentPosts/previousPosts;
+      const freshness=Math.max(0,1-(now-entry.newest)/windowMs);
+      const score=Math.round((currentPosts*2+entry.creators.size*3+entry.engagement
+        +Math.min(10,acceleration*2)+freshness*3)*100)/100;
+      return {
+        tag,score,postCount:entry.posts.size,creatorCount:entry.creators.size,
+        currentPosts,previousPosts,growthMultiplier,status:previousPosts===0?'new' as const:acceleration>1?'rising' as const:'steady' as const,
+      };
+    })
+    .sort((a,b)=>b.score-a.score || b.creatorCount-a.creatorCount || a.tag.localeCompare(b.tag))
+    .slice(0,20);
 }
