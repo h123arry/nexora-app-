@@ -61,7 +61,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
   }
 
   return (
-    <div className="nx-profile-media-grid grid grid-cols-3 gap-px w-full bg-[#090714]">
+    <div className="nx-profile-media-grid grid w-full grid-cols-[repeat(3,minmax(0,1fr))] gap-px bg-[#090714]">
       {gridPosts.map(post => {
         const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
@@ -1588,7 +1588,7 @@ export default function ProfileView({
                 </div>
               </div>
             ) : (
-              <div className="w-full max-w-4xl mx-auto px-2">
+              <div className="w-full max-w-[1040px] mx-auto px-0">
                 <MediaGrid 
                   gridPosts={[...filteredTabPosts].sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
                   pinnedPostIds={pinnedPostIdsList} 
