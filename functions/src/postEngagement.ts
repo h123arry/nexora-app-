@@ -98,12 +98,13 @@ export async function setPostLike(
       const profile = actorProfileSnapshot.data() || {};
       transaction.create(notificationRef, {
         id: notificationId,
-        type: 'like',
-        userId: authorId,
+        type: 'spark',
+        userId: uid,
         username: typeof profile.username === 'string' ? profile.username.slice(0, 80) : 'A Nexora member',
+        actorName: typeof profile.name === 'string' ? profile.name.slice(0, 100) : '',
         avatar: typeof profile.avatar === 'string' ? profile.avatar.slice(0, 1000) : '',
         targetId: postId,
-        content: 'liked your public post',
+        content: 'sparked your post.',
         timestamp: new Date().toISOString(),
         isRead: false,
       });
