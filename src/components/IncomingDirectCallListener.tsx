@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { User } from '../types';
-import { watchDirectCalls } from '../services/directCallService';
+import { startDirectCall, watchDirectCalls } from '../services/directCallService';
 import CallScreen from './CallScreen';
 
 interface IncomingDirectCallListenerProps {
@@ -16,10 +16,49 @@ export default function IncomingDirectCallListener({ currentUser, creators, enab
     type: 'voice' | 'video';
     partnerName: string;
     partnerAvatar: string;
+    incoming: boolean;
   } | null>(null);
   const creatorsRef = useRef(creators);
+  const activeCallRef = useRef(activeCall);
+  const startingCallRef = useRef(false);
   useEffect(() => { creatorsRef.current = creators; }, [creators]);
+  useEffect(() => { activeCallRef.current = activeCall; }, [activeCall]);
   const closeCall = useCallback(() => setActiveCall(null), []);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const handleStartCall = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {};
+      const chatId = typeof detail.chatId === 'string' ? detail.chatId : '';
+      const recipientId = typeof detail.recipientId === 'string' ? detail.recipientId : '';
+      const type = detail.type === 'video' ? 'video' : detail.type === 'voice' ? 'voice' : null;
+      if (!chatId || !recipientId || !type) return;
+      if (activeCallRef.current || startingCallRef.current) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'You already have a call in progress.' }));
+        return;
+      }
+      startingCallRef.current = true;
+      void startDirectCall(chatId, recipientId, type).then(started => {
+        const next = {
+          callId: started.callId,
+          type,
+          partnerName: typeof detail.partnerName === 'string' ? detail.partnerName : 'NEXORA member',
+          partnerAvatar: typeof detail.partnerAvatar === 'string' ? detail.partnerAvatar : '',
+          incoming: false,
+        };
+        activeCallRef.current = next;
+        setActiveCall(next);
+      }).catch((error: any) => {
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: error?.message || 'The call could not be started. Please try again.',
+        }));
+      }).finally(() => {
+        startingCallRef.current = false;
+      });
+    };
+    window.addEventListener('NEXORA_START_DIRECT_CALL', handleStartCall);
+    return () => window.removeEventListener('NEXORA_START_DIRECT_CALL', handleStartCall);
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled) {
@@ -39,6 +78,7 @@ export default function IncomingDirectCallListener({ currentUser, creators, enab
           type: incoming.type,
           partnerName: caller?.name || incoming.callerName || 'NEXORA member',
           partnerAvatar: caller?.avatar || incoming.callerAvatar || '',
+          incoming: true,
         };
       });
     }, error => console.warn('[NEXORA calls] Incoming call updates are unavailable:', error.message));
@@ -52,7 +92,7 @@ export default function IncomingDirectCallListener({ currentUser, creators, enab
       type={activeCall.type}
       partnerName={activeCall.partnerName}
       partnerAvatar={activeCall.partnerAvatar}
-      incoming
+      incoming={activeCall.incoming}
       onClose={closeCall}
     />
   );
