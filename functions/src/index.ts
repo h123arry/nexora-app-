@@ -13,7 +13,7 @@ import { deletePublicPostComment } from './postCommentDeletion.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
-import { setCircleMemberRole, moderateCircleMember, listCircleBans } from './communityGovernance.js';
+import { setCircleMemberRole, moderateCircleMember, listCircleBans, transferCircleOwnership } from './communityGovernance.js';
 import { submitCircleReport, listCircleReports, resolveCircleReport } from './communityReports.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary, getReferralInvitePreview } from './referrals.js';
@@ -524,6 +524,20 @@ export const setCommunityMemberRole = onCall({ maxInstances: 10 }, async (reques
   }
 });
 
+
+export const transferCommunityOwnership = onCall({ maxInstances: 5 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to transfer Circle ownership.');
+  await assertCallableSessionActive(adminDb, request.auth.uid, request.auth.token?.auth_time);
+  try {
+    return await transferCircleOwnership(adminDb, request.auth.uid, request.data?.communityId, request.data?.targetUid);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid active Circle')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only the active Circle owner')) throw new HttpsError('permission-denied', message);
+    if (message.includes('already be an active')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'Circle ownership could not be transferred. Please retry.');
+  }
+});
 
 export const listCommunityBans = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to review Circle moderation records.');

@@ -190,3 +190,49 @@ export async function listCircleBans(
     };
   }));
 }
+
+
+/**
+ * Transfer a Circle to an existing active member. The owner and both membership
+ * records are checked and updated atomically; client-side role fields are never trusted.
+ */
+export async function transferCircleOwnership(
+  db: Firestore,
+  actorUid: string,
+  communityId: string,
+  targetUid: string,
+): Promise<{ communityId: string; previousOwnerId: string; ownerId: string }> {
+  if (!actorUid || !validId(communityId) || !validId(targetUid) || actorUid === targetUid) {
+    throw new Error('Choose a valid active Circle member.');
+  }
+  const communityRef = db.collection('communities').doc(communityId);
+  const oldOwnerRef = communityRef.collection('members').doc(actorUid);
+  const newOwnerRef = communityRef.collection('members').doc(targetUid);
+  const auditRef = communityRef.collection('auditEvents').doc(randomUUID());
+  await db.runTransaction(async transaction => {
+    const [community, oldOwner, newOwner] = await Promise.all([
+      transaction.get(communityRef), transaction.get(oldOwnerRef), transaction.get(newOwnerRef),
+    ]);
+    if (!community.exists || community.get('ownerId') !== actorUid
+      || !oldOwner.exists || oldOwner.get('status') !== 'active' || oldOwner.get('role') !== 'owner') {
+      throw new Error('Only the active Circle owner can transfer ownership.');
+    }
+    if (!newOwner.exists || newOwner.get('status') !== 'active') {
+      throw new Error('The new owner must already be an active Circle member.');
+    }
+    const admins = Array.isArray(community.get('admins')) ? community.get('admins') as string[] : [];
+    const moderators = Array.isArray(community.get('moderators')) ? community.get('moderators') as string[] : [];
+    transaction.update(communityRef, {
+      ownerId: targetUid,
+      admins: [...new Set([...admins.filter(uid => uid !== targetUid), actorUid])],
+      moderators: moderators.filter(uid => uid !== targetUid && uid !== actorUid),
+    });
+    transaction.update(oldOwnerRef, { role: 'admin' });
+    transaction.update(newOwnerRef, { role: 'owner' });
+    transaction.create(auditRef, {
+      id: auditRef.id, actorUid, targetUid, action: 'ownership_transferred',
+      previousOwnerId: actorUid, newOwnerId: targetUid, createdAt: new Date(),
+    });
+  });
+  return { communityId, previousOwnerId: actorUid, ownerId: targetUid };
+}

@@ -14,6 +14,11 @@ import CircleReportsPanel from './CircleReportsPanel';
 import SaveToCollectionButton from './SaveToCollectionButton';
 import { getCreatorCommunityAsset, getCreatorCommunityAssets } from '../content/creatorCommunityAssets';
 
+
+function safeCircleAvatar(value: string): string {
+  return /^https:\/\//i.test(value) || value === '/nexora-mark.png' ? value : '/nexora-mark.png';
+}
+
 interface CirclesViewProps {
   currentUser: User;
 }
@@ -53,9 +58,18 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
 
   // Community Portal Modal state
   const [selectedCircle, setSelectedCircle] = useState<Circle | null>(null);
-  const [activePortalTab, setActivePortalTab] = useState<string>('feed');
+  const [activePortalTab, setActivePortalTab] = useState<string>('chat');
+  const [circlePeople, setCirclePeople] = useState<Array<{ userId: string; name: string; username: string; avatar: string; role: string }>>([]);
   const selectedCircleCanManage = Boolean(selectedCircle && (selectedCircle.ownerId === currentUser.id || selectedCircle.creatorId === currentUser.id || selectedCircle.admins?.includes(currentUser.id) || selectedCircle.moderators?.includes(currentUser.id)));
-  useEffect(() => { setActivePortalTab('feed'); }, [selectedCircle?.id]);
+  useEffect(() => { setActivePortalTab('chat'); setCirclePeople([]); }, [selectedCircle?.id]);
+  useEffect(() => {
+    let active = true;
+    if (!selectedCircle?.isJoinedByMe) { setCirclePeople([]); return; }
+    CommunityService.listActiveMembers(selectedCircle.id)
+      .then(members => { if (active) setCirclePeople(members); })
+      .catch(() => { if (active) setCirclePeople([]); });
+    return () => { active = false; };
+  }, [selectedCircle?.id, selectedCircle?.isJoinedByMe]);
 
   // Interactive state helpers for sub-tabs in Community Portal
   const [circlePolls, setCirclePolls] = useState<Array<{ id: string; question: string; options: Array<{ id: string; text: string; votes: number }>; createdBy: string; status: string; myVote: string | null; createdAt: string }>>([]);
@@ -79,14 +93,14 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
       selectedCircle.id,
       currentUser.id,
       messages => setChatMessages(messages.map(message => ({
-        sender: message.senderId === currentUser.id ? currentUser.name : 'Circle member',
-        avatar: message.senderId === currentUser.id ? currentUser.avatar : '/nexora-mark.png',
+        sender: message.senderId === currentUser.id ? currentUser.name : (circlePeople.find(person => person.userId === message.senderId)?.name || 'Circle member'),
+        avatar: message.senderId === currentUser.id ? currentUser.avatar : (circlePeople.find(person => person.userId === message.senderId)?.avatar || '/nexora-mark.png'),
         text: message.content,
         time: message.time,
       }))),
       error => setChatError(error.message || 'Circle messages could not be loaded.'),
     );
-  }, [selectedCircle?.id, selectedCircle?.isJoinedByMe, currentUser.id, currentUser.name, currentUser.avatar]);
+  }, [selectedCircle?.id, selectedCircle?.isJoinedByMe, currentUser.id, currentUser.name, currentUser.avatar, circlePeople]);
   useEffect(() => {
     if (!selectedCircle || !selectedCircle.isJoinedByMe) {
       setCirclePolls([]);
@@ -220,12 +234,12 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
             </h2>
           </div>
           <p className="text-xs text-violet-300/60 font-sans">
-            Your audiences • Curated networks, close connections & shared interest groups
+            A place for shared interests, smaller communities and ongoing conversations.
           </p>
         </div>
       </div>
 
-      {/* Community Builder Module */}
+      {/* Create a Circle Module */}
       <div className="bg-[#05030c] border border-white/10 rounded-3xl p-5 relative overflow-hidden">
         {/* Background micro gradient glow */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-violet-600/10 rounded-full blur-2xl pointer-events-none" />
@@ -233,12 +247,12 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" />
           <h3 className="text-xs font-black tracking-widest uppercase font-mono text-violet-400">
-            Community Builder
+            Create a Circle
           </h3>
         </div>
 
         <p className="text-xs text-violet-200/80 mb-4 leading-normal font-sans text-left">
-          Describe your community. NEXORA will create a public Circle using the details you provide.
+          Start a Circle around a topic, project, or group of people.
         </p>
 
         <form onSubmit={handleCreateCommunity} className="space-y-3 relative z-10">
@@ -247,7 +261,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               type="text"
               required
               disabled={isBuilding}
-              placeholder='e.g., "Create a football community in Port Harcourt" or "science discussion group"'
+              placeholder='Give your Circle a name or describe its purpose'
               value={promptInput}
               onChange={(e) => setPromptInput(e.target.value)}
               className="flex-1 px-4 py-2 bg-white/5 border border-white/10 focus:outline-hidden text-xs rounded-xl focus:border-white/10 text-white font-sans text-left"
@@ -258,7 +272,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               className="px-5 py-2 font-mono font-black text-xs bg-[#8b5cf6] text-white rounded-xl hover:brightness-110 active:scale-97 disabled:opacity-50 flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Wand2 className="w-3.5 h-3.5" />
-              <span>{isBuilding ? 'BUILDING...' : 'CREATE CIRCLE'}</span>
+              <span>{isBuilding ? 'BUILDING...' : 'Create Circle'}</span>
             </button>
           </div>
           <div className="space-y-2">
@@ -285,7 +299,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 : 'border-transparent text-violet-300/60 hover:text-white'
             }`}
           >
-            All Communities
+            All Circles
           </button>
           <button
             onClick={() => setActiveFilter('joined')}
@@ -295,7 +309,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 : 'border-transparent text-violet-300/60 hover:text-white'
             }`}
           >
-            My Communities
+            My Circles
           </button>
           <button
             onClick={() => setActiveFilter('explore')}
@@ -310,7 +324,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
         </div>
 
         <span className="hidden md:block text-[10px] font-mono text-violet-400/40 uppercase">
-          {filteredCircles.length} COMMUNITIES AVAILABLE
+          {filteredCircles.length} CIRCLES
         </span>
       </div>
 
@@ -320,9 +334,9 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
           <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
             <Users className="w-6 h-6" />
           </div>
-          <h4 className="text-sm font-sans font-extrabold text-white">No Communities Found</h4>
+          <h4 className="text-sm font-sans font-extrabold text-white">No Circles yet</h4>
           <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
-            Use the Community Builder above to instantly launch your custom community space on Nexora.
+            Use the Create a Circle above to instantly launch your custom community space on Nexora.
           </p>
         </div>
       ) : (
@@ -334,7 +348,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               onClick={() => {
                 if (circle.isJoinedByMe) {
                   setSelectedCircle(circle);
-                  setActivePortalTab('feed');
+                  setActivePortalTab('chat');
                 } else {
                   alert(`Join "${circle.name}" first to access this community's posts and tools.`);
                 }
@@ -386,7 +400,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 {/* Creator/Members count */}
                 <div className="flex items-center gap-2 text-violet-400">
                   <Users className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-mono">Member count unavailable</span>
+                  <span className="text-[10px] font-mono">Circle members</span>
                 </div>
 
                 {/* Toggle Button */}
@@ -440,7 +454,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                   <button 
                     onClick={() => setSelectedCircle(null)}
                     className="p-1.5 sm:p-2 bg-black/40 hover:bg-black/60 text-white rounded-xl border border-white/5 transition-colors cursor-pointer shrink-0"
-                    title="Close Lounge"
+                    title="Close Circle"
                   >
                     <X className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button></div>
@@ -451,16 +465,16 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               <div className="bg-black/40 border-b border-white/10 overflow-x-auto scrollbar-none flex-shrink-0">
                 <div className="flex gap-1.5 px-3 py-2.5 min-w-max">
                   {[
-                    { id: 'feed', label: '📢 Feed', icon: FileText },
-                    { id: 'members', label: '👥 Members', icon: Users },
-                    { id: 'events', label: '📅 Events', icon: Calendar },
-                    { id: 'files', label: '📁 Files', icon: FileText },
-                    { id: 'polls', label: '📊 Polls', icon: BarChart2 },
-                                        { id: 'chat', label: '💬 Chat', icon: Send },
-                    { id: 'announcements', label: '🔔 Announcements', icon: Megaphone },
-                    { id: 'mods', label: '🛡 Moderators', icon: Shield },
-                    { id: 'rules', label: '📋 Rules', icon: FileText },
-                                                            ...(selectedCircleCanManage ? [{ id: 'insights', label: '📈 Page insights', icon: BarChart2 }] : [])
+                    { id: 'chat', label: 'Chat', icon: Send },
+                    { id: 'members', label: 'People', icon: Users },
+                    { id: 'feed', label: 'Feed', icon: FileText },
+                    { id: 'events', label: 'Events', icon: Calendar },
+                    { id: 'files', label: 'Shared media', icon: FileText },
+                    { id: 'polls', label: 'Polls', icon: BarChart2 },
+                    { id: 'announcements', label: 'Announcements', icon: Megaphone },
+                    { id: 'mods', label: 'Admins', icon: Shield },
+                    { id: 'rules', label: 'Rules', icon: FileText },
+                    ...(selectedCircleCanManage ? [{ id: 'insights', label: 'Circle insights', icon: BarChart2 }] : [])
                   ].map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activePortalTab === tab.id;
@@ -558,44 +572,48 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                   </div>
                 )}
                 {activePortalTab === 'chat' && (
-                  <div className="space-y-3 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-[#A78BFA] font-bold">Community Group Chat Chatroom</h3>
-                    
-                    <div className="bg-[#03010b]/80 border border-white/10 rounded-2xl p-3 h-52 overflow-y-auto space-y-3 flex flex-col">
-                      <div className="text-[9px] font-mono text-center text-violet-400/40 select-none pb-2">Messages are visible to Circle members. They are not end-to-end encrypted.</div>
-                      {chatError && <p className="text-[10px] text-rose-300">{chatError}</p>}{chatMessages.length === 0 && !chatError && <p className="text-xs text-violet-300/60 text-center py-6">No messages yet. Start the conversation.</p>}{chatMessages.map((msg, i) => (
-                        <div key={i} className="flex gap-2.5 items-start">
-                          <img src={msg.avatar} alt={msg.sender} className="w-8 h-8 rounded-xl object-cover shrink-0" />
-                          <div className="bg-white/5 border border-white/5 rounded-2xl p-2.5 max-w-md">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className="text-[10.5px] font-black text-rose-300">{msg.sender}</span>
-                              <span className="text-[8px] font-mono text-violet-400/40">{msg.time}</span>
+                  <div className="grid grid-cols-1 gap-4 text-left lg:grid-cols-[minmax(0,1fr)_260px]">
+                    <section className="flex min-h-[55vh] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#080615]">
+                      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                        <div>
+                          <h3 className="text-sm font-bold text-white">Circle conversation</h3>
+                          <p className="mt-0.5 text-[10px] text-violet-200/55">Shared with active Circle members</p>
+                        </div>
+                        <span className="rounded-full border border-violet-400/20 px-2.5 py-1 text-[10px] text-violet-200">{circlePeople.length} people</span>
+                      </div>
+                      <div className="flex-1 space-y-3 overflow-y-auto p-4">
+                        <p className="text-center text-[10px] text-white/35">Circle messages are visible to members. They are not end-to-end encrypted.</p>
+                        {chatError && <p role="alert" className="rounded-xl bg-rose-950/30 p-3 text-xs text-rose-200">{chatError}</p>}
+                        {chatMessages.length === 0 && !chatError && <p className="py-12 text-center text-xs text-violet-200/55">No messages yet. Say hello and start the conversation.</p>}
+                        {chatMessages.map((msg, i) => (
+                          <div key={i} className="flex items-start gap-2.5">
+                            <img src={safeCircleAvatar(msg.avatar)} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+                            <div className="max-w-[85%] rounded-2xl rounded-tl-md border border-white/10 bg-white/[0.045] px-3 py-2.5">
+                              <div className="mb-1 flex items-center gap-2"><span className="text-[11px] font-semibold text-violet-200">{msg.sender}</span><span className="text-[9px] text-white/35">{msg.time}</span></div>
+                              <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-white/90">{msg.text}</p>
                             </div>
-                            <p className="text-xs text-white/90 leading-normal">{msg.text}</p>
                           </div>
+                        ))}
+                      </div>
+                      <form onSubmit={handleGroupChatSubmit} className="flex gap-2 border-t border-white/10 p-3">
+                        <input type="text" required maxLength={2000} disabled={!selectedCircle?.isJoinedByMe || isSendingMessage} placeholder="Message this Circle…" value={chatInput} onChange={e => setChatInput(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-xs text-white outline-none focus:border-violet-400/50" />
+                        <button type="submit" disabled={!selectedCircle?.isJoinedByMe || isSendingMessage || !chatInput.trim()} aria-label="Send Circle message" className="rounded-xl bg-violet-600 px-4 text-white transition hover:bg-violet-500 disabled:opacity-40"><Send className="h-4 w-4" /></button>
+                      </form>
+                    </section>
+                    <aside className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+                      <div className="flex items-center justify-between"><h3 className="text-xs font-bold text-white">People in this Circle</h3><button type="button" onClick={() => setActivePortalTab('members')} className="text-[10px] font-semibold text-violet-300 hover:text-white">See all</button></div>
+                      <p className="text-[10px] text-white/40">{circlePeople.length} active members · owner and trusted admins are marked below.</p>
+                      {circlePeople.slice(0, 8).map(person => (
+                        <div key={person.userId} className="flex items-center gap-2.5">
+                          <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-violet-500/15">{person.avatar && <img src={safeCircleAvatar(person.avatar)} alt="" className="h-full w-full object-cover" />}</div>
+                          <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-medium text-white">{person.name}</p><p className="truncate text-[9px] text-white/40">{person.username ? `@${person.username}` : 'NEXORA member'}</p></div>
+                          {person.role === 'owner' && <span className="text-[9px] text-amber-300">Owner</span>}
+                          {person.role === 'admin' && <span className="text-[9px] text-violet-300">Admin</span>}
                         </div>
                       ))}
-                    </div>
-
-                    <form onSubmit={handleGroupChatSubmit} className="flex gap-2">
-                      <input 
-                        type="text" 
-                        required
-                        maxLength={2000}
-                        disabled={!selectedCircle?.isJoinedByMe || isSendingMessage}
-                        placeholder="Say something to the lounge..." 
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-white/10 bg-[#03010b]/50 text-white rounded-xl text-xs focus:outline-none focus:border-[#8b5cf6]"
-                      />
-                      <button 
-                        type="submit"
-                        disabled={!selectedCircle?.isJoinedByMe || isSendingMessage || !chatInput.trim()}
-                        className="p-2 bg-[#8b5cf6] hover:bg-violet-500 border border-white/10 text-white rounded-xl transition-colors cursor-pointer"
-                      >
-                        <Send className="w-4 h-4" />
-                      </button>
-                    </form>
+                      {circlePeople.length > 8 && <button type="button" onClick={() => setActivePortalTab('members')} className="w-full rounded-lg border border-white/10 py-2 text-[10px] font-semibold text-violet-200">View all {circlePeople.length} members</button>}
+                      {selectedCircle && <div className="mt-3 border-t border-white/10 pt-3"><p className="text-[10px] font-semibold text-white">About this Circle</p><p className="mt-1 text-[10px] leading-relaxed text-white/55">{selectedCircle.description}</p><p className="mt-2 text-[9px] text-white/35">Created by {selectedCircle.creatorId === currentUser.id ? 'you' : 'a Circle member'}</p></div>}
+                    </aside>
                   </div>
                 )}
 
@@ -616,6 +634,18 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                       currentUserId={currentUser.id}
                       isOwner={selectedCircle.ownerId === currentUser.id}
                       canManage={selectedCircle.ownerId === currentUser.id || Boolean(selectedCircle.admins?.includes(currentUser.id) || selectedCircle.moderators?.includes(currentUser.id))}
+                      onOwnershipTransferred={newOwnerId => {
+                        setSelectedCircle(previous => previous ? {
+                          ...previous,
+                          ownerId: newOwnerId,
+                          admins: [...new Set([...(previous.admins || []).filter(id => id !== newOwnerId), currentUser.id])],
+                        } : previous);
+                        setCircles(previous => previous.map(circle => circle.id === selectedCircle.id ? {
+                          ...circle,
+                          ownerId: newOwnerId,
+                          admins: [...new Set([...(circle.admins || []).filter(id => id !== newOwnerId), currentUser.id])],
+                        } : circle));
+                      }}
                     />
                     <div className="border-t border-white/10 pt-5">
                       <CircleReportsPanel

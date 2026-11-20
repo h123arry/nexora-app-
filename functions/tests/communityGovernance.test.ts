@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { setCircleMemberRole, moderateCircleMember, listCircleBans } from '../src/communityGovernance.js';
+import { setCircleMemberRole, moderateCircleMember, listCircleBans, transferCircleOwnership } from '../src/communityGovernance.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-engagement';
 const app = initializeApp({ projectId }, 'community-governance-tests');
@@ -115,5 +115,29 @@ describe('trusted Circle member enforcement', () => {
       /not banned/,
     );
     assert.equal((await circle.collection('members').doc('carol').get()).get('status'), 'active');
+  });
+});
+
+
+describe('trusted Circle ownership transfer', () => {
+  it('transfers ownership only to an active member and retains an admin role for the previous owner', async () => {
+    await circle.collection('members').doc('bob').set({ userId: 'bob', role: 'member', status: 'active' });
+    const result = await transferCircleOwnership(db, 'alice', 'governance-circle', 'bob');
+    assert.deepEqual(result, { communityId: 'governance-circle', previousOwnerId: 'alice', ownerId: 'bob' });
+    assert.equal((await circle.get()).get('ownerId'), 'bob');
+    assert.equal((await circle.collection('members').doc('alice').get()).get('role'), 'admin');
+    assert.equal((await circle.collection('members').doc('bob').get()).get('role'), 'owner');
+    assert.deepEqual((await circle.get()).get('admins'), ['alice']);
+    const audit = await circle.collection('auditEvents').where('action', '==', 'ownership_transferred').get();
+    assert.equal(audit.size, 1);
+    assert.equal(audit.docs[0].get('previousOwnerId'), 'alice');
+    assert.equal(audit.docs[0].get('newOwnerId'), 'bob');
+  });
+
+  it('rejects former owners, inactive members and self-transfer', async () => {
+    await assert.rejects(transferCircleOwnership(db, 'alice', 'governance-circle', 'carol'), /Only the active Circle owner/);
+    await assert.rejects(transferCircleOwnership(db, 'bob', 'governance-circle', 'missing'), /active Circle member/);
+    await assert.rejects(transferCircleOwnership(db, 'bob', 'governance-circle', 'bob'), /valid active Circle member/);
+    assert.equal((await circle.get()).get('ownerId'), 'bob');
   });
 });

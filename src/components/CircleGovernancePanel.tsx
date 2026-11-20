@@ -16,11 +16,13 @@ export default function CircleGovernancePanel({
   currentUserId,
   isOwner,
   canManage = isOwner,
+  onOwnershipTransferred,
 }: {
   communityId: string;
   currentUserId: string;
   isOwner: boolean;
   canManage?: boolean;
+  onOwnershipTransferred?: (newOwnerId: string) => void;
 }) {
   const [members, setMembers] = useState<CircleMember[]>([]);
   const [reasonByUser, setReasonByUser] = useState<Record<string, string>>({});
@@ -35,6 +37,9 @@ export default function CircleGovernancePanel({
   const [inviteLink, setInviteLink] = useState('');
   const [inviteToken, setInviteToken] = useState('');
   const [inviteBusy, setInviteBusy] = useState(false);
+  const [successorId, setSuccessorId] = useState('');
+  const [transferBusy, setTransferBusy] = useState(false);
+  const [ownershipTransferred, setOwnershipTransferred] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -104,6 +109,28 @@ export default function CircleGovernancePanel({
     }
   };
 
+  const transferOwnership = async () => {
+    if (!isOwner || ownershipTransferred || !successorId || transferBusy) return;
+    const successor = members.find(member => member.userId === successorId);
+    if (!successor || !window.confirm(`Transfer ownership of this Circle to ${successor.name}? You will become an admin and cannot undo this yourself.`)) return;
+    setTransferBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      await CommunityService.transferOwnership(communityId, successorId);
+      setOwnershipTransferred(true);
+      onOwnershipTransferred?.(successorId);
+      setMembers(previous => previous.map(member => member.userId === currentUserId
+        ? { ...member, role: 'admin' }
+        : member.userId === successorId ? { ...member, role: 'owner' } : member));
+      setNotice(`Ownership transferred to ${successor.name}. You are now an admin.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Circle ownership could not be transferred.');
+    } finally {
+      setTransferBusy(false);
+    }
+  };
+
   const saveRole = async (member: CircleMember) => {
     const role = roleByUser[member.userId] || 'member';
     const reason = reasonByUser[member.userId] || '';
@@ -134,6 +161,21 @@ export default function CircleGovernancePanel({
       </div>
       {error && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-950/20 p-3 text-xs text-rose-200">{error}</p>}
       {notice && <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-950/20 p-3 text-xs text-emerald-200">{notice}</p>}
+      {isOwner && !ownershipTransferred && (
+        <div className="rounded-2xl border border-violet-400/20 bg-violet-950/10 p-4 space-y-3">
+          <div>
+            <p className="text-xs font-bold text-white">Transfer Circle ownership</p>
+            <p className="mt-1 text-[11px] text-violet-200/60">Choose an existing active member. They become the owner and you become an admin.</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <select aria-label="Choose the new Circle owner" value={successorId} onChange={event => setSuccessorId(event.target.value)} className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#0b1020] px-3 py-2 text-xs text-white">
+              <option value="">Choose a member</option>
+              {members.filter(member => member.userId !== currentUserId && member.role !== 'owner').map(member => <option key={member.userId} value={member.userId}>{member.name}{member.username ? ` (@${member.username})` : ''}</option>)}
+            </select>
+            <button type="button" onClick={() => void transferOwnership()} disabled={!successorId || transferBusy} className="rounded-lg border border-violet-300/20 bg-violet-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">{transferBusy ? 'Transferring…' : 'Transfer ownership'}</button>
+          </div>
+        </div>
+      )}
       {canManage && (
         <div className="rounded-2xl border border-violet-400/20 bg-violet-950/10 p-4 space-y-3">
           <div className="flex items-center gap-2"><Link2 className="h-4 w-4 text-violet-300" /><p className="text-xs font-bold text-white">Circle invitations</p></div>
@@ -166,7 +208,7 @@ export default function CircleGovernancePanel({
                   </div>
                   <span className="rounded-lg border border-white/10 px-2 py-1 text-[9px] uppercase text-violet-200/70">{member.role}</span>
                 </div>
-                {isOwner && member.userId !== currentUserId && member.role !== 'owner' && (
+                {isOwner && !ownershipTransferred && member.userId !== currentUserId && member.role !== 'owner' && (
                   <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1.5fr_auto]">
                     <select value={selectedRole} onChange={event => setRoleByUser(previous => ({ ...previous, [member.userId]: event.target.value as 'admin' | 'moderator' | 'member' }))} className="min-w-0 rounded-lg border border-white/10 bg-[#0b1020] px-2 py-2 text-xs text-white">
                       <option value="member">Member</option>
@@ -186,7 +228,7 @@ export default function CircleGovernancePanel({
           </button>}
         </div>
       )}
-      {!isOwner && <p className="text-[10px] text-violet-200/40">Role delegation is reserved for the Circle owner. Active managers can create invitations; the server verifies every action.</p>}
+      {(!isOwner || ownershipTransferred) && <p className="text-[10px] text-violet-200/40">Role delegation is reserved for the Circle owner. Active managers can create invitations; the server verifies every action.</p>}
     </section>
   );
 }
