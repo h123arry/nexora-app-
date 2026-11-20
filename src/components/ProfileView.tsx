@@ -61,7 +61,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
   }
 
   return (
-    <div className="nx-profile-media-grid grid grid-cols-3 gap-[2px] w-full bg-[var(--nx-canvas)]">
+    <div className="nx-profile-media-grid grid grid-cols-3 gap-px w-full bg-[#090714]">
       {gridPosts.map(post => {
         const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
@@ -77,7 +77,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="group aspect-[2/3] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-3px]"
+            className="group aspect-square overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-3px]"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
@@ -330,8 +330,6 @@ export default function ProfileView({
       : identityVerification?.identityType === 'creator'
         ? 'creator'
         : 'default';
-  const [allContentFilter, setAllContentFilter] = useState<'all' | 'photos' | 'posts' | 'pinned'>('all');
-  const [showAllContentDropdown, setShowAllContentDropdown] = useState(false);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const [selectedGridPost, setSelectedGridPost] = useState<Post | null>(null);
   const [showGiftVerse, setShowGiftVerse] = useState(false);
@@ -706,11 +704,6 @@ export default function ProfileView({
         e.preventDefault();
         return;
       }
-      if (showAllContentDropdown) {
-        setShowAllContentDropdown(false);
-        e.preventDefault();
-        return;
-      }
       if (isStorageCenterOpen) {
         setIsStorageCenterOpen(false);
         e.preventDefault();
@@ -737,7 +730,6 @@ export default function ProfileView({
     selectedGridPost,
     showShareModal,
     isProfileMenuOpen,
-    showAllContentDropdown,
     isStorageCenterOpen,
     showReputationModal,
     activePanel
@@ -1573,8 +1565,7 @@ export default function ProfileView({
                 )}
               </section>
             )}
-            {profileTab === 'media' && <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-2 px-3 pb-1"><span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Content</span><div className="flex flex-wrap gap-1.5">{([{id:'all',label:'All'},{id:'photos',label:'Photos'},{id:'posts',label:'Text'},{id:'pinned',label:'Pinned'}] as const).map(filter => <button key={filter.id} type="button" onClick={() => setAllContentFilter(filter.id)} aria-pressed={allContentFilter === filter.id} className={`rounded-full border px-3 py-1.5 text-[10px] font-semibold transition-colors ${allContentFilter === filter.id ? 'border-violet-400/40 bg-violet-500/15 text-violet-100' : 'border-white/10 bg-white/[0.025] text-zinc-400 hover:text-white'}`}>{filter.label}</button>)}</div></div>}
-            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} isOwner={auth.currentUser?.uid === currentUser.id} onExplore={() => setShowGiftVerse(true)} /> : filteredTabPosts.filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).length === 0 ? (
+            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} isOwner={auth.currentUser?.uid === currentUser.id} onExplore={() => setShowGiftVerse(true)} /> : filteredTabPosts.length === 0 ? (
               <div className="p-8 py-16 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 max-w-md mx-auto my-6">
                 <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                   {profileTab === 'media' && <Camera className="w-6 h-6" />}
@@ -1599,7 +1590,7 @@ export default function ProfileView({
             ) : (
               <div className="w-full max-w-4xl mx-auto px-2">
                 <MediaGrid 
-                  gridPosts={[...filteredTabPosts].filter(post => profileTab !== 'media' || (allContentFilter === 'all' ? true : allContentFilter === 'photos' ? !!post.image && !post.videoUrl : allContentFilter === 'posts' ? !post.image && !post.videoUrl : pinnedPostIdsList.includes(post.id))).sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
+                  gridPosts={[...filteredTabPosts].sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
                   pinnedPostIds={pinnedPostIdsList} 
                   onSelectPost={(post) => setSelectedGridPost(post)} 
                 />
