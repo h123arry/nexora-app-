@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Check, Loader2, Mic, MicOff, PhoneOff, RefreshCw, Video, VideoOff, X } from 'lucide-react';
+import { AlertTriangle, Check, Loader2, Mic, MicOff, PhoneOff, RefreshCw, Video, VideoOff, Volume2, X } from 'lucide-react';
 import { endDirectCall, getDirectCallToken, respondToDirectCall, watchDirectCall, type DirectCall } from '../services/directCallService';
 
 declare global {
@@ -262,7 +262,7 @@ export default function CallScreen({
       <footer className="shrink-0 border-t border-white/10 bg-[#080d1b] px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-5">
         {audioBlocked && (
           <button type="button" onClick={() => void enableAudio()} className="mx-auto mb-4 flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold text-white">
-            <Video className="h-4 w-4" /> Tap to enable call audio
+            <Volume2 className="h-4 w-4" /> Tap to enable call audio
           </button>
         )}
         {waiting && incoming ? (
