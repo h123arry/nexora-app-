@@ -17,6 +17,7 @@ import { shapeAuthenticatedVohAccountContext } from './server/vohAccountContext'
 import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, isCurrentPublicProfileMedia, buildR2OriginUploadRecords } from './server/r2Storage';
 import { runVohContextTool, VOH_CONTEXT_TOOL_DECLARATIONS } from './server/vohTools';
 import { createGeminiVohProvider, resolveVohContextScope, runVohIntelligence, VohEmptyModelResponseError, VohToolRegistry } from './server/vohIntelligenceCore';
+import { resolveVohFeatureScopes, selectVohToolsForScopes } from './server/vohToolScopes';
 
 const isProduction = process.env.NEXORA_ENV === 'production' || process.env.NODE_ENV === 'production';
 // Load local environment variables only outside production. Production values
@@ -952,8 +953,12 @@ vohRouter.post('/chat', async (req, res) => {
       text: clipText(item?.text, 4000),
     })) : [];
     const contextScope = resolveVohContextScope(req.body?.context?.scope);
+    const featureScopes = resolveVohFeatureScopes(req.body?.context?.scopes, contextScope);
+    const includeProfile = featureScopes.has('profile');
+    const includeFeed = featureScopes.has('feed');
+    const includeWorldPulse = featureScopes.has('world_pulse');
     const [accountContext, personalMemoryPrompt] = await Promise.all([
-      contextScope === 'profile'
+      includeProfile
         ? getAuthenticatedVohAccountContext(res.locals.vohUid).catch(error => {
             console.error('VOH account context unavailable:', error instanceof Error ? error.name : 'unknown');
             return null;
@@ -967,10 +972,11 @@ vohRouter.post('/chat', async (req, res) => {
     const suppliedContext = req.body?.context && typeof req.body.context === 'object' ? req.body.context : {};
     const context = shapeVohContext({
       ...(suppliedContext),
-      posts: contextScope === 'feed' ? suppliedContext.posts : [],
+      posts: includeFeed ? suppliedContext.posts : [],
       circles: [],
       notifications: [],
-      currentUser: contextScope === 'profile' ? accountContext : null,
+      pulse: includeWorldPulse ? suppliedContext.pulse : null,
+      currentUser: includeProfile ? accountContext : null,
     }, res.locals.vohUid);
 
     const clientInfo = getGeminiClient();
@@ -1052,7 +1058,8 @@ When answering:
     // The intelligence core owns orchestration. Gemini is only the current
     // provider adapter; the core, context policy and tools do not depend on it.
     const toolRegistry = new VohToolRegistry();
-    for (const declaration of VOH_CONTEXT_TOOL_DECLARATIONS) {
+    const availableToolDeclarations = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, featureScopes);
+    for (const declaration of availableToolDeclarations) {
       toolRegistry.register({
         name: declaration.name,
         description: declaration.description,
