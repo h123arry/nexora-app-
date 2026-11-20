@@ -10,6 +10,10 @@ NEXORA is an actively developed social platform bringing together profiles, a so
 
 > **Project status:** This repository contains a mix of Firebase-backed application paths, client-local features, prototypes, and disabled integrations. Code or UI presence is not proof that a service is deployed, production-configured, or available to users.
 
+## Final engineering phase
+
+[Phase 6 — Full Integration, Testing and Launch Readiness](docs/phase-6-full-integration-and-launch-readiness.md) is the closing engineering pass. It defines the integration audit, security and data-integrity checks, automated quality gates, and external release evidence required before launch claims can be made.
+
 ## Expansion programme
 
 The additive [NEXORA Expansion Programme](docs/NEXORA_EXPANSION_PROGRAMME.md) defines 11 connected workstreams, delivery safeguards, implementation sequencing, and release gates. It is a scope and status contract, not a claim that those workstreams are already implemented.
