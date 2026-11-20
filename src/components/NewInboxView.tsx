@@ -483,8 +483,20 @@ export default function NewInboxView({
           : file.type.startsWith('video/') ? 'video'
           : file.type.startsWith('audio/') ? 'audio' : 'document');
         setAttachmentProgress(0);
+        const extension = file.name.split('.').pop()?.toLowerCase() || '';
+        const mimeByExtension: Record<string, string> = {
+          jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif',
+          mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', ogg: 'audio/ogg', aac: 'audio/aac',
+          pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          txt: 'text/plain', csv: 'text/csv', rtf: 'application/rtf',
+        };
+        const normalizedFile = !file.type || file.type === 'application/octet-stream'
+          ? new File([file], file.name, { type: mimeByExtension[extension] || file.type || 'application/octet-stream' })
+          : file;
         const uploaded = await uploadPrivateChatMediaFile({
-          file, userId: currentUser.id, chatId: activeChatId, fileName: file.name,
+          file: normalizedFile, userId: currentUser.id, chatId: activeChatId, fileName: file.name,
           onProgress: setAttachmentProgress,
         });
         const sent = await handleSendMessage('', {
