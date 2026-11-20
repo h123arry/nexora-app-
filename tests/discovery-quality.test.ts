@@ -140,3 +140,34 @@ test('not-interested tag filters use the same Unicode normalization as ranked po
   });
   assert.equal(ranked.length, 0);
 });
+
+
+test('For You uses a small bounded serendipity boost for adjacent interests', () => {
+  const now = Date.parse('2026-11-07T12:00:00.000Z');
+  const makePost = (id: string, tags: string[]) => ({
+    id, userId: id, username: id, name: id, avatar: '', isVerified: false,
+    content: 'A discovery post', tags, likes: 0, commentsCount: 0, shares: 0,
+    timestamp: '2026-11-07T11:00:00.000Z', comments: [],
+  }) as any;
+  const ranked = rankPosts([
+    makePost('unrelated', ['gardening']),
+    makePost('adjacent', ['design']),
+  ], { now, interestDNA: { 'design systems': 2 } });
+  assert.equal(ranked[0]?.post.id, 'adjacent');
+  assert.ok(ranked[0]?.reasons.includes('explores a topic related to your interests'));
+});
+
+test('adjacent-interest discovery ignores weak one-character overlaps and remains bounded', () => {
+  const now = Date.parse('2026-11-07T12:00:00.000Z');
+  const makePost = (id: string, tags: string[]) => ({
+    id, userId: id, username: id, name: id, avatar: '', isVerified: false,
+    content: 'A discovery post', tags, likes: 0, commentsCount: 0, shares: 0,
+    timestamp: '2026-11-07T11:00:00.000Z', comments: [],
+  }) as any;
+  const ranked = rankPosts([
+    makePost('unrelated', ['art']),
+    makePost('related', ['design']),
+  ], { now, interestDNA: { 'a design': 100, 'design systems': 100 } });
+  assert.equal(ranked[0]?.post.id, 'related');
+  assert.ok(ranked.every(item => Number.isFinite(item.score)));
+});
