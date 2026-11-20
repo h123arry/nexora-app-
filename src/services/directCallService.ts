@@ -1,6 +1,8 @@
 import { collection, doc, onSnapshot, query, where, type Unsubscribe } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { db, functions } from '../lib/firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { app, db } from '../lib/firebase';
+
+const callFunctions = getFunctions(app, 'europe-west1');
 
 export interface DirectCall {
   id: string;
@@ -23,17 +25,17 @@ export async function startDirectCall(chatId: string, recipientId: string, type:
   const callable = httpsCallable<
     { callId: string; chatId: string; recipientId: string; type: 'voice' | 'video' },
     { callId: string; status: 'ringing'; expiresAt: number }
-  >(functions, 'startDirectCall');
+  >(callFunctions, 'startDirectCall');
   return (await callable({ callId, chatId, recipientId, type })).data;
 }
 
 export async function respondToDirectCall(callId: string, decision: 'accept' | 'decline') {
-  const callable = httpsCallable<{ callId: string; decision: 'accept' | 'decline' }, { status: DirectCall['status'] }>(functions, 'respondToDirectCall');
+  const callable = httpsCallable<{ callId: string; decision: 'accept' | 'decline' }, { status: DirectCall['status'] }>(callFunctions, 'respondToDirectCall');
   return (await callable({ callId, decision })).data;
 }
 
 export async function endDirectCall(callId: string) {
-  const callable = httpsCallable<{ callId: string }, { ended: true }>(functions, 'endDirectCall');
+  const callable = httpsCallable<{ callId: string }, { ended: true }>(callFunctions, 'endDirectCall');
   return (await callable({ callId })).data;
 }
 
@@ -41,7 +43,7 @@ export async function getDirectCallToken(callId: string) {
   const callable = httpsCallable<
     { callId: string },
     { token: string; wsUrl: string; roomName: string; expiresAt: number; callType: 'voice' | 'video' }
-  >(functions, 'getDirectCallToken');
+  >(callFunctions, 'getDirectCallToken');
   return (await callable({ callId })).data;
 }
 
