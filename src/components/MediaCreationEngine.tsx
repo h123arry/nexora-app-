@@ -1762,8 +1762,8 @@ export default function MediaCreationEngine({
                 <Camera className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Allow {permissionTarget === 'mic' ? 'microphone' : 'camera'} access</h3>
-                <p className="text-xs text-[#A39BBF] leading-relaxed mt-1">Your browser or device will ask for permission. NEXORA only uses {permissionTarget === 'mic' ? 'the microphone' : 'the camera'} when you choose to record or capture media.</p>
+                <h3 className="text-sm font-bold text-white">Allow {permissionTarget === 'mic' ? 'microphone' : activeMode === 'reel' ? 'camera and microphone' : 'camera'} access</h3>
+                <p className="text-xs text-[#A39BBF] leading-relaxed mt-1">Your browser or device will ask for permission. NEXORA only uses {permissionTarget === 'mic' ? 'the microphone when you record a voice note' : activeMode === 'reel' ? 'your camera and microphone when you record a video' : 'the camera when you take a photo'}.</p>
               </div>
               <div className="flex gap-2">
                 <button 
