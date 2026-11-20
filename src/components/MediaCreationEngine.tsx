@@ -2041,7 +2041,6 @@ export default function MediaCreationEngine({
                             </div>
                           ))}
                         </div>
-                      </div>
                       {isLensStudioOpen && (
                         <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3 sm:col-span-2">
                           <div className="flex items-center justify-between">
