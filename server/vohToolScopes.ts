@@ -1,6 +1,6 @@
-export type VohFeatureScope = 'feed' | 'profile' | 'world_pulse' | 'circles' | 'notifications' | 'drafts' | 'studio';
+export type VohFeatureScope = 'feed' | 'profile' | 'world_pulse' | 'circles' | 'notifications' | 'drafts' | 'studio' | 'public_discovery';
 
-const ALLOWED_SCOPES = new Set<VohFeatureScope>(['feed', 'profile', 'world_pulse', 'circles', 'notifications', 'drafts', 'studio']);
+const ALLOWED_SCOPES = new Set<VohFeatureScope>(['feed', 'profile', 'world_pulse', 'circles', 'notifications', 'drafts', 'studio', 'public_discovery']);
 const TOOL_SCOPE: Record<string, VohFeatureScope> = {
   get_visible_feed: 'feed',
   get_my_profile_summary: 'profile',
@@ -9,6 +9,7 @@ const TOOL_SCOPE: Record<string, VohFeatureScope> = {
   get_recent_notifications: 'notifications',
   get_my_drafts: 'drafts',
   get_my_studio_project: 'studio',
+  get_public_discovery_snapshot: 'public_discovery',
 };
 
 /** Resolve explicit feature permissions. Legacy single-scope clients remain supported. */

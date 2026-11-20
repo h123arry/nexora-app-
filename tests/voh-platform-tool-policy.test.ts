@@ -9,7 +9,7 @@ describe('VOH feature-scoped tool access', () => {
     assert.deepEqual([...resolveVohFeatureScopes(undefined, 'profile')], ['profile']);
   });
   it('accepts multiple explicit scopes and ignores unknown values', () => {
-    assert.deepEqual([...resolveVohFeatureScopes(['feed', 'world_pulse', 'inbox', 'admin'], 'none')], ['feed', 'world_pulse']);
+    assert.deepEqual([...resolveVohFeatureScopes(['feed', 'world_pulse', 'public_discovery', 'inbox', 'admin'], 'none')], ['feed', 'world_pulse', 'public_discovery']);
   });
   it('fails closed when scope is missing or invalid', () => {
     assert.equal(resolveVohFeatureScopes(undefined, 'unknown').size, 0);
@@ -28,6 +28,9 @@ describe('VOH feature-scoped tool access', () => {
   it('exposes draft and Studio tools only under their explicit scopes', () => {
     assert.deepEqual(selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['drafts'])).map(tool => tool.name), ['get_my_drafts']);
     assert.deepEqual(selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['studio'])).map(tool => tool.name), ['get_my_studio_project']);
+  });
+  it('exposes public discovery only when its explicit scope is selected', () => {
+    assert.deepEqual(selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['public_discovery'])).map(tool => tool.name), ['get_public_discovery_snapshot']);
   });
   it('never exposes inbox or write tools without an explicit integration', () => {
     const names = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['feed', 'profile', 'world_pulse'])).map(tool => tool.name);
