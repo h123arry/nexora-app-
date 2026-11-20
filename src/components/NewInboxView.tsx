@@ -505,6 +505,7 @@ export default function NewInboxView({
           onProgress: setAttachmentProgress,
         });
         uploadInProgress = false;
+        if (sendingMessageRef.current) throw new Error('Another message is still being sent. Please retry this attachment.');
         const sent = await handleSendMessage('', {
           type: detectedType, url: uploaded.storagePath, name: file.name,
           contentType: uploaded.contentType, size: uploaded.size,
@@ -1180,11 +1181,14 @@ export default function NewInboxView({
               chatId: activeChatId,
               fileName: `voice-note-${Date.now()}.${voiceRecordingExtension(contentType)}`,
             });
+            if (sendingMessageRef.current) throw new Error('Another message is still being sent. Please retry your voice note.');
             const sent = await handleSendMessage('', {
               type: 'voice', url: uploaded.storagePath,
               name: `Voice Note (${duration}s)`, duration, contentType: uploaded.contentType, size: uploaded.size
             });
-            if (!sent) throw new Error('Your voice note uploaded, but the message could not be saved. Please retry.');
+            // A failed Firestore write already leaves a retryable message bubble with this uploaded path.
+            // Close the recorder rather than uploading the same audio again and creating a duplicate.
+            if (!sent) { setShowVoiceRecorder(false); return; }
             setShowVoiceRecorder(false);
           }}
           onCancel={() => setShowVoiceRecorder(false)}
