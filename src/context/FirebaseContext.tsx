@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { onIdTokenChanged, signInAnonymously, User as FirebaseUser, ConfirmationResult, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { onIdTokenChanged, User as FirebaseUser, ConfirmationResult, setPersistence, indexedDBLocalPersistence, browserLocalPersistence } from 'firebase/auth';
 import { User } from '../types';
 import { ProfileService } from '../services/firebase/profileService';
 import { AuthService } from '../services/firebase/authService';
@@ -59,10 +59,10 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let observedUid = null as string | null;
     let hydratedIdentity = null as string | null;
     let inFlightHydration: { key: string; promise: Promise<User | null> } | null = null;
-    let anonymousBootstrapStarted = false;
-    const persistenceReady = setPersistence(auth, browserLocalPersistence);
+    let disposed = false;
+    let unsubscribe: (() => void) | null = null;
 
-    const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
+    const handleAuthState = async (fbUser: FirebaseUser | null) => {
       const currentSequence = ++sequence;
       const nextUid = fbUser?.uid ?? null;
 
@@ -79,18 +79,8 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         inFlightHydration = null;
         setUser(null);
         setError(null);
-        if (!anonymousBootstrapStarted) {
-          anonymousBootstrapStarted = true;
-          setInitializing(true);
-          void persistenceReady.then(() => signInAnonymously(auth)).catch((bootstrapError) => {
-            const code = (bootstrapError as { code?: string } | null)?.code || 'anonymous-auth-unavailable';
-            if (auth.currentUser) return;
-            setError(`Unable to start your NEXORA session (${code}). Tap to retry.`);
-            anonymousBootstrapStarted = false;
-            setInitializing(false);
-          });
-          return;
-        }
+        // A signed-out visitor remains a public visitor. Never create a hidden
+        // anonymous Firebase account during refresh, app launch, or logout.
         setInitializing(false);
         return;
       }
@@ -136,11 +126,34 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           inFlightHydration = null;
         }
       }
-    });
+    };
+
+    // Restore durable auth persistence before observing the initial auth state.
+    // IndexedDB is more reliable for installed PWAs; local browser persistence is
+    // retained as a compatibility fallback for browsers without IndexedDB support.
+    void (async () => {
+      try {
+        await setPersistence(auth, indexedDBLocalPersistence);
+      } catch (primaryError) {
+        try {
+          await setPersistence(auth, browserLocalPersistence);
+        } catch (fallbackError) {
+          const code = (fallbackError as { code?: string } | null)?.code
+            || (primaryError as { code?: string } | null)?.code
+            || 'auth-persistence-unavailable';
+          if (!disposed) {
+            setError(`NEXORA could not restore secure sign-in persistence (${code}). Please sign in again.`);
+            setInitializing(false);
+          }
+        }
+      }
+      if (!disposed) unsubscribe = onIdTokenChanged(auth, handleAuthState);
+    })();
 
     return () => {
+      disposed = true;
       sequence++;
-      unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 
@@ -286,12 +299,9 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setError(null);
     let currentUser = auth.currentUser;
     try {
-      // A failed first anonymous bootstrap must be recoverable without forcing
-      // visitors through email/password authentication or a page refresh.
-      if (!currentUser) {
-        const credential = await signInAnonymously(auth);
-        currentUser = credential.user;
-      }
+      // A signed-out visitor must choose a real sign-in or signup method.
+      // Do not silently create an anonymous account during a retry.
+      if (!currentUser) throw new Error('Sign in or create a NEXORA account to continue.');
       await currentUser.getIdTokenResult(true);
       const profile = await ProfileService.getOrCreateProfile(currentUser);
       if (!profile) throw new Error('NEXORA could not find or create your private account profile.');
