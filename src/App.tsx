@@ -3654,6 +3654,7 @@ export default function App() {
               onLoginSuccess={(user) => {
                 setCurrentUser(getRichUser(user));
                 setShowEmailAuth(false);
+                setShowAuthChoice(false);
                 setShowPublicAccountSetup(false);
                 void retryProfileLoad().catch(() => {
                   window.dispatchEvent(new CustomEvent('toast', { detail: 'Your account was created, but profile sync is still finishing. Please retry.' }));
@@ -3666,7 +3667,7 @@ export default function App() {
             onClick={() => { setShowEmailAuth(false); setShowPublicAccountSetup(false); setShowAuthChoice(true); }}
             className="fixed right-4 top-4 z-[110] rounded-xl border border-white/15 bg-[#0B1424]/95 px-3 py-2 text-xs font-semibold text-violet-200 shadow-lg backdrop-blur"
           >
-            Back to username signup
+            Back
           </button>
         </div>
       )}
