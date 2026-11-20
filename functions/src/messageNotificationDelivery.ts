@@ -30,8 +30,7 @@ export function buildDirectMessageNotification(input: {
 }
 
 function messagePreview(message: Record<string, unknown>): string {
-  const content = typeof message.content === 'string' ? message.content.trim() : '';
-  if (content) return content.slice(0, 180);
+  // Keep private message text off lock-screen notifications by default.
   const mediaType = String(message.customMediaType || message.mediaType || '').toLowerCase();
   if (mediaType === 'image') return 'Sent you a photo';
   if (mediaType === 'video') return 'Sent you a video';
