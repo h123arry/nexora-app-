@@ -353,15 +353,13 @@ export default function NotificationsView({
     const priorityWeight = { high: 3, medium: 2, low: 1 };
     
     return filtered.sort((a, b) => {
-      // Priority Level weighting
-      const aWeight = priorityWeight[a.priorityLevel] || 1;
-      const bWeight = priorityWeight[b.priorityLevel] || 1;
-      if (aWeight !== bWeight) return bWeight - aWeight;
-
       const aTime = Date.parse(a.timestamp) || 0;
       const bTime = Date.parse(b.timestamp) || 0;
-      return bTime - aTime; 
-    });
+      if (aTime !== bTime) return bTime - aTime;
+      const aWeight = priorityWeight[a.priorityLevel] || 1;
+      const bWeight = priorityWeight[b.priorityLevel] || 1;
+      return bWeight - aWeight;
+    });;
   };
 
   // Group notifications into Time Sections: Today, Yesterday, This Week, Earlier, Older
@@ -411,16 +409,9 @@ export default function NotificationsView({
     }
   };
 
-  const getPriorityBadge = (priority: 'high' | 'medium' | 'low') => {
-    switch (priority) {
-      case 'high':
-        return <span className="px-1.5 py-0.5 rounded-sm bg-rose-500/10 border border-rose-500/20 text-[8px] font-mono font-extrabold text-rose-400 uppercase tracking-widest">HIGH PRIORITY</span>;
-      case 'medium':
-        return <span className="px-1.5 py-0.5 rounded-sm bg-amber-500/10 border border-amber-500/20 text-[8px] font-mono font-extrabold text-amber-400 uppercase tracking-widest">MEDIUM</span>;
-      case 'low':
-        return <span className="px-1.5 py-0.5 rounded-sm bg-zinc-500/10 border border-zinc-500/20 text-[8px] font-mono font-extrabold text-zinc-400 uppercase tracking-widest">LOW PRIORITY</span>;
-    }
-  };
+  const getPriorityBadge = (type: string) => type === 'security'
+    ? <span className="px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-[9px] font-sans font-semibold text-rose-300">Account security</span>
+    : null;
 
   const activeGroupedNotifications = getFilteredAndSortedNotifications();
   const timeGroupedNotifications = groupNotificationsByTime(activeGroupedNotifications.slice(0, visibleCount));
@@ -824,7 +815,7 @@ export default function NotificationsView({
                         >
                           {/* Top Tag detail and Drag Swipe quick visual hints */}
                           <div className="absolute top-2.5 right-4 flex items-center gap-2">
-                            {getPriorityBadge(notif.priorityLevel)}
+                            {getPriorityBadge(notif.type)}
                           </div>
 
                           {/* Main Row layout with checkbox if multiselect is on */}
