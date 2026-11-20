@@ -81,17 +81,33 @@ export default function MessageBubble({
     if (privateVoiceUrl) URL.revokeObjectURL(privateVoiceUrl);
   }, [privateVoiceUrl]);
   useEffect(() => () => { if (privateMediaUrl) URL.revokeObjectURL(privateMediaUrl); }, [privateMediaUrl]);
+  const mediaPreviewRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const path = message.mediaStoragePath || '';
-    if (message.mediaType !== 'image' || !path || attemptedMediaPathRef.current === path) return;
-    attemptedMediaPathRef.current = path;
+    const target = mediaPreviewRef.current;
+    if (message.mediaType !== 'image' || !path || !target || attemptedMediaPathRef.current === path) return;
     let active = true;
-    setLoadingPrivateMedia(true);
-    void onResolveVoiceMedia(path).then(url => {
-      if (active) setPrivateMediaUrl(url); else URL.revokeObjectURL(url);
-    }).catch(() => { if (active) setPrivateMediaError('Image unavailable. Tap to retry.'); })
-      .finally(() => { if (active) setLoadingPrivateMedia(false); });
-    return () => { active = false; };
+    const loadVisibleImage = () => {
+      if (!active || attemptedMediaPathRef.current === path) return;
+      attemptedMediaPathRef.current = path;
+      setLoadingPrivateMedia(true);
+      void onResolveVoiceMedia(path).then(url => {
+        if (active) setPrivateMediaUrl(url); else URL.revokeObjectURL(url);
+      }).catch(() => { if (active) setPrivateMediaError('Image unavailable. Tap to retry.'); })
+        .finally(() => { if (active) setLoadingPrivateMedia(false); });
+    };
+    if (typeof IntersectionObserver === 'undefined') {
+      loadVisibleImage();
+      return () => { active = false; };
+    }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        observer.disconnect();
+        loadVisibleImage();
+      }
+    }, { rootMargin: '240px' });
+    observer.observe(target);
+    return () => { active = false; observer.disconnect(); };
   }, [message.mediaStoragePath, message.mediaType, onResolveVoiceMedia]);
   const loadPrivateMedia = async () => {
     if (!message.mediaStoragePath || loadingPrivateMedia) return;
@@ -257,7 +273,7 @@ export default function MessageBubble({
                 <p className="rounded-lg border border-[var(--nx-edge)] bg-black/20 px-3 py-2 text-xs text-[var(--nx-muted)]">This older voice message has no stored audio file.</p>
               )
             ) : message.mediaStoragePath && message.mediaType ? (
-              <div className="mb-1 w-full min-w-[220px] max-w-[320px] overflow-hidden rounded-xl border border-white/10 bg-black/25">
+              <div ref={mediaPreviewRef} className="mb-1 w-full min-w-[220px] max-w-[320px] overflow-hidden rounded-xl border border-white/10 bg-black/25">
                 {message.mediaType === 'image' ? (
                   privateMediaUrl
                     ? <a href={privateMediaUrl} target="_blank" rel="noreferrer"><img src={privateMediaUrl} alt={message.fileName || 'Shared image'} className="max-h-[420px] w-full object-contain" loading="lazy" /></a>
