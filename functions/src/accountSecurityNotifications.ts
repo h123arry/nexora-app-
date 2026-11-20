@@ -38,7 +38,7 @@ function maskEmail(value: string): string {
   return `${name.slice(0, 1)}•••@${domain}`;
 }
 
-function describeEvent(eventType: AccountSecurityEventType, details: AccountSecurityEventDetails) {
+export function buildAccountSecurityEventMessage(eventType: AccountSecurityEventType, details: AccountSecurityEventDetails = {}) {
   switch (eventType) {
     case 'NEW_LOGIN':
       return { title: 'New sign-in', body: `Your NEXORA account was signed in on ${details.browser || details.device || 'a new device'}.` };
@@ -80,7 +80,7 @@ export async function recordAccountSecurityNotification(
   }
 
   const details = safeDetails(rawDetails);
-  const event = describeEvent(eventType as AccountSecurityEventType, details);
+  const event = buildAccountSecurityEventMessage(eventType as AccountSecurityEventType, details);
   const notificationId = `security_${randomUUID()}`;
   const timestamp = new Date().toISOString();
   const userRef = db.collection('users').doc(userId);
