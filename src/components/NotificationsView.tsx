@@ -346,7 +346,8 @@ export default function NotificationsView({
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       filtered = filtered.filter(n => 
-        n.content.toLowerCase().includes(q) || 
+        n.content.toLowerCase().includes(q) ||
+        (n.title && n.title.toLowerCase().includes(q)) ||
         n.username.toLowerCase().includes(q) ||
         (n.previewText && n.previewText.toLowerCase().includes(q))
       );
