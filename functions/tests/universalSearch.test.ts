@@ -7,6 +7,10 @@ import { getNexoraTrending, searchNexoraContent, syncUniversalSearchRecord } fro
 
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-search' }, 'universal-search-tests');
 const db = getFirestore(app);
+// Isolate trend tests from the engagement suite's shared, heavily populated
+// Firestore project so the bounded 250-post sample remains deterministic.
+const trendingApp = initializeApp({ projectId: 'demo-nexora-trending-tests' }, 'universal-search-trending-tests');
+const trendingDb = getFirestore(trendingApp);
 const paths = ['viewer','public-user','private-user','blocked-user'];
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Universal search tests require the Firestore Emulator.');
@@ -65,6 +69,9 @@ after(async () => {
   await db.doc('verifiedIdentities/creator-two').delete().catch(() => undefined);
   await db.doc('communities/search-circle').delete().catch(() => undefined);
   await deleteApp(app);
+  await trendingDb.recursiveDelete(trendingDb.doc('posts')).catch(() => undefined);
+  await trendingDb.recursiveDelete(trendingDb.doc('users')).catch(() => undefined);
+  await deleteApp(trendingApp);
 });
 describe('NEXORA universal search', () => {
   it('indexes and returns public people and video content while respecting blocks and private profiles', async () => {
@@ -138,17 +145,19 @@ it('ranks exact multi-word search intent above a weaker term-only match', async 
 
 it('trending requires recent multi-creator activity and reports rising-topic momentum', async () => {
   const now=Date.now();
-  await db.doc('posts/trend-old').set({ id:'trend-old', userId:'public-user', audience:'public', timestamp:new Date(now-36*3600000), tags:['momentum-check'], likes:10 });
+  await trendingDb.doc('users/public-user').set({ username:'public-user' });
+  await trendingDb.doc('users/creator-two').set({ username:'creator-two' });
+  await trendingDb.doc('posts/trend-old').set({ id:'trend-old', userId:'public-user', audience:'public', timestamp:new Date(now-36*3600000), tags:['momentum-check'], likes:10 });
   await db.doc('posts/trend-new-a').set({ id:'trend-new-a', userId:'public-user', audience:'public', timestamp:new Date(now-2*3600000), tags:['momentum-check'], likes:30 });
   await db.doc('posts/trend-new-b').set({ id:'trend-new-b', userId:'creator-two', audience:'public', timestamp:new Date(now-1*3600000), tags:['momentum-check'], likes:20 });
   await db.doc('posts/trend-archived').set({ id:'trend-archived', userId:'public-user', audience:'public', timestamp:new Date(now-30*60*1000), tags:['archived-only'], isArchived:true });
   await db.doc('posts/trend-archived-two').set({ id:'trend-archived-two', userId:'creator-two', audience:'public', timestamp:new Date(now-20*60*1000), tags:['archived-only'] });
-  const topics=await getNexoraTrending(db);
+  const topics=await getNexoraTrending(trendingDb);
   assert.equal(topics.some(item=>item.tag==='archived-only'),false);
   const topic=topics.find(item=>item.tag==='momentum-check');
   assert.ok(topic);
   assert.equal(topic?.currentPosts,2);
   assert.equal(topic?.previousPosts,1);
   assert.equal(topic?.status,'rising');
-  for(const id of ['trend-old','trend-new-a','trend-new-b','trend-archived','trend-archived-two']) await db.doc('posts/'+id).delete();
+  for(const id of ['trend-old','trend-new-a','trend-new-b','trend-archived','trend-archived-two']) await trendingDb.doc('posts/'+id).delete();
 });
