@@ -29,7 +29,9 @@ export function buildNotificationPushData(
     ? '/#inbox'
     : type === 'follow' || type === 'profile_view'
       ? '/#profile'
-      : '/#activity';
+      : type === 'pulse_alert'
+        ? '/#live'
+        : '/#activity';
   return {
     type,
     targetId,
@@ -55,6 +57,7 @@ function notificationTitle(type: string): string {
   if (type === 'comment_reply') return 'Someone replied to your comment';
   if (type === 'repost') return 'Someone reposted your post';
   if (type === 'mention') return 'You were mentioned on NEXORA';
+  if (type === 'pulse_alert') return 'Someone you follow is live on NEXORA';
   if (type === 'spark' || type === 'like') return 'Someone engaged with your post';
   return 'NEXORA notification';
 }
