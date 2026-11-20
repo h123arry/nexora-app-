@@ -11,6 +11,8 @@ test('chat attachments normalize common mobile and file-picker MIME types by ext
   assert.equal(normalizeChatAttachmentContentType('report.docx', 'application/octet-stream'), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
   assert.equal(normalizeChatAttachmentContentType('photo.heic', 'application/octet-stream'), 'image/heic');
   assert.equal(normalizeChatAttachmentContentType('recording.m4a', 'audio/x-m4a'), 'audio/mp4');
+  assert.equal(normalizeChatAttachmentContentType('voice-note.webm', 'audio/webm;codecs=opus'), 'audio/webm');
+  assert.equal(normalizeChatAttachmentContentType('clip.webm', 'video/webm'), 'video/webm');
   assert.equal(normalizeChatAttachmentContentType('archive.zip', 'application/x-zip-compressed'), 'application/zip');
 });
 
