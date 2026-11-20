@@ -1,5 +1,5 @@
-import { db } from './config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../../lib/firebase';
 import { EmailService, EmailTemplateType } from './emailService';
 
 export type SecurityEventType = 
@@ -101,38 +101,12 @@ export class SecurityNotificationService {
         break;
     }
 
-    // 1. Store in Firestore under user's security log collection
+    // Store the security audit record and inbox notification atomically on the server.
     try {
-      if (db && userId) {
-        await addDoc(collection(db, 'users', userId, 'securityLogs'), {
-          eventType,
-          title,
-          body,
-          details,
-          timestamp: serverTimestamp(),
-          ip: details.ip || 'Recorded',
-          browser: details.browser || 'Browser'
-        });
-
-        // Store as in-app notification
-        await addDoc(collection(db, 'users', userId, 'notifications'), {
-          type: 'security',
-          userId: 'system',
-          username: 'NEXORA',
-          avatar: '',
-          title,
-          content: body,
-          eventType,
-          category: 'account',
-          targetId: 'account-security',
-          timestamp: new Date().toISOString(),
-          isRead: false,
-          priority: 8,
-          iconType: 'shield'
-        });
-      }
+      const recordAccountEvent = httpsCallable(functions, 'recordAccountSecurityEvent');
+      await recordAccountEvent({ eventType, details });
     } catch {
-      console.warn('Firestore security notification was unavailable; authentication remains authoritative in Firebase Auth.');
+      console.warn('Server-side account notification was unavailable; authentication remains authoritative in Firebase Auth.');
     }
 
     // 2. Trigger native OS Push Notification without loading Firebase
