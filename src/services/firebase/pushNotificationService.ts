@@ -1,4 +1,5 @@
 import { getMessaging, getToken, onMessage, Messaging, deleteToken } from 'firebase/messaging';
+import { onIdTokenChanged } from 'firebase/auth';
 import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, app, db } from './config';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
@@ -21,154 +22,151 @@ export interface PushNotificationPayload {
   };
 }
 
+type StoredRegistration = { uid: string; tokenId: string };
+const REGISTRATION_STORAGE_KEY = 'nexora_push_registration_owner';
+
 export class PushNotificationService {
   private static messaging: Messaging | null = null;
   private static token: string | null = null;
   private static isInitialized = false;
   private static tokenOwnerUid: string | null = null;
+  private static initPromise: Promise<string | null> | null = null;
+  private static unsubscribeAuth: (() => void) | null = null;
+  private static unsubscribeMessage: (() => void) | null = null;
 
   private static async tokenDocumentId(token: string): Promise<string> {
     const bytes = new TextEncoder().encode(token);
     const digest = await crypto.subtle.digest('SHA-256', bytes);
-    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
   }
 
-  private static async persistToken(token: string): Promise<void> {
-    const uid = auth.currentUser?.uid;
-    if (!uid) throw new Error('Sign in before registering a push device.');
+  private static readStoredRegistration(): StoredRegistration | null {
+    try {
+      const raw = localStorage.getItem(REGISTRATION_STORAGE_KEY);
+      if (!raw) return null;
+      const value = JSON.parse(raw) as Partial<StoredRegistration>;
+      return typeof value.uid === 'string' && typeof value.tokenId === 'string'
+        ? { uid: value.uid, tokenId: value.tokenId }
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private static async persistToken(token: string, uid: string): Promise<void> {
     const tokenId = await this.tokenDocumentId(token);
+    const previous = this.readStoredRegistration();
+    if (previous && (previous.uid !== uid || previous.tokenId !== tokenId)) {
+      await deleteDoc(doc(db, 'users', previous.uid, 'pushTokens', previous.tokenId)).catch(() => undefined);
+    }
+    if (auth.currentUser?.uid !== uid) throw new Error('The signed-in account changed during push registration.');
     await setDoc(doc(db, 'users', uid, 'pushTokens', tokenId), {
       token,
       platform: 'web',
       updatedAt: serverTimestamp(),
     }, { merge: true });
+    localStorage.setItem(REGISTRATION_STORAGE_KEY, JSON.stringify({ uid, tokenId }));
     this.tokenOwnerUid = uid;
+    this.token = token;
   }
 
-  /**
-   * Initializes Push Notifications & FCM Messaging
-   */
-  static async init(): Promise<string | null> {
-    if (isNativeRuntime()) {
-      console.info('Native push is not configured in this build; Web Push registration is intentionally disabled inside Capacitor.');
-      return null;
-    }
-    const uid = auth.currentUser?.uid;
-    if (!uid) return null;
-    if (this.token && this.tokenOwnerUid && this.tokenOwnerUid !== uid) {
-      const previousTokenId = await this.tokenDocumentId(this.token);
-      await deleteDoc(doc(db, 'users', this.tokenOwnerUid, 'pushTokens', previousTokenId));
-      if (this.messaging) await deleteToken(this.messaging);
-      this.token = null;
-      this.tokenOwnerUid = null;
-      this.isInitialized = false;
-    }
-    if (this.isInitialized && this.token && this.tokenOwnerUid === uid) {
-      return this.token;
-    }
+  private static async registerWebPush(uid: string): Promise<string | null> {
+    if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) return null;
+    if (Notification.permission !== 'granted') return null;
 
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      console.warn('Push Notifications not supported in this environment.');
+    const vapidKey = (import.meta as any).env?.VITE_FIREBASE_VAPID_KEY?.trim();
+    if (!vapidKey) {
+      console.warn('FCM Web Push is not configured: VITE_FIREBASE_VAPID_KEY is missing.');
       return null;
     }
 
-    try {
-      // Check or request permission
-      const permission = Notification.permission;
-      // Ask only from the user's explicit Notifications inbox action.
-      if (permission !== 'granted') {
-        console.warn('Push Notification permission denied by user.');
-        return null;
-      }
+    const registration = await navigator.serviceWorker.register('/service-worker.js');
+    await navigator.serviceWorker.ready;
+    if (auth.currentUser?.uid !== uid) return null;
 
-      // Initialize Firebase Messaging if Web Messaging is available
-      this.messaging = getMessaging(app);
+    this.messaging = getMessaging(app);
+    const token = await getToken(this.messaging, {
+      vapidKey,
+      serviceWorkerRegistration: registration,
+    });
+    if (!token) return null;
+    await this.persistToken(token, uid);
 
-      // Attempt acquiring FCM Push Registration Token if VAPID key is configured
-      const vapidKey = (import.meta as any).env?.VITE_FIREBASE_VAPID_KEY;
-      if (vapidKey) {
-        try {
-          const fcmToken = await getToken(this.messaging, { vapidKey });
-          if (fcmToken) {
-            await this.persistToken(fcmToken);
-            this.token = fcmToken;
-            console.info('FCM device registration is active.');
-          }
-        } catch {
-          console.warn('FCM token registration unavailable; verify the VAPID key and messaging service worker configuration.');
-        }
-      } else {
-        console.info('FCM Web Push is not configured: VITE_FIREBASE_VAPID_KEY is missing. Permission alone does not enable remote push delivery.');
-      }
-
-      // Listen for foreground messages
-      onMessage(this.messaging, (payload) => {
-        if (payload.notification) {
-          this.displayNativeNotification({
-            title: payload.notification.title || 'Nexora Alert',
-            body: payload.notification.body || '',
-            icon: '/nexora-mark.png',
-            data: payload.data as any
-          });
+    if (!this.unsubscribeAuth) {
+      this.unsubscribeAuth = onIdTokenChanged(auth, user => {
+        const owner = this.tokenOwnerUid || this.readStoredRegistration()?.uid || null;
+        if (owner && user?.uid !== owner) {
+          void this.removeStoredRegistration();
         }
       });
-
-      this.isInitialized = true;
-      return this.token;
-    } catch {
-      console.warn('Push Notification initialization unavailable in this environment.');
-      return null;
     }
+
+    this.unsubscribeMessage?.();
+    this.unsubscribeMessage = onMessage(this.messaging, payload => {
+      if (!payload.notification) return;
+      this.displayNativeNotification({
+        title: payload.notification.title || 'NEXORA',
+        body: payload.notification.body || '',
+        data: payload.data as PushNotificationPayload['data'],
+      });
+    });
+
+    this.isInitialized = true;
+    return token;
   }
 
-  /** Removes this browser's registration from the signed-in account. */
-  static async unregister(): Promise<void> {
-    const uid = this.tokenOwnerUid;
-    const token = this.token;
-    if (!uid || !token) return;
-    const tokenId = await this.tokenDocumentId(token);
-    await deleteDoc(doc(db, 'users', uid, 'pushTokens', tokenId));
-    if (this.messaging) await deleteToken(this.messaging);
+  private static async removeStoredRegistration(): Promise<void> {
+    const stored = this.readStoredRegistration();
+    if (stored) {
+      await deleteDoc(doc(db, 'users', stored.uid, 'pushTokens', stored.tokenId)).catch(() => undefined);
+      localStorage.removeItem(REGISTRATION_STORAGE_KEY);
+    }
+    if (this.messaging) await deleteToken(this.messaging).catch(() => undefined);
+    this.unsubscribeMessage?.();
+    this.unsubscribeMessage = null;
     this.token = null;
     this.tokenOwnerUid = null;
     this.isInitialized = false;
   }
 
-  /**
-   * Displays native Web Push notification on Desktop / Mobile OS
-   */
-  static displayNativeNotification(payload: PushNotificationPayload) {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
+  /** Register this browser only after the user has explicitly granted push permission. */
+  static async init(): Promise<string | null> {
+    if (isNativeRuntime()) {
+      console.info('Native push is not configured in this build; native device delivery remains disabled.');
+      return null;
+    }
+    const uid = auth.currentUser?.uid;
+    if (!uid) return null;
+    if (this.isInitialized && this.token && this.tokenOwnerUid === uid) return this.token;
+    if (this.initPromise) return this.initPromise;
 
+    this.initPromise = this.registerWebPush(uid)
+      .catch(error => {
+        console.warn('NEXORA push registration could not be completed.', error);
+        return null;
+      })
+      .finally(() => { this.initPromise = null; });
+    return this.initPromise;
+  }
+
+  /** Remove this browser's token from its owning account and revoke the FCM token. */
+  static async unregister(): Promise<void> {
+    await this.removeStoredRegistration();
+  }
+
+  static displayNativeNotification(payload: PushNotificationPayload): void {
+    if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return;
     const data = payload.data || {};
     const options: NotificationOptions = {
       body: payload.body,
-      icon: '/nexora-mark.png',
-      badge: '/icons/icon-48.png',
-      tag: data.notificationId || ('nexora-' + (data.type || 'general') + '-' + (data.targetId || 'update')),
+      icon: payload.icon || '/nexora-mark.png',
+      badge: payload.badge || '/icons/icon-48.png',
+      tag: data.notificationId || `nexora-${data.type || 'general'}-${data.targetId || 'update'}`,
       data,
       silent: true,
     };
-
-    // Mobile browsers and installed Android PWAs should display through the service worker.
-    const serviceWorkerReady = 'serviceWorker' in navigator
-      ? navigator.serviceWorker.ready
-      : Promise.reject(new Error('Service workers are unavailable.'));
-    void serviceWorkerReady.then(async registration => {
-      if (typeof registration.showNotification === 'function') {
-        await registration.showNotification(payload.title, options);
-        return;
-      }
-      const notification = new Notification(payload.title, options);
-      notification.onclick = () => {
-        window.focus();
-        if (data.url) window.location.href = data.url;
-        else window.dispatchEvent(new CustomEvent('changeTab', {
-          detail: { tab: data.type === 'chat' || data.type === 'message' ? 'inbox' : 'activity' }
-        }));
-        notification.close();
-      };
+    void navigator.serviceWorker.ready.then(async registration => {
+      await registration.showNotification(payload.title, options);
     }).catch(() => {
       try {
         const notification = new Notification(payload.title, options);
@@ -176,12 +174,13 @@ export class PushNotificationService {
           window.focus();
           if (data.url) window.location.href = data.url;
           else window.dispatchEvent(new CustomEvent('changeTab', {
-            detail: { tab: data.type === 'chat' || data.type === 'message' ? 'inbox' : 'activity' }
+            detail: { tab: data.type === 'chat' || data.type === 'message' ? 'inbox' : 'activity' },
           }));
           notification.close();
         };
       } catch {
-        console.warn('Native notification could not be displayed.');
+        console.warn('NEXORA could not display this device notification.');
       }
     });
-  }}
+  }
+}
