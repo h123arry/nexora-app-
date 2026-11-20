@@ -777,9 +777,6 @@ export default function NexoraVideoPlayer({
           const nextTime = Math.max(0, Math.min(video.duration, video.currentTime + delta));
           video.currentTime = nextTime;
           setCurrentTime(nextTime);
-          setHud({ type: null, value: nextTime, visible: true });
-          if (playStateIndicatorTimeoutRef.current) clearTimeout(playStateIndicatorTimeoutRef.current);
-          playStateIndicatorTimeoutRef.current = window.setTimeout(() => setHud(current => ({ ...current, visible: false })), 650);
         }
         return;
       }
