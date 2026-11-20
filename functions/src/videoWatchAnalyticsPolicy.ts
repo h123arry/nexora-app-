@@ -8,3 +8,22 @@ export function acceptedWatchCredit({elapsedSeconds,previousPositionSeconds,next
   if (progress <= 0.25 || progress > elapsedSeconds * 1.75 + 2) return 0;
   return Math.min(elapsedSeconds,15);
 }
+
+export interface PublicVideoViewEligibilityInput {
+  viewerId: string;
+  creatorId: string;
+  audience: unknown;
+  creditedSeconds: number;
+  alreadyCounted: boolean;
+}
+
+/** Count a public post view only after qualified playback, once per viewer/day marker. */
+export function shouldCountPublicVideoView(input: PublicVideoViewEligibilityInput): boolean {
+  return input.viewerId.length > 0
+    && input.creatorId.length > 0
+    && input.viewerId !== input.creatorId
+    && input.audience === 'public'
+    && Number.isFinite(input.creditedSeconds)
+    && input.creditedSeconds > 0
+    && input.alreadyCounted === false;
+}
