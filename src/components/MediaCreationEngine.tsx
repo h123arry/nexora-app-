@@ -2017,7 +2017,7 @@ export default function MediaCreationEngine({
                          <div className="relative z-10 w-full space-y-3">
                            <div className="mx-auto flex w-full max-w-xs items-center gap-3 rounded-full border border-white/10 bg-[#050914]/55 px-4 py-2 backdrop-blur-xl">
                              <span className="text-[10px] font-medium text-white/75">Zoom</span>
-                             <input aria-label="Camera zoom" type="range" min="1" max="3" step="0.1" value={cameraZoom} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onChange={event => handleCameraZoomChange(Number(event.target.value))} className="min-w-0 flex-1 accent-[#8A78D6] disabled:opacity-40" />
+                             <input aria-label="Camera zoom" type="range" min="1" max="3" step="0.1" value={cameraZoom} onChange={event => handleCameraZoomChange(Number(event.target.value))} className="min-w-0 flex-1 accent-[#7AAFC0] disabled:opacity-40" />
                              <span className="w-8 text-right text-[10px] tabular-nums text-white/75">{cameraZoom.toFixed(1)}×</span>
                            </div>
                            <div className="flex items-center justify-between gap-3">
@@ -2188,7 +2188,7 @@ export default function MediaCreationEngine({
                           <div className="z-10 flex flex-col items-center gap-2">
                              <div className="mx-auto flex w-full max-w-xs items-center gap-3 rounded-full border border-white/10 bg-[#050914]/65 px-4 py-2 text-[10px] font-semibold text-white backdrop-blur-xl">
                                <span>Zoom · {cameraZoom.toFixed(1)}×</span>
-                               <input aria-label="Video camera zoom" type="range" min="1" max="3" step="0.1" value={cameraZoom} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onChange={event => handleCameraZoomChange(Number(event.target.value))} className="min-w-0 flex-1 accent-[#8A78D6] disabled:opacity-40" />
+                               <input aria-label="Video camera zoom" type="range" min="1" max="3" step="0.1" value={cameraZoom} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null || Boolean(recordedVideoUrl)} onChange={event => handleCameraZoomChange(Number(event.target.value))} className="min-w-0 flex-1 accent-[#7AAFC0] disabled:opacity-40" />
                              </div>
                              
                             <label className="flex items-center gap-2 rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[10px] font-semibold text-white">
