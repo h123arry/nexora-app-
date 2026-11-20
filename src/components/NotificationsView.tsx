@@ -381,6 +381,7 @@ export default function NotificationsView({
       if (activeCategory === 'likes') return n.type === 'like' || n.type === 'spark';
       if (activeCategory === 'reposts') return n.type === 'repost';
       if (activeCategory === 'followers') return n.type === 'follow';
+      if (activeCategory === 'messages') return n.type === 'message';
       if (activeCategory === 'profile_views') return n.type === 'profile_view';
       if (activeCategory === 'system' || activeCategory === 'account') return n.category === 'account' || n.type === 'system' || n.type === 'security';
       if (activeCategory === 'origin') return n.type === 'origin_attribution';
@@ -772,6 +773,7 @@ export default function NotificationsView({
             { id: 'comments', label: 'Comments' },
             { id: 'likes', label: 'Sparks & Likes' },
             { id: 'followers', label: 'Followers' },
+            { id: 'messages', label: 'Messages' },
             { id: 'reposts', label: 'Quotes & reposts' },
             { id: 'profile_views', label: 'Profile Views' },
             { id: 'live', label: 'Live Streams' },
