@@ -464,7 +464,7 @@ service cloud.firestore {
       }
 
       // Push tokens are private device credentials. Only the owning account may
-      // register, refresh, inspect or revoke its own web-device token records.
+      // register, refresh, inspect or revoke its own web and native device tokens.
       match /pushTokens/{tokenId} {
         allow get, list: if owner(userId);
         allow create, update: if owner(userId)
@@ -473,7 +473,7 @@ service cloud.firestore {
           && request.resource.data.token is string
           && request.resource.data.token.size() >= 20
           && request.resource.data.token.size() <= 4096
-          && request.resource.data.platform == 'web'
+          && request.resource.data.platform in ['web', 'android', 'ios']
           && request.resource.data.updatedAt == request.time;
         allow delete: if owner(userId);
       }
