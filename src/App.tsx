@@ -3223,11 +3223,11 @@ export default function App() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('carousel'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }}
+                    onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('photo'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }}
                     className="group relative flex min-h-[150px] flex-col items-center justify-center overflow-hidden rounded-[1.7rem] border border-white/12 bg-[linear-gradient(145deg,rgba(31,24,62,.92),rgba(12,10,25,.98))] px-3 py-4 text-center transition hover:border-[#9A76FF]/55 hover:bg-[#19143A] active:scale-[0.985]"
                   >
                     <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(138,63,252,.12),transparent_58%)]" />
-                    <span className="relative grid h-14 w-14 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-[#D5C7FF] transition duration-300 group-hover:scale-105"><FileImage className="h-7 w-7" /></span>
+                    <span className="relative grid h-14 w-14 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-[#D5C7FF] transition duration-300 group-hover:scale-105"><FolderOpen className="h-7 w-7" /></span>
                     <span className="relative mt-3 text-sm font-extrabold text-white">Choose from gallery</span>
                     <span className="relative mt-1 text-[10px] leading-relaxed text-[#AFA6C8]">Select photos from your device</span>
                   </button>
