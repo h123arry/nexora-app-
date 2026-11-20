@@ -14,6 +14,8 @@ export interface DirectCall {
   status: 'ringing' | 'accepted' | 'declined' | 'missed' | 'busy' | 'ended' | 'failed';
   callerName: string;
   recipientName: string;
+  callerAvatar?: string;
+  recipientAvatar?: string;
   createdAt: number;
   updatedAt: number;
   expiresAt: number;
