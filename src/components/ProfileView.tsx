@@ -1604,7 +1604,7 @@ export default function ProfileView({
                 )}
               </section>
             )}
-            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} isOwner={auth.currentUser?.uid === currentUser.id} onExplore={() => setShowGiftVerse(true)} /> : filteredTabPosts.length === 0 ? (
+            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} isOwner={auth.currentUser?.uid === currentUser.id} onExplore={() => setShowGiftVerse(true)} /> : profileTab === 'sparks' && isOwnProfile ? null : filteredTabPosts.length === 0 ? (
               <div className="p-8 py-16 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 max-w-md mx-auto my-6">
                 <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                   {profileTab === 'media' && <Camera className="w-6 h-6" />}
