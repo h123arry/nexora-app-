@@ -697,36 +697,12 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         )}
       </AnimatePresence>
 
-      {/* Primary Top Panel Row */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-4">
-        <div>
-          <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
-          <div className="flex items-center gap-2.5 mb-1">
-            <VohIcon size={26} animated glow variant="brand" />
-            <h1 className="text-2xl font-black font-sans tracking-tight text-current uppercase">
-              VOH AI
-            </h1>
-          </div>
-          <p className="text-xs text-current/60 font-sans leading-relaxed">
-            Ask questions, get ideas and help with your NEXORA account.
-          </p>
-        </div>
-
-        {/* Floating Controls */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-violet-950/40 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-mono">
-            <VohIcon size={15} animated variant="violet" />
-            <span className="font-black text-violet-300 uppercase">YOUR ACCOUNT</span>
-          </div>
-
-          <button 
-            onClick={() => createNewSession()}
-            className="px-3.5 py-1.5 bg-gradient-to-tr from-violet-600 to-pink-600 text-white text-xs font-black font-sans rounded-xl hover:brightness-110 shadow-md flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New chat</span>
-          </button>
-        </div>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-current/10 pb-3">
+        <p className="text-xs text-zinc-400">Ask a question or start a new chat.</p>
+        <button type="button" onClick={() => createNewSession()} className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-violet-500">
+          <Plus className="h-3.5 w-3.5" />
+          New chat
+        </button>
       </div>
 
       {/* Main navigation toolbar */}
