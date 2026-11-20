@@ -909,18 +909,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
           <button key={item} type="button" onClick={() => setCategory(item)} className={`shrink-0 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${category === item ? 'border-[#A78BFA] bg-[#7138FF]/25 text-white' : 'border-white/10 bg-white/[0.04] text-[#A39BBF]'}`}>{item}</button>
         ))}
       </div>
-      <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2.5">
-        <span className="shrink-0 text-[10px] font-semibold text-[#D7C7FF]">Effect strength</span>
-        <input type="range" min="0" max="100" value={effectIntensity} onChange={event => setEffectIntensity(Number(event.target.value))} className="min-w-0 flex-1 accent-violet-500" aria-label="Lens effect strength" />
-        <span className="w-8 text-right text-[10px] tabular-nums text-[#A39BBF]">{effectIntensity}%</span>
-      </label>
-      {(category === 'Beauty' || allLenses.find(item => item.id === activeLens)?.category === 'Beauty') && (
-        <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2.5">
-          <span className="shrink-0 text-[10px] font-semibold text-[#D7C7FF]">Skin softening</span>
-          <input type="range" min="0" max="100" value={beautyIntensity} onChange={event => setBeautyIntensity(Number(event.target.value))} className="min-w-0 flex-1 accent-violet-500" aria-label="Skin softening intensity" />
-          <span className="w-8 text-right text-[10px] tabular-nums text-[#A39BBF]">{beautyIntensity}%</span>
-        </label>
-      )}
+
       <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]" aria-label="Swipe to see more lenses">
         {visibleLenses.map(lens => {
           const selected = activeLens === lens.id;
