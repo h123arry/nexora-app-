@@ -6,10 +6,7 @@ import { deleteOwnNotification, deleteOwnNotifications, setNotificationReadState
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { getNotificationTimeSection } from '../utils/notificationTime';
-import {
-  requestPushPermission,
-  isPushPermissionGranted,
-} from '../services/notificationService';
+import { isNativeRuntime } from '../lib/nativeRuntime';
 
 interface NotificationsViewProps {
   notifications: Notification[];
@@ -655,7 +652,7 @@ export default function NotificationsView({
             <span className="w-2 h-2 rounded-full bg-pink-400 animate-ping" />
             <span className="text-xs font-mono font-black text-violet-200 uppercase tracking-wider flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              Browser notification permission
+              Device notification permission
             </span>
           </div>
 
@@ -663,25 +660,20 @@ export default function NotificationsView({
             <button
               type="button"
               onClick={async () => {
-                const res = await requestPushPermission();
-                if (res === 'granted') {
-                  try {
-                    const { PushNotificationService } = await import('../services/firebase/pushNotificationService');
-                    const token = await PushNotificationService.init();
-                    addToast(token
-                      ? "NEXORA push notifications are enabled on this device."
-                      : "Permission is granted, but push registration is not ready. Check the Firebase VAPID configuration.");
-                  } catch {
-                    addToast("Push registration could not be completed. Please try again.");
-                  }
-                } else {
-                  addToast("Push permission was not granted by the browser.");
+                try {
+                  const { PushNotificationService } = await import('../services/firebase/pushNotificationService');
+                  const token = await PushNotificationService.requestPermissionAndRegister();
+                  addToast(token
+                    ? "NEXORA call and activity alerts are enabled on this device."
+                    : "Permission was not granted or device push setup is incomplete. Please check your notification settings.");
+                } catch {
+                  addToast("Push registration could not be completed. Please try again.");
                 }
               }}
               className="px-2.5 py-1 rounded-xl bg-violet-600/20 hover:bg-violet-600/40 text-violet-300 border border-violet-500/30 text-[11px] font-mono flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Bell className="w-3 h-3 text-violet-400" />
-              <span>{isPushPermissionGranted() ? 'Browser Permission Granted' : 'Request Browser Permission'}</span>
+              <span>{isNativeRuntime() ? 'Enable device notifications' : 'Enable browser notifications'}</span>
             </button>
 
 
