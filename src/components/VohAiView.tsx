@@ -70,6 +70,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const [loadingAi, setLoadingAi] = useState(false);
   const [generatingMessageId, setGeneratingMessageId] = useState<string | null>(null);
   const [typingIndicator, setTypingIndicator] = useState(false);
+  const messagesViewportRef = useRef<HTMLDivElement | null>(null);
 
   // Voice AI States
   const [isRecording, setIsRecording] = useState(false);
@@ -224,6 +225,12 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
   const activeSession = sessions.find(s => s.id === activeSessionId) || sessions[0];
 
+  useEffect(() => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) return;
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'auto' });
+  }, [activeSessionId, activeSession?.messages.length, activeSession?.messages[activeSession.messages.length - 1]?.text, typingIndicator]);
+
   const createNewSession = (initialPrompt?: string, title?: string) => {
     const newSession: ChatSession = {
       id: `session-${Date.now()}`,
@@ -234,7 +241,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         {
           id: `msg-${Date.now()}-welcome`,
           sender: 'voh',
-          text: "Let's co-build something spectacular. How can I assist you today?",
+          text: "Hi, I'm VOH AI. What would you like help with today?",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ],
@@ -527,7 +534,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const handleImprovePostQuery = async () => {
     if (!query.trim()) return;
     setLoadingAi(true);
-    showToast("Polishing your command...");
+    showToast("Improving your post...");
     try {
       const res = await authenticatedVohFetch('/api/voh-ai/improve-post', {
         method: 'POST',
@@ -538,7 +545,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         const data = await res.json();
         if (typeof data.text === 'string' && data.text.trim()) {
           setQuery(data.text);
-          showToast("Command polished successfully! ✨");
+          showToast("Your post is ready to use.");
         }
       } else {
         const payload = await res.json().catch(() => ({}));
@@ -619,7 +626,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     
     const results = SearchEngine.getSuggestions(aiSearchInput, allUsers, posts, allCircles);
     setIntelligentResults(results);
-    showToast("Parsed Search DNA!");
+    showToast("Search complete.");
   };
 
   // Moderation Analysis triggers
@@ -673,7 +680,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   };
 
   return (
-    <div id="premium-voh-ai-workspace" className="space-y-6">
+    <div id="premium-voh-ai-workspace" className="h-full min-h-0 flex flex-col gap-4 overflow-hidden px-3 sm:px-5 pb-3">
       
       {/* Dynamic Toast Alerts */}
       <AnimatePresence>
@@ -690,36 +697,12 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         )}
       </AnimatePresence>
 
-      {/* Primary Top Panel Row */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-4">
-        <div>
-          <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
-          <div className="flex items-center gap-2.5 mb-1">
-            <VohIcon size={26} animated glow variant="brand" />
-            <h1 className="text-2xl font-black font-sans tracking-tight text-current uppercase">
-              VOH AI Assistant
-            </h1>
-          </div>
-          <p className="text-xs text-current/60 font-sans leading-relaxed">
-            AI help for your chats, posts, search and account.
-          </p>
-        </div>
-
-        {/* Floating Controls */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-violet-950/40 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-mono">
-            <VohIcon size={15} animated variant="violet" />
-            <span className="font-black text-violet-300 uppercase">YOUR NEXORA ACCOUNT</span>
-          </div>
-
-          <button 
-            onClick={() => createNewSession()}
-            className="px-3.5 py-1.5 bg-gradient-to-tr from-violet-600 to-pink-600 text-white text-xs font-black font-sans rounded-xl hover:brightness-110 shadow-md flex items-center gap-1 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>NEW CHAT</span>
-          </button>
-        </div>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-current/10 pb-3">
+        <p className="text-xs text-zinc-400">Ask a question or start a new chat.</p>
+        <button type="button" onClick={() => createNewSession()} className="inline-flex items-center gap-2 rounded-full bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-violet-500">
+          <Plus className="h-3.5 w-3.5" />
+          New chat
+        </button>
       </div>
 
       {/* Main navigation toolbar */}
@@ -730,7 +713,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             onClick={() => {
               setActiveSubView(view);
               if (view === 'moderation' && currentUser.role !== 'admin' && currentUser.role !== 'founder') {
-                showToast("This text assessment does not change live moderation decisions.");
+                showToast("This review is a guide and does not change moderation decisions.");
               }
             }}
             className={`px-4 py-2 rounded-xl text-xs font-bold font-sans uppercase tracking-wider transition-all cursor-pointer ${
@@ -739,13 +722,13 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                 : 'bg-current/5 text-current/60 hover:text-current hover:bg-current/10'
             }`}
           >
-            {view}
+            {{ chat: 'Chat', voice: 'Voice', assistants: 'Helpers', search: 'Search', ecosystem: 'More tools', moderation: 'Content review', settings: 'Settings' }[view]}
           </button>
         ))}
       </div>
 
       {/* Main Work Area Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className={activeSubView === 'chat' ? "flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-12 gap-4 items-stretch overflow-hidden" : "flex-1 min-h-0 overflow-y-auto grid grid-cols-1 xl:grid-cols-12 gap-4 items-start"}>
         
         {/* ======================================================== */}
         {/* CHAT MAIN VIEW */}
@@ -753,8 +736,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         {activeSubView === 'chat' && (
           <>
             {/* Sessions Sidebar Column (Left 4 cols) */}
-            <div className="lg:col-span-4 space-y-4">
-              <div className="bg-[#03010b] border border-white/10 rounded-3xl p-4 space-y-4 min-h-[420px] max-h-[600px] flex flex-col justify-between">
+            <div className="hidden xl:block xl:col-span-3 min-h-0 space-y-4">
+              <div className="bg-[#03010b] border border-white/10 rounded-3xl p-4 space-y-4 min-h-0 max-h-[calc(100dvh-15rem)] flex flex-col justify-between">
                 
                 <div className="space-y-4 overflow-y-auto flex-1">
                   {/* Search sessions */}
@@ -762,7 +745,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-current/30" />
                     <input
                       type="text"
-                      placeholder="Search dialogues..."
+                      placeholder="Search chats..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-9 pr-3 py-1.5 bg-white/5 border border-white/5 rounded-xl text-xs focus:outline-none focus:border-white/10"
@@ -796,7 +779,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                   {/* Dialogues List */}
                   <div className="space-y-2">
-                    <span className="text-[10px] font-sans font-black tracking-wider text-violet-400 uppercase block">Active Dialogues</span>
+                    <span className="text-[10px] font-sans font-black tracking-wider text-violet-400 uppercase block">Your chats</span>
                     
                     <div className="space-y-1 max-h-[250px] overflow-y-auto">
                       {sessions
@@ -849,13 +832,13 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                 {showFolderModal && (
                   <div className="border border-white/10 p-3 rounded-2xl bg-slate-950 space-y-2.5">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-sans font-bold text-violet-400 uppercase">Create New Folder</span>
+                      <span className="text-[10px] font-sans font-bold text-violet-400 uppercase">Create a folder</span>
                       <button onClick={() => setShowFolderModal(false)}><X className="w-3.5 h-3.5" /></button>
                     </div>
                     <div className="flex gap-2">
                       <input
                         type="text"
-                        placeholder="Folder name..."
+                        placeholder="Folder name"
                         value={folderName}
                         onChange={(e) => setFolderName(e.target.value)}
                         className="flex-1 px-2.5 py-1 text-xs bg-white/5 border border-white/5 rounded-lg focus:outline-none"
@@ -866,7 +849,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                             setFolders(prev => [...prev, { id: `folder-${Date.now()}`, name: `📁 ${folderName}` }]);
                             setFolderName('');
                             setShowFolderModal(false);
-                            showToast("Folder registered.");
+                            showToast("Folder created.");
                           }
                         }}
                         className="px-3 py-1 bg-violet-600 text-white rounded-lg text-xs"
@@ -881,13 +864,16 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             </div>
 
             {/* Chat Conversation Area (Right 8 cols) */}
-            <div className="lg:col-span-8 flex flex-col border border-current/10 rounded-3xl bg-current/3 overflow-hidden min-h-[420px] max-h-[600px] justify-between">
+            <div className="xl:col-span-9 flex h-full min-h-0 flex-col border border-current/10 rounded-2xl bg-current/3 overflow-hidden justify-between">
               
-              {/* Dialogue Header */}
+              {/* Chat Header */}
               <div className="p-3 border-b border-current/5 bg-current/5 flex justify-between items-center">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-500" />
-                  <span className="text-xs font-bold text-current">{activeSession?.title || 'Dialogue Session'}</span>
+                  <span className="text-xs font-bold text-current">{activeSession?.title || 'Chat'}</span>
+                  <select aria-label="Choose a chat" value={activeSessionId} onChange={(event) => setActiveSessionId(event.target.value)} className="xl:hidden ml-2 min-w-0 max-w-[46%] rounded-lg border border-white/10 bg-[#101B2E] px-2 py-1.5 text-[11px] text-white">
+                    {sessions.filter(session => !session.isArchived).map(session => <option key={session.id} value={session.id}>{session.title}</option>)}
+                  </select>
                 </div>
                 {activeSession?.messages && activeSession.messages.length > 0 && (
                   <button 
@@ -898,13 +884,13 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     className="p-1 rounded hover:bg-white/5 text-[10px] font-sans text-current/40 flex items-center gap-1"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    <span>Clear logs</span>
+                    <span>Clear chat</span>
                   </button>
                 )}
               </div>
 
               {/* Messages viewport */}
-              <div className="p-4 space-y-4 overflow-y-auto flex-1 max-h-[380px]">
+              <div ref={messagesViewportRef} className="min-h-0 flex-1 p-4 space-y-4 overflow-y-auto overscroll-contain">
                 {activeSession?.messages.map((msg) => (
                   <div 
                     key={msg.id}
@@ -1005,117 +991,19 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                 ))}
 
                 {(!activeSession?.messages || activeSession.messages.length <= 1) && (
-                  <div className="space-y-4 mt-2 animate-fadeIn">
-                    
-                    {/* Bento Row 1: Suggested Prompt Action Cards (Grid) */}
-                    <div>
-                      <span className="text-[10px] font-sans font-black tracking-wider text-violet-400 uppercase block mb-2">Suggested Actions</span>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                        
-                        <button
-                          type="button"
-                          onClick={() => handleSendPrompt(undefined, "Summarize my active feed and identify design trends.")}
-                          className="p-3 text-left bg-[#05030f] border border-white/10 rounded-2xl hover:border-white/10 hover:bg-violet-950/15 transition-all group cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <VohIcon size={16} variant="violet" />
-                            <span className="text-xs font-black font-sans text-white group-hover:text-violet-300">Summarize Feed</span>
-                          </div>
-                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Quickly parse active home feed posts and compile design topics.</p>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleSendPrompt(undefined, "How do I maximize my NEX token tips and reputation points?")}
-                          className="p-3 text-left bg-[#05030f] border border-fuchsia-500/15 rounded-2xl hover:border-fuchsia-500/40 hover:bg-fuchsia-950/15 transition-all group cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <TrendingUp className="w-4 h-4 text-fuchsia-400" />
-                            <span className="text-xs font-black font-sans text-white group-hover:text-fuchsia-300">Optimize NEX Earnings</span>
-                          </div>
-                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Learn about tips, engagement weighting, and reputation rules.</p>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleSendPrompt(undefined, "What topics are popular around Port Harcourt node right now?")}
-                          className="p-3 text-left bg-[#05030f] border border-cyan-500/15 rounded-2xl hover:border-cyan-500/40 hover:bg-cyan-950/15 transition-all group cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <Compass className="w-4 h-4 text-cyan-400" />
-                            <span className="text-xs font-black font-sans text-white group-hover:text-cyan-300">What's happening nearby</span>
-                          </div>
-                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Explore startup discussions and hashtags active in Nigeria.</p>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleSendPrompt(undefined, "Review my account security setup.")}
-                          className="p-3 text-left bg-[#05030f] border border-emerald-500/15 rounded-2xl hover:border-emerald-500/40 hover:bg-emerald-950/15 transition-all group cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                            <span className="text-xs font-black font-sans text-white group-hover:text-emerald-300">Security Guard</span>
-                          </div>
-                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Validate localized session logs and encrypted transaction syncs.</p>
-                        </button>
-
-                      </div>
+                  <div className="mx-auto flex min-h-[34vh] w-full max-w-2xl flex-col justify-center gap-5 py-8 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-violet-400/20 bg-violet-500/10">
+                      <VohIcon size={26} animated glow variant="brand" />
                     </div>
-
-                    {/* Bento Row 2: Learned Memory DNA capsules */}
-                    <div className="p-4 bg-white/3 border border-white/5 rounded-2xl space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <BrainCircuit className="w-4 h-4 text-violet-400 animate-pulse" />
-                          <span className="text-[10px] font-sans font-black tracking-wider text-violet-300 uppercase">AI Preference Capsule</span>
-                        </div>
-                        {memoryDNA.length > 0 && (
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              setMemoryDNA([]);
-                              showToast("AI memory wiped cleanly.");
-                            }}
-                            className="text-[9px] font-mono text-rose-400 hover:underline cursor-pointer"
-                          >
-                            Wipe memory DNA
-                          </button>
-                        )}
-                      </div>
-                      
-                      {memoryDNA.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5">
-                          {memoryDNA.map((pref, i) => (
-                            <span key={i} className="px-2.5 py-1 text-[9.5px] font-sans bg-violet-500/10 border border-white/10 text-violet-300 rounded-lg flex items-center gap-1">
-                              <span className="w-1 h-1 rounded-full bg-violet-400" />
-                              {pref}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-current/40 italic">No persistent memory logged. Speak or chat with VOH AI to build your profile DNA.</p>
-                      )}
-                      
-                      <p className="text-[9px] text-current/40 font-mono">These are local preference labels only. VOH does not silently save new memories from this chat.</p>
+                    <div className="space-y-2">
+                      <h2 className="text-xl font-semibold text-white">What can I help you with?</h2>
+                      <p className="mx-auto max-w-md text-sm leading-relaxed text-zinc-400">Ask a question, talk through an idea, get help with a post or learn more about NEXORA.</p>
                     </div>
-
-                    {/* Bento Row 3: Diagnostic Node Metrics */}
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
-                        <span className="text-[8px] text-current/40 uppercase block mb-0.5">VOH Link Speed</span>
-                        <span className="text-xs font-black font-sans text-emerald-400">Local UI</span>
-                      </div>
-                      <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
-                        <span className="text-[8px] text-current/40 uppercase block mb-0.5">Linked Engines</span>
-                        <span className="text-xs font-black font-sans text-violet-300">Scoped</span>
-                      </div>
-                      <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
-                        <span className="text-[8px] text-current/40 uppercase block mb-0.5">Database Sync</span>
-                        <span className="text-xs font-black font-sans text-cyan-400">Explicit only</span>
-                      </div>
+                    <div className="mx-auto grid w-full max-w-xl grid-cols-1 gap-2 sm:grid-cols-3">
+                      <button type="button" onClick={() => handleSendPrompt(undefined, "Help me write a post for my audience.")} className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-left text-xs font-medium text-zinc-200 transition-colors hover:border-violet-400/30 hover:bg-violet-500/10">Help me write a post</button>
+                      <button type="button" onClick={() => handleSendPrompt(undefined, "Summarize my recent feed.")} className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-left text-xs font-medium text-zinc-200 transition-colors hover:border-violet-400/30 hover:bg-violet-500/10">Summarize my feed</button>
+                      <button type="button" onClick={() => handleSendPrompt(undefined, "Give me practical ideas to grow my NEXORA account.")} className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-left text-xs font-medium text-zinc-200 transition-colors hover:border-violet-400/30 hover:bg-violet-500/10">Help me grow my account</button>
                     </div>
-
                   </div>
                 )}
 
@@ -1138,19 +1026,19 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                   onClick={() => handleSendPrompt(undefined, "Summarize my active feed.")}
                   className="px-2.5 py-1 text-[9.5px] font-sans border border-current/10 rounded-lg hover:border-white/10 text-current/70 hover:text-violet-400 transition-all bg-current/5"
                 >
-                  #SummarizeFeed
+                  Summarize my feed
                 </button>
                 <button
                   onClick={() => handleSendPrompt(undefined, "What is currently trending in Nigeria?")}
                   className="px-2.5 py-1 text-[9.5px] font-sans border border-current/10 rounded-lg hover:border-emerald-500/30 text-current/70 hover:text-emerald-400 transition-all bg-current/5"
                 >
-                  #NigeriaTrends
+                  What's trending in Nigeria?
                 </button>
                 <button
                   onClick={() => handleSendPrompt(undefined, "Identify job & collaboration opportunities.")}
                   className="px-2.5 py-1 text-[9.5px] font-sans border border-current/10 rounded-lg hover:border-amber-500/30 text-current/70 hover:text-amber-400 transition-all bg-current/5"
                 >
-                  #FindOpportunities
+                  Find jobs and opportunities
                 </button>
               </div>
 
@@ -1170,7 +1058,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                           none: 'feed'
                         };
                         setAttachedContextType(cycle[attachedContextType]);
-                        showToast(`Switched context to ${cycle[attachedContextType].toUpperCase()}`);
+                        showToast('Shared information updated.');
                       }}
                       className="px-2.5 py-1 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 border border-white/10 text-[10px] font-sans font-extrabold text-violet-300 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
                     >
@@ -1178,20 +1066,20 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {attachedContextType === 'profile' && <UserCheck className="w-3 h-3 text-cyan-400" />}
                       {attachedContextType === 'inbox' && <MessageSquare className="w-3 h-3 text-fuchsia-400" />}
                       {attachedContextType === 'none' && <Sparkle className="w-3 h-3 text-amber-400" />}
-                      <span>CYCLE DATA CONTEXT</span>
+                      <span>Change shared information</span>
                     </button>
 
                     <span className="text-[10px] text-current/60 font-sans hidden sm:inline">
-                      {attachedContextType === 'feed' && "📎 Shared: posts currently loaded in this browser"}
-                      {attachedContextType === 'profile' && `👤 Shared: profile fields explicitly sent with this request`}
-                      {attachedContextType === 'inbox' && "💬 Shared: inbox mode label only; message content is not attached"}
-                      {attachedContextType === 'none' && "🌐 Shared: no Nexora context"}
+                      {attachedContextType === 'feed' && "Uses posts from your feed"}
+                      {attachedContextType === 'profile' && `Uses your profile details`}
+                      {attachedContextType === 'inbox' && "Private messages are never shared"}
+                      {attachedContextType === 'none' && "No extra information shared"}
                     </span>
                     <span className="text-[10px] text-current/60 font-sans sm:hidden inline">
-                      {attachedContextType === 'feed' && "📎 Loaded Feed"}
-                      {attachedContextType === 'profile' && "👤 Shared Profile"}
-                      {attachedContextType === 'inbox' && "💬 Inbox Mode"}
-                      {attachedContextType === 'none' && "🌐 No Context"}
+                      {attachedContextType === 'feed' && "Feed information"}
+                      {attachedContextType === 'profile' && "Profile information"}
+                      {attachedContextType === 'inbox' && "Private messages stay private"}
+                      {attachedContextType === 'none' && "No extra information"}
                     </span>
                   </div>
 
@@ -1202,7 +1090,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       className="px-2.5 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-[10px] font-sans font-extrabold text-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95 animate-pulse"
                     >
                       <Sparkles className="w-3 h-3 text-amber-400 animate-spin" />
-                      <span>POLISH COMMAND</span>
+                      <span>Improve post</span>
                     </button>
                   )}
                 </div>
@@ -1216,14 +1104,14 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                         ? 'bg-rose-600 border-rose-500 text-white animate-pulse' 
                         : 'bg-white/5 border-white/5 text-current/60 hover:text-violet-400'
                     }`}
-                    title={continuousListening ? "Continuous Listening Active" : "Enable continuous voice listening"}
+                    title={continuousListening ? "Listening" : "Use voice input"}
                   >
                     <Mic className="w-4 h-4" />
                   </button>
 
                   <input
                     type="text"
-                    placeholder={loadingAi ? "VOH AI is thinking..." : "Ask VOH AI: summarize feed, find job..."}
+                    placeholder={loadingAi ? "VOH AI is thinking..." : "Message VOH AI..."}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     disabled={loadingAi}
@@ -1283,7 +1171,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                   >
                     {isRecording ? <MicOff className="w-5 h-5 animate-pulse" /> : <Mic className="w-5 h-5" />}
                   </button>
-                  <span className="text-[10px] text-current/40 uppercase tracking-wider">{isRecording ? `Recording...` : 'Transmitter Standby'}</span>
+                  <span className="text-[10px] text-current/40 uppercase tracking-wider">{isRecording ? `Recording...` : 'Microphone ready'}</span>
                 </div>
 
                 <div className="border-t border-white/5 pt-3 flex gap-2">
@@ -1295,7 +1183,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       className="bg-transparent border-none text-[11px] font-bold focus:outline-none text-violet-300"
                     >
                       <option value="en-US">English (US)</option>
-                      <option value="en-NG">English (Nigerian Dialect)</option>
+                      <option value="en-NG">English (Nigeria)</option>
                       <option value="fr-FR">French</option>
                       <option value="de-DE">German</option>
                     </select>
@@ -1303,7 +1191,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                   <div className="flex-1 bg-white/5 rounded-xl p-2.5 flex items-center justify-between">
                     <div>
-                      <span className="text-[8px] text-current/40 uppercase block mb-0.5">Auto Voice Play</span>
+                      <span className="text-[8px] text-current/40 uppercase block mb-0.5">Read replies aloud</span>
                       <span className="text-[11px] font-bold text-violet-300">{voiceConfig.autoRead ? 'ON' : 'OFF'}</span>
                     </div>
                     <input 
@@ -1519,7 +1407,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         )}
 
         {/* ======================================================== */}
-        {/* ECOSYSTEM & MONETIZATION SUBVIEW */}
+        {/* MORE TOOLS */}
         {/* ======================================================== */}
         {activeSubView === 'ecosystem' && (
           <div className="lg:col-span-12 space-y-4">
@@ -1662,7 +1550,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             <div className="bg-[#03010b] border border-white/10 rounded-3xl p-6 space-y-6">
               <div>
                 <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block mb-1">VOH AI PARAMETERS CONTROL</span>
-                <p className="text-xs text-current/60">Customize systemic instructions, temperature, rate limit thresholds and memory DNA preferences.</p>
+                <p className="text-xs text-current/60">Choose how VOH AI responds and manage what it remembers.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1673,7 +1561,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs">
-                        <span>Creative Temperature</span>
+                        <span>Response creativity</span>
                         <span className="font-bold text-violet-300">{aiSettings.temperature}</span>
                       </div>
                       <input
@@ -1864,9 +1752,9 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     </div>
                   </div>
 
-                  {/* Category 2: Communities & Nodes */}
+                  {/* Category 2: Communities */}
                   <div className="space-y-3 bg-[#03010b]/50 p-3.5 rounded-xl border border-white/5">
-                    <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">🏟️ Spaces & Nodes</span>
+                    <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">🏟️ Communities</span>
 
                     <div className="space-y-2">
                       <div className="space-y-1">
@@ -1898,7 +1786,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] text-zinc-400">Locations (Nodes)</label>
+                        <label className="text-[10px] text-zinc-400">Locations</label>
                         <input
                           type="text"
                           value={terminologyState.nodesCapitalized}
@@ -1916,11 +1804,11 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                   {/* Category 3: Content Interaction */}
                   <div className="space-y-3 bg-[#03010b]/50 p-3.5 rounded-xl border border-white/5">
-                    <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">⚡ Sparks & Loops</span>
+                    <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">⚡ Likes and comments</span>
 
                     <div className="space-y-2">
                       <div className="space-y-1">
-                        <label className="text-[10px] text-zinc-400">Likes (Sparks)</label>
+                        <label className="text-[10px] text-zinc-400">Likes</label>
                         <input
                           type="text"
                           value={terminologyState.sparksCapitalized}

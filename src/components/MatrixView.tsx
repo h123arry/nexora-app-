@@ -14,6 +14,7 @@ interface MatrixViewProps {
   onOpenCreate?: (initialMode?: 'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null, initialCaption?: string) => void;
   creators?: User[];
   initialSubTab?: MatrixSubTab;
+  onClose?: () => void;
 }
 
 type MatrixSubTab = 'ai' | 'studio' | 'circles' | 'missions' | 'messages';
@@ -24,9 +25,11 @@ export default function MatrixView({
   onAddPost,
   onOpenCreate,
   creators = [],
-  initialSubTab
+  initialSubTab,
+  onClose
 }: MatrixViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<MatrixSubTab>(initialSubTab === 'circles' ? 'messages' : initialSubTab || 'ai');
+  const [showMatrixMenu, setShowMatrixMenu] = useState(false);
 
   useEffect(() => {
     if (initialSubTab) {
@@ -38,7 +41,7 @@ export default function MatrixView({
   const [deploySuccess, setDeploySuccess] = useState(false);
 
   // Predefined community tags for quick tap selection
-  const popularTags = ['SpaceGlass', 'Rust', 'BuildInPublic', 'DesignTokens', 'AIEngines', 'FutureHuman'];
+  const popularTags = ['Food', 'Travel', 'Music', 'Learning', 'Business', 'Creativity'];
 
   const handleStudioDeploy = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,10 +56,42 @@ export default function MatrixView({
   };
 
   const menuItems = [
-    { id: 'studio' as MatrixSubTab, label: 'Post Studio', desc: 'Create community posts & stories', icon: Paintbrush, color: 'text-fuchsia-400' },
-    { id: 'missions' as MatrixSubTab, label: 'Missions', desc: 'Goals, challenges & helpers', icon: Target, color: 'text-yellow-400' },
-    { id: 'messages' as MatrixSubTab, label: 'Messages', desc: 'Your direct messages', icon: MessageSquare, color: 'text-sky-400' }
+    { id: 'studio' as MatrixSubTab, label: 'Create a post', desc: 'Write posts and share updates', icon: Paintbrush, color: 'text-fuchsia-400' },
+    { id: 'missions' as MatrixSubTab, label: 'Challenges', desc: 'Things to try and achieve', icon: Target, color: 'text-yellow-400' },
+    { id: 'messages' as MatrixSubTab, label: 'Messages', desc: 'Your private conversations', icon: MessageSquare, color: 'text-sky-400' }
   ];
+
+  if (activeSubTab === 'ai') {
+    return (
+      <div className="fixed inset-0 z-[90] flex h-[100dvh] flex-col overflow-hidden bg-[#050914] text-white">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-white/10 bg-[#070D19] px-4">
+          <button type="button" onClick={() => onClose?.()} aria-label="Back to NEXORA" className="flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-white/10 hover:text-white">
+            <ArrowRight className="h-5 w-5 rotate-180" />
+          </button>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <VohIcon size={22} animated glow variant="brand" />
+            <div className="min-w-0">
+              <h1 className="truncate text-sm font-semibold text-white">VOH AI</h1>
+              <p className="text-[11px] text-zinc-400">Your personal AI assistant</p>
+            </div>
+          </div>
+          <div className="relative ml-auto">
+            <button type="button" aria-expanded={showMatrixMenu} onClick={() => setShowMatrixMenu(value => !value)} className="rounded-full border border-white/10 px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-white/5">More</button>
+            {showMatrixMenu && (
+              <div className="absolute right-0 top-12 z-[100] min-w-44 rounded-xl border border-white/10 bg-[#0B1424] p-1.5 shadow-2xl">
+                {menuItems.map(item => (
+                  <button key={item.id} type="button" onClick={() => { setActiveSubTab(item.id); setShowMatrixMenu(false); }} className="block w-full rounded-lg px-3 py-2.5 text-left text-xs font-medium text-zinc-200 hover:bg-violet-500/10 hover:text-white">{item.label}</button>
+                ))}
+              </div>
+            )}
+          </div>
+        </header>
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <VohAiView currentUser={currentUser} posts={posts} onAddPost={onAddPost} setActiveTab={() => {}} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="voh-ai-centre" className="space-y-6 pb-28 sm:pb-12">
@@ -74,7 +109,7 @@ export default function MatrixView({
             </h2>
           </div>
           <p className="text-xs text-current/60 font-sans">
-            Your friendly space to talk with AI, share updates, join interest communities, and send messages.
+            Create posts, join communities and keep up with your conversations.
           </p>
         </div>
 
@@ -117,15 +152,6 @@ export default function MatrixView({
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.08, ease: "easeOut" }}
           >
-            {activeSubTab === 'ai' && (
-              <VohAiView 
-                currentUser={currentUser} 
-                posts={posts} 
-                onAddPost={onAddPost} 
-                setActiveTab={() => {}}
-              />
-            )}
-
             {activeSubTab === 'studio' && (
               <div className="space-y-6">
                 <div className="p-5 rounded-3xl bg-[#03010b] border border-white/10 relative overflow-hidden">
@@ -144,17 +170,17 @@ export default function MatrixView({
                   {deploySuccess && (
                     <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono rounded-xl flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 shrink-0" />
-                      <span>POST SHARED SUCCESSFULLY! VISIBLE ON THE FEED.</span>
+                      <span>Post shared successfully.</span>
                     </div>
                   )}
 
                   <form onSubmit={handleStudioDeploy} className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-[11px] font-mono tracking-wider text-current/60 uppercase font-bold">What is on your mind?</label>
+                      <label className="text-[11px] font-mono tracking-wider text-current/60 uppercase font-bold">What would you like to share?</label>
                       <textarea
                         value={customPostContent}
                         onChange={(e) => setCustomPostContent(e.target.value)}
-                        placeholder="Write your update, design discovery, or question..."
+                        placeholder="Write something you'd like to share..."
                         className="w-full h-28 p-3 rounded-2xl bg-current/5 border border-current/10 outline-hidden text-current text-xs font-sans placeholder-current/40 focus:border-white/10 transition-colors resize-none leading-relaxed"
                         required
                       />
@@ -162,7 +188,7 @@ export default function MatrixView({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-mono tracking-wider text-current/60 uppercase font-bold">Add Tags (comma-separated)</label>
+                        <label className="text-[11px] font-mono tracking-wider text-current/60 uppercase font-bold">Add topics (optional)</label>
                         <input
                           type="text"
                           value={customPostTags}
