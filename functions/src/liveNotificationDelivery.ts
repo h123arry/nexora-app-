@@ -3,6 +3,33 @@ import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 
 const FOLLOWER_PAGE_SIZE = 400;
 
+export function buildLiveStartNotification(input: {
+  sessionId: string;
+  hostId: string;
+  username: string;
+  actorName: string;
+  avatar: string;
+  title: string;
+  timestamp: string;
+}) {
+  return {
+    id: `live_${input.sessionId}`,
+    type: 'pulse_alert' as const,
+    userId: input.hostId,
+    username: input.username,
+    actorName: input.actorName,
+    avatar: input.avatar,
+    targetId: input.sessionId,
+    content: `${input.actorName} is live now: ${input.title}`,
+    timestamp: input.timestamp,
+    isRead: false,
+    priority: 2,
+    category: 'live',
+    actionText: 'Join live',
+    actionType: 'join_live',
+  };
+}
+
 export function createLiveStartNotificationDelivery(db: Firestore) {
   return onDocumentCreated(
     { document: 'liveSessions/{sessionId}', retry: true },
@@ -47,22 +74,9 @@ export function createLiveStartNotificationDelivery(db: Firestore) {
           let writes = 0;
           existing.forEach((snapshot, index) => {
             if (snapshot.exists) return;
-            batch.set(snapshot.ref, {
-              id: snapshot.id,
-              type: 'pulse_alert',
-              userId: hostId,
-              username,
-              actorName,
-              avatar,
-              targetId: sessionId,
-              content: `${actorName} is live now: ${title}`,
-              timestamp,
-              isRead: false,
-              priority: 2,
-              category: 'live',
-              actionText: 'Join live',
-              actionType: 'join_live',
-            });
+            batch.set(snapshot.ref, buildLiveStartNotification({
+              sessionId, hostId, username, actorName, avatar, title, timestamp,
+            }));
             writes++;
           });
           if (writes) await batch.commit();
