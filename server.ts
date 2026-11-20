@@ -946,17 +946,28 @@ vohRouter.post('/chat', async (req, res) => {
       sender: item?.sender === 'user' ? 'user' : 'voh',
       text: clipText(item?.text, 4000),
     })) : [];
+    const requestedScope = req.body?.context?.scope;
+    const contextScope: 'feed' | 'profile' | 'none' = requestedScope === 'feed' || requestedScope === 'profile' ? requestedScope : 'none';
     const [accountContext, personalMemoryPrompt] = await Promise.all([
-      getAuthenticatedVohAccountContext(res.locals.vohUid).catch(error => {
-        console.error('VOH account context unavailable:', error instanceof Error ? error.name : 'unknown');
-        return null;
-      }),
+      contextScope === 'profile'
+        ? getAuthenticatedVohAccountContext(res.locals.vohUid).catch(error => {
+            console.error('VOH account context unavailable:', error instanceof Error ? error.name : 'unknown');
+            return null;
+          })
+        : Promise.resolve(null),
       getVohMemoryPrompt(res.locals.vohUid).catch(error => {
         console.error('VOH personal memory unavailable:', error instanceof Error ? error.name : 'unknown');
         return 'Persistent personal memory could not be loaded for this request. Do not claim that saved memories were consulted.';
       }),
     ]);
-    const context = shapeVohContext({ ...(req.body?.context || {}), currentUser: accountContext }, res.locals.vohUid);
+    const suppliedContext = req.body?.context && typeof req.body.context === 'object' ? req.body.context : {};
+    const context = shapeVohContext({
+      ...(suppliedContext),
+      posts: contextScope === 'feed' ? suppliedContext.posts : [],
+      circles: [],
+      notifications: [],
+      currentUser: contextScope === 'profile' ? accountContext : null,
+    }, res.locals.vohUid);
 
     const clientInfo = getGeminiClient();
     
