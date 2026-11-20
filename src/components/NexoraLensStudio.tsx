@@ -155,6 +155,49 @@ function drawLens(context: CanvasRenderingContext2D, landmarks: any[], lens: Len
       const size = Math.max(3, eyeDistance * (.035 + (i % 2) * .018));
       context.beginPath(); context.moveTo(x, y - size * 2); context.lineTo(x + size * .5, y - size * .5); context.lineTo(x + size * 2, y); context.lineTo(x + size * .5, y + size * .5); context.lineTo(x, y + size * 2); context.lineTo(x - size * .5, y + size * .5); context.lineTo(x - size * 2, y); context.lineTo(x - size * .5, y - size * .5); context.closePath(); context.fill();
     }
+  } else if (lens.sticker === 'teddyBear') {
+    const earY = forehead.y - eyeDistance * 0.42;
+    context.fillStyle = '#9A5B35';
+    context.strokeStyle = '#F2C7A5';
+    context.lineWidth = Math.max(2, eyeDistance * 0.025);
+    for (const side of [-1, 1]) {
+      context.beginPath(); context.arc(forehead.x + side * faceWidth * 0.34, earY, eyeDistance * 0.25, 0, Math.PI * 2); context.fill(); context.stroke();
+      context.fillStyle = '#E8B99A';
+      context.beginPath(); context.arc(forehead.x + side * faceWidth * 0.34, earY, eyeDistance * 0.13, 0, Math.PI * 2); context.fill();
+      context.fillStyle = '#9A5B35';
+    }
+    context.fillStyle = 'rgba(154,91,53,.9)';
+    context.beginPath(); context.ellipse(nose.x, nose.y + eyeDistance * 0.78, eyeDistance * 0.23, eyeDistance * 0.17, 0, 0, Math.PI * 2); context.fill();
+    context.fillStyle = '#2B160E';
+    context.beginPath(); context.ellipse(nose.x, nose.y + eyeDistance * 0.72, eyeDistance * 0.075, eyeDistance * 0.055, 0, 0, Math.PI * 2); context.fill();
+  } else if (lens.sticker === 'beard') {
+    if (mouthLeft && mouthRight && chin) {
+      context.fillStyle = 'rgba(54,35,28,.92)';
+      context.strokeStyle = 'rgba(20,14,12,.9)';
+      context.lineWidth = Math.max(2, eyeDistance * 0.025);
+      context.beginPath();
+      context.moveTo(mouthLeft.x - eyeDistance * 0.12, mouthLeft.y - eyeDistance * 0.08);
+      context.quadraticCurveTo(nose.x, mouthLeft.y - eyeDistance * 0.34, mouthRight.x + eyeDistance * 0.12, mouthRight.y - eyeDistance * 0.08);
+      context.quadraticCurveTo(chin.x + eyeDistance * 0.52, chin.y - eyeDistance * 0.08, chin.x, chin.y + eyeDistance * 0.08);
+      context.quadraticCurveTo(chin.x - eyeDistance * 0.52, chin.y - eyeDistance * 0.08, mouthLeft.x - eyeDistance * 0.12, mouthLeft.y - eyeDistance * 0.08);
+      context.closePath(); context.fill(); context.stroke();
+      context.fillStyle = '#302019';
+      context.beginPath(); context.moveTo(mouthLeft.x, mouthLeft.y - eyeDistance * 0.12);
+      context.quadraticCurveTo(nose.x, mouthLeft.y - eyeDistance * 0.32, mouthRight.x, mouthRight.y - eyeDistance * 0.12);
+      context.quadraticCurveTo(nose.x, mouthLeft.y + eyeDistance * 0.02, mouthLeft.x, mouthLeft.y - eyeDistance * 0.12);
+      context.fill();
+    }
+  } else if (lens.sticker === 'hair') {
+    const hairlineY = forehead.y - eyeDistance * 0.22;
+    context.fillStyle = '#24172D';
+    context.strokeStyle = '#8D6AAE';
+    context.lineWidth = Math.max(2, eyeDistance * 0.025);
+    context.beginPath();
+    context.moveTo(forehead.x - faceWidth * 0.55, forehead.y + eyeDistance * 0.16);
+    context.bezierCurveTo(forehead.x - faceWidth * 0.58, hairlineY - eyeDistance * 0.82, forehead.x + faceWidth * 0.48, hairlineY - eyeDistance * 0.82, forehead.x + faceWidth * 0.55, forehead.y + eyeDistance * 0.16);
+    context.quadraticCurveTo(forehead.x + faceWidth * 0.2, hairlineY - eyeDistance * 0.12, forehead.x, hairlineY + eyeDistance * 0.04);
+    context.quadraticCurveTo(forehead.x - faceWidth * 0.22, hairlineY - eyeDistance * 0.08, forehead.x - faceWidth * 0.55, forehead.y + eyeDistance * 0.16);
+    context.closePath(); context.fill(); context.stroke();
   }
   context.restore();
 }
@@ -412,17 +455,11 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
         return next;
       });
     }).catch(error => {
-      console.info('[NEXORA Lensverse] Cloud creator lenses are unavailable; local lenses remain available.', error);
+      console.info('[NEXORA LensVerse] Cloud creator lenses are unavailable; local lenses remain available.', error);
     });
     return () => { active = false; };
   }, [userId]);
 
-  const [beautyIntensity, setBeautyIntensity] = useState(32);
-  const beautyIntensityRef = useRef(32);
-  beautyIntensityRef.current = beautyIntensity;
-  const [effectIntensity, setEffectIntensity] = useState(100);
-  const effectIntensityRef = useRef(100);
-  effectIntensityRef.current = effectIntensity;
   const [favourites, setFavourites] = useState<string[]>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(`nexora_lens_favourites_${userId}`) || '[]');
@@ -513,9 +550,8 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
             context.scale(-1, 1);
           }
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
-          if (effectIntensityRef.current > 0 && lens.filter !== 'none') {
+          if (lens.filter !== 'none') {
             context.save();
-            context.globalAlpha = effectIntensityRef.current / 100;
             context.filter = lens.filter;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             context.restore();
@@ -529,24 +565,29 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
             } catch { latestLandmarks = null; }
             lastDetectAt = now;
           }
-          if (latestLandmarks && lens.category === 'Beauty' && beautyIntensityRef.current > 0) {
+          // Beauty lenses include gentle, fixed skin diffusion. Eye and mouth cut-outs
+          // keep the most important facial details crisp; no strength control is needed.
+          if (latestLandmarks && lens.category === 'Beauty') {
             const forehead = point(latestLandmarks, 10, canvas.width, canvas.height);
             const chin = point(latestLandmarks, 152, canvas.width, canvas.height);
             const leftCheek = point(latestLandmarks, 234, canvas.width, canvas.height);
             const rightCheek = point(latestLandmarks, 454, canvas.width, canvas.height);
-            if (forehead && chin && leftCheek && rightCheek) {
+            const leftEye = point(latestLandmarks, 33, canvas.width, canvas.height);
+            const rightEye = point(latestLandmarks, 263, canvas.width, canvas.height);
+            const mouthLeft = point(latestLandmarks, 61, canvas.width, canvas.height);
+            const mouthRight = point(latestLandmarks, 291, canvas.width, canvas.height);
+            if (forehead && chin && leftCheek && rightCheek && leftEye && rightEye && mouthLeft && mouthRight) {
+              const faceWidth = Math.hypot(rightCheek.x - leftCheek.x, rightCheek.y - leftCheek.y);
+              const faceHeight = Math.abs(chin.y - forehead.y);
               context.save();
               context.beginPath();
-              context.ellipse(
-                (leftCheek.x + rightCheek.x) / 2,
-                (forehead.y + chin.y) / 2,
-                Math.hypot(rightCheek.x - leftCheek.x, rightCheek.y - leftCheek.y) * 0.48,
-                Math.abs(chin.y - forehead.y) * 0.49,
-                0, 0, Math.PI * 2,
-              );
-              context.clip();
-              context.globalAlpha = beautyIntensityRef.current / 100 * 0.28;
-              context.filter = 'blur(2.4px) saturate(1.04)';
+              context.ellipse((leftCheek.x + rightCheek.x) / 2, (forehead.y + chin.y) / 2, faceWidth * 0.48, faceHeight * 0.49, 0, 0, Math.PI * 2);
+              context.ellipse(leftEye.x, leftEye.y, faceWidth * 0.13, faceHeight * 0.055, 0, 0, Math.PI * 2, true);
+              context.ellipse(rightEye.x, rightEye.y, faceWidth * 0.13, faceHeight * 0.055, 0, 0, Math.PI * 2, true);
+              context.ellipse((mouthLeft.x + mouthRight.x) / 2, (mouthLeft.y + mouthRight.y) / 2, faceWidth * 0.19, faceHeight * 0.045, 0, 0, Math.PI * 2, true);
+              context.clip('evenodd');
+              context.globalAlpha = 0.16;
+              context.filter = 'blur(1.6px) saturate(1.03)';
               context.drawImage(video, 0, 0, canvas.width, canvas.height);
               context.restore();
             }
@@ -582,6 +623,9 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
                 if (lens.sticker !== 'none') {
                   threeRuntime.render();
                   context.drawImage(threeCanvas, 0, 0, canvas.width, canvas.height);
+                  if (['teddyBear', 'beard', 'hair'].includes(lens.sticker)) {
+                    drawLens(context, latestLandmarks, lens, canvas.width, canvas.height, now);
+                  }
                 }
               }
             } else {
@@ -589,10 +633,10 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
             }
           }
           const sceneProfile = getNexoraSceneEffectProfile(lens.category);
-          if (sceneProfile && effectIntensityRef.current > 0) {
+          if (sceneProfile) {
             const particles = getNexoraSceneParticles(canvas.width, canvas.height, now, sceneProfile);
             context.save();
-            context.globalAlpha = sceneProfile.opacity * (effectIntensityRef.current / 100);
+            context.globalAlpha = sceneProfile.opacity;
             if (sceneProfile.mode === 'aurora') {
               const glow = context.createLinearGradient(0, canvas.height * 0.08, canvas.width, canvas.height * 0.72);
               glow.addColorStop(0, 'rgba(113,56,255,0)');
@@ -733,7 +777,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
       category: 'Creator',
       filter: `brightness(${(customBrightness / 100).toFixed(2)}) contrast(${(customContrast / 100).toFixed(2)}) saturate(${(customSaturation / 100).toFixed(2)}) hue-rotate(${customHue}deg)`,
       sticker: 'none',
-      description: 'A look you created in Lensverse.',
+      description: 'A look you created in LensVerse.',
       intensity: 100,
       featured: true,
     };
@@ -820,8 +864,8 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
 
       <div className="flex items-center justify-between gap-2 px-1">
         <div className="min-w-0">
-          <p className="text-xs font-bold text-white">Lensverse</p>
-          <p className="text-[10px] text-[#8E88A7]">{visibleLenses.length} lenses in this collection · 300 lenses</p>
+          <p className="text-xs font-bold text-white">LensVerse</p>
+          <p className="text-[10px] text-[#8E88A7]">{visibleLenses.length} lenses in this collection · {NEXORA_LENS_CATALOG.length} curated lenses</p>
         </div>
         <span className="shrink-0 rounded-full border border-[#7138FF]/40 bg-[#7138FF]/15 px-2.5 py-1 text-[9px] font-semibold text-[#D7C7FF]">NEXORA ORIGINALS</span>
       </div>
@@ -865,18 +909,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
           <button key={item} type="button" onClick={() => setCategory(item)} className={`shrink-0 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${category === item ? 'border-[#A78BFA] bg-[#7138FF]/25 text-white' : 'border-white/10 bg-white/[0.04] text-[#A39BBF]'}`}>{item}</button>
         ))}
       </div>
-      <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2.5">
-        <span className="shrink-0 text-[10px] font-semibold text-[#D7C7FF]">Effect strength</span>
-        <input type="range" min="0" max="100" value={effectIntensity} onChange={event => setEffectIntensity(Number(event.target.value))} className="min-w-0 flex-1 accent-violet-500" aria-label="Lens effect strength" />
-        <span className="w-8 text-right text-[10px] tabular-nums text-[#A39BBF]">{effectIntensity}%</span>
-      </label>
-      {(category === 'Beauty' || allLenses.find(item => item.id === activeLens)?.category === 'Beauty') && (
-        <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2.5">
-          <span className="shrink-0 text-[10px] font-semibold text-[#D7C7FF]">Skin softening</span>
-          <input type="range" min="0" max="100" value={beautyIntensity} onChange={event => setBeautyIntensity(Number(event.target.value))} className="min-w-0 flex-1 accent-violet-500" aria-label="Skin softening intensity" />
-          <span className="w-8 text-right text-[10px] tabular-nums text-[#A39BBF]">{beautyIntensity}%</span>
-        </label>
-      )}
+
       <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]" aria-label="Swipe to see more lenses">
         {visibleLenses.map(lens => {
           const selected = activeLens === lens.id;

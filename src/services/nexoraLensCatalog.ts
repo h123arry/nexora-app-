@@ -13,7 +13,8 @@ export type NexoraLensCategory =
 
 export type NexoraLensSticker =
   | 'none' | 'crown' | 'cat' | 'halo' | 'glasses' | 'hearts'
-  | 'sparkles' | 'puppy' | 'bunny' | 'flower' | 'robot' | 'butterfly';
+  | 'sparkles' | 'puppy' | 'bunny' | 'flower' | 'robot' | 'butterfly'
+  | 'teddyBear' | 'beard' | 'hair';
 
 export type NexoraLens = {
   id: string;
@@ -47,7 +48,7 @@ const collections: Array<{
 
 const arStickers: NexoraLensSticker[] = [
   'crown', 'cat', 'halo', 'glasses', 'hearts', 'sparkles',
-  'puppy', 'bunny', 'flower', 'robot', 'butterfly',
+  'puppy', 'bunny', 'flower', 'robot', 'butterfly', 'teddyBear', 'beard', 'hair',
 ];
 
 const originalNames: Record<string, string> = {
@@ -62,6 +63,9 @@ const originalNames: Record<string, string> = {
   flower: 'Petal Crown',
   robot: 'Nexa Bot',
   butterfly: 'Butterfly Aura',
+  teddyBear: 'Teddy Bear',
+  beard: 'Classic Beard',
+  hair: 'Style Switch',
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -101,11 +105,27 @@ function makeLens(collectionIndex: number, itemIndex: number): NexoraLens {
   };
 }
 
-export const NEXORA_LENS_CATALOG: NexoraLens[] = collections.flatMap((_, collectionIndex) =>
-  Array.from({ length: 30 }, (_, itemIndex) => makeLens(collectionIndex, itemIndex)),
+// A deliberately curated set replaces the old 300 auto-generated near-duplicates.
+// The selected variation indexes preserve stable IDs for retained legacy favourites.
+const curatedVariations: Record<NexoraLensCategory, number[]> = {
+  'Camera Enhance': [0, 6, 12],
+  Beauty: [0, 6, 12, 18],
+  Cinema: [0, 6, 12],
+  Colour: [0, 6, 12],
+  Creator: [0, 6, 12],
+  AR: Array.from({ length: arStickers.length }, (_, index) => index),
+  Fantasy: [0, 6],
+  Playful: [0, 6],
+  Retro: [0, 6],
+  World: [0, 6],
+  Community: [],
+};
+
+export const NEXORA_LENS_CATALOG: NexoraLens[] = collections.flatMap((collection, collectionIndex) =>
+  curatedVariations[collection.category].map((variationIndex) => makeLens(collectionIndex, variationIndex)),
 );
 
-export const NEXORA_LENS_CATALOG_VERSION = '1.0.0';
+export const NEXORA_LENS_CATALOG_VERSION = '2.0.0';
 export const NEXORA_LENS_CATALOG_SIZE = NEXORA_LENS_CATALOG.length;
 
 export const NEXORA_LENS_CATEGORIES = [
