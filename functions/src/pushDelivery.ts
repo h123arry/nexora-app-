@@ -22,6 +22,14 @@ export function buildNotificationPushData(
   const username = typeof notification.username === 'string' ? notification.username.replace(/^@+/, '').slice(0, 40) : '';
   const actorName = typeof notification.actorName === 'string' ? notification.actorName.slice(0, 80) : '';
   const userId = typeof notification.userId === 'string' ? notification.userId.slice(0, 128) : '';
+  const params = new URLSearchParams({ nxPushType: type, nxPushNotification: notificationId });
+  if (targetId) params.set('nxPushTarget', targetId);
+  if (userId) params.set('nxPushUser', userId);
+  const destination = type === 'message' || type === 'chat'
+    ? '/#inbox'
+    : type === 'follow' || type === 'profile_view'
+      ? '/#profile'
+      : '/#activity';
   return {
     type,
     targetId,
@@ -29,7 +37,7 @@ export function buildNotificationPushData(
     username,
     actorName,
     userId,
-    url: type === 'message' && targetId ? '/#inbox' : type === 'follow' && targetId ? '/#profile' : '/#activity',
+    url: `/?${params.toString()}${destination.slice(1)}`,
   };
 }
 
