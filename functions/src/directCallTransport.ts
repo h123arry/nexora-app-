@@ -1,11 +1,10 @@
-import { createHash } from 'node:crypto';
 import { getFirestore } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { onCallWithSession as onCall } from './callableSession.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { createDirectCallVideoGrant, directCallRoomName, createDirectCallVideoGrant as createGrant, validateDirectCallRequest } from './directCallPolicy.js';
+import { directCallRoomName, createDirectCallVideoGrant, validateDirectCallRequest } from './directCallPolicy.js';
 import { createLiveKitJwt } from './liveKitTokenPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
@@ -206,7 +205,7 @@ export const getDirectCallToken = onCall({ region: 'europe-west1', secrets: [api
     iat: now,
     exp: now + TOKEN_TTL_SECONDS,
     name: uid === call.callerId ? call.callerName : call.recipientName,
-    video: createGrant(call.roomName || directCallRoomName(callId)),
+    video: createDirectCallVideoGrant(call.roomName || directCallRoomName(callId)),
   }, secret);
   return { token, wsUrl, roomName: call.roomName || directCallRoomName(callId), expiresAt: (now + TOKEN_TTL_SECONDS) * 1000, callType: call.type };
 });
