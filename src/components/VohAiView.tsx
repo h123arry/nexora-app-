@@ -241,7 +241,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         {
           id: `msg-${Date.now()}-welcome`,
           sender: 'voh',
-          text: "Let's co-build something spectacular. How can I assist you today?",
+          text: "Hi, I'm VOH AI. What would you like help with today?",
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ],
@@ -1015,117 +1015,19 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                 ))}
 
                 {(!activeSession?.messages || activeSession.messages.length <= 1) && (
-                  <div className="space-y-4 mt-2 animate-fadeIn">
-                    
-                    {/* Bento Row 1: Suggested Prompt Action Cards (Grid) */}
-                    <div>
-                      <span className="text-[10px] font-sans font-black tracking-wider text-violet-400 uppercase block mb-2">Suggested Actions</span>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                        
-                        <button
-                          type="button"
-                          onClick={() => handleSendPrompt(undefined, "Summarize my active feed and identify design trends.")}
-                          className="p-3 text-left bg-[#05030f] border border-white/10 rounded-2xl hover:border-white/10 hover:bg-violet-950/15 transition-all group cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <VohIcon size={16} variant="violet" />
-                            <span className="text-xs font-black font-sans text-white group-hover:text-violet-300">Summarize Feed</span>
-                          </div>
-                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Quickly parse active home feed posts and compile design topics.</p>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleSendPrompt(undefined, "How do I maximize my NEX token tips and reputation points?")}
-                          className="p-3 text-left bg-[#05030f] border border-fuchsia-500/15 rounded-2xl hover:border-fuchsia-500/40 hover:bg-fuchsia-950/15 transition-all group cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <TrendingUp className="w-4 h-4 text-fuchsia-400" />
-                            <span className="text-xs font-black font-sans text-white group-hover:text-fuchsia-300">Optimize NEX Earnings</span>
-                          </div>
-                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Learn about tips, engagement weighting, and reputation rules.</p>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleSendPrompt(undefined, "What topics are popular around Port Harcourt node right now?")}
-                          className="p-3 text-left bg-[#05030f] border border-cyan-500/15 rounded-2xl hover:border-cyan-500/40 hover:bg-cyan-950/15 transition-all group cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <Compass className="w-4 h-4 text-cyan-400" />
-                            <span className="text-xs font-black font-sans text-white group-hover:text-cyan-300">What's happening nearby</span>
-                          </div>
-                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Explore startup discussions and hashtags active in Nigeria.</p>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleSendPrompt(undefined, "Review my account security setup.")}
-                          className="p-3 text-left bg-[#05030f] border border-emerald-500/15 rounded-2xl hover:border-emerald-500/40 hover:bg-emerald-950/15 transition-all group cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                            <span className="text-xs font-black font-sans text-white group-hover:text-emerald-300">Security Guard</span>
-                          </div>
-                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Review recent account activity and connection status.</p>
-                        </button>
-
-                      </div>
+                  <div className="mx-auto flex min-h-[34vh] w-full max-w-2xl flex-col justify-center gap-5 py-8 text-center">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-violet-400/20 bg-violet-500/10">
+                      <VohIcon size={26} animated glow variant="brand" />
                     </div>
-
-                    {/* Bento Row 2: What VOH AI remembers */}
-                    <div className="p-4 bg-white/3 border border-white/5 rounded-2xl space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <BrainCircuit className="w-4 h-4 text-violet-400 animate-pulse" />
-                          <span className="text-[10px] font-sans font-black tracking-wider text-violet-300 uppercase">AI Preference Capsule</span>
-                        </div>
-                        {memoryDNA.length > 0 && (
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              setMemoryDNA([]);
-                              showToast("AI memory wiped cleanly.");
-                            }}
-                            className="text-[9px] font-mono text-rose-400 hover:underline cursor-pointer"
-                          >
-                            Clear saved details
-                          </button>
-                        )}
-                      </div>
-                      
-                      {memoryDNA.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5">
-                          {memoryDNA.map((pref, i) => (
-                            <span key={i} className="px-2.5 py-1 text-[9.5px] font-sans bg-violet-500/10 border border-white/10 text-violet-300 rounded-lg flex items-center gap-1">
-                              <span className="w-1 h-1 rounded-full bg-violet-400" />
-                              {pref}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-current/40 italic">No saved details yet. Chat with VOH AI to build your personal memory.</p>
-                      )}
-                      
-                      <p className="text-[9px] text-current/40 font-mono">These are local preference labels only. VOH does not silently save new memories from this chat.</p>
+                    <div className="space-y-2">
+                      <h2 className="text-xl font-semibold text-white">What can I help you with?</h2>
+                      <p className="mx-auto max-w-md text-sm leading-relaxed text-zinc-400">Ask a question, talk through an idea, get help with a post or learn more about NEXORA.</p>
                     </div>
-
-                    {/* Bento Row 3: Diagnostic Node Metrics */}
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
-                        <span className="text-[8px] text-current/40 uppercase block mb-0.5">VOH Link Speed</span>
-                        <span className="text-xs font-black font-sans text-emerald-400">Local UI</span>
-                      </div>
-                      <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
-                        <span className="text-[8px] text-current/40 uppercase block mb-0.5">Connected tools</span>
-                        <span className="text-xs font-black font-sans text-violet-300">Scoped</span>
-                      </div>
-                      <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
-                        <span className="text-[8px] text-current/40 uppercase block mb-0.5">Database Sync</span>
-                        <span className="text-xs font-black font-sans text-cyan-400">Explicit only</span>
-                      </div>
+                    <div className="mx-auto grid w-full max-w-xl grid-cols-1 gap-2 sm:grid-cols-3">
+                      <button type="button" onClick={() => handleSendPrompt(undefined, "Help me write a post for my audience.")} className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-left text-xs font-medium text-zinc-200 transition-colors hover:border-violet-400/30 hover:bg-violet-500/10">Help me write a post</button>
+                      <button type="button" onClick={() => handleSendPrompt(undefined, "Summarize my recent feed.")} className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-left text-xs font-medium text-zinc-200 transition-colors hover:border-violet-400/30 hover:bg-violet-500/10">Summarize my feed</button>
+                      <button type="button" onClick={() => handleSendPrompt(undefined, "Give me practical ideas to grow my NEXORA account.")} className="rounded-xl border border-white/10 bg-white/[0.035] p-3 text-left text-xs font-medium text-zinc-200 transition-colors hover:border-violet-400/30 hover:bg-violet-500/10">Help me grow my account</button>
                     </div>
-
                   </div>
                 )}
 
@@ -1683,7 +1585,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                   <div className="space-y-3">
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs">
-                        <span>Creative Temperature</span>
+                        <span>Response creativity</span>
                         <span className="font-bold text-violet-300">{aiSettings.temperature}</span>
                       </div>
                       <input
@@ -1876,7 +1778,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                   {/* Category 2: Communities & Nodes */}
                   <div className="space-y-3 bg-[#03010b]/50 p-3.5 rounded-xl border border-white/5">
-                    <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">🏟️ Spaces & Nodes</span>
+                    <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">🏟️ Communities</span>
 
                     <div className="space-y-2">
                       <div className="space-y-1">
@@ -1908,7 +1810,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] text-zinc-400">Locations (Nodes)</label>
+                        <label className="text-[10px] text-zinc-400">Locations</label>
                         <input
                           type="text"
                           value={terminologyState.nodesCapitalized}
