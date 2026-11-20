@@ -147,7 +147,7 @@ export const indexPublicProfileForSearch = onDocumentWritten('users/{userId}', a
 export const notifyCreatorMilestonesFromPost = onDocumentWritten('posts/{postId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const post = event.data?.after.exists ? event.data.after.data() : null;
-  if (before && post && !searchFieldsChanged(before, post as Record<string, unknown>, ['likes', 'views', 'viewCount', 'isArchived', 'isDraft', 'audience', 'userId'])) return;
+  if (before && post && !searchFieldsChanged(before, post as Record<string, unknown>, ['likes', 'views', 'viewCount', 'commentsCount', 'comments', 'shares', 'saves', 'bookmarksCount', 'isArchived', 'isDraft', 'audience', 'userId'])) return;
   if (!post || post.isArchived === true || post.isDraft === true) return;
   const creatorId = typeof post.userId === 'string' ? post.userId : typeof post.authorId === 'string' ? post.authorId : '';
   if (!creatorId) return;
@@ -159,7 +159,7 @@ export const notifyCreatorMilestonesFromAccount = onDocumentWritten('users/{user
   if (!event.data?.after.exists) return;
   const before = event.data.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const after = event.data.after.data() as Record<string, unknown>;
-  if (before && !searchFieldsChanged(before, after, ['followers', 'isVerified'])) return;
+  if (before && !searchFieldsChanged(before, after, ['followers', 'isVerified', 'totalEarnedNex'])) return;
   try { await issueCreatorMilestones(adminDb, event.params.userId); }
   catch (error) { console.error('[Creator milestones] Account milestone evaluation failed.', error); }
 });
