@@ -3,7 +3,7 @@ import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, app, db } from './config';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
 import { Capacitor } from '@capacitor/core';
-import { PushNotifications } from '@capacitor/push-notifications';
+import { FirebaseMessaging } from '@capacitor-firebase/messaging';
 
 export interface PushNotificationPayload {
   title: string;
@@ -50,8 +50,8 @@ export class PushNotificationService {
   /** Requests permission only from the explicit Notifications screen action. */
   static async requestPermissionAndRegister(): Promise<string | null> {
     if (isNativeRuntime()) {
-      const current = await PushNotifications.checkPermissions();
-      const permission = current.receive === 'granted' ? current : await PushNotifications.requestPermissions();
+      const current = await FirebaseMessaging.checkPermissions();
+      const permission = current.receive === 'granted' ? current : await FirebaseMessaging.requestPermissions();
       if (permission.receive !== 'granted') return null;
       return this.init();
     }
@@ -80,13 +80,13 @@ export class PushNotificationService {
       if (this.isInitialized && this.tokenOwnerUid === uid) return this.token;
 
       try {
-        const permission = await PushNotifications.checkPermissions();
+        const permission = await FirebaseMessaging.checkPermissions();
         if (permission.receive !== 'granted') {
           console.info('Native push is not enabled. The user can enable notifications in NEXORA settings.');
           return null;
         }
         if (Capacitor.getPlatform() === 'android') {
-          await PushNotifications.createChannel({
+          await FirebaseMessaging.createChannel({
             id: 'nexora_calls',
             name: 'NEXORA calls',
             description: 'Incoming NEXORA voice and video calls',
@@ -95,19 +95,19 @@ export class PushNotificationService {
             vibration: true,
           });
         }
-        await PushNotifications.addListener('registration', registration => {
+        await FirebaseMessaging.addListener('registration', registration => {
           const platform = Capacitor.getPlatform();
           if (platform !== 'android' && platform !== 'ios') return;
           void this.persistToken(registration.value, platform).then(() => {
             this.token = registration.value;
           }).catch(error => console.warn('[NEXORA push] Device token could not be saved:', error));
         });
-        await PushNotifications.addListener('registrationError', error => {
+        await FirebaseMessaging.addListener('registrationError', error => {
           this.isInitialized = false;
           this.tokenOwnerUid = null;
           console.warn('[NEXORA push] Native device registration failed:', error);
         });
-        await PushNotifications.addListener('pushNotificationActionPerformed', action => {
+        await FirebaseMessaging.addListener('pushNotificationActionPerformed', action => {
           if (action.notification.data?.type === 'incoming_call') {
             window.dispatchEvent(new CustomEvent('NEXORA_INCOMING_CALL_PUSH_OPENED', {
               detail: action.notification.data,
@@ -116,7 +116,11 @@ export class PushNotificationService {
           }
         });
         this.tokenOwnerUid = uid;
-        await PushNotifications.register();
+        const registration = await FirebaseMessaging.getToken();
+        const platform = Capacitor.getPlatform();
+        if (platform !== 'android' && platform !== 'ios') return null;
+        await this.persistToken(registration.token, platform);
+        this.token = registration.token;
         this.isInitialized = true;
         return this.token;
       } catch (error) {
@@ -200,8 +204,8 @@ export class PushNotificationService {
     const tokenId = await this.tokenDocumentId(token);
     await deleteDoc(doc(db, 'users', uid, 'pushTokens', tokenId));
     if (isNativeRuntime()) {
-      await PushNotifications.unregister().catch(() => undefined);
-      await PushNotifications.removeAllListeners();
+      await FirebaseMessaging.unregister().catch(() => undefined);
+      await FirebaseMessaging.removeAllListeners();
     }
     if (this.messaging) await deleteToken(this.messaging);
     this.token = null;
