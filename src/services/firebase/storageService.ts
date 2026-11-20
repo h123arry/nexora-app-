@@ -187,48 +187,56 @@ export async function uploadPrivateChatMediaFile(options: MediaUploadOptions): P
   if (!intentResponse.ok || typeof intent.uploadUrl !== 'string' || typeof intent.mediaId !== 'string' || typeof intent.storagePath !== 'string') {
     throw new Error(typeof intent.error === 'string' ? intent.error : 'NEXORA could not prepare this attachment.');
   }
-  await new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    let settled = false;
-    const finish = (error?: Error) => {
-      if (settled) return;
-      settled = true;
-      signal?.removeEventListener('abort', abort);
-      if (error) reject(error); else resolve();
-    };
-    const abort = () => xhr.abort();
-    xhr.open('PUT', intent.uploadUrl, true);
-    xhr.setRequestHeader('Content-Type', contentType);
-    xhr.setRequestHeader('If-None-Match', '*');
-    xhr.upload.onprogress = event => {
-      if (event.lengthComputable && event.total > 0) onProgress?.(Math.round(event.loaded / event.total * 100));
-    };
-    xhr.onload = () => xhr.status >= 200 && xhr.status < 300
-      ? (onProgress?.(100), finish())
-      : finish(new Error(`Private media upload failed (HTTP ${xhr.status}).`));
-    xhr.onerror = () => finish(new Error('NEXORA could not reach private media storage. Check your connection and retry.'));
-    xhr.onabort = () => finish(new DOMException('Upload cancelled.', 'AbortError'));
-    signal?.addEventListener('abort', abort, { once: true });
-    if (signal?.aborted) return abort();
-    xhr.send(file);
-  });
-  const completeToken = await user.getIdToken(true);
-  const completeResponse = await fetch(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/${encodeURIComponent(intent.mediaId)}/complete`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${completeToken}` },
-    signal,
-  });
-  const completed = await completeResponse.json().catch(() => ({}));
-  if (!completeResponse.ok || completed.storagePath !== intent.storagePath) {
-    throw new Error(typeof completed.error === 'string' ? completed.error : 'NEXORA could not verify the uploaded attachment.');
-  }
-  return {
-    mediaId: intent.mediaId,
-    downloadUrl: '',
-    storagePath: completed.storagePath,
-    contentType: completed.contentType,
-    size: completed.size,
+  const abortIntent = async () => {
+    try {
+      const abortToken = await user.getIdToken();
+      await fetch(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/${encodeURIComponent(intent.mediaId)}/abort`, {
+        method: 'POST', headers: { Authorization: `Bearer ${abortToken}` },
+      });
+    } catch { /* Server-side pending-upload expiry remains the fallback cleanup. */ }
   };
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      let settled = false;
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        signal?.removeEventListener('abort', abort);
+        if (error) reject(error); else resolve();
+      };
+      const abort = () => xhr.abort();
+      xhr.open('PUT', intent.uploadUrl, true);
+      xhr.setRequestHeader('Content-Type', contentType);
+      xhr.setRequestHeader('If-None-Match', '*');
+      xhr.upload.onprogress = event => {
+        if (event.lengthComputable && event.total > 0) onProgress?.(Math.round(event.loaded / event.total * 100));
+      };
+      xhr.onload = () => xhr.status >= 200 && xhr.status < 300
+        ? (onProgress?.(100), finish())
+        : finish(new Error(`Private media upload failed (HTTP ${xhr.status}).`));
+      xhr.onerror = () => finish(new Error('NEXORA could not reach private media storage. Check your connection and retry.'));
+      xhr.onabort = () => finish(new DOMException('Upload cancelled.', 'AbortError'));
+      signal?.addEventListener('abort', abort, { once: true });
+      if (signal?.aborted) return abort();
+      xhr.send(file);
+    });
+    const completeToken = await user.getIdToken(true);
+    const completeResponse = await fetch(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/${encodeURIComponent(intent.mediaId)}/complete`, {
+      method: 'POST', headers: { Authorization: `Bearer ${completeToken}` }, signal,
+    });
+    const completed = await completeResponse.json().catch(() => ({}));
+    if (!completeResponse.ok || completed.storagePath !== intent.storagePath) {
+      throw new Error(typeof completed.error === 'string' ? completed.error : 'NEXORA could not verify the uploaded attachment.');
+    }
+    return {
+      mediaId: intent.mediaId, downloadUrl: '', storagePath: completed.storagePath,
+      contentType: completed.contentType, size: completed.size,
+    };
+  } catch (error) {
+    await abortIntent();
+    throw error;
+  }
 }
 
 export async function resolvePrivateChatMedia(storagePath: string): Promise<string> {
