@@ -105,6 +105,7 @@ import PublicAccountSetup from './components/PublicAccountSetup';
 import UsernameLoginModal from './components/UsernameLoginModal';
 import OfflineBanner from './components/OfflineBanner';
 import PwaUpdatePrompt from './components/PwaUpdatePrompt';
+import IncomingDirectCallListener from './components/IncomingDirectCallListener';
 
 export default function App() {
   const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, retryProfileLoad, logout, loginWithUsername } = useFirebase();
@@ -2375,6 +2376,11 @@ export default function App() {
       )}
       <OfflineBanner />
       <PwaUpdatePrompt />
+      <IncomingDirectCallListener
+        currentUser={getRichUser(currentUser)}
+        creators={(Object.values(globalUsersMap) as User[]).filter(user => user.id !== currentUser.id)}
+        enabled={isLoggedIn && firebaseUser?.uid === currentUser.id}
+      />
       {isLoggedIn && activeTab === 'feed' && (
         <Suspense fallback={null}>
           <RetentionWelcomePanel userId={currentUser.id} notifications={notifications} />
@@ -2542,7 +2548,6 @@ export default function App() {
                       }}
                       creators={Object.values(globalUsersMap) as User[]}
                       initialSubTab={matrixSubTabRedirect}
-                      onClose={() => navigateTo('feed')}
                     />
                   )}
 
@@ -3353,12 +3358,12 @@ export default function App() {
                     className="p-2.5 rounded-xl bg-white/3 border border-white/5 hover:border-cyan-500/30 text-left hover:bg-cyan-950/20 transition-all group cursor-pointer"
                   >
                     <span className="block text-[10.5px] font-black text-white group-hover:text-cyan-300 font-sans">#OptimizeEarnings</span>
-                    <span className="block text-[9px] text-zinc-400 font-sans mt-0.5">Learn how to reach more people</span>
+                    <span className="block text-[9px] text-zinc-400 font-sans mt-0.5">Learn about reach weightings</span>
                   </button>
                 </div>
               </div>
 
-              {/* Ask VOH AI */}
+              {/* Core Command Input */}
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -3381,11 +3386,11 @@ export default function App() {
                 className="space-y-3 relative z-10"
               >
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-mono tracking-wider text-zinc-400 uppercase block">What would you like help with?</label>
+                  <label className="text-[9px] font-mono tracking-wider text-zinc-400 uppercase block">What is your request?</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      placeholder="Ask a question or share an idea..."
+                      placeholder="e.g. Find startup opportunities in Nigeria..."
                       value={quickAiQuery}
                       onChange={(e) => setQuickAiQuery(e.target.value)}
                       className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-xs text-white focus:outline-none focus:border-white/10"

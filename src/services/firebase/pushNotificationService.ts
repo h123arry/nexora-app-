@@ -2,6 +2,8 @@ import { getMessaging, getToken, onMessage, Messaging, deleteToken } from 'fireb
 import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, app, db } from './config';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseMessaging, Importance } from '@capacitor-firebase/messaging';
 
 export interface PushNotificationPayload {
   title: string;
@@ -33,16 +35,30 @@ export class PushNotificationService {
     return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
   }
 
-  private static async persistToken(token: string): Promise<void> {
+  private static async persistToken(token: string, platform: 'web' | 'android' | 'ios' = 'web'): Promise<void> {
     const uid = auth.currentUser?.uid;
     if (!uid) throw new Error('Sign in before registering a push device.');
     const tokenId = await this.tokenDocumentId(token);
     await setDoc(doc(db, 'users', uid, 'pushTokens', tokenId), {
       token,
-      platform: 'web',
+      platform,
       updatedAt: serverTimestamp(),
     }, { merge: true });
     this.tokenOwnerUid = uid;
+  }
+
+  /** Requests permission only from the explicit Notifications screen action. */
+  static async requestPermissionAndRegister(): Promise<string | null> {
+    if (isNativeRuntime()) {
+      const current = await FirebaseMessaging.checkPermissions();
+      const permission = current.receive === 'granted' ? current : await FirebaseMessaging.requestPermissions();
+      if (permission.receive !== 'granted') return null;
+      return this.init();
+    }
+    if (typeof window === 'undefined' || !('Notification' in window)) return null;
+    const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (permission !== 'granted') return null;
+    return this.init();
   }
 
   /**
@@ -50,8 +66,67 @@ export class PushNotificationService {
    */
   static async init(): Promise<string | null> {
     if (isNativeRuntime()) {
-      console.info('Native push is not configured in this build; Web Push registration is intentionally disabled inside Capacitor.');
-      return null;
+      const uid = auth.currentUser?.uid;
+      if (!uid) return null;
+      if (this.tokenOwnerUid && this.tokenOwnerUid !== uid) {
+        if (this.token) {
+          const previousTokenId = await this.tokenDocumentId(this.token);
+          await deleteDoc(doc(db, 'users', this.tokenOwnerUid, 'pushTokens', previousTokenId));
+        }
+        this.token = null;
+        this.tokenOwnerUid = null;
+        this.isInitialized = false;
+      }
+      if (this.isInitialized && this.tokenOwnerUid === uid) return this.token;
+
+      try {
+        const permission = await FirebaseMessaging.checkPermissions();
+        if (permission.receive !== 'granted') {
+          console.info('Native push is not enabled. The user can enable notifications in NEXORA settings.');
+          return null;
+        }
+        if (Capacitor.getPlatform() === 'android') {
+          await FirebaseMessaging.createChannel({
+            id: 'nexora_calls',
+            name: 'NEXORA calls',
+            description: 'Incoming NEXORA voice and video calls',
+            importance: Importance.Max,
+            sound: 'default',
+            vibration: true,
+          });
+        }
+        await FirebaseMessaging.addListener('tokenReceived', event => {
+          const platform = Capacitor.getPlatform();
+          if (platform !== 'android' && platform !== 'ios') return;
+          void this.persistToken(event.token, platform).then(() => {
+            this.token = event.token;
+          }).catch(error => {
+            this.isInitialized = false;
+            this.tokenOwnerUid = null;
+            console.warn('[NEXORA push] Device token could not be saved:', error);
+          });
+        });
+        await FirebaseMessaging.addListener('notificationActionPerformed', action => {
+          const notificationData = action.notification.data as Record<string, unknown> | undefined;
+          if (notificationData?.type === 'incoming_call') {
+            window.dispatchEvent(new CustomEvent('NEXORA_INCOMING_CALL_PUSH_OPENED', {
+              detail: notificationData,
+            }));
+            window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox' } }));
+          }
+        });
+        this.tokenOwnerUid = uid;
+        const registration = await FirebaseMessaging.getToken();
+        const platform = Capacitor.getPlatform();
+        if (platform !== 'android' && platform !== 'ios') return null;
+        await this.persistToken(registration.token, platform);
+        this.token = registration.token;
+        this.isInitialized = true;
+        return this.token;
+      } catch (error) {
+        console.warn('[NEXORA push] Native push registration is unavailable:', error);
+        return null;
+      }
     }
     const uid = auth.currentUser?.uid;
     if (!uid) return null;
@@ -128,6 +203,10 @@ export class PushNotificationService {
     if (!uid || !token) return;
     const tokenId = await this.tokenDocumentId(token);
     await deleteDoc(doc(db, 'users', uid, 'pushTokens', tokenId));
+    if (isNativeRuntime()) {
+      await FirebaseMessaging.deleteToken().catch(() => undefined);
+      await FirebaseMessaging.removeAllListeners();
+    }
     if (this.messaging) await deleteToken(this.messaging);
     this.token = null;
     this.tokenOwnerUid = null;

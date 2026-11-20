@@ -1616,6 +1616,21 @@ const publicProfile = (uid) => ({
       platform: 'web',
       updatedAt: serverTimestamp()
     }));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'users', 'alice', 'pushTokens', 'b'.repeat(64)), {
+      token: 'fcm-android-device-token-that-is-long-enough',
+      platform: 'android',
+      updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'users', 'alice', 'pushTokens', 'c'.repeat(64)), {
+      token: 'fcm-ios-device-token-that-is-long-enough',
+      platform: 'ios',
+      updatedAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'users', 'alice', 'pushTokens', 'd'.repeat(64)), {
+      token: 'unsupported-device-token-that-is-long-enough',
+      platform: 'desktop',
+      updatedAt: serverTimestamp()
+    }));
     await assertSucceeds(getDoc(aliceToken));
     await assertSucceeds(getDocs(collection(dbFor('alice'), 'users', 'alice', 'pushTokens')));
     await assertFails(getDoc(doc(dbFor('bob'), ...tokenPath)));

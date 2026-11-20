@@ -43,7 +43,6 @@ import AttachmentMenu from './AttachmentMenu';
 import VoiceRecorder from './VoiceRecorder';
 import EmojiPicker from './EmojiPicker';
 import MediaGallery from './MediaGallery';
-import CallScreen from './CallScreen';
 import CirclesView from './CirclesView';
 
 interface NewInboxViewProps {
@@ -113,7 +112,6 @@ export default function NewInboxView({
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const audioInputRef = useRef<HTMLInputElement | null>(null);
-  const [activeCall, setActiveCall] = useState<{ type: 'voice' | 'video'; partnerName: string; partnerAvatar: string } | null>(null);
   
   // Message context / reply / edit
   const [activeContextMessageId, setActiveContextMessageId] = useState<string | null>(null);
@@ -188,6 +186,19 @@ export default function NewInboxView({
       console.warn('[NEXORA inbox] Your chat list could not be loaded:', error.message);
     });
   }, [currentUser.id, isServerBackedInbox]);
+
+  const placeDirectCall = (type: 'voice' | 'video') => {
+    if (!activeChat || activeChat.isGroup || !isServerBackedInbox) return;
+    window.dispatchEvent(new CustomEvent('NEXORA_START_DIRECT_CALL', {
+      detail: {
+        chatId: activeChat.id,
+        recipientId: activeChat.partnerId,
+        type,
+        partnerName: activeChat.partnerName,
+        partnerAvatar: activeChat.partnerAvatar || '',
+      },
+    }));
+  };
 
   // Firestore real-time listener
   useEffect(() => {
@@ -864,11 +875,22 @@ export default function NewInboxView({
                 <button
                   type="button"
                   aria-label={`Start a voice call with ${activeChat.partnerName}`}
-                  onClick={() => setActiveCall({ type: 'voice', partnerName: activeChat.partnerName, partnerAvatar: activeChat.partnerAvatar })}
-                  className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
+                  onClick={() => void placeDirectCall('voice')}
+                  disabled={Boolean(activeChat.isGroup) || !isServerBackedInbox}
+                  className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                   title="Voice Call"
                 >
                   <Phone className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Start a video call with ${activeChat.partnerName}`}
+                  onClick={() => void placeDirectCall('video')}
+                  disabled={Boolean(activeChat.isGroup) || !isServerBackedInbox}
+                  className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Video Call"
+                >
+                  <Video className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
@@ -916,6 +938,7 @@ export default function NewInboxView({
                       isMe={isMe}
                       isGrouped={Boolean(isGrouped)}
                       isLastInGroup={true}
+                      currentUserId={currentUser.id}
                       partnerName={activeChat.partnerName}
                       partnerAvatar={activeChat.partnerAvatar}
                       onRetry={handleRetryMessage}
@@ -937,8 +960,7 @@ export default function NewInboxView({
                       playingVoiceId={null}
                       voiceProgress={0}
                       voicePlaybackSpeed={1}
-                      currentUserId={currentUser.id}
-                      isPinned={false}
+                                  isPinned={false}
                       groupReadCount={activeChat?.isGroup ? Object.values(msg.recipientReceipts || {}).filter(receipt => receipt.status === 'read').length : 0}
                       groupRecipientCount={activeChat?.isGroup ? Math.max(0, (activeChat.membersCount || 0) - 1) : 0}
                     />
@@ -1194,16 +1216,6 @@ export default function NewInboxView({
           hasMoreHistory={Boolean(activeChatId && hasOlderMessages[activeChatId])}
           isLoadingOlder={isLoadingOlderMessages}
           onLoadOlder={() => void loadOlderMessages()}
-        />
-      )}
-
-      {/* CALL SCREEN */}
-      {activeCall && (
-        <CallScreen
-          isOpen={Boolean(activeCall)}
-          type={activeCall.type}
-          partnerName={activeCall.partnerName}
-          onClose={() => setActiveCall(null)}
         />
       )}
 

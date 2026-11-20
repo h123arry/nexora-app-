@@ -228,6 +228,14 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Direct-call records are server-owned. Participants may read call state only;
+    // all invitations, decisions, status transitions and room credentials use callables.
+    match /directCalls/{callId} {
+      allow get: if signedIn() && request.auth.uid in resource.data.participants;
+      allow list: if signedIn() && (resource.data.callerId == request.auth.uid || resource.data.recipientId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
     // Default-deny for every path not explicitly listed below.
     match /{document=**} { allow read, write: if false; }
 
@@ -456,7 +464,7 @@ service cloud.firestore {
       }
 
       // Push tokens are private device credentials. Only the owning account may
-      // register, refresh, inspect or revoke its own web-device token records.
+      // register, refresh, inspect or revoke its own web and native device tokens.
       match /pushTokens/{tokenId} {
         allow get, list: if owner(userId);
         allow create, update: if owner(userId)
@@ -465,7 +473,7 @@ service cloud.firestore {
           && request.resource.data.token is string
           && request.resource.data.token.size() >= 20
           && request.resource.data.token.size() <= 4096
-          && request.resource.data.platform == 'web'
+          && request.resource.data.platform in ['web', 'android', 'ios']
           && request.resource.data.updatedAt == request.time;
         allow delete: if owner(userId);
       }
