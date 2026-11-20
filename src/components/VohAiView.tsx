@@ -449,7 +449,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       } else if (attachedContextType === 'feed_profile') {
         contextualMessage = `[SYSTEM CONTEXT: The user has explicitly selected both their feed and profile for this request. Use only the recent feed posts and authenticated profile details supplied by the server.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'circles') {
-        contextualMessage = `[SYSTEM CONTEXT: The user selected their joined Circles for this request. Use only Circles loaded from verified active memberships by the server.]\\n\\nUser query: ${message}`;
+        contextualMessage = `[SYSTEM CONTEXT: The user selected their joined Circles for this request. Use only Circles loaded from verified active memberships by the server.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'inbox') {
         contextualMessage = `[SYSTEM CONTEXT: The user is viewing the inbox. Private message contents are not included; do not claim access to them.]\n\nUser query: ${message}`;
       }
