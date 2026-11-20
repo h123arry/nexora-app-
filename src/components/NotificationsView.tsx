@@ -340,8 +340,12 @@ export default function NotificationsView({
         window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: notif.userId || notif.username } }));
         addToast(`Viewing profile of @${notif.username}`);
       }
+    } else if (notif.type === 'message') {
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox' } }));
+      if (notif.targetId) window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-chat', { detail: { chatId: notif.targetId } })), 650);
     } else if (notif.type === 'pulse_alert') {
-      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'pulse' } }));
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'live' } }));
+      if (notif.targetId) window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-live', { detail: { sessionId: notif.targetId } })), 650);
     } else if (notif.type === 'security' || notif.category === 'account') {
       const section = notif.type === 'security' ? 'security' : 'account';
       window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'settings' } }));
