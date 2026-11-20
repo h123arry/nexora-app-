@@ -33,15 +33,16 @@ export default function IncomingDirectCallListener({ currentUser, creators, enab
       const recipientId = typeof detail.recipientId === 'string' ? detail.recipientId : '';
       const type = detail.type === 'video' ? 'video' : detail.type === 'voice' ? 'voice' : null;
       if (!chatId || !recipientId || !type) return;
+      const callType: 'voice' | 'video' = type;
       if (activeCallRef.current || startingCallRef.current) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'You already have a call in progress.' }));
         return;
       }
       startingCallRef.current = true;
-      void startDirectCall(chatId, recipientId, type).then(started => {
+      void startDirectCall(chatId, recipientId, callType).then(started => {
         const next = {
           callId: started.callId,
-          type,
+          type: callType,
           partnerName: typeof detail.partnerName === 'string' ? detail.partnerName : 'NEXORA member',
           partnerAvatar: typeof detail.partnerAvatar === 'string' ? detail.partnerAvatar : '',
           incoming: false,
