@@ -12,7 +12,8 @@ const apiKey = defineSecret('LIVEKIT_API_KEY');
 const apiSecret = defineSecret('LIVEKIT_API_SECRET');
 const DEFAULT_LIVEKIT_URL = 'wss://nexora-live-is43sh5r.livekit.cloud';
 const CALL_RING_SECONDS = 45;
-const TOKEN_TTL_SECONDS = 60 * 60;
+const TOKEN_TTL_SECONDS = 10 * 60;
+const ACTIVE_CALL_MAX_MS = 12 * 60 * 60 * 1000;
 
 function asText(value: unknown, max = 120): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -114,10 +115,24 @@ export const startDirectCall = onCall({ region: 'europe-west1', maxInstances: 30
     updatedAt: now,
     expiresAt: now + CALL_RING_SECONDS * 1000,
   };
+  const callerActiveRef = db.collection('activeDirectCalls').doc(callerId);
+  const recipientActiveRef = db.collection('activeDirectCalls').doc(recipientId);
   await db.runTransaction(async tx => {
-    const existing = await tx.get(callRef);
+    const [existing, callerActive, recipientActive] = await Promise.all([
+      tx.get(callRef), tx.get(callerActiveRef), tx.get(recipientActiveRef),
+    ]);
     if (existing.exists) throw new HttpsError('already-exists', 'This call has already been started.');
+    if (callerActive.exists && Number(callerActive.data()?.expiresAt || 0) > now) {
+      throw new HttpsError('already-exists', 'You are already in another call.');
+    }
+    if (recipientActive.exists && Number(recipientActive.data()?.expiresAt || 0) > now) {
+      throw new HttpsError('failed-precondition', 'This person is already in another call.');
+    }
+    if (callerActive.exists) tx.delete(callerActiveRef);
+    if (recipientActive.exists) tx.delete(recipientActiveRef);
     tx.create(callRef, callRecord);
+    tx.set(callerActiveRef, { callId: checked.callId, status: 'ringing', expiresAt: callRecord.expiresAt });
+    tx.set(recipientActiveRef, { callId: checked.callId, status: 'ringing', expiresAt: callRecord.expiresAt });
   });
   try {
     await sendIncomingCallPush(recipientId, {
@@ -149,12 +164,28 @@ export const respondToDirectCall = onCall({ region: 'europe-west1', maxInstances
     if (!snapshot.exists) throw new HttpsError('not-found', 'This call is no longer available.');
     const call = snapshot.data() as any;
     if (call.recipientId !== uid || call.status !== 'ringing') throw new HttpsError('permission-denied', 'Only the invited person can answer this call.');
-    if (call.expiresAt <= Date.now()) {
-      tx.update(ref, { status: 'missed', updatedAt: Date.now(), endedAt: Date.now() });
+    const callerPointer = db.collection('activeDirectCalls').doc(call.callerId);
+    const recipientPointer = db.collection('activeDirectCalls').doc(call.recipientId);
+    const [callerActive, recipientActive] = await Promise.all([tx.get(callerPointer), tx.get(recipientPointer)]);
+    const now = Date.now();
+    if (call.expiresAt <= now) {
+      tx.update(ref, { status: 'missed', updatedAt: now, endedAt: now });
+      if (callerActive.data()?.callId === callId) tx.delete(callerPointer);
+      if (recipientActive.data()?.callId === callId) tx.delete(recipientPointer);
       return { status: 'missed' as const };
     }
+    if (callerActive.data()?.callId !== callId || recipientActive.data()?.callId !== callId) {
+      throw new HttpsError('failed-precondition', 'This call is no longer active.');
+    }
     const status = decision === 'accept' ? 'accepted' : 'declined';
-    tx.update(ref, { status, updatedAt: Date.now(), ...(status === 'declined' ? { endedAt: Date.now() } : { acceptedAt: Date.now() }) });
+    tx.update(ref, { status, updatedAt: now, ...(status === 'declined' ? { endedAt: now } : { acceptedAt: now, expiresAt: now + ACTIVE_CALL_MAX_MS }) });
+    if (status === 'accepted') {
+      tx.set(callerPointer, { callId, status: 'accepted', expiresAt: now + ACTIVE_CALL_MAX_MS });
+      tx.set(recipientPointer, { callId, status: 'accepted', expiresAt: now + ACTIVE_CALL_MAX_MS });
+    } else {
+      tx.delete(callerPointer);
+      tx.delete(recipientPointer);
+    }
     return { status };
   });
   return result;
@@ -171,9 +202,16 @@ export const endDirectCall = onCall({ region: 'europe-west1', maxInstances: 30 }
     if (!snapshot.exists) return { ended: true };
     const call = snapshot.data() as any;
     if (call.callerId !== uid && call.recipientId !== uid) throw new HttpsError('permission-denied', 'You are not part of this call.');
+    const callerPointer = db.collection('activeDirectCalls').doc(call.callerId);
+    const recipientPointer = db.collection('activeDirectCalls').doc(call.recipientId);
+    const [callerActive, recipientActive] = await Promise.all([tx.get(callerPointer), tx.get(recipientPointer)]);
+    const now = Date.now();
     if (['ringing', 'accepted'].includes(call.status)) {
-      tx.update(ref, { status: call.status === 'ringing' && call.callerId !== uid ? 'declined' : call.status === 'ringing' ? 'missed' : 'ended', updatedAt: Date.now(), endedAt: Date.now() });
+      const status = call.status === 'accepted' ? 'ended' : call.callerId === uid ? 'missed' : 'declined';
+      tx.update(ref, { status, updatedAt: now, endedAt: now });
     }
+    if (callerActive.data()?.callId === callId) tx.delete(callerPointer);
+    if (recipientActive.data()?.callId === callId) tx.delete(recipientPointer);
     return { ended: true };
   });
   return result;
