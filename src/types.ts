@@ -179,6 +179,9 @@ export interface Post {
   mediaStoragePath?: string;
   mediaType?: 'image' | 'video' | 'audio' | 'document';
   mediaContentType?: string;
+  mediaStoragePath?: string;
+  mediaType?: 'image' | 'video' | 'audio' | 'document';
+  mediaContentType?: string;
   audience?: 'public' | 'circle' | 'community' | 'followers' | 'onlyme';
   communityName?: string;
   tags: string[];
