@@ -88,6 +88,15 @@ export default function NewInboxView({
   });
 
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handlePushOpenChat = (event: Event) => {
+      const chatId = (event as CustomEvent<{ chatId?: string }>).detail?.chatId;
+      if (typeof chatId === 'string' && chatId.trim()) setActiveChatId(chatId);
+    };
+    window.addEventListener('nexora-open-chat', handlePushOpenChat as EventListener);
+    return () => window.removeEventListener('nexora-open-chat', handlePushOpenChat as EventListener);
+  }, []);
   const [inboxTab, setInboxTab] = useState<'chats' | 'requests' | 'archived'>('chats');
   const [searchQuery, setSearchQuery] = useState('');
   const [newMessageText, setNewMessageText] = useState('');
