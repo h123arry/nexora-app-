@@ -348,7 +348,7 @@ export default function NewInboxView({
 
   const handleMessageInputChange = (value: string) => {
     setNewMessageText(value);
-    if (!activeChatId) return false;
+    if (!activeChatId) return;
     const nextTypingState = value.trim() ? 'typing' : null;
     if (nextTypingState !== typingStateRef.current) {
       typingStateRef.current = nextTypingState;
@@ -367,7 +367,7 @@ export default function NewInboxView({
   const handleSendMessage = async (customContent?: string, mediaData?: { type: string; url: string; name?: string; duration?: number; contentType?: string; size?: number }) => {
     const contentToSend = customContent !== undefined ? customContent : newMessageText.trim();
     if (!contentToSend && !mediaData) return false;
-    if (!activeChatId) return;
+    if (!activeChatId) return false;
     if (mediaData && !isSupportedOutgoingMediaType(mediaData.type)) {
       window.dispatchEvent(new CustomEvent('toast', { detail: 'This attachment type is not supported in direct messages.' }));
       return false;
