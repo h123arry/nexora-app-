@@ -286,7 +286,14 @@ export class AuthService {
 
     if (typeof window !== 'undefined') {
       try {
-        await setPersistence(auth, this.getLoginPersistence(rememberDevice));
+        try {
+          await setPersistence(auth, this.getLoginPersistence(rememberDevice));
+        } catch (primaryError) {
+          if (!rememberDevice) throw primaryError;
+          // Keep the session persistent if IndexedDB is unavailable in a
+          // browser/WebView; never silently fall back to tab-only persistence.
+          await setPersistence(auth, browserLocalPersistence);
+        }
       } catch (error) {
         throw this.publicAuthError(error);
       }
