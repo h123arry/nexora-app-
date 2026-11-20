@@ -46,12 +46,12 @@ export class ChatEngine {
       // Return a default session
       const defaultSession: ChatSession = {
         id: 'default-session',
-        title: 'Welcome Session',
+        title: 'New chat',
         messages: [
           {
             id: 'welcome-msg',
             sender: 'voh',
-            text: "Hey, I'm **VOH AI**. I can help you think through ideas and use the authenticated profile, visible feed, joined communities, recent notifications and loaded World Pulse snapshot when available. I cannot read private messages or execute account-changing actions.",
+            text: "Hi, I'm **VOH AI**. Ask me questions, talk through ideas, get help with your posts, or learn more about NEXORA. I can use information from your account and public feed when it's available, but I can't read private messages or change your account for you.",
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             reactions: []
           }
@@ -77,9 +77,9 @@ export class ChatEngine {
     const data = localStorage.getItem(key);
     if (!data) {
       const defaultFolders: ChatFolder[] = [
-        { id: 'folder-creator', name: '🎨 Creator Brainstorming', color: '#8B5CF6' },
-        { id: 'folder-code', name: '💻 System Architecture', color: '#10B981' },
-        { id: 'folder-general', name: '💬 General Inquiries', color: '#3B82F6' }
+        { id: 'folder-creator', name: 'Ideas', color: '#8B5CF6' },
+        { id: 'folder-code', name: 'Work', color: '#10B981' },
+        { id: 'folder-general', name: 'Personal', color: '#3B82F6' }
       ];
       localStorage.setItem(key, JSON.stringify(defaultFolders));
       return defaultFolders;
