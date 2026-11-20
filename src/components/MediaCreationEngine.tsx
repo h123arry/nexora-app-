@@ -424,6 +424,7 @@ export default function MediaCreationEngine({
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
   const [isCaptureMenuOpen, setIsCaptureMenuOpen] = useState(false);
   const [cameraZoom, setCameraZoom] = useState(1);
+  const pinchStartRef = useRef<{ distance: number; zoom: number } | null>(null);
   const [activePhotoTool, setActivePhotoTool] = useState<'filters' | 'adjust' | 'text' | 'crop'>('filters');
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [draftsList, setDraftsList] = useState<DraftItem[]>(() => readLocalDrafts(draftsKey));
@@ -879,8 +880,29 @@ export default function MediaCreationEngine({
   };
 
   const handleCameraZoomChange = (value: number) => {
-    // Keep zoom under the creator's control. The preview and captured frame use the same crop.
     setCameraZoom(Math.max(1, Math.min(3, value)));
+  };
+
+  const handleCameraPinchStart = (event: React.TouchEvent<HTMLVideoElement>) => {
+    if (event.touches.length !== 2) return;
+    const dx = event.touches[0].clientX - event.touches[1].clientX;
+    const dy = event.touches[0].clientY - event.touches[1].clientY;
+    pinchStartRef.current = { distance: Math.hypot(dx, dy), zoom: cameraZoom };
+  };
+
+  const handleCameraPinchMove = (event: React.TouchEvent<HTMLVideoElement>) => {
+    if (event.touches.length !== 2 || !pinchStartRef.current) return;
+    event.preventDefault();
+    const dx = event.touches[0].clientX - event.touches[1].clientX;
+    const dy = event.touches[0].clientY - event.touches[1].clientY;
+    const distance = Math.hypot(dx, dy);
+    if (pinchStartRef.current.distance > 0) {
+      handleCameraZoomChange(pinchStartRef.current.zoom * distance / pinchStartRef.current.distance);
+    }
+  };
+
+  const handleCameraPinchEnd = (event: React.TouchEvent<HTMLVideoElement>) => {
+    if (event.touches.length < 2) pinchStartRef.current = null;
   };
 
   const openSelectedImagesInStudio = async () => {
@@ -2010,16 +2032,12 @@ export default function MediaCreationEngine({
                              <button type="button" onClick={() => { setIsCaptureMenuOpen(false); setActiveTab('drafts'); setCurrentStep(1); }} className="w-full rounded-xl px-3 py-2.5 text-left text-xs font-medium text-[#EEEAF8] hover:bg-[#7138FF]/15">Open drafts</button>
                            </div>
                          )}
-                         <video ref={photoPreviewRef} autoPlay muted playsInline style={{ transform: `scale(${cameraZoom})` }} className="absolute inset-0 h-full w-full object-cover bg-[#050914]" aria-label="Live camera preview" />
+                         <video ref={photoPreviewRef} autoPlay muted playsInline onTouchStart={handleCameraPinchStart} onTouchMove={handleCameraPinchMove} onTouchEnd={handleCameraPinchEnd} onTouchCancel={handleCameraPinchEnd} style={{ transform: `scale(${cameraZoom})`, touchAction: "none" }} className="absolute inset-0 h-full w-full object-cover bg-[#050914]" aria-label="Live camera preview. Pinch with two fingers to zoom" />
                          {permissionState !== 'granted' && (
                            <button type="button" onClick={() => setPermissionTarget('camera')} className="relative z-10 mx-auto rounded-xl border border-[#44376F] bg-[#120E2B] px-5 py-3 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
                          )}
                          <div className="relative z-10 w-full space-y-3">
-                           <div className="mx-auto flex w-full max-w-xs items-center gap-3 rounded-full border border-white/10 bg-[#050914]/55 px-4 py-2 backdrop-blur-xl">
-                             <span className="text-[10px] font-medium text-white/75">Zoom</span>
-                             <input aria-label="Camera zoom" type="range" min="1" max="3" step="0.1" value={cameraZoom} onChange={event => handleCameraZoomChange(Number(event.target.value))} className="min-w-0 flex-1 accent-[#7AAFC0] disabled:opacity-40" />
-                             <span className="w-8 text-right text-[10px] tabular-nums text-white/75">{cameraZoom.toFixed(1)}×</span>
-                           </div>
+                           <p className="text-center text-[10px] font-medium text-white/65">Pinch with two fingers to zoom</p>
                            <div className="flex items-center justify-between gap-3">
                              <label className="grid h-12 min-w-12 place-items-center rounded-full border border-white/15 bg-[#050914]/60 px-4 text-xs font-semibold text-white backdrop-blur-xl">Gallery<input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /></label>
                              <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="grid h-[76px] w-[76px] shrink-0 place-items-center rounded-full border-[5px] border-white/90 bg-[#8B79D4] text-xs font-bold text-white shadow-[0_0_0_5px_rgba(5,9,20,.45)] transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50">Capture</button>
@@ -2182,13 +2200,10 @@ export default function MediaCreationEngine({
                             </div>
                           </div>
                           <div className="absolute inset-0 z-0 flex items-center justify-center">
-                            {countdownTimer !== null ? <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span> : recordedVideoUrl ? <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" /> : <video ref={videoPreviewRef} autoPlay muted playsInline style={{ transform: `scale(${cameraZoom})` }} className="h-full w-full bg-[#120E2B] object-cover" />}
+                            {countdownTimer !== null ? <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span> : recordedVideoUrl ? <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" /> : <video ref={videoPreviewRef} autoPlay muted playsInline onTouchStart={handleCameraPinchStart} onTouchMove={handleCameraPinchMove} onTouchEnd={handleCameraPinchEnd} onTouchCancel={handleCameraPinchEnd} style={{ transform: `scale(${cameraZoom})`, touchAction: "none" }} className="h-full w-full bg-[#120E2B] object-cover" aria-label="Live video preview. Pinch with two fingers to zoom" />}
                           </div>
                           <div className="z-10 flex flex-col items-center gap-2">
-                             <div className="mx-auto flex w-full max-w-xs items-center gap-3 rounded-full border border-white/10 bg-[#050914]/65 px-4 py-2 text-[10px] font-semibold text-white backdrop-blur-xl">
-                               <span>Zoom · {cameraZoom.toFixed(1)}×</span>
-                               <input aria-label="Video camera zoom" type="range" min="1" max="3" step="0.1" value={cameraZoom} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null || Boolean(recordedVideoUrl)} onChange={event => handleCameraZoomChange(Number(event.target.value))} className="min-w-0 flex-1 accent-[#7AAFC0] disabled:opacity-40" />
-                             </div>
+                             <p className="text-center text-[10px] font-medium text-white/65">Pinch with two fingers to zoom</p>
                              
                             <label className="flex items-center gap-2 rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[10px] font-semibold text-white">
                               Video length
