@@ -877,16 +877,8 @@ export default function MediaCreationEngine({
   };
 
   const handleCameraZoomChange = (value: number) => {
-    const nextZoom = Math.max(1, Math.min(3, value));
-    setCameraZoom(nextZoom);
-    const stream = photoStreamRef.current || videoStreamRef.current;
-    const track = stream?.getVideoTracks()[0];
-    if (!track) return;
-    const capabilities = track.getCapabilities() as MediaTrackCapabilities & { zoom?: { min: number; max: number; step?: number } };
-    if (capabilities.zoom) {
-      const hardwareZoom = Math.max(capabilities.zoom.min, Math.min(capabilities.zoom.max, nextZoom));
-      void track.applyConstraints({ advanced: [{ zoom: hardwareZoom } as MediaTrackConstraintSet] }).catch(() => undefined);
-    }
+    // Keep zoom under the creator's control. The preview and captured frame use the same crop.
+    setCameraZoom(Math.max(1, Math.min(3, value)));
   };
 
   const openSelectedImagesInStudio = async () => {
@@ -2140,17 +2132,17 @@ export default function MediaCreationEngine({
                           </div>
                         </div>
                       ) : (
-                        <div className="relative mx-auto flex aspect-[4/5] w-full max-w-[320px] flex-col justify-between overflow-hidden rounded-2xl border border-[#44376F] bg-black p-3.5 shadow-md">
-                          <div className="z-10 flex items-center justify-between text-[8px] font-mono text-[#A39BBF]">
-                            <span className="rounded border border-white/5 bg-black/70 px-2 py-0.5">Camera</span>
+                        <div className={`relative mx-auto flex w-full flex-col justify-between overflow-hidden bg-black ${immersiveCameraMode ? "fixed inset-0 z-20 h-[100dvh] rounded-none border-0 p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]" : "aspect-[4/5] max-w-[320px] rounded-2xl border border-[#44376F] p-3.5 shadow-md"}`}>
+                          <div className="z-10 flex items-center justify-between gap-2 text-[10px] text-[#D8D1EA]">
+                            <span className="rounded-full border border-white/10 bg-[#050914]/65 px-3 py-1.5 font-semibold">NEXORA camera</span>
                             <button type="button" onClick={() => { setActiveMode('video'); setIsLensStudioOpen(false); }} className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[9px] font-semibold text-white">Choose from gallery</button>
                             <div className="flex items-center gap-2">
                               <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="rounded-full border border-[#A78BFA]/40 bg-[#7138FF]/25 px-3 py-1.5 text-[9px] font-bold text-white"><Sparkles className="mr-1 inline h-3 w-3" /> Filters & Lenses</button>
-                              <button disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button>
+                              <button disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button><button type="button" onClick={handleExitClick} aria-label="Close camera" className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-[#050914]/65 text-white"><X className="h-4 w-4" /></button>
                             </div>
                           </div>
                           <div className="absolute inset-0 z-0 flex items-center justify-center">
-                            {countdownTimer !== null ? <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span> : recordedVideoUrl ? <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" /> : <video ref={videoPreviewRef} autoPlay muted playsInline className="h-full w-full bg-[#120E2B] object-cover" />}
+                            {countdownTimer !== null ? <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span> : recordedVideoUrl ? <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" /> : <video ref={videoPreviewRef} autoPlay muted playsInline style={{ transform: `scale(${cameraZoom})` }} className="h-full w-full bg-[#120E2B] object-cover" />}
                           </div>
                           <div className="z-10 flex flex-col items-center gap-2">
                             <label className="flex items-center gap-2 rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[10px] font-semibold text-white">
