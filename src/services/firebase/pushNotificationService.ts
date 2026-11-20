@@ -3,7 +3,7 @@ import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, app, db } from './config';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
 import { Capacitor } from '@capacitor/core';
-import { FirebaseMessaging } from '@capacitor-firebase/messaging';
+import { FirebaseMessaging, Importance } from '@capacitor-firebase/messaging';
 
 export interface PushNotificationPayload {
   title: string;
@@ -90,7 +90,7 @@ export class PushNotificationService {
             id: 'nexora_calls',
             name: 'NEXORA calls',
             description: 'Incoming NEXORA voice and video calls',
-            importance: 5,
+            importance: Importance.Max,
             sound: 'default',
             vibration: true,
           });
