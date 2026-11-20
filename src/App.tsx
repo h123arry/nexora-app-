@@ -2542,6 +2542,7 @@ export default function App() {
                       }}
                       creators={Object.values(globalUsersMap) as User[]}
                       initialSubTab={matrixSubTabRedirect}
+                      onClose={() => navigateTo('feed')}
                     />
                   )}
 
