@@ -27,6 +27,7 @@ import {
   limit,
   startAfter,
   getDocs,
+  getDoc,
   type QueryDocumentSnapshot,
   type DocumentData,
   deleteDoc,
@@ -103,6 +104,8 @@ export default function NewInboxView({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const sendingMessageRef = useRef(false);
+  const attachmentUploadRef = useRef(false);
   const [attachmentProgress, setAttachmentProgress] = useState(0);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -367,12 +370,13 @@ export default function NewInboxView({
   const handleSendMessage = async (customContent?: string, mediaData?: { type: string; url: string; name?: string; duration?: number; contentType?: string; size?: number }) => {
     const contentToSend = customContent !== undefined ? customContent : newMessageText.trim();
     if (!contentToSend && !mediaData) return false;
-    if (!activeChatId) return false;
+    if (!activeChatId || sendingMessageRef.current) return false;
     if (mediaData && !isSupportedOutgoingMediaType(mediaData.type)) {
       window.dispatchEvent(new CustomEvent('toast', { detail: 'This attachment type is not supported in direct messages.' }));
       return false;
     }
 
+    sendingMessageRef.current = true;
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingStateRef.current = null;
     void updateTypingState(activeChatId, currentUser.id, null);
@@ -463,11 +467,14 @@ export default function NewInboxView({
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be sent. Your draft is saved. Please try again.' }));
       }
       return false;
+    } finally {
+      sendingMessageRef.current = false;
     }
   };
 
   const sendAttachmentFiles = async (fileList: FileList | null, forcedType?: 'image' | 'video' | 'audio' | 'document') => {
-    if (!fileList?.length || !activeChatId) return;
+    if (!fileList?.length || !activeChatId || attachmentUploadRef.current) return;
+    attachmentUploadRef.current = true;
     const files = Array.from(fileList);
     setIsUploadingAttachment(true);
     try {
@@ -490,6 +497,7 @@ export default function NewInboxView({
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Attachment could not be sent. Please retry.' }));
     } finally {
+      attachmentUploadRef.current = false;
       setIsUploadingAttachment(false);
       setAttachmentProgress(0);
     }
@@ -500,9 +508,16 @@ export default function NewInboxView({
     if (!chatId || !db) return;
     setLocalMessages(previous => ({ ...previous, [chatId]: (previous[chatId] || []).map(item => item.id === message.id ? { ...item, status: 'sending', isOfflineUnsent: false } : item) }));
     try {
-      await setDoc(doc(db, `chats/${chatId}/messages`, message.id), serializeOutgoingMessage(message));
+      const messageRef = doc(db, `chats/${chatId}/messages`, message.id);
+      const existing = await getDoc(messageRef);
+      if (!existing.exists()) await setDoc(messageRef, serializeOutgoingMessage(message));
       setLocalMessages(previous => ({ ...previous, [chatId]: (previous[chatId] || []).map(item => item.id === message.id ? { ...item, status: 'sent', isOfflineUnsent: false } : item) }));
-      await updateDoc(doc(db, 'chats', chatId), { lastMessage: message.content, lastTimestamp: message.timestamp });
+      const preview = message.customMediaType === 'voice' ? 'Voice message'
+        : message.mediaType === 'image' ? 'Sent a photo'
+        : message.mediaType === 'video' ? 'Sent a video'
+        : message.mediaType === 'audio' ? 'Sent an audio file'
+        : message.mediaType === 'document' ? 'Sent a document' : message.content;
+      await updateDoc(doc(db, 'chats', chatId), { lastMessage: preview, lastTimestamp: message.timestamp });
     } catch {
       setLocalMessages(previous => ({ ...previous, [chatId]: (previous[chatId] || []).map(item => item.id === message.id ? { ...item, status: 'failed', isOfflineUnsent: true } : item) }));
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Message still could not be sent. Check your connection and retry.' }));
