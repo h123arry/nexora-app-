@@ -12,13 +12,32 @@ describe('trusted notification push delivery policy', () => {
       username: 'harry',
       actorName: 'Harry',
       userId: 'user-1',
-      url: '/#inbox',
+      url: '/?nxPushType=message&nxPushNotification=notification-1&nxPushTarget=chat%2Fwith%3Fbad&nxPushUser=user-1#inbox',
     });
     assert.ok(Object.values(data).every((value) => typeof value === 'string'));
   });
 
   it('uses a safe default route for unknown notification types', () => {
-    assert.equal(buildNotificationPushData({}, 'n1').url, '/#activity');
+    assert.equal(new URL(buildNotificationPushData({}, 'n1').url, 'https://nexora.example').searchParams.get('nxPushType'), 'system');
+    assert.match(buildNotificationPushData({}, 'n1').url, /#activity$/);
+  });
+
+
+  it('preserves the exact target for post and profile push deep links', () => {
+    const mention = buildNotificationPushData({ type: 'mention', targetId: 'post-42', userId: 'actor-7' }, 'mention-9');
+    const mentionUrl = new URL(mention.url, 'https://nexora.example');
+    assert.equal(mentionUrl.searchParams.get('nxPushType'), 'mention');
+    assert.equal(mentionUrl.searchParams.get('nxPushTarget'), 'post-42');
+    assert.equal(mentionUrl.searchParams.get('nxPushUser'), 'actor-7');
+    assert.equal(mentionUrl.searchParams.get('nxPushNotification'), 'mention-9');
+
+    const follow = buildNotificationPushData({ type: 'follow', userId: 'follower-3' }, 'follow-4');
+    assert.match(follow.url, /#profile$/);
+    assert.equal(new URL(follow.url, 'https://nexora.example').searchParams.get('nxPushUser'), 'follower-3');
+
+    const live = buildNotificationPushData({ type: 'pulse_alert', targetId: 'live-42', userId: 'creator-2' }, 'live-5');
+    assert.match(live.url, /#live$/);
+    assert.equal(new URL(live.url, 'https://nexora.example').searchParams.get('nxPushTarget'), 'live-42');
   });
 
   it('chunks device tokens into provider-safe batches', () => {

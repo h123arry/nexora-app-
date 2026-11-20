@@ -22,6 +22,16 @@ export function buildNotificationPushData(
   const username = typeof notification.username === 'string' ? notification.username.replace(/^@+/, '').slice(0, 40) : '';
   const actorName = typeof notification.actorName === 'string' ? notification.actorName.slice(0, 80) : '';
   const userId = typeof notification.userId === 'string' ? notification.userId.slice(0, 128) : '';
+  const params = new URLSearchParams({ nxPushType: type, nxPushNotification: notificationId });
+  if (targetId) params.set('nxPushTarget', targetId);
+  if (userId) params.set('nxPushUser', userId);
+  const destination = type === 'message' || type === 'chat'
+    ? '/#inbox'
+    : type === 'follow' || type === 'profile_view'
+      ? '/#profile'
+      : type === 'pulse_alert'
+        ? '/#live'
+        : '/#activity';
   return {
     type,
     targetId,
@@ -29,7 +39,7 @@ export function buildNotificationPushData(
     username,
     actorName,
     userId,
-    url: type === 'message' && targetId ? '/#inbox' : type === 'follow' && targetId ? '/#profile' : '/#activity',
+    url: `/?${params.toString()}${destination.slice(1)}`,
   };
 }
 
@@ -47,6 +57,7 @@ function notificationTitle(type: string): string {
   if (type === 'comment_reply') return 'Someone replied to your comment';
   if (type === 'repost') return 'Someone reposted your post';
   if (type === 'mention') return 'You were mentioned on NEXORA';
+  if (type === 'pulse_alert') return 'Someone you follow is live on NEXORA';
   if (type === 'spark' || type === 'like') return 'Someone engaged with your post';
   return 'NEXORA notification';
 }
@@ -88,12 +99,9 @@ export function createNotificationPushDelivery(db: Firestore, app: App) {
       for (const tokenChunk of chunkPushTokens(tokenValues)) {
         const response = await messaging.sendEachForMulticast({
           tokens: tokenChunk,
-          notification: { title, body: detail },
-          data,
-          webpush: {
-            fcmOptions: { link: data.url },
-            notification: { icon: '/nexora-mark.png', badge: '/icons/icon-48.png' },
-          },
+          // Data-only messages are rendered by NEXORA's root service worker,
+          // giving every alert one predictable click/deep-link handler.
+          data: { ...data, title, body: detail },
         });
         const staleTokenIds: string[] = [];
         response.responses.forEach((result, index) => {
