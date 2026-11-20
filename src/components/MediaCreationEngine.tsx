@@ -855,6 +855,7 @@ export default function MediaCreationEngine({
     const files = e.target.files;
     if (!files) return;
     requestPermission('gallery', () => {
+      setCurrentStep(3);
       void Promise.all(Array.from(files).slice(0, 10).map(async (file: File) => {
         try {
           await validateMediaFile(file, 'image');
@@ -925,7 +926,8 @@ export default function MediaCreationEngine({
       context.drawImage(video, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
       context.restore();
       const snapUrl = canvas.toDataURL('image/jpeg', 0.92);
-      setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+      setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: cameraZoom, cropOffset: { x: 0, y: 0 } }]);
+      setCurrentStep(3);
       window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Photo captured.' }));
     });
   };
@@ -948,6 +950,7 @@ export default function MediaCreationEngine({
           setVideoTrimStart(0);
           setVideoTrimEnd(Math.min(15, Math.max(1, Math.round(metadata.duration || 15))));
           setVideoDuration(metadata.duration || 15);
+          setCurrentStep(3);
         } catch (error) {
           window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
         }
