@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Users, Wand2, Check, X, Send, FileText, Calendar, Shield, Megaphone, BarChart2 } from 'lucide-react';
 import { Circle, User } from '../types';
@@ -17,22 +17,6 @@ import { getCreatorCommunityAsset, getCreatorCommunityAssets } from '../content/
 
 function safeCircleAvatar(value: string): string {
   return /^https:\/\//i.test(value) || value === '/nexora-mark.png' ? value : '/nexora-mark.png';
-}
-
-function CirclePlainText({ value, className }: { value: string; className: string }) {
-  const elementRef = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (elementRef.current) elementRef.current.textContent = value;
-  }, [value]);
-  return <span ref={elementRef} className={className} />;
-}
-
-function CircleMessageBody({ value, className }: { value: string; className: string }) {
-  const elementRef = useRef<HTMLParagraphElement>(null);
-  useEffect(() => {
-    if (elementRef.current) elementRef.current.textContent = value;
-  }, [value]);
-  return <p ref={elementRef} className={className} />;
 }
 
 interface CirclesViewProps {
@@ -605,8 +589,8 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                           <div key={i} className="flex items-start gap-2.5">
                             <img src={safeCircleAvatar(msg.avatar)} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
                             <div className="max-w-[85%] rounded-2xl rounded-tl-md border border-white/10 bg-white/[0.045] px-3 py-2.5">
-                              <div className="mb-1 flex items-center gap-2"><CirclePlainText value={msg.sender} className="text-[11px] font-semibold text-violet-200" /><CirclePlainText value={msg.time} className="text-[9px] text-white/35" /></div>
-                              <CircleMessageBody value={msg.text} className="whitespace-pre-wrap break-words text-xs leading-relaxed text-white/90" />
+                              <div className="mb-1 flex items-center gap-2"><span className="text-[11px] font-semibold text-violet-200">{msg.sender}</span><span className="text-[9px] text-white/35">{msg.time}</span></div>
+                              <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-white/90">{msg.text}</p>
                             </div>
                           </div>
                         ))}
