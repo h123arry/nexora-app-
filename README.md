@@ -78,6 +78,33 @@ NEX is an internal platform unit. It should not be described as a bank deposit, 
 - Server-side AI features depend on a valid provider configuration and available service access.
 - Private provider credentials must remain on the server and must never be committed to the repository or exposed in browser code.
 
+
+### Live experiences and creator production tools
+- Live-session and streaming workflows, including LiveKit token policy, live-session discovery, moderation-related controls, and replay/recording support in the codebase.
+- NEXORA Studio provides creator-oriented media editing workflows, including timeline, audio, text, subtitles, transitions, export validation, and cloud-draft policy modules.
+- NEXORA Lens includes a lens catalogue, expressions, scene effects, and augmented-reality capability policy and creator-lens workflows.
+- Availability of live streaming, recording storage, native camera capabilities, and media export depends on the relevant provider credentials, platform permissions, deployment, and real-device verification.
+
+### World Pulse and intelligent discovery
+- World Pulse includes community, topic, signal, and AI-context modules intended to help people understand activity across NEXORA.
+- Discovery and recommendation work includes feed pagination, recommendation quality, watch-time signals, freshness, and user preference policies.
+- A module or signal pipeline in the repository should not be interpreted as proof of a fully populated real-time global trends service; live data coverage and production behavior depend on configured sources and observed activity.
+
+### Business, services, and bookings
+- Business Pages and service-directory workflows support service listings and booking requests.
+- Booking operations include trusted server-side handling, participant actions, scheduling safeguards, and reminder workflows in the codebase.
+- Payment collection, external calendar integrations, and delivery of reminders through every channel are separate integrations and must not be assumed enabled without deployment and end-to-end verification.
+
+### Trust, safety, identity, and account controls
+- The repository includes moderation and reporting policy modules, community report workflows, identity-verification authority policies, account-security workflows, and account-deletion safeguards.
+- These capabilities are intended to support safer accounts and communities; their actual production enforcement depends on deployed rules, trusted services, configuration, and operational review.
+- Users' privacy, content ownership, and access boundaries remain central to product development.
+
+### NEXORA Origin and content provenance
+- NEXORA Origin is the project's provenance and attribution direction for source content, permission-aware reuse, remix lineage, and creator insights.
+- Origin policy and workflow modules exist in the codebase. The presence of these modules does not imply that every Origin workflow is generally available to all users.
+
+
 ---
 
 ## Platform architecture
@@ -100,6 +127,30 @@ NEXORA is developed in its existing application architecture. The project is not
 | Capacitor | Android and iOS application packaging and native integration |
 
 The root application targets **Node.js 22**. Refer to the lockfiles and package manifests for the exact dependency versions.
+
+
+## Mobile apps and store-release target
+
+NEXORA's mobile application work uses **Capacitor** to package the existing web application for Android and iOS, with native project and asset-generation workflows in the repository.
+
+**Target: January 2027 — Google Play and Apple App Store.** This is the project's intended release window, not a claim that either store has approved or published the apps. Store availability will follow completion of the release work and the independent review processes of Google Play and Apple.
+
+The mobile release track includes:
+- Android and iOS project synchronization from the web build.
+- Platform-specific app assets and splash-screen generation.
+- Android and iOS build scripts.
+- Real-device testing for authentication, media permissions, camera/gallery access, uploads, notifications, navigation, and lifecycle behavior.
+- Store listing preparation, privacy disclosures, support details, signing and release configuration, and submission review.
+
+Useful repository commands:
+```sh
+npm run mobile:doctor
+npm run mobile:sync
+npm run mobile:build:android
+npm run mobile:build:ios
+```
+
+These commands describe the available build workflow; they do not establish that a signed release build has passed device acceptance, or that store submissions have been completed. The January 2027 target remains subject to testing, release readiness, and store approval.
 
 ## Security and responsible operation
 
