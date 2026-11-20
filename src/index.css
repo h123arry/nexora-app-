@@ -2378,3 +2378,54 @@ body {
 @media (min-width: 768px) {
   .nx-profile-tabbar .nx-profile-tabs-track { justify-content: center; }
 }
+
+
+/* Edge-to-edge social feed: remove nested card framing and let media meet the viewport edges. */
+.nx-feed-stage .nx-post-card.nx-feed-post {
+  width: 100%;
+  margin-inline: 0 !important;
+  padding-inline: 0;
+  border-inline: 0 !important;
+  border-top: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.nx-feed-stage .nx-feed-post:hover { border-color: var(--nx-edge) !important; }
+.nx-feed-stage .nx-feed-media {
+  width: 100%;
+  margin-inline: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+.nx-feed-stage .nx-feed-media > .nx-video-frame {
+  width: 100%;
+  border-radius: 0 !important;
+}
+.nx-feed-stage .nx-feed-post > .nx-feed-media img,
+.nx-feed-stage .nx-feed-post > .nx-feed-media video { border-radius: 0 !important; }
+
+/* Reels use the complete dynamic viewport rather than the feed's inline-video height cap. */
+.nx-reels-viewer,
+.nx-reels-viewer > div {
+  height: 100dvh;
+  min-height: 100dvh;
+  width: 100%;
+}
+.nx-reels-viewer .nx-video-frame {
+  width: 100%;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.nx-reels-viewer .nx-video-frame > video {
+  width: 100%;
+  height: 100%;
+  max-height: none !important;
+  object-fit: cover !important;
+}
+@media (max-width: 1023px) {
+  .nx-feed-stage .nx-post-card.nx-feed-post { margin-inline: 0 !important; }
+}
