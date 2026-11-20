@@ -228,14 +228,7 @@ export const getDirectCallToken = onCall({ region: 'europe-west1', secrets: [api
   }
   if (call.status !== 'accepted') throw new HttpsError('failed-precondition', 'The other person has not answered yet.');
   if (Number(call.expiresAt || 0) <= Date.now()) throw new HttpsError('deadline-exceeded', 'This call has expired.');
-  const [callerStatus, recipientStatus] = await Promise.all([
-    db.collection('accountStatus').doc(call.callerId).get(),
-    db.collection('accountStatus').doc(call.recipientId).get(),
-  ]);
-  if (accountIsRestricted(callerStatus.data(), 'suspended') || accountIsRestricted(callerStatus.data(), 'messagingRestricted')
-    || accountIsRestricted(recipientStatus.data(), 'suspended') || accountIsRestricted(recipientStatus.data(), 'messagingRestricted')) {
-    throw new HttpsError('permission-denied', 'This call is no longer allowed for one of the accounts.');
-  }
+  await assertCanCall(call.callerId, call.recipientId, call.chatId);
   const key = apiKey.value();
   const secret = apiSecret.value();
   const wsUrl = process.env.LIVEKIT_URL?.trim() || DEFAULT_LIVEKIT_URL;
