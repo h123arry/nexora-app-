@@ -57,7 +57,9 @@ export class PushNotificationService {
     const tokenId = await this.tokenDocumentId(token);
     const previous = this.readStoredRegistration();
     if (previous && (previous.uid !== uid || previous.tokenId !== tokenId)) {
-      await deleteDoc(doc(db, 'users', previous.uid, 'pushTokens', previous.tokenId)).catch(() => undefined);
+      // Fail closed: never attach a shared browser token to a new account if the old
+      // account's registration cannot first be revoked.
+      await deleteDoc(doc(db, 'users', previous.uid, 'pushTokens', previous.tokenId));
     }
     if (auth.currentUser?.uid !== uid) throw new Error('The signed-in account changed during push registration.');
     await setDoc(doc(db, 'users', uid, 'pushTokens', tokenId), {
@@ -96,7 +98,13 @@ export class PushNotificationService {
       this.unsubscribeAuth = onIdTokenChanged(auth, user => {
         const owner = this.tokenOwnerUid || this.readStoredRegistration()?.uid || null;
         if (owner && user?.uid !== owner) {
-          void this.removeStoredRegistration();
+          // Do not attempt a cross-account Firestore delete after auth has changed.
+          // Keep the ownership marker so the old account can revoke it on its next sign-in.
+          this.unsubscribeMessage?.();
+          this.unsubscribeMessage = null;
+          this.token = null;
+          this.tokenOwnerUid = null;
+          this.isInitialized = false;
         }
       });
     }
@@ -120,7 +128,7 @@ export class PushNotificationService {
   private static async removeStoredRegistration(): Promise<void> {
     const stored = this.readStoredRegistration();
     if (stored) {
-      await deleteDoc(doc(db, 'users', stored.uid, 'pushTokens', stored.tokenId)).catch(() => undefined);
+      await deleteDoc(doc(db, 'users', stored.uid, 'pushTokens', stored.tokenId));
       localStorage.removeItem(REGISTRATION_STORAGE_KEY);
     }
     if (this.messaging) await deleteToken(this.messaging).catch(() => undefined);
