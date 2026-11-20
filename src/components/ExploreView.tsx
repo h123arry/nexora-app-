@@ -683,10 +683,14 @@ export default function ExploreView({
             <button
               type="button"
               onClick={() => setActiveTab('pulse')}
-              className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:border-violet-300/30 hover:bg-violet-500/10"
+              className="group inline-flex min-h-10 items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-4 py-2 text-left transition-colors hover:border-violet-300/30 hover:bg-violet-500/10"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Radio className="h-5 w-5" aria-hidden="true" /></span>
-              <span className="text-xs font-semibold text-white">What's happening</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-200"><Radio className="h-4 w-4" aria-hidden="true" /></span>
+              <span className="text-xs font-semibold text-white">Trending</span>
+            </button>
+            <button type="button" onClick={onOpenVohAi} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-4 py-2 text-xs font-semibold text-violet-200 transition-colors hover:bg-violet-500/20">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-500/15">✦</span>
+              Ask VOH AI
             </button>
           </div>
 
@@ -703,7 +707,7 @@ export default function ExploreView({
                 {showAllPulse ? 'Show less' : 'View more'} →
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <span className="text-xs font-sans text-zinc-400 block">Popular this week</span>
                 {trendingTags.length === 0 ? (
@@ -722,10 +726,6 @@ export default function ExploreView({
                     <span className="text-[10px] font-mono text-zinc-500">{count} posts</span>
                   </button>
                 ))}
-              </div>
-              <div className="space-y-2">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase block">More from NEXORA</span>
-                <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">Discover new posts, creators and conversations below.</p>
               </div>
             </div>
           </div>
