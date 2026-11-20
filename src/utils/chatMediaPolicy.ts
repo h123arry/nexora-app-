@@ -31,6 +31,8 @@ const MIME_ALIASES: Record<string, string> = {
   'application/x-zip-compressed': 'application/zip',
 };
 
+const KNOWN_MIME_TYPES = new Set([...Object.values(EXTENSION_MIME_TYPES), 'audio/webm']);
+
 const VOICE_RECORDING_MIME_TYPES = [
   'audio/webm;codecs=opus',
   'audio/ogg;codecs=opus',
@@ -49,7 +51,7 @@ export function normalizeChatAttachmentContentType(fileName: string, reportedTyp
   }
   // Android document providers sometimes report a generic or incorrect type.
   // A known file extension is a better upload hint in that case.
-  if (extensionType && !Object.values(EXTENSION_MIME_TYPES).includes(normalized)) return extensionType;
+  if (extensionType && !KNOWN_MIME_TYPES.has(normalized)) return extensionType;
   return normalized;
 }
 
