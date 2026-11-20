@@ -44,8 +44,8 @@ export function buildCreatorMilestones(stats: CreatorMilestoneStats): CreatorMil
     add(`published_posts_${threshold}`, `${threshold} posts published`,
       `You have published ${threshold} posts on NEXORA. Keep creating.`, stats.publishedPosts >= threshold);
   }
-  add('creator_verified', 'Creator verification approved',
-    'Your NEXORA account has been verified. Your creator identity is now recognised.', stats.isVerified);
+  add('account_verified', 'Account verification complete',
+    'Your NEXORA account is now verified.', stats.isVerified);
   return milestones;
 }
 
@@ -106,8 +106,8 @@ export async function issueCreatorMilestones(db: Firestore, creatorId: string): 
         timestamp,
         isRead: false,
         priority: 4,
-        category: 'creator',
-        targetId: 'creator-dashboard',
+        category: milestone.id === 'account_verified' ? 'account' : 'creator',
+        targetId: milestone.id === 'account_verified' ? 'account-security' : 'creator-dashboard',
         milestoneId: milestone.id,
       });
     });
