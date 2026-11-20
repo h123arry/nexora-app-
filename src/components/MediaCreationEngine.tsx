@@ -168,6 +168,7 @@ async function renderCroppedVideoBlob(source: Blob, ratio: number): Promise<Blob
   video.src = sourceUrl;
   let sourceStream: MediaStream | null = null;
   let outputStream: MediaStream | null = null;
+  let activeRecorder: MediaRecorder | null = null;
   let frameRequest = 0;
   try {
     await new Promise<void>((resolve, reject) => {
@@ -190,14 +191,19 @@ async function renderCroppedVideoBlob(source: Blob, ratio: number): Promise<Blob
     if (sourceRatio > ratio) { sw = sourceHeight * ratio; sx = (sourceWidth - sw) / 2; }
     else { sh = sourceWidth / ratio; sy = (sourceHeight - sh) / 2; }
     outputStream = canvas.captureStream(30);
-    const captureVideo = video as HTMLVideoElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream };
+    const captureVideo = video as HTMLVideoElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream; audioTracks?: { length: number } };
     const capture = captureVideo.captureStream || captureVideo.mozCaptureStream;
-    if (capture) {
-      sourceStream = capture.call(video);
-      sourceStream.getAudioTracks().forEach(track => outputStream!.addTrack(track));
+    if (!capture) {
+      throw new Error('This browser cannot crop video while keeping its audio. Your original video has not changed.');
     }
+    sourceStream = capture.call(video);
+    const audioTracks = sourceStream.getAudioTracks();
+    if (captureVideo.audioTracks?.length && audioTracks.length === 0) {
+      throw new Error('The video audio could not be carried into the cropped file. Your original video has not changed.');
+    }
+    audioTracks.forEach(track => outputStream!.addTrack(track));
     const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
-    const recorder = new MediaRecorder(outputStream, mimeType ? { mimeType } : undefined);
+    const recorder = activeRecorder = new MediaRecorder(outputStream, mimeType ? { mimeType } : undefined);
     const chunks: Blob[] = [];
     const finished = new Promise<Blob>((resolve, reject) => {
       recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
@@ -222,6 +228,7 @@ async function renderCroppedVideoBlob(source: Blob, ratio: number): Promise<Blob
     return await finished;
   } finally {
     cancelAnimationFrame(frameRequest);
+    if (activeRecorder && activeRecorder.state !== 'inactive') activeRecorder.stop();
     sourceStream?.getTracks().forEach(track => track.stop());
     outputStream?.getTracks().forEach(track => track.stop());
     video.pause();
