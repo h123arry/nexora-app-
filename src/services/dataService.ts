@@ -1013,7 +1013,7 @@ export async function getNotificationPreferences(userId: string): Promise<Partia
 
 export async function saveNotificationPreferences(userId: string, preferences: NotificationPreferenceMap): Promise<void> {
   if (!auth.currentUser || auth.currentUser.uid !== userId) throw new Error('Only the signed-in account can change its notification preferences.');
-  const allowed: (keyof NotificationPreferenceMap)[] = ['likes','comments','followers','mentions','communities','events','verification','creatorUploads','friendRequests','securityAlerts','push'];
+  const allowed: (keyof NotificationPreferenceMap)[] = ['likes','comments','followers','reposts','mentions','communities','events','verification','creatorUploads','friendRequests','securityAlerts','push'];
   const clean = Object.fromEntries(allowed.map(key => [key, preferences[key] === true])) as NotificationPreferenceMap;
   const preferencesRef = doc(db, 'users', userId, 'settings', 'preferences');
   const existing = await getDoc(preferencesRef);
