@@ -313,10 +313,10 @@ export interface Notification {
   isRead: boolean;
   priority?: number; // 1 to 8 priority for sorting
   actionText?: string; // e.g. 'Follow Back', 'Reply', 'Join'
-  actionType?: 'follow_back' | 'reply' | 'join_community' | 'view_post' | 'save' | 'open_chat' | 'view_profile';
+  actionType?: 'follow_back' | 'reply' | 'join_community' | 'join_live' | 'view_post' | 'save' | 'open_chat' | 'view_profile';
   title?: string;
   eventType?: string;
-  category?: 'account' | 'creator' | 'messages' | 'mentions' | 'followers' | 'communities' | 'world_pulse' | 'voh_ai' | 'comments' | 'sparks' | 'profile_views';
+  category?: 'account' | 'creator' | 'messages' | 'mentions' | 'followers' | 'communities' | 'world_pulse' | 'live' | 'voh_ai' | 'comments' | 'sparks' | 'profile_views';
   actorName?: string;
   targetPostPreview?: string;
   targetPostImage?: string;
