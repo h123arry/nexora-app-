@@ -10,6 +10,7 @@ const { getAuthSessionIdentityKey, shouldHydrateAuthSession } = await import('..
 const { persistProfileWithBestEffortProjection } = await import('../src/services/firebase/profileProvisioningPolicy.ts');
 const {
   browserLocalPersistence,
+  indexedDBLocalPersistence,
   browserSessionPersistence,
   deleteUser,
   signInAnonymously,
@@ -94,7 +95,7 @@ test('maps Firebase configuration and credential failures without exposing provi
 });
 
 test('maps the remember-device choice to local or tab-session persistence', () => {
-  assert.equal(AuthService.getLoginPersistence(true), browserLocalPersistence);
+  assert.equal(AuthService.getLoginPersistence(true), indexedDBLocalPersistence);
   assert.equal(AuthService.getLoginPersistence(false), browserSessionPersistence);
 });
 
