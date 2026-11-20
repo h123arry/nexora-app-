@@ -333,7 +333,7 @@ interface DraftItem {
   id: string;
   caption: string;
   images: string[];
-  imageEdits?: Pick<SelectedImage, 'rotation' | 'zoom' | 'cropOffset' | 'filterName' | 'filterStyle'>[];
+  imageEdits?: Pick<SelectedImage, 'rotation' | 'zoom' | 'cropOffset' | 'filterName' | 'filterStyle' | 'cropRatio'>[];
   videoUrl?: string;
   voiceUrl?: string;
   transcript?: string;
@@ -622,6 +622,7 @@ export default function MediaCreationEngine({
           rotation: nextAutosave?.imageEdits?.[index]?.rotation ?? 0,
           zoom: nextAutosave?.imageEdits?.[index]?.zoom ?? 1,
           cropOffset: nextAutosave?.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+          cropRatio: nextAutosave?.imageEdits?.[index]?.cropRatio || 'original',
           filterName: nextAutosave?.imageEdits?.[index]?.filterName,
           filterStyle: nextAutosave?.imageEdits?.[index]?.filterStyle,
         }))
@@ -1421,7 +1422,7 @@ export default function MediaCreationEngine({
       id: `draft-${Date.now()}`,
       caption,
       images: selectedImages.map(img => img.url),
-      imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, filterName, filterStyle })),
+      imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle, cropRatio }) => ({ rotation, zoom, cropOffset, filterName, filterStyle, cropRatio })),
       videoUrl: videoFileUrl || recordedVideoUrl || undefined,
       voiceUrl: voiceFileUrl || undefined,
       transcript: voiceTranscript || undefined,
@@ -1483,6 +1484,7 @@ export default function MediaCreationEngine({
         rotation: draft.imageEdits?.[index]?.rotation ?? 0,
         zoom: draft.imageEdits?.[index]?.zoom ?? 1,
         cropOffset: draft.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+        cropRatio: draft.imageEdits?.[index]?.cropRatio || 'original',
         filterName: draft.imageEdits?.[index]?.filterName,
         filterStyle: draft.imageEdits?.[index]?.filterStyle,
       })));
