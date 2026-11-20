@@ -47,6 +47,20 @@ export class PushNotificationService {
     this.tokenOwnerUid = uid;
   }
 
+  /** Requests permission only from the explicit Notifications screen action. */
+  static async requestPermissionAndRegister(): Promise<string | null> {
+    if (isNativeRuntime()) {
+      const current = await PushNotifications.checkPermissions();
+      const permission = current.receive === 'granted' ? current : await PushNotifications.requestPermissions();
+      if (permission.receive !== 'granted') return null;
+      return this.init();
+    }
+    if (typeof window === 'undefined' || !('Notification' in window)) return null;
+    const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (permission !== 'granted') return null;
+    return this.init();
+  }
+
   /**
    * Initializes Push Notifications & FCM Messaging
    */
@@ -54,14 +68,16 @@ export class PushNotificationService {
     if (isNativeRuntime()) {
       const uid = auth.currentUser?.uid;
       if (!uid) return null;
-      if (this.token && this.tokenOwnerUid && this.tokenOwnerUid !== uid) {
-        const previousTokenId = await this.tokenDocumentId(this.token);
-        await deleteDoc(doc(db, 'users', this.tokenOwnerUid, 'pushTokens', previousTokenId));
+      if (this.tokenOwnerUid && this.tokenOwnerUid !== uid) {
+        if (this.token) {
+          const previousTokenId = await this.tokenDocumentId(this.token);
+          await deleteDoc(doc(db, 'users', this.tokenOwnerUid, 'pushTokens', previousTokenId));
+        }
         this.token = null;
         this.tokenOwnerUid = null;
         this.isInitialized = false;
       }
-      if (this.isInitialized && this.token && this.tokenOwnerUid === uid) return this.token;
+      if (this.isInitialized && this.tokenOwnerUid === uid) return this.token;
 
       try {
         const permission = await PushNotifications.checkPermissions();
@@ -97,6 +113,7 @@ export class PushNotificationService {
             window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox' } }));
           }
         });
+        this.tokenOwnerUid = uid;
         await PushNotifications.register();
         this.isInitialized = true;
         return this.token;
