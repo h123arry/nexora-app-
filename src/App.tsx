@@ -949,6 +949,7 @@ export default function App() {
   }, [activeTab]);
 
   const [isUniversalSearchOpen, setIsUniversalSearchOpen] = useState(false);
+  const [settingsInitialSection, setSettingsInitialSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta' | 'origin'>('account');
 
   // Pause any playing videos immediately when switching main tabs
   useEffect(() => {
@@ -1102,6 +1103,13 @@ export default function App() {
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('toggleNavMenu', handleToggleNav);
     window.addEventListener('changeTab', handleChangeTab);
+    const handleOpenSettingsSection = (event: Event) => {
+      const section = (event as CustomEvent<{ section?: string }>).detail?.section;
+      if (section && ['account', 'privacy', 'notifications', 'appearance', 'security', 'connected', 'about', 'beta', 'origin'].includes(section)) {
+        setSettingsInitialSection(section as typeof settingsInitialSection);
+      }
+    };
+    window.addEventListener('nexora-open-settings', handleOpenSettingsSection);
     const handleOpenUniversalSearch = () => setIsUniversalSearchOpen(true);
     window.addEventListener('openUniversalSearch', handleOpenUniversalSearch);
     const handleViewProfileEvent = (e: any) => {
@@ -1126,6 +1134,7 @@ export default function App() {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('toggleNavMenu', handleToggleNav);
       window.removeEventListener('changeTab', handleChangeTab);
+      window.removeEventListener('nexora-open-settings', handleOpenSettingsSection);
       window.removeEventListener('openUniversalSearch', handleOpenUniversalSearch);
       window.removeEventListener('nexora-view-profile', handleViewProfileEvent);
     };
@@ -2700,7 +2709,7 @@ export default function App() {
                       currentUser={getRichUser(currentUser)}
                       theme={theme}
                       setTheme={setTheme}
-                      initialSection={securityReminderStep > 0 ? 'connected' : 'account'}
+                      initialSection={securityReminderStep > 0 ? 'connected' : settingsInitialSection}
                     />
                   )}
                     </motion.div>
