@@ -118,6 +118,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   const isCommentsOpen = activeCommentsPostId === post.id;
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
   const hasMediaCaptionOverlay = Boolean(post.videoUrl);
+  const isFeedPhotoPost = !post.videoUrl && Boolean(post.image || post.images?.length) && !post.opportunityType;
   const cardRef = useRef<HTMLDivElement | null>(null);
   const impressionTimerRef = useRef<number | null>(null);
   const impressionRecordedRef = useRef(false);
@@ -165,7 +166,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           : post.userId === 'user-0'
           ? 'bg-gradient-to-b from-violet-500/5 to-transparent'
           : 'bg-transparent'
-      }`}
+      } ${isFeedPhotoPost ? 'nx-post-card--photo-feed' : ''}`}
     >
 
       {/* Scheduled Queue Warning */}
@@ -582,11 +583,12 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           )}
         </div>
       ) : (post.image || (post.images && post.images.length > 0)) && !post.opportunityType ? (
-        <div className="mb-3 mx-4 sm:mx-6 overflow-hidden rounded-2xl border border-white/10 bg-black">
+        <div className="nx-feed-photo-media mb-3 mx-4 sm:mx-6 overflow-hidden rounded-2xl border border-white/10 bg-black">
           <NexoraImagePlayer
             post={post}
             image={post.image}
             images={post.images}
+            disableFullscreen
             onSpark={() => onSpark(post.id)}
             isFollowing={post.userId ? followingIds.includes(post.userId) : false}
             onToggleFollow={() => post.userId && onToggleFollow?.(post.userId)}
