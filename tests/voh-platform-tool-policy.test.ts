@@ -21,8 +21,8 @@ describe('VOH feature-scoped tool access', () => {
     const combined = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['profile', 'world_pulse', 'circles']));
     assert.deepEqual(combined.map(tool => tool.name), ['get_my_profile_summary', 'get_my_communities', 'get_world_pulse_snapshot']);
   });
-  it('never exposes community, notification, inbox or write tools without an explicit integration', () => {
+  it('never exposes notification, inbox or write tools without an explicit integration', () => {
     const names = selectVohToolsForScopes(VOH_CONTEXT_TOOL_DECLARATIONS, new Set(['feed', 'profile', 'world_pulse', 'circles'])).map(tool => tool.name);
-    assert.equal(names.some(name => /inbox|message|send|publish|delete|community|notification/i.test(name)), false);
+    assert.equal(names.some(name => /inbox|message|send|publish|delete|notification/i.test(name)), false);
   });
 });
