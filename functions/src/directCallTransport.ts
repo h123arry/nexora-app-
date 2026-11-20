@@ -77,7 +77,6 @@ async function sendIncomingCallPush(recipientId: string, payload: Record<string,
   for (let i = 0; i < tokenValues.length; i += 500) {
     await messaging.sendEachForMulticast({
       tokens: tokenValues.slice(i, i + 500),
-      notification: { title: payload.callerName || 'NEXORA call', body: payload.callType === 'video' ? 'Incoming video call' : 'Incoming voice call' },
       data: payload,
       android: { priority: 'high', ttl: CALL_RING_SECONDS * 1000 },
       webpush: { headers: { Urgency: 'high', TTL: String(CALL_RING_SECONDS) }, notification: { requireInteraction: true, tag: 'nexora-call-' + payload.callId } },
@@ -192,7 +191,14 @@ export const getDirectCallToken = onCall({ region: 'europe-west1', secrets: [api
     throw new HttpsError('permission-denied', 'You are not part of this call.');
   }
   if (call.status !== 'accepted') throw new HttpsError('failed-precondition', 'The other person has not answered yet.');
-  if (call.expiresAt <= Date.now() && call.status === 'ringing') throw new HttpsError('deadline-exceeded', 'This call has expired.');
+  const [callerStatus, recipientStatus] = await Promise.all([
+    db.collection('accountStatus').doc(call.callerId).get(),
+    db.collection('accountStatus').doc(call.recipientId).get(),
+  ]);
+  if (accountIsRestricted(callerStatus.data(), 'suspended') || accountIsRestricted(callerStatus.data(), 'messagingRestricted')
+    || accountIsRestricted(recipientStatus.data(), 'suspended') || accountIsRestricted(recipientStatus.data(), 'messagingRestricted')) {
+    throw new HttpsError('permission-denied', 'This call is no longer allowed for one of the accounts.');
+  }
   const key = apiKey.value();
   const secret = apiSecret.value();
   const wsUrl = process.env.LIVEKIT_URL?.trim() || DEFAULT_LIVEKIT_URL;
