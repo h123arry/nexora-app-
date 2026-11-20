@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, FileAudio, Loader2, Search, X } from 'lucide-react';
 import { ExtendedMessage } from '../types';
-import { resolvePrivateChatAudio } from '../services/firebase/storageService';
+import { resolvePrivateChatMedia } from '../services/firebase/storageService';
 
 interface MediaGalleryProps {
   isOpen: boolean;
@@ -40,8 +40,8 @@ export default function MediaGallery({
 
   const voiceMessages = useMemo(() => messages
     .filter(message => message.customMediaType === 'voice'
-      && typeof message.voiceAudioUrl === 'string'
-      && message.voiceAudioUrl.startsWith('chats/')
+      && typeof (message.voiceAudioUrl || message.mediaStoragePath) === 'string'
+      && (message.voiceAudioUrl || message.mediaStoragePath || '').startsWith('chats/')
       && !message.isOfflineUnsent
       && message.status !== 'failed'
       && message.status !== 'sending')
@@ -62,7 +62,7 @@ export default function MediaGallery({
     setLoadingMessageId(message.id);
     setErrorMessage('');
     try {
-      const url = await resolvePrivateChatAudio(message.voiceAudioUrl);
+      const url = await resolvePrivateChatMedia(message.mediaStoragePath || message.voiceAudioUrl || '');
       objectUrls.current.add(url);
       setAudioUrls(previous => ({ ...previous, [message.id]: url }));
     } catch {
@@ -109,7 +109,7 @@ export default function MediaGallery({
           <div className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 p-6 text-center">
             <FileAudio className="h-8 w-8 text-violet-300/50"/>
             <p className="mt-3 text-sm font-bold text-white/70">{searchQuery ? 'No matching voice notes' : 'No voice notes in this loaded history'}</p>
-            <p className="mt-1 max-w-xs text-xs leading-5 text-white/35">Only attachments that were actually sent in this conversation appear here. Images, videos and documents are not listed unless messaging supports and stores them.</p>
+            <p className="mt-1 max-w-xs text-xs leading-5 text-white/35">Only voice notes actually sent in this conversation appear here.</p>
           </div>
         ) : voiceMessages.map(message => {
           const sender = message.senderId === currentUserId ? 'You' : chatPartnerName;
