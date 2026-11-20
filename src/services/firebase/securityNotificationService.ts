@@ -6,7 +6,10 @@ export type SecurityEventType =
   | 'NEW_LOGIN'
   | 'PASSWORD_CHANGED'
   | 'EMAIL_CHANGED'
+  | 'EMAIL_LINKED'
   | 'PHONE_CHANGED'
+  | 'PHONE_LINKED'
+  | 'SESSIONS_REVOKED'
   | 'SUSPICIOUS_SIGNIN'
   | 'TWO_FACTOR_TOGGLED'
   | 'VERIFICATION_APPROVED';
@@ -55,6 +58,24 @@ export class SecurityNotificationService {
         emailTemplate = 'SECURITY_ALERT_EMAIL';
         break;
 
+      case 'EMAIL_LINKED':
+        title = 'Email Sign-in Connected';
+        body = 'An email sign-in method was connected to your NEXORA account.';
+        emailTemplate = 'SECURITY_ALERT_EMAIL';
+        break;
+
+      case 'PHONE_LINKED':
+        title = 'Phone Number Verified';
+        body = 'A phone number was verified and connected to your NEXORA account.';
+        emailTemplate = 'SECURITY_ALERT_PHONE';
+        break;
+
+      case 'SESSIONS_REVOKED':
+        title = 'All Other Sessions Signed Out';
+        body = 'Your account sessions were revoked. Sign in again on devices you still use.';
+        emailTemplate = 'SECURITY_ALERT_LOGIN';
+        break;
+
       case 'PHONE_CHANGED':
         title = 'Phone Number Updated';
         body = `Your verified phone number was changed to ${details.newValue || 'new number'}.`;
@@ -94,14 +115,26 @@ export class SecurityNotificationService {
         });
 
         // Store as in-app notification
-        await addDoc(collection(db, 'users', userId, 'notifications'), {
+        const notificationRef = await addDoc(collection(db, 'users', userId, 'notifications'), {
           type: 'security',
+          userId: 'system',
+          username: 'NEXORA',
+          avatar: '',
           title,
           content: body,
+          eventType,
+          category: 'account',
+          targetId: 'account-security',
           timestamp: new Date().toISOString(),
           isRead: false,
-          priority: 'high',
+          priority: 8,
           iconType: 'shield'
+        });
+        await addDoc(collection(db, 'users', userId, 'securityLogs'), {
+          notificationId: notificationRef.id,
+          eventType,
+          notificationDelivered: true,
+          recordedAt: serverTimestamp()
         });
       }
     } catch {
