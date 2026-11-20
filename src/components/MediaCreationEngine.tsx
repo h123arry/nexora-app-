@@ -1034,6 +1034,7 @@ export default function MediaCreationEngine({
         setCountdownTimer(prev => {
           if (prev !== null && prev <= 1) {
             window.clearInterval(counter);
+            let cleanupZoomRecording = () => {};
             try {
               const stream = videoStreamRef.current;
               if (!stream || !stream.getVideoTracks().some(track => track.readyState === 'live')) {
@@ -1041,7 +1042,6 @@ export default function MediaCreationEngine({
                 return null;
               }
               let recordingStream = stream;
-              let cleanupZoomRecording = () => {};
               const previewVideo = videoPreviewRef.current;
               if (cameraZoom > 1 && previewVideo && previewVideo.videoWidth > 0) {
                 const canvas = document.createElement('canvas');
@@ -1109,6 +1109,7 @@ export default function MediaCreationEngine({
               });
               setVideoRawBlob(null);
             } catch (error) {
+              cleanupZoomRecording();
               setIsRecording(false);
               window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Could not start video recording. Please retry.' }));
             }
