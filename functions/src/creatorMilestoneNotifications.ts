@@ -77,9 +77,10 @@ export async function issueCreatorMilestones(db: Firestore, creatorId: string): 
   const userSnapshot = await userRef.get();
   if (!userSnapshot.exists) return;
 
-  const [profileSnapshot, postsSnapshot] = await Promise.all([
+  const [profileSnapshot, postsSnapshot, earningsSnapshot] = await Promise.all([
     db.collection('publicProfiles').doc(creatorId).get(),
     db.collection('posts').where('userId', '==', creatorId).limit(500).get(),
+    db.collection('creatorEarnings').where('creatorId', '==', creatorId).limit(500).get(),
   ]);
   const user = userSnapshot.data() || {};
   const profile = profileSnapshot.data() || {};
@@ -94,7 +95,13 @@ export async function issueCreatorMilestones(db: Firestore, creatorId: string): 
     totalComments: posts.reduce((total, post) => total + safeCount(post.commentsCount ?? (Array.isArray(post.comments) ? post.comments.length : 0)), 0),
     totalShares: posts.reduce((total, post) => total + safeCount(post.shares), 0),
     totalSaves: posts.reduce((total, post) => total + safeCount(post.bookmarksCount ?? post.saves), 0),
-    totalEarnedNex: safeCount(user.totalEarnedNex),
+    totalEarnedNex: Math.max(
+      safeCount(user.totalEarnedNex),
+      earningsSnapshot.docs.reduce((total, document) => {
+        const earning = document.data();
+        return total + (earning.status === 'available' ? safeCount(earning.creatorShareNex) : 0);
+      }, 0),
+    ),
     highestPostViews: views.reduce((highest, value) => Math.max(highest, value), 0),
     publishedPosts: posts.length,
     isVerified: user.isVerified === true || profile.isVerified === true,
