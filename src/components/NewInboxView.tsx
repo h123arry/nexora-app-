@@ -903,7 +903,8 @@ export default function NewInboxView({
                   type="button"
                   aria-label={`Start a voice call with ${activeChat.partnerName}`}
                   onClick={() => void placeDirectCall('voice')}
-                  className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
+                  disabled={Boolean(activeChat.isGroup) || !isServerBackedInbox || Boolean(activeCall)}
+                  className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                   title="Voice Call"
                 >
                   <Phone className="w-4 h-4" />
