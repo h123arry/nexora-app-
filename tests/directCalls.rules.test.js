@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 
-const projectId = 'demo-nexora-direct-calls-rules';
+const projectId = 'demo-nexora-rules';
 let env;
 
 before(async () => {
