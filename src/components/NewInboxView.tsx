@@ -109,7 +109,7 @@ export default function NewInboxView({
   const sendingMessageRef = useRef(false);
   const attachmentUploadRef = useRef(false);
   const [attachmentProgress, setAttachmentProgress] = useState(0);
-  const [pendingAttachmentRetry, setPendingAttachmentRetry] = useState<{ files: File[]; forcedType?: 'image' | 'video' | 'audio' | 'document'; error: string } | null>(null);
+  const [pendingAttachmentRetry, setPendingAttachmentRetry] = useState<{ chatId: string; files: File[]; forcedType?: 'image' | 'video' | 'audio' | 'document'; error: string } | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -518,7 +518,7 @@ export default function NewInboxView({
       const message = error instanceof Error ? error.message : 'Attachment could not be sent. Please retry.';
       const remainingFiles = files.slice(uploadInProgress ? currentIndex : currentIndex);
       if (uploadInProgress && remainingFiles.length) {
-        setPendingAttachmentRetry({ files: remainingFiles, forcedType, error: message });
+        setPendingAttachmentRetry({ chatId: activeChatId, files: remainingFiles, forcedType, error: message });
       } else if (remainingFiles.length > 0) {
         setPendingAttachmentRetry({ files: remainingFiles, forcedType, error: message });
       }
@@ -958,7 +958,7 @@ export default function NewInboxView({
               <div ref={messagesEndRef} />
             </div>
 
-            {pendingAttachmentRetry && (
+            {pendingAttachmentRetry?.chatId === activeChatId && (
               <div className="mx-3 mb-2 flex items-center gap-3 rounded-xl border border-rose-400/20 bg-rose-500/[0.06] px-3 py-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[11px] font-medium text-white">Couldn't send {pendingAttachmentRetry.files.length === 1 ? pendingAttachmentRetry.files[0].name : `${pendingAttachmentRetry.files.length} attachments`}</p>
@@ -1148,7 +1148,7 @@ export default function NewInboxView({
       <input ref={galleryInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files); event.currentTarget.value = ''; }} />
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'image'); event.currentTarget.value = ''; }} />
       <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'video'); event.currentTarget.value = ''; }} />
-      <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/rtf" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'document'); event.currentTarget.value = ''; }} />
+      <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.rtf,.md,.json,.xml,.zip,.7z,.rar,.tar,.gz,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,text/plain,text/csv,application/rtf,application/json,application/xml,application/zip" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'document'); event.currentTarget.value = ''; }} />
       <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'audio'); event.currentTarget.value = ''; }} />
 
       {/* ATTACHMENT MENU */}
