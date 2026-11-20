@@ -1,3 +1,32 @@
+let nexoraMessaging = null;
+try {
+  importScripts('https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js');
+  importScripts('https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging-compat.js');
+  firebase.initializeApp({
+    projectId: "nexora-prod-voiceharrison",
+    appId: "1:128918144717:web:1bf7a574fddb18bc3e0b84",
+    apiKey: "AIzaSyA8RyvP6crBpl4Zg_bgjlTqqgZkMA85NT4",
+    messagingSenderId: "128918144717"
+  });
+  nexoraMessaging = firebase.messaging();
+  nexoraMessaging.onBackgroundMessage(payload => {
+    // FCM displays notification-payload messages automatically.
+    if (payload.notification) return;
+    const data = payload.data || {};
+    const title = data.title || (data.username ? `@${data.username}` : 'NEXORA');
+    self.registration.showNotification(title, {
+      body: data.body || data.content || 'You have a new NEXORA update.',
+      icon: '/nexora-mark.png',
+      badge: '/icons/icon-48.png',
+      tag: data.notificationId || `nexora-${data.type || 'update'}-${data.targetId || 'general'}`,
+      data,
+    });
+  });
+} catch (error) {
+  // Push support must never prevent the core offline app worker from installing.
+  console.warn('[NEXORA] Firebase Messaging is unavailable in this browser.', error);
+}
+
 const CACHE_NAME = 'nexora-shell-cache-v3';
 const MAX_DYNAMIC_ENTRIES = 80;
 const ASSETS_TO_CACHE = [
@@ -72,4 +101,31 @@ self.addEventListener('fetch', (event) => {
       });
     })
   );
+});
+
+
+// Keep notification routing in the same root-scoped worker as the PWA shell.
+// FCM's automatic click handler is stopped so the existing app window is reused.
+self.addEventListener('notificationclick', event => {
+  event.stopImmediatePropagation();
+  event.notification.close();
+  const data = event.notification.data || {};
+  const target = new URL(data.url || '/', self.location.origin);
+  target.searchParams.set('nxPushType', data.type || 'system');
+  if (data.userId) target.searchParams.set('nxPushUser', data.userId);
+  if (data.targetId) target.searchParams.set('nxPushTarget', data.targetId);
+  if (data.notificationId) target.searchParams.set('nxPushNotification', data.notificationId);
+  const targetUrl = target.toString();
+
+  event.waitUntil((async () => {
+    const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of windows) {
+      if ('focus' in client) {
+        await client.focus();
+        client.postMessage({ type: 'NEXORA_PUSH_OPEN', data });
+        return;
+      }
+    }
+    await clients.openWindow(targetUrl);
+  })());
 });
