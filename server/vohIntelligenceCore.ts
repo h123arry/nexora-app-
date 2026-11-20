@@ -22,6 +22,7 @@ export interface VohToolContext {
   posts: Record<string, unknown>[];
   circles: Record<string, unknown>[];
   notifications: Record<string, unknown>[];
+  pulse?: Record<string, unknown> | null;
 }
 
 export interface VohToolResult {
