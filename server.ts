@@ -828,6 +828,11 @@ function shapeVohContext(context: any, authenticatedUid: string) {
 
 // Helper to initialize Gemini safely (lazy loading)
 function getGeminiClient(): { ai: GoogleGenAI; model: string } | null {
+  // The app selects a provider by configuration; provider SDK details stay
+  // behind the VOH model adapter. Gemini remains the configured adapter until
+  // another provider is deliberately implemented and tested.
+  const provider = (process.env.VOH_AI_PROVIDER || 'gemini').trim().toLowerCase();
+  if (provider !== 'gemini') return null;
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
     return null;
@@ -840,7 +845,7 @@ function getGeminiClient(): { ai: GoogleGenAI; model: string } | null {
       },
     },
   });
-  return { ai, model: process.env.GEMINI_MODEL || 'gemini-2.5-flash' };
+  return { ai, model: process.env.VOH_AI_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-flash' };
 }
 
 // ----------------- VOH AI API ENDPOINTS -----------------
