@@ -767,6 +767,23 @@ export default function NexoraVideoPlayer({
     if (now - lastTapRef.current < 280) {
       if (singleTapTimeoutRef.current) clearTimeout(singleTapTimeoutRef.current);
       lastTapRef.current = 0;
+      const bounds = containerRef.current?.getBoundingClientRect();
+      const relativeX = bounds ? (clientX - bounds.left) / bounds.width : 0.5;
+
+      if (relativeX < 0.34 || relativeX > 0.66) {
+        const video = videoRef.current;
+        if (video && Number.isFinite(video.duration)) {
+          const delta = relativeX < 0.34 ? -10 : 10;
+          const nextTime = Math.max(0, Math.min(video.duration, video.currentTime + delta));
+          video.currentTime = nextTime;
+          setCurrentTime(nextTime);
+          setHud({ type: null, value: nextTime, visible: true });
+          if (playStateIndicatorTimeoutRef.current) clearTimeout(playStateIndicatorTimeoutRef.current);
+          playStateIndicatorTimeoutRef.current = window.setTimeout(() => setHud(current => ({ ...current, visible: false })), 650);
+        }
+        return;
+      }
+
       if (!post.isLikedByUser) { onSpark(); playNexoraSound('social.spark'); }
       recordReelSignal(post.id, { liked: true }, currentUser?.id);
       setHeartPosition({ x: clientX, y: clientY });
