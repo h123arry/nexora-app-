@@ -1,5 +1,6 @@
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { initializeApp as initializeAdminApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
@@ -214,14 +215,19 @@ describe('VOH API security boundary', () => {
   });
 
   it('shares a per-UID quota across route requests and rejects the excess', async () => {
+    const rateLimitId = createHash('sha256').update(uid).digest('hex');
+    // Earlier tests deliberately exercise several VOH routes using this same UID.
+    // Reset only this test user's emulator bucket so this boundary test starts at zero.
+    await testDb.collection('vohRateLimits').doc(rateLimitId).delete();
     const replies: Response[] = [];
-    // Keep requests sequential: the emulator's transaction contention behavior
-    // is not a reliable way to test the production quota boundary under a burst.
+    // Keep requests sequential: emulator transaction contention is not a reliable
+    // way to test the production quota boundary under a burst.
     for (let index = 0; index < 24; index += 1) {
       replies.push(await signedRequest('summarize-post', { content: 'A short post.' }));
     }
-    assert.equal(replies.filter(response => response.status === 429).length, 4);
     assert.ok(replies.slice(0, 20).every(response => response.status === 503));
+    assert.ok(replies.slice(20).every(response => response.status === 429));
+    assert.equal(replies.filter(response => response.status === 429).length, 4);
     assert.ok(uid.length > 0);
   });
 });
