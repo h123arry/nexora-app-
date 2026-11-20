@@ -43,8 +43,6 @@ import AttachmentMenu from './AttachmentMenu';
 import VoiceRecorder from './VoiceRecorder';
 import EmojiPicker from './EmojiPicker';
 import MediaGallery from './MediaGallery';
-import CallScreen from './CallScreen';
-import { startDirectCall } from '../services/directCallService';
 import CirclesView from './CirclesView';
 
 interface NewInboxViewProps {
@@ -114,7 +112,6 @@ export default function NewInboxView({
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const audioInputRef = useRef<HTMLInputElement | null>(null);
-  const [activeCall, setActiveCall] = useState<{ callId: string; type: 'voice' | 'video'; partnerName: string; partnerAvatar: string; incoming: boolean } | null>(null);
   
   // Message context / reply / edit
   const [activeContextMessageId, setActiveContextMessageId] = useState<string | null>(null);
@@ -190,21 +187,17 @@ export default function NewInboxView({
     });
   }, [currentUser.id, isServerBackedInbox]);
 
-  const placeDirectCall = async (type: 'voice' | 'video') => {
-    if (!activeChat || activeChat.isGroup || !isServerBackedInbox || activeCall) return;
-    try {
-      const started = await startDirectCall(activeChat.id, activeChat.partnerId, type);
-      setActiveCall({
-        callId: started.callId,
+  const placeDirectCall = (type: 'voice' | 'video') => {
+    if (!activeChat || activeChat.isGroup || !isServerBackedInbox) return;
+    window.dispatchEvent(new CustomEvent('NEXORA_START_DIRECT_CALL', {
+      detail: {
+        chatId: activeChat.id,
+        recipientId: activeChat.partnerId,
         type,
         partnerName: activeChat.partnerName,
         partnerAvatar: activeChat.partnerAvatar || '',
-        incoming: false,
-      });
-    } catch (error: any) {
-      const message = error?.message || 'The call could not be started. Please try again.';
-      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
-    }
+      },
+    }));
   };
 
   // Firestore real-time listener
@@ -883,7 +876,7 @@ export default function NewInboxView({
                   type="button"
                   aria-label={`Start a voice call with ${activeChat.partnerName}`}
                   onClick={() => void placeDirectCall('voice')}
-                  disabled={Boolean(activeChat.isGroup) || !isServerBackedInbox || Boolean(activeCall)}
+                  disabled={Boolean(activeChat.isGroup) || !isServerBackedInbox}
                   className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                   title="Voice Call"
                 >
@@ -893,7 +886,7 @@ export default function NewInboxView({
                   type="button"
                   aria-label={`Start a video call with ${activeChat.partnerName}`}
                   onClick={() => void placeDirectCall('video')}
-                  disabled={Boolean(activeChat.isGroup) || !isServerBackedInbox || Boolean(activeCall)}
+                  disabled={Boolean(activeChat.isGroup) || !isServerBackedInbox}
                   className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                   title="Video Call"
                 >
@@ -1223,19 +1216,6 @@ export default function NewInboxView({
           hasMoreHistory={Boolean(activeChatId && hasOlderMessages[activeChatId])}
           isLoadingOlder={isLoadingOlderMessages}
           onLoadOlder={() => void loadOlderMessages()}
-        />
-      )}
-
-      {/* CALL SCREEN */}
-      {activeCall && (
-        <CallScreen
-          isOpen={Boolean(activeCall)}
-          type={activeCall.type}
-          partnerName={activeCall.partnerName}
-          partnerAvatar={activeCall.partnerAvatar}
-          callId={activeCall.callId}
-          incoming={activeCall.incoming}
-          onClose={() => setActiveCall(null)}
         />
       )}
 
