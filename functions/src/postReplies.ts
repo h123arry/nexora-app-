@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 
 export interface PublicPostReply {
@@ -54,6 +54,10 @@ export async function addPublicPostCommentReply(
       content,
       timestamp: new Date().toISOString(),
     };
+    const mentionedUsernames = [...new Set([...content.matchAll(/(?:^|\s)@([a-zA-Z0-9_.]{1,40})\b/g)].map(match => match[1].toLowerCase()))].slice(0, 10);
+    const mentionedProfiles = mentionedUsernames.length
+      ? await transaction.get(db.collection('publicProfiles').where('username', 'in', mentionedUsernames))
+      : null;
     comments[index] = { ...comment, replies: [...replies, reply] };
     transaction.update(postRef, { comments, repliesUpdatedAt: FieldValue.serverTimestamp() });
 
@@ -63,14 +67,35 @@ export async function addPublicPostCommentReply(
       transaction.create(notificationRef, {
         id: notificationRef.id,
         type: 'comment_reply',
-        userId: recipientId,
+        userId: uid,
         username: reply.username,
+        actorName: reply.name,
         avatar: reply.avatar,
         targetId: postId,
         content: 'replied to your comment',
-        timestamp: new Date().toISOString(),
+        timestamp: reply.timestamp,
         isRead: false,
+        priority: 2,
+        actionText: 'View Post',
+        actionType: 'view_post',
       });
+    }
+    if (mentionedProfiles) {
+      for (const mentioned of mentionedProfiles.docs) {
+        if (mentioned.id === uid) continue;
+        const mentionedData = mentioned.data();
+        const username = String(mentionedData.username || '').replace(/^@+/, '').toLowerCase();
+        if (!username || !mentionedUsernames.includes(username)) continue;
+        const digest = createHash('sha256').update(`${postId}:${commentId}:${id}:${mentioned.id}`).digest('hex').slice(0, 40);
+        const mentionRef = db.collection('users').doc(mentioned.id).collection('notifications').doc(`mention_${digest}`);
+        transaction.create(mentionRef, {
+          id: mentionRef.id, type: 'mention', userId: uid,
+          username: reply.username, actorName: reply.name, avatar: reply.avatar,
+          targetId: postId, content: `mentioned you in a reply: "${content.slice(0, 90)}"`,
+          timestamp: reply.timestamp, isRead: false, priority: 2,
+          actionText: 'View Post', actionType: 'view_post', category: 'mentions',
+        });
+      }
     }
     return { reply, created: true };
   });

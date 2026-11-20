@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, BookmarkCheck, Eye, ArrowRight, Sparkle, History, VolumeX, AlertTriangle, Layers, Trash, Star, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, CheckSquare, Square, Check, Scale } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
-import { deleteOwnNotification, deleteOwnNotifications, setNotificationReadState, setNotificationsReadState } from '../services/dataService';
+import { addFollow, deleteOwnNotification, deleteOwnNotifications, getNotificationPreferences, saveNotificationPreferences, setNotificationReadState, setNotificationsReadState } from '../services/dataService';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { getNotificationTimeSection } from '../utils/notificationTime';
@@ -57,6 +57,8 @@ export default function NotificationsView({
   // Multi-select management state
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [followBackPending, setFollowBackPending] = useState<string[]>([]);
+  const [followedBackIds, setFollowedBackIds] = useState<string[]>([]);
 
 
   // Floating notifications/toast feedback system
@@ -72,10 +74,12 @@ export default function NotificationsView({
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   // Notification configuration preferences
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [settingsToggles, setSettingsToggles] = useState({
     likes: true,
     comments: true,
     followers: true,
+    reposts: true,
     mentions: true,
     communities: true,
     events: true,
@@ -83,6 +87,7 @@ export default function NotificationsView({
     creatorUploads: true,
     friendRequests: true,
     securityAlerts: true,
+    push: true,
   });
 
   // Notifications are hydrated from the real notification prop; no sample activity is seeded.
@@ -158,6 +163,27 @@ export default function NotificationsView({
 
   }, [propNotifications]);
 
+  useEffect(() => {
+    let active = true;
+    setPreferencesLoaded(false);
+    getNotificationPreferences(currentUser.id)
+      .then(saved => {
+        if (!active) return;
+        setSettingsToggles(previous => ({ ...previous, ...saved }));
+        setPreferencesLoaded(true);
+      })
+      .catch(() => {
+        if (active) addToast("Couldn't load your notification preferences. Your saved settings were left unchanged.");
+      });
+    return () => { active = false; };
+  }, [currentUser.id]);
+
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+    void saveNotificationPreferences(currentUser.id, settingsToggles)
+      .catch(() => addToast("Couldn't save your notification preferences. Please try again."));
+  }, [currentUser.id, preferencesLoaded, settingsToggles]);
+
   // ---------------------------------------------------------------------------
   // INTERACTIVE ACTION HANDLERS
   // ---------------------------------------------------------------------------
@@ -229,6 +255,22 @@ export default function NotificationsView({
     }
   };
 
+  const handleFollowBack = async (notif: RichNotification, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const actorId = notif.userId;
+    if (!actorId || actorId === 'multiple' || actorId === currentUser.id || followedBackIds.includes(actorId) || followBackPending.includes(actorId)) return;
+    setFollowBackPending(previous => [...previous, actorId]);
+    try {
+      await addFollow(currentUser.id, actorId);
+      setFollowedBackIds(previous => [...previous, actorId]);
+      addToast(`You're now following @${notif.username}.`);
+    } catch {
+      addToast(`Couldn't follow @${notif.username}. Please try again.`);
+    } finally {
+      setFollowBackPending(previous => previous.filter(id => id !== actorId));
+    }
+  };
+
   const handleLoadMore = () => {
     setVisibleCount(previous => previous + 5);
   };
@@ -270,7 +312,7 @@ export default function NotificationsView({
     }
 
     // Interactive custom routing checks
-    if (notif.type === 'comment' || notif.type === 'spark' || notif.type === 'like') {
+    if (notif.type === 'comment' || notif.type === 'comment_reply' || notif.type === 'mention' || notif.type === 'spark' || notif.type === 'like' || notif.type === 'repost') {
       // Redirect to Feed, look for element
       window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'feed' } }));
       setTimeout(() => {
@@ -291,15 +333,19 @@ export default function NotificationsView({
           addToast('The linked post is not currently available in your feed.');
         }
       }, 500);
-    } else if (notif.type === 'follow' || notif.type === 'profile_view') {
+    } else if (notif.type === 'follow' || notif.type === 'profile_view' || notif.type === 'gift') {
       if (onViewProfile && notif.userId && notif.userId !== 'multiple') {
         onViewProfile(notif.userId);
       } else {
         window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: notif.userId || notif.username } }));
         addToast(`Viewing profile of @${notif.username}`);
       }
+    } else if (notif.type === 'message') {
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox' } }));
+      if (notif.targetId) window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-chat', { detail: { chatId: notif.targetId } })), 650);
     } else if (notif.type === 'pulse_alert') {
-      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'pulse' } }));
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'live' } }));
+      if (notif.targetId) window.setTimeout(() => window.dispatchEvent(new CustomEvent('nexora-open-live', { detail: { sessionId: notif.targetId } })), 650);
     } else if (notif.type === 'security' || notif.category === 'account') {
       const section = notif.type === 'security' ? 'security' : 'account';
       window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'settings' } }));
@@ -320,9 +366,10 @@ export default function NotificationsView({
       if (n.isArchived) return false;
 
       // Filter settings blocks
-      if (n.type === 'like' && !settingsToggles.likes) return false;
-      if (n.type === 'comment' && !settingsToggles.comments) return false;
+      if ((n.type === 'like' || n.type === 'spark') && !settingsToggles.likes) return false;
+      if ((n.type === 'comment' || n.type === 'comment_reply') && !settingsToggles.comments) return false;
       if (n.type === 'follow' && !settingsToggles.followers) return false;
+      if (n.type === 'repost' && !settingsToggles.reposts) return false;
       if (n.type === 'mention' && !settingsToggles.mentions) return false;
       if (n.type === 'community' && !settingsToggles.communities) return false;
       if ((n.type === 'system' || n.type === 'security') && !settingsToggles.securityAlerts) return false;
@@ -330,16 +377,18 @@ export default function NotificationsView({
       // Match categories
       if (activeCategory === 'all') return true;
       if (activeCategory === 'mentions') return n.type === 'mention';
-      if (activeCategory === 'comments') return n.type === 'comment';
+      if (activeCategory === 'comments') return n.type === 'comment' || n.type === 'comment_reply';
       if (activeCategory === 'likes') return n.type === 'like' || n.type === 'spark';
+      if (activeCategory === 'reposts') return n.type === 'repost';
       if (activeCategory === 'followers') return n.type === 'follow';
+      if (activeCategory === 'messages') return n.type === 'message';
       if (activeCategory === 'profile_views') return n.type === 'profile_view';
       if (activeCategory === 'system' || activeCategory === 'account') return n.category === 'account' || n.type === 'system' || n.type === 'security';
       if (activeCategory === 'origin') return n.type === 'origin_attribution';
       if (activeCategory === 'communities') return n.type === 'community';
-      if (activeCategory === 'live') return n.type === 'pulse_alert' && n.content.includes('LIVE');
+      if (activeCategory === 'live') return n.type === 'pulse_alert';
       if (activeCategory === 'verification') return n.type === 'reputation_milestone' && n.content.includes('Verification');
-      if (activeCategory === 'creator') return (n.type === 'reputation_milestone' && n.category !== 'account') || n.category === 'creator' || n.type === 'mission_milestone';
+      if (activeCategory === 'creator') return n.type === 'gift' || (n.type === 'reputation_milestone' && n.category !== 'account') || n.category === 'creator' || n.type === 'mission_milestone';
 
       return true;
     });
@@ -393,7 +442,10 @@ export default function NotificationsView({
       case 'spark':
         return <Zap className="w-4 h-4 text-amber-400 fill-amber-400/20" />;
       case 'comment':
+      case 'comment_reply':
         return <MessageSquare className="w-4 h-4 text-pink-400" />;
+      case 'gift':
+        return <Star className="w-4 h-4 text-violet-300" />;
       case 'follow':
         return <UserPlus className="w-4 h-4 text-emerald-400" />;
       case 'profile_view':
@@ -617,11 +669,13 @@ export default function NotificationsView({
                       { key: 'likes', label: 'Likes & Sparks' },
                       { key: 'comments', label: 'Comments & Replies' },
                       { key: 'followers', label: 'Followers' },
+                      { key: 'reposts', label: 'Quotes & reposts' },
                       { key: 'mentions', label: 'Mentions (@)' },
                       { key: 'communities', label: 'Communities' },
                       { key: 'events', label: 'Events Registration' },
                       { key: 'verification', label: 'Verification Status' },
-                      { key: 'securityAlerts', label: 'Security & Auth Alerts' }
+                      { key: 'securityAlerts', label: 'Security & Auth Alerts' },
+                      { key: 'push', label: 'Push alerts' }
                     ].map(pref => {
                       const val = settingsToggles[pref.key as keyof typeof settingsToggles];
                       return (
@@ -719,6 +773,8 @@ export default function NotificationsView({
             { id: 'comments', label: 'Comments' },
             { id: 'likes', label: 'Sparks & Likes' },
             { id: 'followers', label: 'Followers' },
+            { id: 'messages', label: 'Messages' },
+            { id: 'reposts', label: 'Quotes & reposts' },
             { id: 'profile_views', label: 'Profile Views' },
             { id: 'live', label: 'Live Streams' },
             { id: 'communities', label: 'Communities' },
@@ -901,7 +957,7 @@ export default function NotificationsView({
                                       }
                                     }}
                                   >
-                                    @{notif.username}
+                                    {notif.actorName || `@${notif.username}`}
                                   </button>
                                 )}
                                 <span>{notif.content}</span>
@@ -962,6 +1018,17 @@ export default function NotificationsView({
                               )}
 
                             </div>
+
+                            {notif.type === 'follow' && notif.userId && notif.userId !== currentUser.id && notif.userId !== 'multiple' && (
+                              <button
+                                type="button"
+                                onClick={(event) => void handleFollowBack(notif, event)}
+                                disabled={followBackPending.includes(notif.userId) || followedBackIds.includes(notif.userId)}
+                                className="px-3 py-1.5 rounded-xl border border-violet-400/25 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20 disabled:opacity-60 disabled:cursor-default text-[10px] font-semibold transition-colors"
+                              >
+                                {followBackPending.includes(notif.userId) ? 'Following…' : followedBackIds.includes(notif.userId) ? 'Following' : 'Follow back'}
+                              </button>
+                            )}
 
                             <div className="flex items-center gap-1.5 opacity-60 group-hover/item:opacity-100 transition-opacity">
                               <button

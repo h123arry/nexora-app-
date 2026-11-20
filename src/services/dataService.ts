@@ -994,3 +994,35 @@ export async function updateMessageReadReceipt(
   // Preserve the established direct-message receipt contract.
   await updateDoc(messageRef, { status });
 }
+
+
+export type NotificationPreferenceMap = {
+  likes: boolean; comments: boolean; followers: boolean; reposts: boolean; mentions: boolean;
+  communities: boolean; events: boolean; verification: boolean;
+  creatorUploads: boolean; friendRequests: boolean; securityAlerts: boolean; push: boolean;
+};
+
+export async function getNotificationPreferences(userId: string): Promise<Partial<NotificationPreferenceMap>> {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) throw new Error('Only the signed-in account can read its notification preferences.');
+  const snapshot = await getDoc(doc(db, 'users', userId, 'settings', 'preferences'));
+  const value = snapshot.data()?.notifications;
+  if (!value || typeof value !== 'object') return {};
+  const allowed: (keyof NotificationPreferenceMap)[] = ['likes','comments','followers','reposts','mentions','communities','events','verification','creatorUploads','friendRequests','securityAlerts','push'];
+  return Object.fromEntries(allowed.filter(key => typeof value[key] === 'boolean').map(key => [key, value[key]])) as Partial<NotificationPreferenceMap>;
+}
+
+export async function saveNotificationPreferences(userId: string, preferences: NotificationPreferenceMap): Promise<void> {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) throw new Error('Only the signed-in account can change its notification preferences.');
+  const allowed: (keyof NotificationPreferenceMap)[] = ['likes','comments','followers','reposts','mentions','communities','events','verification','creatorUploads','friendRequests','securityAlerts','push'];
+  const clean = Object.fromEntries(allowed.map(key => [key, preferences[key] === true])) as NotificationPreferenceMap;
+  const preferencesRef = doc(db, 'users', userId, 'settings', 'preferences');
+  const existing = await getDoc(preferencesRef);
+  if (existing.exists()) {
+    await updateDoc(preferencesRef, { notifications: clean, updatedAt: serverTimestamp() });
+  } else {
+    await setDoc(preferencesRef, {
+      privacy: {}, notifications: clean, appearance: {}, content: {}, feed: {}, security: {},
+      updatedAt: serverTimestamp(),
+    });
+  }
+}

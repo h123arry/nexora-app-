@@ -620,12 +620,23 @@ export class AuthService {
     }
   }
 
+  private static async unregisterPushForCurrentDevice(): Promise<void> {
+    try {
+      const { PushNotificationService } = await import('./pushNotificationService');
+      await PushNotificationService.unregister();
+    } catch (error) {
+      // Authentication must remain available even if a stale push token cannot be revoked.
+      console.warn('[NEXORA] Could not unregister this device push token before sign-out.', error);
+    }
+  }
+
   /**
    * Logout
    */
   static async logout(): Promise<void> {
     this.requireConfigured();
     try {
+      await this.unregisterPushForCurrentDevice();
       await signOut(auth);
     } catch (err: any) {
       throw this.publicAuthError(err);
@@ -724,6 +735,7 @@ export class AuthService {
     if (!auth.currentUser) throw new Error('Sign in before revoking active sessions.');
     const revoke = httpsCallable(functions, 'revokeAllSessions');
     try {
+      await this.unregisterPushForCurrentDevice();
       await revoke({});
       await signOut(auth);
     } catch (error) {
