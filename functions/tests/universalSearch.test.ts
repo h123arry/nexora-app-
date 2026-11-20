@@ -31,8 +31,8 @@ before(async () => {
   await db.doc('posts/blocked-post').set({ id:'blocked-post', userId:'blocked-user', content:'Nexora blocked content', audience:'public', timestamp:new Date(), tags:['nexora'] });
   await db.doc('follows/viewer_creator-two').set({ followerId:'viewer', followingId:'creator-two', createdAt:new Date() });
   await db.doc('posts/followed-video').set({ id:'followed-video', userId:'creator-two', content:'Nexora video discovery', audience:'public', mediaType:'video', timestamp:new Date(), tags:['community'], likes:2 });
-  await db.doc('posts/trend-a').set({ id:'trend-a', userId:'public-user', content:'A trending design post', audience:'public', timestamp:new Date(), tags:['trending'], likes:20 });
-  await db.doc('posts/trend-b').set({ id:'trend-b', userId:'creator-two', content:'Another trending design post', audience:'public', timestamp:new Date(), tags:['trending'], likes:15 });
+  await trendingDb.doc('posts/trend-a').set({ id:'trend-a', userId:'public-user', content:'A trending design post', audience:'public', timestamp:new Date(), tags:['trending'], likes:20 });
+  await trendingDb.doc('posts/trend-b').set({ id:'trend-b', userId:'creator-two', content:'Another trending design post', audience:'public', timestamp:new Date(), tags:['trending'], likes:15 });
   await db.doc('posts/private-trend-a').set({ id:'private-trend-a', userId:'private-user', content:'Private-only trend', audience:'public', timestamp:new Date(), tags:['private-only'] });
   await db.doc('posts/private-trend-b').set({ id:'private-trend-b', userId:'private-user', content:'Private-only trend', audience:'public', timestamp:new Date(), tags:['private-only'] });
   await syncUniversalSearchRecord(db,'person','public-user','users/public-user',(await db.doc('users/public-user').get()).data()!);
@@ -148,10 +148,10 @@ it('trending requires recent multi-creator activity and reports rising-topic mom
   await trendingDb.doc('users/public-user').set({ username:'public-user' });
   await trendingDb.doc('users/creator-two').set({ username:'creator-two' });
   await trendingDb.doc('posts/trend-old').set({ id:'trend-old', userId:'public-user', audience:'public', timestamp:new Date(now-36*3600000), tags:['momentum-check'], likes:10 });
-  await db.doc('posts/trend-new-a').set({ id:'trend-new-a', userId:'public-user', audience:'public', timestamp:new Date(now-2*3600000), tags:['momentum-check'], likes:30 });
-  await db.doc('posts/trend-new-b').set({ id:'trend-new-b', userId:'creator-two', audience:'public', timestamp:new Date(now-1*3600000), tags:['momentum-check'], likes:20 });
-  await db.doc('posts/trend-archived').set({ id:'trend-archived', userId:'public-user', audience:'public', timestamp:new Date(now-30*60*1000), tags:['archived-only'], isArchived:true });
-  await db.doc('posts/trend-archived-two').set({ id:'trend-archived-two', userId:'creator-two', audience:'public', timestamp:new Date(now-20*60*1000), tags:['archived-only'] });
+  await trendingDb.doc('posts/trend-new-a').set({ id:'trend-new-a', userId:'public-user', audience:'public', timestamp:new Date(now-2*3600000), tags:['momentum-check'], likes:30 });
+  await trendingDb.doc('posts/trend-new-b').set({ id:'trend-new-b', userId:'creator-two', audience:'public', timestamp:new Date(now-1*3600000), tags:['momentum-check'], likes:20 });
+  await trendingDb.doc('posts/trend-archived').set({ id:'trend-archived', userId:'public-user', audience:'public', timestamp:new Date(now-30*60*1000), tags:['archived-only'], isArchived:true });
+  await trendingDb.doc('posts/trend-archived-two').set({ id:'trend-archived-two', userId:'creator-two', audience:'public', timestamp:new Date(now-20*60*1000), tags:['archived-only'] });
   const topics=await getNexoraTrending(trendingDb);
   assert.equal(topics.some(item=>item.tag==='archived-only'),false);
   const topic=topics.find(item=>item.tag==='momentum-check');
