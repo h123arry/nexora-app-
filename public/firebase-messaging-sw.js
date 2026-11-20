@@ -18,12 +18,15 @@ messaging.onBackgroundMessage((payload) => {
   // Only create a notification here for data-only messages to avoid duplicates.
   if (payload.notification) return;
   const data = payload.data || {};
-  const notificationTitle = data.title || (data.username ? `@${data.username}` : 'NEXORA');
+  const isIncomingCall = data.type === 'incoming_call';
+  const notificationTitle = data.title || (isIncomingCall ? (data.callerName || 'NEXORA call') : data.username ? `@${data.username}` : 'NEXORA');
   const notificationOptions = {
-    body: data.body || data.content || 'You have a new NEXORA update.',
+    body: isIncomingCall ? (data.callType === 'video' ? 'Incoming video call' : 'Incoming voice call') : data.body || data.content || 'You have a new NEXORA update.',
     icon: '/nexora-mark.png',
     badge: '/icons/icon-48.png',
-    tag: data.notificationId || `nexora-${data.type || 'update'}-${data.targetId || 'general'}`,
+    tag: isIncomingCall ? `nexora-call-${data.callId || 'incoming'}` : data.notificationId || `nexora-${data.type || 'update'}-${data.targetId || 'general'}`,
+    requireInteraction: isIncomingCall,
+    vibrate: isIncomingCall ? [300, 150, 300, 150, 600] : undefined,
     data
   };
   self.registration.showNotification(notificationTitle, notificationOptions);
