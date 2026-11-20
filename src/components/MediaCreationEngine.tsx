@@ -866,7 +866,7 @@ export default function MediaCreationEngine({
         if (files.length > remaining) {
           window.dispatchEvent(new CustomEvent('toast', { detail: `Only ${remaining} more photo${remaining === 1 ? '' : 's'} can be added to this post.` }));
         }
-        const imported = await Promise.all(chosen.map(async file => {
+        const imported: Array<SelectedImage | null> = await Promise.all(chosen.map(async (file): Promise<SelectedImage | null> => {
           try {
             await validateMediaFile(file, 'image');
             const url = await new Promise<string>((resolve, reject) => {
