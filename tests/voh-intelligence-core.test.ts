@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { runVohIntelligence, VohToolRegistry, VohEmptyModelResponseError, createGeminiVohProvider } from '../server/vohIntelligenceCore';
+import { runVohIntelligence, VohToolRegistry, VohEmptyModelResponseError, createGeminiVohProvider, resolveVohContextScope } from '../server/vohIntelligenceCore';
 
 const context = { currentUser: { name: 'Test' }, posts: [], circles: [], notifications: [] };
 
@@ -49,4 +49,12 @@ test('Gemini adapter translates the provider-neutral request contract', async ()
   assert.equal(response.text, 'ok');
   assert.equal(received?.model, 'gemini-test');
   assert.equal((received?.config as { systemInstruction: string }).systemInstruction, 'rules');
+});
+
+test('VOH context scope defaults to none and accepts only explicit feed/profile scopes', () => {
+  assert.equal(resolveVohContextScope(undefined), 'none');
+  assert.equal(resolveVohContextScope('inbox'), 'none');
+  assert.equal(resolveVohContextScope('everything'), 'none');
+  assert.equal(resolveVohContextScope('feed'), 'feed');
+  assert.equal(resolveVohContextScope('profile'), 'profile');
 });
