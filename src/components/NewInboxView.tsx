@@ -985,8 +985,7 @@ export default function NewInboxView({
                       playingVoiceId={null}
                       voiceProgress={0}
                       voicePlaybackSpeed={1}
-                      currentUserId={currentUser.id}
-                      isPinned={false}
+                                  isPinned={false}
                       groupReadCount={activeChat?.isGroup ? Object.values(msg.recipientReceipts || {}).filter(receipt => receipt.status === 'read').length : 0}
                       groupRecipientCount={activeChat?.isGroup ? Math.max(0, (activeChat.membersCount || 0) - 1) : 0}
                     />
