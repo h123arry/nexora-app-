@@ -453,7 +453,17 @@ body {
 @media (max-width: 767px) {
   .nx-story-rail { padding-bottom: .15rem; }
   .nx-story-track { gap: .8rem; }
-  .nx-profile-media-grid { gap: 2px; }
+  /* Profile tiles stay nearly flush: a single-pixel midnight divider, never card gaps. */
+  .nx-profile-media-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px !important;
+    width: 100%;
+  }
+  .nx-profile-media-grid > * {
+    aspect-ratio: 3 / 4;
+    min-width: 0;
+    border-radius: 0;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .nx-story-track > button { transition: none; }
