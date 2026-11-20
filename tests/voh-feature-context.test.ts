@@ -22,7 +22,7 @@ function document(id: string, data: Record<string, unknown>, parent?: VohSnapsho
   return {
     id,
     data: () => data,
-    ref: parent ? { parent: { parent: { get: async () => parent } } } : undefined,
+    ref: parent ? { parent: { parent: { path: `communities/${parent.id}`, get: async () => parent } } } : undefined,
   } as VohSnapshotDocument;
 }
 
