@@ -37,7 +37,7 @@ export default function MatrixView({
   }, [initialSubTab]);
   const [customPostContent, setCustomPostContent] = useState('');
   const [customPostTags, setCustomPostTags] = useState('');
-  const [deploySuccess, setDeploySuccess] = useState(false);
+  const [deploySuccess, setShare postSuccess] = useState(false);
 
   // Predefined community tags for quick tap selection
   const popularTags = ['Food', 'Travel', 'Music', 'Learning', 'Business', 'Creativity'];
@@ -168,7 +168,7 @@ export default function MatrixView({
                   {deploySuccess && (
                     <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono rounded-xl flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 shrink-0" />
-                      <span>POST SHARED SUCCESSFULLY! VISIBLE ON THE FEED.</span>
+                      <span>Post shared successfully.</span>
                     </div>
                   )}
 
@@ -178,7 +178,7 @@ export default function MatrixView({
                       <textarea
                         value={customPostContent}
                         onChange={(e) => setCustomPostContent(e.target.value)}
-                        placeholder="Write your update, design discovery, or question..."
+                        placeholder="Write something you'd like to share..."
                         className="w-full h-28 p-3 rounded-2xl bg-current/5 border border-current/10 outline-hidden text-current text-xs font-sans placeholder-current/40 focus:border-white/10 transition-colors resize-none leading-relaxed"
                         required
                       />
@@ -186,7 +186,7 @@ export default function MatrixView({
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-mono tracking-wider text-current/60 uppercase font-bold">Add Tags (comma-separated)</label>
+                        <label className="text-[11px] font-mono tracking-wider text-current/60 uppercase font-bold">Add topics (optional)</label>
                         <input
                           type="text"
                           value={customPostTags}
