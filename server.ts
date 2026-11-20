@@ -9,6 +9,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
+import { Readable } from 'node:stream';
 import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
@@ -498,6 +499,99 @@ app.use('/api/media', r2MediaRouter);
 
 const privateChatMediaRouter = express.Router();
 privateChatMediaRouter.use(requireFirebaseUser);
+privateChatMediaRouter.post('/chat/:chatId/upload-intent', async (req, res) => {
+  if (!r2Config) return res.status(503).json({ error: 'Private chat media storage is not configured.' });
+  const uid = res.locals.userId as string;
+  const chatId = req.params.chatId;
+  const { contentType, size, fileName } = req.body || {};
+  if (!/^[A-Za-z0-9_-]{1,150}$/.test(chatId)) return res.status(400).json({ error: 'Invalid conversation.' });
+  let policy: ReturnType<typeof validateR2Upload>;
+  try { policy = validateR2Upload(contentType, size); }
+  catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : 'Unsupported attachment.' }); }
+  try {
+    const chat = await serverDb.collection('chats').doc(chatId).get();
+    if (!chat.exists || !Array.isArray(chat.get('participants')) || !chat.get('participants').includes(uid)) {
+      return res.status(404).json({ error: 'Conversation not found.' });
+    }
+    if (!await allowChatMediaUpload(uid)) return res.status(429).json({ error: 'Attachment upload limit reached. Please try again shortly.' });
+    const mediaId = randomUUID();
+    const normalizedType = String(contentType).split(';')[0].trim().toLowerCase();
+    const storagePath = `chats/${chatId}/media/${uid}/${mediaId}`;
+    const assetRef = serverDb.collection('privateChatMediaAssets').doc(mediaId);
+    await assetRef.create({
+      id: mediaId, chatId, ownerId: uid, storagePath, storageProvider: 'r2',
+      contentType: normalizedType, size, kind: policy.kind,
+      fileName: typeof fileName === 'string' ? fileName.slice(0, 180) : 'attachment',
+      status: 'pending_upload', createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+    });
+    const uploadUrl = createR2PresignedUrl(r2Config, 'PUT', storagePath, 900, normalizedType, new Date(), true);
+    return res.status(201).json({ mediaId, storagePath, uploadUrl, contentType: normalizedType, size });
+  } catch (error) {
+    console.error('[PrivateChatMedia] Could not create upload intent.', error instanceof Error ? error.name : 'unknown');
+    return res.status(503).json({ error: 'NEXORA could not prepare this attachment. Please retry.' });
+  }
+});
+privateChatMediaRouter.post('/chat/:chatId/:mediaId/complete', async (req, res) => {
+  if (!r2Config) return res.status(503).json({ error: 'Private chat media storage is not configured.' });
+  const uid = res.locals.userId as string;
+  const { chatId, mediaId } = req.params;
+  if (!/^[A-Za-z0-9_-]{1,150}$/.test(chatId) || !/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) return res.status(400).json({ error: 'Invalid attachment reference.' });
+  try {
+    const [chat, assetRef] = await Promise.all([
+      serverDb.collection('chats').doc(chatId).get(),
+      Promise.resolve(serverDb.collection('privateChatMediaAssets').doc(mediaId)),
+    ]);
+    const assetSnapshot = await assetRef.get();
+    const asset = assetSnapshot.data();
+    if (!chat.exists || !Array.isArray(chat.get('participants')) || !chat.get('participants').includes(uid)
+      || !assetSnapshot.exists || asset?.chatId !== chatId || asset?.ownerId !== uid
+      || asset?.status !== 'pending_upload') return res.status(404).json({ error: 'Attachment upload not found.' });
+    const headUrl = createR2PresignedUrl(r2Config, 'HEAD', asset.storagePath, 120);
+    const head = await fetch(headUrl, { method: 'HEAD' });
+    if (!head.ok) return res.status(409).json({ error: 'The attachment is not uploaded yet. Please retry.' });
+    const actualSize = Number(head.headers.get('content-length') || 0);
+    const actualType = (head.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (actualSize !== asset.size || actualType !== asset.contentType) return res.status(400).json({ error: 'Attachment integrity check failed.' });
+    await assetRef.update({ status: 'uploaded', uploadedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    return res.status(200).json({ mediaId, storagePath: asset.storagePath, contentType: actualType, size: actualSize, fileName: asset.fileName });
+  } catch (error) {
+    console.error('[PrivateChatMedia] Attachment completion failed.', error instanceof Error ? error.name : 'unknown');
+    return res.status(503).json({ error: 'NEXORA could not verify this attachment. Please retry.' });
+  }
+});
+privateChatMediaRouter.get('/chat/:chatId/media/:uploaderId/:mediaId', async (req, res) => {
+  if (!r2Config) return res.status(503).end();
+  const uid = res.locals.userId as string;
+  const { chatId, uploaderId, mediaId } = req.params;
+  if (!/^[A-Za-z0-9_-]{1,150}$/.test(chatId) || !/^[A-Za-z0-9_-]{1,128}$/.test(uploaderId) || !/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) return res.status(404).end();
+  try {
+    const chatRef = serverDb.collection('chats').doc(chatId);
+    const [chat, asset] = await Promise.all([
+      chatRef.get(),
+      serverDb.collection('privateChatMediaAssets').doc(mediaId).get(),
+    ]);
+    const storagePath = `chats/${chatId}/media/${uploaderId}/${mediaId}`;
+    if (!chat.exists || !Array.isArray(chat.get('participants')) || !chat.get('participants').includes(uid)
+      || !asset.exists || asset.get('chatId') !== chatId || asset.get('ownerId') !== uploaderId
+      || asset.get('storagePath') !== storagePath || asset.get('status') !== 'uploaded') return res.status(404).end();
+    const linkedMessage = await chatRef.collection('messages').where('mediaStoragePath', '==', storagePath).limit(1).get();
+    if (linkedMessage.empty) return res.status(404).end();
+    const downloadUrl = createR2PresignedUrl(r2Config, 'GET', storagePath, 60);
+    const upstream = await fetch(downloadUrl, { method: 'GET' });
+    if (!upstream.ok || !upstream.body) return res.status(404).end();
+    res.set({
+      'Content-Type': asset.get('contentType'),
+      'Content-Length': String(asset.get('size')),
+      'Cache-Control': 'private, no-store, max-age=0',
+      'X-Content-Type-Options': 'nosniff',
+      'Content-Disposition': 'inline',
+    });
+    Readable.fromWeb(upstream.body as import('node:stream/web').ReadableStream).pipe(res);
+  } catch (error) {
+    console.error('[PrivateChatMedia] Private attachment delivery failed.', error instanceof Error ? error.name : 'unknown');
+    if (!res.headersSent) res.status(503).end();
+  }
+});
 privateChatMediaRouter.post('/chat/:chatId/audio', async (req, res) => {
   if (!mediaBucket) return res.status(503).json({ error: 'Media storage is not configured for this environment.' });
   const uid = res.locals.userId as string;
