@@ -39,6 +39,7 @@ export function createIncomingDirectCallPush(input: IncomingDirectCallPushInput)
       headers: {
         'apns-priority': '10',
         'apns-push-type': 'alert',
+        'apns-expiration': String(Math.floor(Date.now() / 1000) + 45),
       },
       payload: {
         aps: {
