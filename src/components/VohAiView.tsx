@@ -1105,6 +1105,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {attachedContextType === 'notifications' && "Uses your recent notifications"}
                       {attachedContextType === 'drafts' && "Uses your saved post drafts (without media links)"}
                       {attachedContextType === 'studio' && "Uses a summary of your cloud Studio project"}
+                      {attachedContextType === 'discovery' && "Uses a privacy-filtered sample of public posts and topics"}
                       {attachedContextType === 'inbox' && "Private messages are never shared"}
                       {attachedContextType === 'none' && "No extra information shared"}
                     </span>
@@ -1116,6 +1117,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {attachedContextType === 'notifications' && "Your notifications"}
                       {attachedContextType === 'drafts' && "Your drafts"}
                       {attachedContextType === 'studio' && "Studio project"}
+                      {attachedContextType === 'discovery' && "Public Discovery"}
                       {attachedContextType === 'inbox' && "Private messages stay private"}
                       {attachedContextType === 'none' && "No extra information"}
                     </span>
