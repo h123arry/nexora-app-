@@ -159,7 +159,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       id={`post-${post.id}`}
       data-post-id={post.id}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 450px' }}
-      className={`nx-post-card py-4 sm:py-5 border-b border-white/5 transition-colors duration-150 group text-left relative space-y-3 transform-gpu ${
+      className={`nx-post-card nx-feed-post py-4 sm:py-5 border-b border-white/5 transition-colors duration-150 group text-left relative space-y-3 transform-gpu ${
         post.isBroadcastPost
           ? 'bg-gradient-to-b from-amber-500/5 to-transparent'
           : post.userId === 'user-0'
@@ -554,7 +554,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
       {/* Media Players (Photo or Video) */}
       {post.videoUrl ? (
-        <div className="mb-3 mx-4 sm:mx-6 overflow-hidden rounded-2xl border border-white/10 bg-black">
+        <div className="nx-feed-media mb-3 w-full overflow-hidden bg-black">
           <NexoraVideoPlayer
             post={post}
             videoUrl={post.videoUrl}
