@@ -191,7 +191,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
   };
 
   return (
-    <div className="relative flex items-center gap-3 px-4 py-2 bg-slate-950/95 border border-white/10 rounded-2xl shadow-md min-w-[280px] max-w-full z-30 select-none">
+    <div className="relative flex items-center gap-3 px-4 py-2 bg-[#090714]/95 border border-white/10 rounded-2xl shadow-md min-w-[280px] max-w-full z-30 select-none">
       
       {/* Live Waveform or Trashing Visualizer */}
       <div className="flex-1 flex items-center gap-2 overflow-hidden">
@@ -225,7 +225,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
                   key={i} 
                   style={{ height: `${h}px` }} 
                   className={`w-[2px] rounded-full transition-all duration-75 ${
-                    isPaused ? 'bg-zinc-600' : 'bg-gradient-to-t from-pink-500 to-violet-400'
+                    isPaused ? 'bg-zinc-600' : 'bg-gradient-to-t from-[#7138FF] to-[#A855F7]'
                   }`}
                 />
               ))}
@@ -276,7 +276,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
           <button 
             type="button"
             onClick={stopAndSend}
-            className="p-2 rounded-xl bg-gradient-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white transition-all shadow-md cursor-pointer"
+            className="p-2 rounded-xl bg-gradient-to-r from-[#7138FF] to-[#4B10F2] hover:brightness-110 text-white transition-all shadow-md cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
           </button>
@@ -315,14 +315,13 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
           >
             <button
               type="button"
-              onMouseDown={startRecording}
-              onMouseUp={handleMouseRelease}
-              onTouchStart={startRecording}
-              onTouchEnd={handleMouseRelease}
+              onPointerDown={startRecording}
+              onPointerUp={handleMouseRelease}
+              onPointerCancel={discardRecording}
               className={`p-3 rounded-xl shadow-lg transition-colors cursor-pointer ${
                 isRecording 
                   ? 'bg-red-600 hover:bg-red-500 animate-pulse' 
-                  : 'bg-gradient-to-r from-violet-600 to-pink-600 hover:brightness-115'
+                  : 'bg-gradient-to-r from-[#7138FF] to-[#4B10F2] hover:brightness-115'
               } text-white`}
             >
               <Mic className="w-4 h-4" />
