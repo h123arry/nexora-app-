@@ -157,18 +157,19 @@ function createRemoteVideoPoster(videoUrl: string): Promise<Blob | null> {
 const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVideoPosters = false, ownerId }: MediaGridProps) => {
   const attemptedPosterRepairs = useRef(new Set<string>());
   const [repairedPosters, setRepairedPosters] = useState<Record<string, string>>({});
-  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.image || post.images?.find(Boolean) || ''}:${post.videoUrl || ''}`).join('|');
+  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.image || post.images?.find(Boolean) || ''}:${post.videoUrl || ''}:${post.media || ''}:${(post as any).thumbnailUrl || ''}:${(post as any).posterUrl || ''}`).join('|');
 
   useEffect(() => {
     if (!repairVideoPosters || !ownerId || auth.currentUser?.uid !== ownerId) return;
     let active = true;
     const repairMissingPosters = async () => {
       for (const post of gridPosts) {
-        const existingPoster = post.image || post.images?.find(Boolean);
-        if (!post.videoUrl || existingPoster || post.userId !== ownerId || attemptedPosterRepairs.current.has(post.id)) continue;
+        const existingPoster = post.image || post.images?.find(Boolean) || (post as any).thumbnailUrl || (post as any).thumbnail || (post as any).posterUrl;
+        const videoSource = post.videoUrl || (typeof post.media === 'string' && /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media) ? post.media : '');
+        if (!videoSource || existingPoster || post.userId !== ownerId || attemptedPosterRepairs.current.has(post.id)) continue;
         attemptedPosterRepairs.current.add(post.id);
         try {
-          const posterBlob = await createRemoteVideoPoster(post.videoUrl);
+          const posterBlob = await createRemoteVideoPoster(videoSource);
           if (!posterBlob || auth.currentUser?.uid !== ownerId) continue;
           const uploaded = await uploadMediaFile({
             file: new File([posterBlob], `profile-poster-${post.id}.jpg`, { type: 'image/jpeg' }),
@@ -207,8 +208,18 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
     <div className="nx-profile-media-grid grid w-full grid-cols-[repeat(3,minmax(0,1fr))] gap-px bg-[#090714]">
       {gridPosts.map(post => {
         const isVoice = post.isVoice || !!post.voiceAudioUrl || !!(post as any).audioUrl || post.content.includes('🎙') || post.voiceDuration;
-        const isVideo = !!post.videoUrl;
-        const thumbnail = post.image || post.images?.find(Boolean) || repairedPosters[post.id];
+        const mediaUrl = typeof post.media === 'string' ? post.media : '';
+        const mediaType = String((post as any).mediaType || (post as any).type || '').toLowerCase();
+        const isVideo = !!post.videoUrl || (mediaType === 'video' && !!mediaUrl) || /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(mediaUrl);
+        const videoSource = post.videoUrl || (isVideo ? mediaUrl : '');
+        // Resolve actual uploaded media and saved posters across legacy and current post schemas.
+        const thumbnail = post.image
+          || post.images?.find(Boolean)
+          || (post as any).thumbnailUrl
+          || (post as any).thumbnail
+          || (post as any).posterUrl
+          || (!isVideo ? mediaUrl : '')
+          || repairedPosters[post.id];
         const voiceAudioUrl = post.voiceAudioUrl || (post as any).audioUrl;
         const isMultiImage = !isVideo && (post.images?.filter(Boolean).length || 0) > 1;
         const isPinned = pinnedPostIds.includes(post.id);
@@ -218,7 +229,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
             <motion.div
               key={post.id}
               layout
-              className="aspect-[3/4] min-w-0 overflow-hidden bg-gradient-to-br from-[#1d1242] to-[#050314] p-2.5 flex flex-col justify-between text-left"
+              className="aspect-[3/5] min-w-0 overflow-hidden bg-gradient-to-br from-[#1d1242] to-[#050314] p-2.5 flex flex-col justify-between text-left"
             >
               <div className="flex items-center justify-between gap-1">
                 <Mic className="h-4 w-4 shrink-0 text-violet-300" />
@@ -247,7 +258,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="group aspect-[3/4] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-3px]"
+            className="group aspect-[3/5] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-3px]"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
@@ -266,7 +277,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
                     />
                   ) : (
                     <NexoraVideo 
-                      src={post.videoUrl ? `${post.videoUrl}#t=0.001` : ''} 
+                      src={videoSource ? `${videoSource}#t=0.001` : ''} 
                       className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity relative z-10" 
                       preload="metadata" 
                       muted 
@@ -1484,12 +1495,14 @@ export default function ProfileView({
 
   // Tab filtered items (Media, Voice, Reposts, Sparks, Bookmarks, Archive)
   const getTabContent = () => {
-    const allActive = [...posts].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    const userMyPosts = allActive.filter(p => p.username === currentUser.username || p.userId === currentUser.id);
+    // Drive profile tabs from the complete author subscription, not the bounded
+    // home-feed page. Keep post order and media visible after refresh/pagination.
+    const allActive = [...myPosts].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const userMyPosts = allActive;
 
     switch (profileTab) {
       case 'media':
-        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.images?.length || !!p.videoUrl));
+        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.images?.length || !!p.videoUrl || !!p.media || !!(p as any).thumbnailUrl || !!(p as any).posterUrl));
       case 'voice':
         return userMyPosts.filter(p => !p.isArchived && (p.isVoice || p.voiceAudioUrl || p.voiceDuration || (p as any).audioUrl || p.content.includes('🎙')));
       case 'reposts':
@@ -1501,7 +1514,7 @@ export default function ProfileView({
       case 'archive':
         return isOwnProfile ? userMyPosts.filter(p => p.isArchived) : [];
       default:
-        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.images?.length || !!p.videoUrl));
+        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.images?.length || !!p.videoUrl || !!p.media || !!(p as any).thumbnailUrl || !!(p as any).posterUrl));
     }
   };
 
