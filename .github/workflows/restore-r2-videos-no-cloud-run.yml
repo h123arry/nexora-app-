@@ -52,7 +52,7 @@ jobs:
           test "$FIRESTORE_DATABASE_ID" = "default"
           test -n "$GCP_WIF_PROVIDER"
           test -n "$GCP_SERVICE_ACCOUNT"
-          echo "Production Firestore target and existing R2 credentials are present."
+          echo "Production Firestore identity is present; R2 access will be brokered by the live API."
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -106,11 +106,8 @@ jobs:
           R2_BUCKET_NAME: nexora-media
           R2_SIGNING_API_URL: https://nexora-o3od.onrender.com/api/internal/r2-worker/sign
           R2_WORKER_RECONCILE_VIDEOS_ONLY: 'true'
-          R2_SIGNING_AUDIENCE: nexora-r2-media-worker
         run: |
           set -euo pipefail
-          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}"
-          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}"
           TOKEN="$(openssl rand -hex 32)"
           echo "::add-mask::$TOKEN"
           export MEDIA_WORKER_TOKEN="$TOKEN"
