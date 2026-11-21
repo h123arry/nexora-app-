@@ -16,7 +16,7 @@ import { getRecommendationProfile, recordRecommendationEvent, resetRecommendatio
 import { trackClientObservation } from '../services/analyticsService';
 import { rankPosts } from '../services/discovery/discoveryService';
 import { SettingsService } from '../services/firebase/settingsService';
-import { normalizeFeedPreferences, resetFeedPreferences } from '../services/discovery/feedPreferences';
+import { isFeedPostAllowedByPreferences, normalizeFeedPreferences, resetFeedPreferences } from '../services/discovery/feedPreferences';
 import { auth } from '../services/firebase/config';
 import { apiRequestUrl } from '../lib/apiBaseUrl';
 import { ProfileService } from '../services/firebase/profileService';
@@ -1293,15 +1293,13 @@ export default function FeedView({
 
   // Search filter options
   const filteredPosts = useMemo(() => localPosts.filter(post => {
-    // 0. Filter out archived posts
-    if (post.isArchived) return false;
-
-    // 1. Core moderation overrides
-    if (hiddenPostIds.includes(post.id)) return false;
-    if (blockedUserIds.includes(post.userId)) return false;
-    if (mutedUserIds.includes(post.userId)) return false;
-    if (mutedCreatorIds.includes(post.userId)) return false;
-    if (post.tags.some(t => notInterestedTags.includes(t))) return false;
+    // 0. Apply the same user-controlled exclusions used by empty-feed recovery.
+    if (!isFeedPostAllowedByPreferences(post, {
+      hiddenPostIds,
+      blockedCreatorIds: blockedUserIds,
+      mutedCreatorIds: [...mutedUserIds, ...mutedCreatorIds],
+      notInterestedTags,
+    })) return false;
 
     // 2. Prevent scheduled posts in the future from being visible to others
     if (post.scheduledTime) {
@@ -1421,15 +1419,14 @@ export default function FeedView({
     // Empty Feed Protection: If the Posts feed is empty but there are posts on the platform,
     // fallback to public posts that are not blocked or hidden, ensuring the feed is never blank.
     if (feedTab === 'posts' && list.length === 0 && localPosts.length > 0) {
-      const fallbackList = localPosts.filter(post => {
-        if (hiddenPostIds.includes(post.id)) return false;
-        if (blockedUserIds.includes(post.userId)) return false;
-        if (mutedUserIds.includes(post.userId)) return false;
-        if (mutedCreatorIds.includes(post.userId)) return false;
-        // The empty-feed recovery path must preserve every user moderation and interest preference.
-        if (post.tags.some(tag => notInterestedTags.includes(tag))) return false;
-        return !post.isBroadcastPost;
-      });
+      const fallbackList = localPosts.filter(post =>
+        isFeedPostAllowedByPreferences(post, {
+          hiddenPostIds,
+          blockedCreatorIds: blockedUserIds,
+          mutedCreatorIds: [...mutedUserIds, ...mutedCreatorIds],
+          notInterestedTags,
+        }) && !post.isBroadcastPost
+      );
       if (fallbackList.length > 0) {
         list = fallbackList;
       }
