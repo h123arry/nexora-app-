@@ -8,7 +8,7 @@ import VideoBottomSheet from './VideoBottomSheet';
 import NexoraLoader from './NexoraLoader';
 import NexoraWatermark from './branding/NexoraWatermark';
 import NexoraPostRollCard from './branding/NexoraPostRollCard';
-import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Send, X, AlertTriangle, EyeOff, Eye, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, Heart, MessageSquare, Send, X, EyeOff, Eye, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
 import { recordReelReplay, recordReelSignal } from '../services/reels/reelsRanking';
@@ -167,29 +167,44 @@ export default function NexoraVideoPlayer({
   const resolvedUrl = useResolvedUrl(videoUrl);
   const originalResolvedUrl = videoUrl?.startsWith('db-media://') ? resolvedUrl : videoUrl;
   const [processedPlaybackUrl, setProcessedPlaybackUrl] = useState<string | null>(null);
+  const [playbackRefreshKey, setPlaybackRefreshKey] = useState(0);
+  const playbackRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playbackRetryAttemptRef = useRef(0);
+  const wasPlayingBeforeFailureRef = useRef(false);
   const finalVideoUrl = processedPlaybackUrl || originalResolvedUrl;
 
   // Resolve a short-lived, server-signed rendition only for visible/nearby public posts.
   // The callable verifies current post audience, media ID and owner before signing.
   useEffect(() => {
     let cancelled = false;
+    let readinessRetry: ReturnType<typeof setTimeout> | null = null;
     setProcessedPlaybackUrl(null);
     if (!post.mediaAssetId || !((isActive ?? true) || shouldPreload)) return () => { cancelled = true; };
     const resolvePlayback = httpsCallable<
       { postId: string; mediaAssetId: string },
       { ready: boolean; playbackUrl?: string }
     >(getFunctions(app), 'getPublicPostPlayback');
+    const retryResolution = () => {
+      if (cancelled) return;
+      readinessRetry = setTimeout(() => {
+        if (!cancelled) setPlaybackRefreshKey(key => key + 1);
+      }, 2500);
+    };
     void resolvePlayback({ postId: post.id, mediaAssetId: post.mediaAssetId })
       .then(result => {
-        if (!cancelled && result.data.ready && typeof result.data.playbackUrl === 'string') {
+        if (cancelled) return;
+        if (result.data.ready && typeof result.data.playbackUrl === 'string') {
           setProcessedPlaybackUrl(result.data.playbackUrl);
+        } else {
+          retryResolution();
         }
       })
-      .catch(() => {
-        // Keep the original published URL as a compatibility fallback.
-      });
-    return () => { cancelled = true; };
-  }, [post.id, post.mediaAssetId, isActive, shouldPreload]);
+      .catch(() => retryResolution());
+    return () => {
+      cancelled = true;
+      if (readinessRetry) clearTimeout(readinessRetry);
+    };
+  }, [post.id, post.mediaAssetId, isActive, shouldPreload, playbackRefreshKey]);
   const posterUrl = post.image || post.images?.[0];
 
   // Connection & Speed playback status states
@@ -205,7 +220,6 @@ export default function NexoraVideoPlayer({
   const [isReady, setIsReady] = useState(false);
   const [showPostRoll, setShowPostRoll] = useState(false);
   const [watermarkPosition, setWatermarkPosition] = useState(0);
-  const [retryCount, setRetryCount] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const [showLongPressMenu, setShowLongPressMenu] = useState(false);
@@ -214,7 +228,6 @@ export default function NexoraVideoPlayer({
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [hasVideoError, setHasVideoError] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   
   // Premium Player Adjustments & HUD Telemetry
@@ -901,25 +914,56 @@ export default function NexoraVideoPlayer({
   };
 
 
-  const handleVideoFailure = () => {
-    setIsBuffering(false);
-    setIsReady(false);
-    setHasVideoError(true);
-    globalVideoPlaybackManager.pause(playerId);
-    setIsPlaying(false);
+  // Recover silently while the viewer remains on this video. Backoff is bounded,
+  // but retries are never capped, so transient failures and expired signatures
+  // cannot permanently strand a published post.
+  const scheduleAutomaticPlaybackRetry = () => {
+    if (playbackRetryTimerRef.current) clearTimeout(playbackRetryTimerRef.current);
+    const attempt = playbackRetryAttemptRef.current++;
+    const delay = Math.min(30_000, 1_000 * (2 ** Math.min(attempt, 5)));
+    playbackRetryTimerRef.current = setTimeout(() => {
+      playbackRetryTimerRef.current = null;
+      if (isReleased || isActive === false || (!isVisible && isActive === undefined)) return;
+      setIsReady(false);
+      setIsBuffering(true);
+      if (post.mediaAssetId) setPlaybackRefreshKey(key => key + 1);
+      else videoRef.current?.load();
+    }, delay);
   };
 
-  const handleRetryVideo = () => {
-    if (!videoRef.current || retryCount >= 3) return;
-    setRetryCount(count => count + 1);
-    setHasVideoError(false);
+  const handleVideoFailure = () => {
+    wasPlayingBeforeFailureRef.current = isPlaying || isActive !== false;
     setIsReady(false);
     setIsBuffering(true);
-    videoRef.current.load();
-    if (isActive !== false && isVisible) {
+    setIsPlaying(false);
+    scheduleAutomaticPlaybackRetry();
+  };
+
+  const handleVideoCanPlay = () => {
+    markVideoReady();
+    playbackRetryAttemptRef.current = 0;
+    if (playbackRetryTimerRef.current) {
+      clearTimeout(playbackRetryTimerRef.current);
+      playbackRetryTimerRef.current = null;
+    }
+    if (wasPlayingBeforeFailureRef.current && isActive !== false && isVisible && videoRef.current) {
+      wasPlayingBeforeFailureRef.current = false;
       globalVideoPlaybackManager.play(playerId, videoRef.current, finalVideoUrl).catch(() => {});
     }
   };
+
+  useEffect(() => () => {
+    if (playbackRetryTimerRef.current) clearTimeout(playbackRetryTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (isReleased || isActive === false) {
+      if (playbackRetryTimerRef.current) clearTimeout(playbackRetryTimerRef.current);
+      playbackRetryTimerRef.current = null;
+      return;
+    }
+    if (wasPlayingBeforeFailureRef.current && !playbackRetryTimerRef.current) scheduleAutomaticPlaybackRetry();
+  }, [isActive, isReleased, isVisible]);
 
   // Add the post URL to a bookmark collection
   const handleSaveToCollection = (collection: string) => {
@@ -1081,7 +1125,7 @@ export default function NexoraVideoPlayer({
             )}
             <video
               ref={videoRef}
-              src={hasVideoError || isReleased ? undefined : ((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)}
+              src={isReleased ? undefined : ((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)}
               poster={shouldLoadVideoPoster({ isActive, isNearby, shouldPreload, isReleased }) ? (post?.image || undefined) : undefined}
               playsInline
               preload={isReleased ? "none" : (preloadMode || ((isNearby || shouldPreload) ? "auto" : "none"))}
@@ -1089,7 +1133,7 @@ export default function NexoraVideoPlayer({
               onLoadStart={() => { setIsReady(false); setIsBuffering(true); }}
               onLoadedMetadata={handleLoadedMetadata}
               onLoadedData={markVideoReady}
-              onCanPlay={markVideoReady}
+              onCanPlay={handleVideoCanPlay}
               onTimeUpdate={handleTimeUpdate}
               onWaiting={() => setIsBuffering(true)}
               onPlaying={() => { markVideoReady(); setIsPlaying(true); }}
@@ -1123,21 +1167,7 @@ export default function NexoraVideoPlayer({
                 <NexoraPostRollCard username={post.username} isVerified={post.isVerified} avatar={post.avatar} />
               )}
             </AnimatePresence>
-            {hasVideoError && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 text-center p-6 z-20 animate-fade-in">
-                <AlertTriangle className="w-10 h-10 text-pink-500 mb-2 animate-pulse" />
-                <p className="text-sm font-bold text-white mb-1">Video unavailable</p>
-                <p className="text-xs text-zinc-400 mb-4">The video file could not be loaded or network connection failed.</p>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleRetryVideo(); }}
-                  disabled={retryCount >= 3}
-                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed shadow-md flex items-center gap-2"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" /> {retryCount >= 3 ? 'Try again later' : `Tap to retry${retryCount ? ` (${retryCount}/3)` : ''}`}
-                </button>
-              </div>
-            )}
-            {isBuffering && !hasVideoError && (
+            {isBuffering && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none z-10 animate-fade-in">
                 <div className="rounded-full bg-black/55 px-3 py-2 backdrop-blur-md"><NexoraLoader size="sm" center={true} /></div>
               </div>
