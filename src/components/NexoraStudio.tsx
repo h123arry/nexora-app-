@@ -710,6 +710,20 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
     });
   };
 
+  const runAutoCut = () => {
+    if (clips.length < 2) { setMessage('Add at least two video clips to use AutoCut.'); return; }
+    const maxShotLength = 3.2;
+    setClips(previous => previous.map(clip => {
+      const targetLength = Math.min(Math.max(0.5, clip.end - clip.start), maxShotLength);
+      return { ...clip, end: clip.start + targetLength };
+    }));
+    setTransition('cut');
+    setSelectedId(clips[0]?.id || null);
+    setPreviewGlobalTime(0);
+    setPlaying(false);
+    setMessage('AutoCut created a quick-cut montage. Original media is preserved; use Undo to restore the previous edit.');
+  };
+
   const splitAtPlayhead = () => {
     const video = videoRef.current;
     if (!selectedClip || !video) return;
@@ -1206,6 +1220,14 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
         </header>
         <main className="grid min-h-0 flex-1 grid-rows-[minmax(220px,1fr)_auto] overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1">
           <section className="flex min-h-[260px] flex-col items-center justify-center gap-3 border-b border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(75,16,242,.16),transparent_65%)] p-4 lg:border-b-0 lg:border-r">
+            <div className="flex w-full max-w-5xl items-center gap-2 overflow-x-auto pb-1" aria-label="Quick editing tools">
+              <button type="button" onClick={runAutoCut} disabled={clips.length < 2} title="Create a quick-cut montage from your clips" className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-violet-400/40 bg-violet-500/15 px-3 py-2 text-xs font-bold text-violet-100 transition hover:bg-violet-500/25 disabled:opacity-40"><Scissors size={15}/> AutoCut</button>
+              <button type="button" onClick={splitAtPlayhead} disabled={!selectedClip} title="Split selected clip at the playhead" className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-[#34265E] bg-[#100C20] px-3 py-2 text-xs font-semibold text-[#D7CCF7] hover:border-violet-400/50 disabled:opacity-40"><Scissors size={14}/> Split</button>
+              <button type="button" onClick={addTextLayer} disabled={!clips.length} title="Add an editable text layer" className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-[#34265E] bg-[#100C20] px-3 py-2 text-xs font-semibold text-[#D7CCF7] hover:border-violet-400/50 disabled:opacity-40"><Type size={14}/> Text</button>
+              <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-[#34265E] bg-[#100C20] px-3 py-2 text-xs font-semibold text-[#D7CCF7] hover:border-violet-400/50" title="Add a soundtrack"><Music2 size={14}/> Music<input className="hidden" type="file" accept="audio/*" onChange={event => { const file = event.target.files?.[0]; if (file) { setSoundtrack(file); setMessage('Soundtrack added to your Studio project.'); } event.target.value = ''; }}/></label>
+              <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-[#34265E] bg-[#100C20] px-3 py-2 text-xs font-semibold text-[#D7CCF7] hover:border-violet-400/50" title="Add an image overlay"><Upload size={14}/> Overlay<input className="hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => { const file = event.target.files?.[0]; if (file) addImageLayer(file); event.target.value = ''; }}/></label>
+              <button type="button" onClick={addSubtitleSegment} disabled={!clips.length} title="Add an editable subtitle segment" className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-[#34265E] bg-[#100C20] px-3 py-2 text-xs font-semibold text-[#D7CCF7] hover:border-violet-400/50 disabled:opacity-40"><Film size={14}/> Captions</button>
+            </div>
             <div className={`relative flex ${aspectRatio === 'portrait' ? 'aspect-[9/16] max-w-sm' : aspectRatio === 'square' ? 'aspect-square max-w-2xl' : 'aspect-video max-w-5xl'} w-full items-center justify-center overflow-hidden rounded-2xl border border-[#34265E] bg-black shadow-[0_20px_80px_rgba(75,16,242,.14)]`}>
               {soundtrack && <audio ref={soundtrackPreviewRef} src={getUrlForClip(soundtrack)} loop preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
               {voiceover && <audio ref={voiceoverPreviewRef} src={getUrlForClip(voiceover)} preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
