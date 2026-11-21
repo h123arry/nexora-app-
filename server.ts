@@ -1,4 +1,5 @@
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import path from 'path';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
@@ -136,7 +137,24 @@ const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
 const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(firebaseStorageBucket) : null;
 
-app.post('/api/social/follow-state', requireFirebaseUser, async (req, res) => {
+const socialFollowHttpLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (_req, res) => String(res.locals.userId || 'unauthenticated'),
+  message: { code: 'follow_rate_limited', error: 'Too many follow changes. Please wait before trying again.' },
+});
+const socialSparkHttpLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 90,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (_req, res) => String(res.locals.userId || 'unauthenticated'),
+  message: { code: 'spark_rate_limited', error: 'You are sparking too quickly. Please wait a moment.' },
+});
+
+app.post('/api/social/follow-state', requireFirebaseUser, socialFollowHttpLimiter, async (req, res) => {
   const uid = res.locals.userId;
   if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
     return res.status(401).json({ code: 'unauthenticated', error: 'Sign in to follow creators.' });
@@ -164,7 +182,7 @@ app.post('/api/social/follow-state', requireFirebaseUser, async (req, res) => {
   }
 });
 
-app.post('/api/social/post-spark-state', requireFirebaseUser, async (req, res) => {
+app.post('/api/social/post-spark-state', requireFirebaseUser, socialSparkHttpLimiter, async (req, res) => {
   const uid = res.locals.userId;
   if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
     return res.status(401).json({ code: 'unauthenticated', error: 'Sign in to Spark posts.' });
