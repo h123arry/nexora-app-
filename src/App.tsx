@@ -3211,7 +3211,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* NEXORA CREATE STUDIO · full-screen, no-scroll launch surface */}
+      {/* NEXORA CREATE · unified creative home */}
       <AnimatePresence>
         {isCreateMenuOpen && (
           <motion.div
@@ -3221,91 +3221,74 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] isolate h-[100dvh] w-full overflow-hidden bg-[#070511] text-left"
+            className="fixed inset-0 z-[100] isolate h-[100dvh] w-full overflow-hidden bg-[#070511] text-left text-white"
             style={{ paddingTop: 'env(safe-area-inset-top, 0px)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-              <div className="absolute left-1/2 top-[38%] h-[min(82vw,520px)] w-[min(82vw,520px)] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#7138FF]/16 blur-[100px]" />
-              <div className="absolute -right-24 bottom-[-8rem] h-72 w-72 rounded-full bg-[#4B10F2]/20 blur-[90px]" />
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.13),transparent_55%)]" />
+              <div className="absolute -top-36 left-1/2 h-[min(90vw,620px)] w-[min(90vw,620px)] -translate-x-1/2 rounded-full bg-[#7138FF]/20 blur-[110px]" />
+              <div className="absolute -bottom-40 -right-28 h-96 w-96 rounded-full bg-[#4B10F2]/20 blur-[100px]" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(138,63,252,.13),transparent_55%)]" />
             </div>
 
             <div className="relative mx-auto flex h-full w-full max-w-3xl flex-col px-4 pb-3 pt-3 sm:px-7 sm:pb-6 sm:pt-6">
               <header className="flex shrink-0 items-center justify-between gap-3">
                 <div className="min-w-0">
                   <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#B69BFF]">
-                    <Sparkles className="h-3.5 w-3.5" /> NEXORA CREATIVE SPACE
+                    <Sparkles className="h-3.5 w-3.5" /> NEXORA CREATE
                   </span>
-                  <h2 id="nexora-create-title" className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Create something.</h2>
-                  <p className="mt-1 text-xs text-[#A39BBF] sm:text-sm">Your camera, your ideas, your Studio. All in one place.</p>
+                  <h2 id="nexora-create-title" className="mt-1 text-[1.8rem] font-black tracking-tight sm:text-3xl">Make it yours.</h2>
+                  <p className="mt-1 max-w-md text-xs leading-relaxed text-[#A39BBF] sm:text-sm">One creative space for everything you want to share.</p>
                 </div>
-                <button type="button" onClick={() => setIsCreateMenuOpen(false)} aria-label="Close Create Studio" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-[#D9D0F4] transition hover:border-[#B69BFF]/50 hover:bg-white/10">
+                <button type="button" onClick={() => setIsCreateMenuOpen(false)} aria-label="Close Create" className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-[#D9D0F4] transition hover:border-[#B69BFF]/50 hover:bg-white/10">
                   <X className="h-4.5 w-4.5" />
                 </button>
               </header>
 
-              <main className="flex min-h-0 flex-1 flex-col justify-center gap-4 py-4">
-                <div className="mx-auto grid w-full max-w-md grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('photo'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }}
-                    className="group relative flex min-h-[150px] flex-col items-center justify-center overflow-hidden rounded-[1.7rem] border border-[#9A76FF]/45 bg-[linear-gradient(145deg,rgba(113,56,255,.30),rgba(18,14,43,.94)_62%,rgba(7,5,17,.98))] px-3 py-4 text-center shadow-[0_16px_55px_rgba(65,31,150,.20)] transition hover:border-[#C5B2FF]/75 active:scale-[0.985]"
-                  >
-                    <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(138,63,252,.25),transparent_58%)]" />
-                    <span className="relative grid h-14 w-14 place-items-center rounded-full border border-white/20 bg-[#7138FF]/25 text-white shadow-[0_0_40px_rgba(113,56,255,.32)] transition duration-300 group-hover:scale-105"><Camera className="h-7 w-7" /></span>
-                    <span className="relative mt-3 text-sm font-extrabold text-white">Open camera</span>
-                    <span className="relative mt-1 text-[10px] leading-relaxed text-[#C7BCE4]">Take a photo or record</span>
+              <main className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain py-5">
+                <section aria-label="Start creating" className="grid grid-cols-2 gap-3">
+                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('photo'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }}
+                    className="group relative flex min-h-[174px] flex-col justify-between overflow-hidden rounded-[1.65rem] border border-[#A78BFA]/50 bg-[linear-gradient(145deg,rgba(113,56,255,.38),rgba(32,20,72,.92)_58%,rgba(9,7,20,.98))] p-4 text-left shadow-[0_18px_60px_rgba(65,31,150,.22)] transition hover:border-[#D7C8FF]/80 active:scale-[.985]">
+                    <span aria-hidden="true" className="absolute -right-7 -top-7 h-32 w-32 rounded-full bg-[#A855F7]/25 blur-2xl transition group-hover:scale-125" />
+                    <span className="relative grid h-12 w-12 place-items-center rounded-2xl border border-white/20 bg-white/10 text-white shadow-[0_0_35px_rgba(167,139,250,.25)]"><Camera className="h-6 w-6" /></span>
+                    <span className="relative"><span className="block text-base font-extrabold">Capture</span><span className="mt-1 block text-[11px] leading-relaxed text-[#D5C9F2]">Open your camera and create in the moment</span></span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('photo'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }}
-                    className="group relative flex min-h-[150px] flex-col items-center justify-center overflow-hidden rounded-[1.7rem] border border-white/12 bg-[linear-gradient(145deg,rgba(31,24,62,.92),rgba(12,10,25,.98))] px-3 py-4 text-center transition hover:border-[#9A76FF]/55 hover:bg-[#19143A] active:scale-[0.985]"
-                  >
-                    <span aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(138,63,252,.12),transparent_58%)]" />
-                    <span className="relative grid h-14 w-14 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-[#D5C7FF] transition duration-300 group-hover:scale-105"><FolderOpen className="h-7 w-7" /></span>
-                    <span className="relative mt-3 text-sm font-extrabold text-white">Choose from gallery</span>
-                    <span className="relative mt-1 text-[10px] leading-relaxed text-[#AFA6C8]">Select photos from your device</span>
+                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('photo'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }}
+                    className="group relative flex min-h-[174px] flex-col justify-between overflow-hidden rounded-[1.65rem] border border-white/10 bg-[linear-gradient(145deg,rgba(34,27,67,.96),rgba(12,10,25,.98))] p-4 text-left transition hover:border-[#9A76FF]/60 hover:bg-[#19143A] active:scale-[.985]">
+                    <span className="grid h-12 w-12 place-items-center rounded-2xl border border-white/10 bg-white/[.06] text-[#D5C7FF]"><FolderOpen className="h-6 w-6" /></span>
+                    <span><span className="block text-base font-extrabold">Choose media</span><span className="mt-1 block text-[11px] leading-relaxed text-[#AFA6C8]">Bring photos and videos into your post</span></span>
                   </button>
-                </div>
+                </section>
 
-                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
-                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('reel'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="group flex min-h-[76px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left backdrop-blur-xl transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><VideoIcon className="h-5 w-5" /></span>
-                    <span className="min-w-0"><span className="block text-xs font-bold text-white">Video</span><span className="mt-0.5 block text-[10px] text-[#A39BBF]">Record or upload</span></span>
-                  </button>
-                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('text'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="group flex min-h-[76px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left backdrop-blur-xl transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><FileText className="h-5 w-5" /></span>
-                    <span className="min-w-0"><span className="block text-xs font-bold text-white">Write</span><span className="mt-0.5 block text-[10px] text-[#A39BBF]">Share a thought</span></span>
-                  </button>
-                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode(null); setCreationInitialTab('story'); setIsCreatePostModalOpen(true); }} className="group flex min-h-[76px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left backdrop-blur-xl transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><Sparkles className="h-5 w-5" /></span>
-                    <span className="min-w-0"><span className="block text-xs font-bold text-white">Story</span><span className="mt-0.5 block text-[10px] text-[#A39BBF]">24-hour moment</span></span>
-                  </button>
-                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('voice'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="group flex min-h-[76px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left backdrop-blur-xl transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><Mic className="h-5 w-5" /></span>
-                    <span className="min-w-0"><span className="block text-xs font-bold text-white">Voice</span><span className="mt-0.5 block text-[10px] text-[#A39BBF]">Record a note</span></span>
-                  </button>
-                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('poll'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="group flex min-h-[76px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left backdrop-blur-xl transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><BarChart2 className="h-5 w-5" /></span>
-                    <span className="min-w-0"><span className="block text-xs font-bold text-white">Poll</span><span className="mt-0.5 block text-[10px] text-[#A39BBF]">Ask everyone</span></span>
-                  </button>
-                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode(null); setCreationInitialTab('drafts'); setIsCreatePostModalOpen(true); }} className="group flex min-h-[76px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left backdrop-blur-xl transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><FolderOpen className="h-5 w-5" /></span>
-                    <span className="min-w-0"><span className="block text-xs font-bold text-white">Drafts</span><span className="mt-0.5 block text-[10px] text-[#A39BBF]">Pick up later</span></span>
-                  </button>
-                </div>
+                <section>
+                  <div className="mb-3 flex items-end justify-between gap-3">
+                    <div><h3 className="text-sm font-extrabold text-white">Create your way</h3><p className="mt-0.5 text-[11px] text-[#82799F]">Choose a format. Your work stays in the same flow.</p></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('reel'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="flex min-h-[70px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><VideoIcon className="h-5 w-5" /></span><span><span className="block text-xs font-bold">Video</span><span className="mt-0.5 block text-[10px] text-[#9289AE]">Short or long-form</span></span></button>
+                    <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('text'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="flex min-h-[70px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><FileText className="h-5 w-5" /></span><span><span className="block text-xs font-bold">Text post</span><span className="mt-0.5 block text-[10px] text-[#9289AE]">Share an idea</span></span></button>
+                    <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode(null); setCreationInitialTab('story'); setIsCreatePostModalOpen(true); }} className="flex min-h-[70px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><Sparkles className="h-5 w-5" /></span><span><span className="block text-xs font-bold">Story</span><span className="mt-0.5 block text-[10px] text-[#9289AE]">A moment that lasts</span></span></button>
+                    <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('voice'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="flex min-h-[70px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><Mic className="h-5 w-5" /></span><span><span className="block text-xs font-bold">Voice</span><span className="mt-0.5 block text-[10px] text-[#9289AE]">Speak your mind</span></span></button>
+                    <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('poll'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="flex min-h-[70px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><BarChart2 className="h-5 w-5" /></span><span><span className="block text-xs font-bold">Poll</span><span className="mt-0.5 block text-[10px] text-[#9289AE]">Bring people in</span></span></button>
+                    <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('pulse'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="flex min-h-[70px] items-center gap-3 rounded-2xl border border-white/10 bg-[#120E2B]/85 p-3 text-left transition hover:border-[#9A76FF]/55 hover:bg-[#19143A]"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#7138FF]/20 text-[#C8B5FF]"><Globe className="h-5 w-5" /></span><span><span className="block text-xs font-bold">World Pulse</span><span className="mt-0.5 block text-[10px] text-[#9289AE]">Share beyond your circle</span></span></button>
+                  </div>
+                </section>
 
-                <button type="button" onClick={() => { setIsCreateMenuOpen(false); setIsNexoraStudioOpen(true); }} className="group flex w-full shrink-0 items-center gap-3 rounded-2xl border border-[#9A76FF]/35 bg-[linear-gradient(105deg,rgba(113,56,255,.20),rgba(22,0,163,.10))] p-3.5 text-left transition hover:border-[#B69BFF]/70 hover:brightness-110">
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#7138FF]/25 text-[#E0D4FF]"><Sparkles className="h-5 w-5" /></span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white">NEXORA Studio</span><span className="mt-0.5 block text-[10px] leading-relaxed text-[#B8AED4]">Multi-clip editing, sound, titles, layers and cinematic exports.</span></span>
-                  <ChevronRight className="h-5 w-5 shrink-0 text-[#B69BFF] transition group-hover:translate-x-1" />
-                </button>
+                <section className="overflow-hidden rounded-[1.6rem] border border-[#9A76FF]/35 bg-[linear-gradient(110deg,rgba(113,56,255,.22),rgba(22,0,163,.10)_55%,rgba(18,14,43,.85))] p-4 sm:p-5">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-[#B69BFF]/20 bg-[#7138FF]/25 text-[#E0D4FF]"><Sparkles className="h-6 w-6" /></span>
+                    <div className="min-w-0 flex-1"><span className="block text-[10px] font-bold uppercase tracking-[.18em] text-[#B69BFF]">Creative workspace</span><h3 className="mt-1 text-base font-extrabold">NEXORA Studio</h3><p className="mt-1 text-[11px] leading-relaxed text-[#B8AED4]">Shape clips, layer visuals, work with sound and build a finished video.</p></div>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-[#B69BFF]" />
+                  </div>
+                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); setIsNexoraStudioOpen(true); }} className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#B69BFF]/30 bg-[#7138FF]/25 px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#7138FF]/40 active:scale-[.99]">Open Studio <ChevronRight className="h-4 w-4" /></button>
+                </section>
+
+                <section className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode(null); setCreationInitialTab('drafts'); setIsCreatePostModalOpen(true); }} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[.035] px-3 py-3 text-xs font-semibold text-[#C9BFE0] transition hover:border-[#9A76FF]/45"><FolderOpen className="h-4 w-4" /> My drafts</button>
+                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); navigateTo('live'); }} className="flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[.035] px-3 py-3 text-xs font-semibold text-[#C9BFE0] transition hover:border-[#9A76FF]/45"><Radio className="h-4 w-4" /> Go live</button>
+                  <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('community'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[.035] px-3 py-3 text-xs font-semibold text-[#C9BFE0] transition hover:border-[#9A76FF]/45 sm:col-span-1"><Award className="h-4 w-4" /> Community post</button>
+                </section>
               </main>
-
-              <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] pt-3 text-[10px] text-[#756D91]">
-                <span>One creative space. Everything in reach.</span>
-                <button type="button" onClick={() => { setIsCreateMenuOpen(false); navigateTo('live'); }} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-2 font-semibold text-[#C9B9F7] transition hover:border-[#9A76FF]/50 hover:text-white"><Radio className="h-3.5 w-3.5" /> Go live</button>
-              </footer>
+              <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] pt-3 text-[10px] text-[#756D91]"><span>One creative space. Your voice, every format.</span><span className="font-semibold tracking-wide text-[#9A86C5]">NEXORA</span></footer>
             </div>
           </motion.div>
         )}
