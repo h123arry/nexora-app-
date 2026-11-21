@@ -84,7 +84,6 @@ jobs:
         shell: bash
         env:
           PORT: '8080'
-          MEDIA_WORKER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           R2_WORKER_DISABLE_SCHEDULER: 'true'
         run: |
           set -euo pipefail
