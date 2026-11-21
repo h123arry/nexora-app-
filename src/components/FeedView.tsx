@@ -2282,8 +2282,10 @@ export default function FeedView({
             isOffline,
           });
           const { shouldPreload, isReleased, preloadMode } = preloadPlan;
-
-
+          // Warm image posts before they enter view; constrain speculative
+          // requests on slow connections and low-memory devices.
+          const shouldPreloadImage = !hasVideo && !isOffline && activePostIndex >= 0
+            && Math.abs(index - activePostIndex) <= (isConnectionSlow || isConstrainedDevice ? 1 : 2);
 
           return (
             <React.Fragment key={post.id}>
@@ -2295,6 +2297,7 @@ export default function FeedView({
                 followingIds={followingIds}
                 pinnedPostIds={pinnedPostIds}
                 shouldPreload={shouldPreload}
+                shouldPreloadImage={shouldPreloadImage}
                 isReleased={isReleased}
                 preloadMode={preloadMode}
                 currentUser={currentUser}
