@@ -1252,7 +1252,6 @@ export default function ProfileView({
         ? error.message
         : 'NEXORA could not save this profile change. Please try again.';
       window.dispatchEvent(new CustomEvent('toast', { detail: message }));
-      throw error;
     } finally {
       setIsSavingProfile(false);
     }
@@ -3470,7 +3469,7 @@ export default function ProfileView({
                       <button type="button" disabled={isSavingProfile || showSavedFeedback}
                         onClick={() => coverInputRef.current?.click()}
                         className="mt-1 text-xs font-semibold text-violet-300">{editCover ? 'Change photo' : 'Add photo'}</button>
-                      {editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => setEditCover('')}
+                      {editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => { setEditCover(''); void saveProfileField({ coverImage: '' }); }}
                         className="ml-2 text-xs text-zinc-400">Remove</button>}
                     </div>
                     <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={isSavingProfile} onChange={handleCoverPhotoSelection} />
