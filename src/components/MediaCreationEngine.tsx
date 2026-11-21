@@ -1869,7 +1869,7 @@ export default function MediaCreationEngine({
         )}
 
         {/* Dynamic Core Body */}
-        <div className={`flex-1 min-h-0 pr-1 space-y-4 text-left font-sans ${currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel') ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
+        <div className={`flex-1 min-h-0 pr-1 space-y-4 text-left font-sans ${currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel' || activeMode === 'carousel') ? 'flex flex-col overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
           
           {activeTab === 'drafts' ? (
             /* Draft Organizer Screen */
@@ -2025,7 +2025,7 @@ export default function MediaCreationEngine({
                   )}
 
                   {activeMode === 'carousel' && (
-                    <section className="flex h-[min(76dvh,760px)] min-h-[460px] flex-col overflow-hidden rounded-[24px] border border-[#292244] bg-[#090714] shadow-[0_20px_70px_rgba(0,0,0,0.35)]" aria-label="Media gallery">
+                    <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-[#292244] bg-[#090714] shadow-[0_20px_70px_rgba(0,0,0,0.35)]" aria-label="Media gallery">
                       <header className="shrink-0 border-b border-[#292244] px-4 pb-3 pt-4">
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
