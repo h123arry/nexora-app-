@@ -46,7 +46,6 @@ import AttachmentMenu from './AttachmentMenu';
 import VoiceRecorder from './VoiceRecorder';
 import EmojiPicker from './EmojiPicker';
 import MediaGallery from './MediaGallery';
-import CallScreen from './CallScreen';
 import CirclesView from './CirclesView';
 
 interface NewInboxViewProps {
@@ -127,7 +126,6 @@ export default function NewInboxView({
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
   const audioInputRef = useRef<HTMLInputElement | null>(null);
-  const [activeCall, setActiveCall] = useState<{ type: 'voice' | 'video'; partnerName: string; partnerAvatar: string } | null>(null);
   
   // Message context / reply / edit
   const [activeContextMessageId, setActiveContextMessageId] = useState<string | null>(null);
@@ -277,6 +275,12 @@ export default function NewInboxView({
   }, [activeChatId, currentUser.id]);
 
   const activeChat = chats.find(c => c.id === activeChatId);
+  const placeDirectCall = (type: 'voice' | 'video') => {
+    if (!activeChat || activeChat.isGroup || !isServerBackedInbox) return;
+    window.dispatchEvent(new CustomEvent('NEXORA_START_DIRECT_CALL', {
+      detail: { chatId: activeChat.id, recipientId: activeChat.partnerId, type, partnerName: activeChat.partnerName, partnerAvatar: activeChat.partnerAvatar || '' },
+    }));
+  };
   const activeMessages = activeChatId ? (localMessages[activeChatId] || []) : [];
 
   // Filtered chats
@@ -954,11 +958,22 @@ export default function NewInboxView({
                 <button
                   type="button"
                   aria-label={`Start a voice call with ${activeChat.partnerName}`}
-                  onClick={() => setActiveCall({ type: 'voice', partnerName: activeChat.partnerName, partnerAvatar: activeChat.partnerAvatar })}
-                  className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
+                  onClick={() => placeDirectCall('voice')}
+                  disabled={Boolean(activeChat.isGroup) || !isServerBackedInbox}
+                  className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
                   title="Voice Call"
                 >
                   <Phone className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Start a video call with ${activeChat.partnerName}`}
+                  onClick={() => placeDirectCall('video')}
+                  disabled={Boolean(activeChat.isGroup) || !isServerBackedInbox}
+                  className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                  title="Video Call"
+                >
+                  <Video className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
@@ -1335,15 +1350,6 @@ export default function NewInboxView({
         />
       )}
 
-      {/* CALL SCREEN */}
-      {activeCall && (
-        <CallScreen
-          isOpen={Boolean(activeCall)}
-          type={activeCall.type}
-          partnerName={activeCall.partnerName}
-          onClose={() => setActiveCall(null)}
-        />
-      )}
 
     </div>
   );
