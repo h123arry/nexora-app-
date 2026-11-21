@@ -33,7 +33,7 @@ function canonicalQuery(params) {
 
 export function createR2WorkerUrl(config, method, objectKey, expiresSeconds = 900, now = new Date()) {
   if (!config || !['GET', 'PUT'].includes(method) || typeof objectKey !== 'string'
-    || !objectKey || objectKey.startsWith('/') || objectKey.split('/').some(part => !part || part === '.' || part === '..' || part.includes('\\\\'))) {
+    || !objectKey || objectKey.startsWith('/') || objectKey.split('/').some(part => !part || part === '.' || part === '..' || part.includes(String.fromCharCode(92)))) {
     throw new Error('Invalid R2 worker request');
   }
   if (!Number.isInteger(expiresSeconds) || expiresSeconds < 1 || expiresSeconds > 604800) {
@@ -42,7 +42,7 @@ export function createR2WorkerUrl(config, method, objectKey, expiresSeconds = 90
   const host = new URL(config.endpoint).host;
   const uri = `/${encodePath(config.bucket)}/${encodePath(objectKey)}`;
   const dateStamp = now.toISOString().slice(0, 10).replace(/-/g, '');
-  const amzDate = now.toISOString().replace(/[:-]|\\.\\d{3}/g, '');
+  const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
   const scope = `${dateStamp}/auto/s3/aws4_request`;
   const params = new URLSearchParams({
     'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
@@ -52,8 +52,8 @@ export function createR2WorkerUrl(config, method, objectKey, expiresSeconds = 90
     'X-Amz-SignedHeaders': 'host',
   });
   const query = canonicalQuery(params);
-  const canonicalRequest = [method, uri, query, `host:${host}\\n`, 'host', 'UNSIGNED-PAYLOAD'].join('\\n');
-  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha256(canonicalRequest)].join('\\n');
+  const canonicalRequest = [method, uri, query, `host:${host}\n`, 'host', 'UNSIGNED-PAYLOAD'].join('\n');
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha256(canonicalRequest)].join('\n');
   const dateKey = hmac(`AWS4${config.secretAccessKey}`, dateStamp);
   const regionKey = hmac(dateKey, 'auto');
   const serviceKey = hmac(regionKey, 's3');
