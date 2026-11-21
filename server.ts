@@ -154,7 +154,8 @@ const socialSparkHttpLimiter = rateLimit({
   message: { code: 'spark_rate_limited', error: 'You are sparking too quickly. Please wait a moment.' },
 });
 
-app.post('/api/social/follow-state', requireFirebaseUser, socialFollowHttpLimiter, async (req, res) => {
+app.use('/api/social/follow-state', requireFirebaseUser, socialFollowHttpLimiter);
+app.post('/api/social/follow-state', async (req, res) => {
   const uid = res.locals.userId;
   if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
     return res.status(401).json({ code: 'unauthenticated', error: 'Sign in to follow creators.' });
@@ -182,7 +183,8 @@ app.post('/api/social/follow-state', requireFirebaseUser, socialFollowHttpLimite
   }
 });
 
-app.post('/api/social/post-spark-state', requireFirebaseUser, socialSparkHttpLimiter, async (req, res) => {
+app.use('/api/social/post-spark-state', requireFirebaseUser, socialSparkHttpLimiter);
+app.post('/api/social/post-spark-state', async (req, res) => {
   const uid = res.locals.userId;
   if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
     return res.status(401).json({ code: 'unauthenticated', error: 'Sign in to Spark posts.' });
