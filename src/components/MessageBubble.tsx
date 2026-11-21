@@ -87,7 +87,7 @@ export default function MessageBubble({
   const clearLongPress = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); longPressTimer.current = null; };
   useEffect(() => () => clearLongPress(), []);
   const copyMessage = async () => {
-    try { await navigator.clipboard.writeText(message.content || message.fileName || ''); window.dispatchEvent(new CustomEvent('toast', { detail: 'Message copied.' })); }
+    try { await navigator.clipboard.writeText(message.customMediaData?.emoji || message.content || message.fileName || ''); window.dispatchEvent(new CustomEvent('toast', { detail: 'Message copied.' })); }
     catch { window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not copy this message on this device.' })); }
     onToggleContextMenu(null);
   };
@@ -134,7 +134,8 @@ export default function MessageBubble({
   
   const highlightMatch = (text: string, query: string) => {
     if (!query) return <span>{text}</span>;
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    const escapedQuery = query.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\    const parts = text.split(new RegExp(`(${query})`, 'gi'));');
+    const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'));
     return (
       <span>
         {parts.map((part, i) =>
