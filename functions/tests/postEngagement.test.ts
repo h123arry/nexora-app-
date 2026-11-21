@@ -31,7 +31,7 @@ before(async () => {
 });
 after(async () => {
   const fixtureUsers = ['author', 'alice', 'author-missing-projection', ...Array.from({ length: 12 }, (_, index) => `user-${index}`)];
-  const fixturePosts = ['public-post', 'restricted-post', 'public-post-missing-projection'];
+  const fixturePosts = ['public-post', 'restricted-post', 'public-post-missing-projection', 'public-post-orphan-author'];
   await Promise.all([
     ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
     ...fixtureUsers.map(id => db.recursiveDelete(db.doc(`users/${id}`))),
