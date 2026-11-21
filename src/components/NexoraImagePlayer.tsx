@@ -46,6 +46,9 @@ interface NexoraImagePlayerProps {
   onNotInterested?: () => void;
   onViewProfile?: (userId: string) => void;
   onViewSound?: (soundId: string) => void;
+  isActive?: boolean;
+  shouldPreload?: boolean;
+  isReleased?: boolean;
 }
 
 export default function NexoraImagePlayer({
@@ -59,6 +62,9 @@ export default function NexoraImagePlayer({
   onCommentToggle,
   onNotInterested,
   onViewProfile,
+  isActive = true,
+  shouldPreload = false,
+  isReleased = false,
 }: NexoraImagePlayerProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -231,6 +237,7 @@ export default function NexoraImagePlayer({
   }, [rawImagesKey]);
 
   useEffect(() => {
+    if (isReleased || (!isActive && !shouldPreload)) return;
     if (rawImages.length === 0) {
       setIsResolvingMedia(false);
       setIsImageLoading(false);
@@ -279,7 +286,7 @@ export default function NexoraImagePlayer({
       });
 
     return () => { active = false; };
-  }, [rawImagesKey, currentImageIndex]);
+  }, [rawImagesKey, currentImageIndex, isActive, shouldPreload, isReleased]);
 
   useEffect(() => {
     setIsImageLoading(true);
@@ -338,11 +345,11 @@ export default function NexoraImagePlayer({
           </div>
         ) : displayImages[currentImageIndex] ? (
           <>
-            <img loading="lazy"
+            <img loading={isActive || shouldPreload ? "eager" : "lazy"}
               src={displayImages[currentImageIndex]}
               alt={post.imageAltText || post.content || 'Post media'}
               decoding="async"
-              fetchPriority="low"
+              fetchPriority={isActive ? "high" : shouldPreload ? "auto" : "low"}
               aria-hidden={hasImageLoadError}
               onLoad={() => { setIsImageLoading(false); setHasImageLoadError(false); }}
               onError={() => { setIsImageLoading(false); setHasImageLoadError(true); }}
