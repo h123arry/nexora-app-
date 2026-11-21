@@ -23,6 +23,7 @@ const db = getFirestore(getApps()[0], databaseId);
 const storage = new Storage({ projectId });
 const bucket = bucketName ? storage.bucket(bucketName) : null;
 const RENDITIONS = [{height:360,bitrate:'800k',audio:'96k'},{height:720,bitrate:'2500k',audio:'128k'},{height:1080,bitrate:'5000k',audio:'128k'}];
+const R2_STALE_PROCESSING_MS = 45 * 60 * 1000;
 
 function run(binary,args) {
   return new Promise((resolve,reject)=>{
@@ -181,7 +182,7 @@ async function reconcileR2Uploads(){
     // Use the single-field provider index so this reconciler does not depend
     // on a new composite Firestore index being deployed first.
     const inventory = await db.collection('mediaAssets').where('storageProvider','==','r2').limit(200).get();
-    const candidates = inventory.docs.filter(snapshot => ['uploaded','failed','processing'].includes(String(snapshot.get('status'))) && canClaimMediaProcessing(snapshot.data())).slice(0,10);
+    const candidates = inventory.docs.filter(snapshot => ['uploaded','failed','processing'].includes(String(snapshot.get('status'))) && canClaimMediaProcessing(snapshot.data(), Date.now(), R2_STALE_PROCESSING_MS)).slice(0,10);
     for(const snapshot of candidates){
       const asset=snapshot.data();
       if(!asset || !['video','image'].includes(String(asset.kind)) || typeof asset.ownerId!=='string'
