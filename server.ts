@@ -137,6 +137,17 @@ const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(
 
 app.post('/api/social/follow-state', requireFirebaseUser, async (req, res) => {
   const { creatorId, following } = req.body || {};
+  const uid = String(res.locals.userId || '');
+  try {
+    const allowed = await allowFollowMutation(uid);
+    if (!allowed) {
+      res.setHeader('Retry-After', '60');
+      return res.status(429).json({ code: 'follow_rate_limited', error: 'Too many follow changes. Please wait before trying again.' });
+    }
+  } catch (error) {
+    console.error('[SocialFollow] Rate-limit check failed.', error);
+    return res.status(503).json({ code: 'follow_service_unavailable', error: 'NEXORA could not verify follow request limits. Please retry.' });
+  }
   try {
     const result = await setCreatorFollowStateForUser(
       serverDb,
@@ -202,6 +213,30 @@ async function requireFirebaseUser(req: express.Request, res: express.Response, 
   return next();
 }
 
+
+async function allowFollowMutation(uid: string): Promise<boolean> {
+  const windowMs = 60_000;
+  const limit = 60;
+  const ref = serverDb.collection('followMutationRateLimits').doc(createHash('sha256').update(uid).digest('hex'));
+  return serverDb.runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    const previous = snapshot.data();
+    const now = Date.now();
+    const cutoff = now - windowMs;
+    const timestamps = Array.isArray(previous?.requestTimestamps)
+      ? previous.requestTimestamps.filter((value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > cutoff)
+      : [];
+    if (timestamps.length >= limit) return false;
+    timestamps.push(now);
+    transaction.set(ref, {
+      requestTimestamps: timestamps,
+      count: timestamps.length,
+      expiresAt: new Date(now + windowMs * 10),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return true;
+  });
+}
 
 async function allowChatMediaUpload(uid: string): Promise<boolean> {
   const windowMs = 60_000;
