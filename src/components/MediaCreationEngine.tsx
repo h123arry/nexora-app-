@@ -2300,7 +2300,10 @@ export default function MediaCreationEngine({
                       <h3 className="text-sm font-black text-white">Edit your creation</h3>
                       <p className="text-[9px] text-[#8E88A7]">{selectedImages.length ? `Photo ${Math.min((activeEditIndex ?? 0) + 1, selectedImages.length)} of ${selectedImages.length}` : videoFileUrl || recordedVideoUrl ? 'Video workspace' : 'Post preview'}</p>
                     </div>
-                    <button type="button" onClick={saveAsDraftLocally} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-violet-400/25 bg-violet-500/10 px-3 text-[10px] font-bold text-violet-200 hover:bg-violet-500/15"><Save size={13}/> Save</button>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button type="button" onClick={saveAsDraftLocally} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-violet-400/25 bg-violet-500/10 px-3 text-[10px] font-bold text-violet-200 hover:bg-violet-500/15"><Save size={13}/> Save</button>
+                      <button type="button" aria-label="Close editor" onClick={handleExitClick} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#AFA6C3] hover:bg-white/[0.08] hover:text-white"><X size={15}/></button>
+                    </div>
                   </header>
 
                   <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
