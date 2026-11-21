@@ -406,6 +406,7 @@ export default function NewInboxView({
       timestamp: nowIso,
       status: 'sending',
       replyToQuote: replyQuoteText || undefined,
+      replyToMessageId: replyMessageId || undefined,
       customMediaType: mediaData?.type,
       mediaStoragePath: mediaData?.url || undefined,
       mediaType: mediaData?.type === 'voice' ? 'audio' : (mediaData?.type as 'image' | 'video' | 'audio' | 'document' | undefined),
@@ -985,6 +986,11 @@ export default function NewInboxView({
                       partnerName={activeChat.partnerName}
                       partnerAvatar={activeChat.partnerAvatar}
                       onRetry={handleRetryMessage}
+                      onJumpToReply={(messageId) => {
+                        const container = messagesScrollRef.current;
+                        const target = container ? Array.from(container.querySelectorAll<HTMLElement>('[data-message-id]')).find(element => element.dataset.messageId === messageId) : undefined;
+                        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }}
                       onReply={(m) => {
                         setReplyQuoteText(m.content);
                         setReplyMessageId(m.id);
