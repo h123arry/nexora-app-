@@ -36,7 +36,8 @@ test('R2 worker rejects traversal and invalid expiry before signing', () => {
   assert.throws(() => createR2WorkerUrl(config, 'GET', 'users/user_1/media/asset_1', 0), /expiry/);
 });
 
-\ntest('R2 worker accepts the production OIDC signing broker without long-lived R2 keys', () => {
+
+test('R2 worker accepts the production OIDC signing broker without long-lived R2 keys', () => {
   const config = resolveR2WorkerConfig({
     R2_ACCOUNT_ID: 'a'.repeat(32),
     R2_BUCKET_NAME: 'nexora-media',
