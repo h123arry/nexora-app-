@@ -226,21 +226,28 @@ body { background: var(--nx-canvas); }
 }
 .nx-profile-media-grid {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) !important;
-  gap: 0 !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-auto-flow: row !important;
+  gap: 1px !important;
   width: 100% !important;
-  overflow: visible !important;
-  background: transparent !important;
+  overflow: hidden !important;
+  background: var(--nx-canvas) !important;
+}
+.nx-profile-media-grid > * {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 3 / 5 !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
 }
 .nx-profile-media-grid > button {
   width: 100% !important;
-  min-height: 260px;
-  aspect-ratio: 4 / 5 !important;
-  max-height: 76dvh;
+  min-height: 0 !important;
+  aspect-ratio: 3 / 5 !important;
+  max-height: none !important;
   border-radius: 0 !important;
   border: 0 !important;
-  border-bottom: 1px solid rgba(150,144,170,.19) !important;
-  background: transparent !important;
+  background: #090714 !important;
   box-shadow: none !important;
 }
 .nx-profile-media-grid > button img,
@@ -335,7 +342,6 @@ body { background: var(--nx-canvas); }
   .nx-profile-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .nx-profile-stats > div:nth-child(3n + 2) { border-left: 0 !important; border-right: 0 !important; }
   .nx-profile-stats > div + div { border-left: 1px solid rgba(150,144,170,.14) !important; }
-  .nx-profile-media-grid > button { aspect-ratio: 16 / 9 !important; }
 }
 @media (max-width: 639px) {
   .nx-profile-main { padding-inline: 14px !important; }
@@ -473,8 +479,9 @@ body { background: var(--nx-canvas); }
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .nx-profile-media-grid > button {
-    aspect-ratio: 4 / 5 !important;
-    max-height: none;
+    aspect-ratio: 3 / 5 !important;
+    min-height: 0 !important;
+    max-height: none !important;
   }
   #explore-view-master-panel {
     padding-left: 0;
@@ -483,11 +490,6 @@ body { background: var(--nx-canvas); }
   #explore-view-master-panel > .nx-page-header {
     padding-left: 14px;
     padding-right: 14px;
-  }
-}
-@media (min-width: 640px) {
-  .nx-profile-media-grid > button {
-    aspect-ratio: 16 / 10 !important;
   }
 }
 @media (prefers-reduced-motion: reduce) {
