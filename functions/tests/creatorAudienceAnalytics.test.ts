@@ -26,12 +26,17 @@ before(async () => {
 
 after(async () => {
   await db.doc('follows/' + followerId + '_' + creatorId).delete();
+  await db.doc('follows/follower-no-projection_creator-no-projection').delete();
   for (const collectionName of ['creatorAudienceDaily', 'creatorProfileDailyVisitors', 'creatorProfileVisitorHistory']) {
     const snap = await db.collection(collectionName).where('creatorId', '==', creatorId).get();
     for (const item of snap.docs) await item.ref.delete();
   }
   await db.doc('publicProfiles/' + creatorId).delete();
   await db.doc('publicProfiles/' + followerId).delete();
+  await db.doc('publicProfiles/creator-no-projection').delete();
+  await db.doc('publicProfiles/follower-no-projection').delete();
+  await db.doc('users/creator-no-projection').delete();
+  await db.doc('users/follower-no-projection').delete();
   await db.doc('users/' + creatorId).delete();
   await db.doc('users/' + followerId).delete();
   await db.doc('pages/' + pageId).delete();
