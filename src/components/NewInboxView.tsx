@@ -654,9 +654,15 @@ export default function NewInboxView({
     }
   };
 
-  const handleDeleteMessage = async (msgId: string) => {
+  const handleDeleteMessage = async (msgId: string, forEveryone = true) => {
     if (!activeChatId) return;
     const chatId = activeChatId;
+    const target = (localMessages[chatId] || []).find(message => message.id === msgId);
+    if (!target) return;
+    if (forEveryone && target.senderId !== currentUser.id) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'You can only delete your own messages for everyone.' }));
+      return;
+    }
     try {
       if (db) await deleteDoc(doc(db, `chats/${chatId}/messages`, msgId));
       setLocalMessages(prev => ({
@@ -666,6 +672,57 @@ export default function NewInboxView({
     } catch {
       console.warn('[Inbox] Could not delete message from Firestore; details redacted.');
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Message was not deleted. Please retry.' }));
+    }
+  };
+
+  const handleEditMessage = async (message: ExtendedMessage) => {
+    if (!activeChatId || message.senderId !== currentUser.id || !db || message.mediaStoragePath) return;
+    const nextContent = window.prompt('Edit your message', message.content);
+    if (nextContent === null) return;
+    const content = nextContent.trim();
+    if (!content || content.length > 4000 || content === message.content) return;
+    try {
+      await updateDoc(doc(db, `chats/${activeChatId}/messages`, message.id), {
+        content, isEdited: true, editedAt: new Date().toISOString(),
+      });
+      setLocalMessages(previous => ({
+        ...previous,
+        [activeChatId]: (previous[activeChatId] || []).map(item => item.id === message.id
+          ? { ...item, content, isEdited: true } : item),
+      }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be edited. Please try again.' }));
+    }
+  };
+
+  const handlePinMessage = async (message: ExtendedMessage) => {
+    if (!activeChatId || !db) return;
+    const isPinned = !Boolean((message as ExtendedMessage & { isPinned?: boolean }).isPinned);
+    try {
+      await updateDoc(doc(db, `chats/${activeChatId}/messages`, message.id), { isPinned });
+      setLocalMessages(previous => ({
+        ...previous,
+        [activeChatId]: (previous[activeChatId] || []).map(item => item.id === message.id
+          ? { ...item, isPinned } as ExtendedMessage : item),
+      }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be pinned. Please try again.' }));
+    }
+  };
+
+  const handleStarMessage = async (message: ExtendedMessage) => {
+    if (!activeChatId || !db) return;
+    const isStarred = !Boolean((message as ExtendedMessage & { isStarred?: boolean }).isStarred);
+    try {
+      await updateDoc(doc(db, `chats/${activeChatId}/messages`, message.id), { isStarred });
+      setLocalMessages(previous => ({
+        ...previous,
+        [activeChatId]: (previous[activeChatId] || []).map(item => item.id === message.id
+          ? { ...item, isStarred } as ExtendedMessage : item),
+      }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: isStarred ? 'Message starred.' : 'Message unstarred.' }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be starred. Please try again.' }));
     }
   };
 
@@ -934,11 +991,11 @@ export default function NewInboxView({
                       }}
                       onReact={handleReactMessage}
                       onDelete={handleDeleteMessage}
-                      onEdit={() => {}}
-                      onPin={() => {}}
+                      onEdit={handleEditMessage}
+                      onPin={handlePinMessage}
                       onTranslate={() => {}}
                       searchQuery=""
-                      onToggleContextMenu={() => {}}
+                      onToggleContextMenu={(messageId) => setActiveContextMessageId(previous => previous === messageId ? null : messageId)}
                       activeContextMessageId={activeContextMessageId}
                       onTogglePlayVoice={() => {}}
                       onResolveVoiceMedia={resolvePrivateChatMedia}
@@ -947,7 +1004,8 @@ export default function NewInboxView({
                       voiceProgress={0}
                       voicePlaybackSpeed={1}
                       currentUserId={currentUser.id}
-                      isPinned={false}
+                      isPinned={Boolean((msg as ExtendedMessage & { isPinned?: boolean }).isPinned)}
+                      onStar={handleStarMessage}
                       groupReadCount={activeChat?.isGroup ? Object.values(msg.recipientReceipts || {}).filter(receipt => receipt.status === 'read').length : 0}
                       groupRecipientCount={activeChat?.isGroup ? Math.max(0, (activeChat.membersCount || 0) - 1) : 0}
                     />
