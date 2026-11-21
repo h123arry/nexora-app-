@@ -970,8 +970,13 @@ export default function ProfileView({
             setAvatarRotation(0);
             window.dispatchEvent(new CustomEvent('toast', { detail: 'Your profile photo has been uploaded and saved.' }));
           } catch (error) {
+            const code = (error as { code?: string } | null)?.code;
+            const rawMessage = error instanceof Error ? error.message : '';
+            const isPermissionFailure = code === 'permission-denied' || /missing or insufficient permissions/i.test(rawMessage);
             window.dispatchEvent(new CustomEvent('toast', {
-              detail: error instanceof Error ? error.message : 'NEXORA could not upload your profile photo. Please try again.'
+              detail: isPermissionFailure
+                ? 'NEXORA could not save your profile photo right now. Please try again.'
+                : rawMessage.trim() || 'NEXORA could not upload your profile photo. Please try again.'
             }));
           } finally {
             setIsSavingProfile(false);
