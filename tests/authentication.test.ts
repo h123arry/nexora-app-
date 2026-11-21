@@ -184,6 +184,60 @@ test('password changes require the current Firebase credential and persist throu
   assert.equal(restored.firebaseUser.email, email);
 });
 
+
+test('profile identity, media and creator details survive a fresh authenticated session', async () => {
+  await cleanUp();
+  const profileEmail = `nexora-profile-roundtrip-${Date.now()}@example.test`;
+  const updatedUsername = `profile_member_${Date.now().toString().slice(-8)}`;
+  try {
+    const created = await AuthService.registerWithEmail(profileEmail, password, 'Profile Before Edit', `before_${Date.now().toString().slice(-8)}`);
+    const uid = created.firebaseUser.uid;
+    const profilePatch = {
+      name: 'Profile After Edit',
+      username: updatedUsername,
+      avatar: 'https://media.example.test/profile-avatar.webp',
+      coverImage: 'https://media.example.test/profile-cover.jpg',
+      bio: 'This profile must remain the same after signing in again.',
+      website: 'https://example.test',
+      pronouns: 'they/them',
+      profileCategory: 'Digital Creator',
+      creatorType: 'Video Creator',
+      socialTwitter: 'https://x.com/nexora_member',
+      socialInstagram: 'https://instagram.com/nexora_member',
+      profileFrameId: 'frame-aurora',
+      profileBadgeId: 'badge-regalia',
+      pinnedMusicSong: 'Original Song',
+      pinnedMusicArtist: 'NEXORA Creator',
+      pinnedMusicUrl: 'https://example.test/music',
+      pinnedPosts: ['post-roundtrip'],
+      lastDisplayNameChangeTime: new Date().toISOString(),
+      lastUsernameChangeTime: new Date().toISOString(),
+    };
+    await ProfileService.updateProfile(uid, profilePatch);
+
+    const savedPrivate = await ProfileService.getProfile(uid);
+    const savedPublic = await ProfileService.getPublicProfile(uid);
+    assert.equal(savedPrivate?.coverImage, profilePatch.coverImage);
+    assert.equal(savedPublic?.coverImage, profilePatch.coverImage);
+    assert.equal(savedPublic?.bio, profilePatch.bio);
+
+    await signOut(auth);
+    const restored = await AuthService.loginWithEmail(profileEmail, password);
+    assert.equal(restored.firebaseUser.uid, uid);
+
+    const restoredPrivate = await ProfileService.getProfile(uid);
+    const restoredPublic = await ProfileService.getPublicProfile(uid);
+    for (const [field, value] of Object.entries(profilePatch)) {
+      assert.equal((restoredPrivate as any)?.[field], value, `private profile field ${field} must survive sign-in`);
+      if (!['lastDisplayNameChangeTime', 'lastUsernameChangeTime'].includes(field)) {
+        assert.equal((restoredPublic as any)?.[field], value, `public profile field ${field} must stay synchronized`);
+      }
+    }
+  } finally {
+    await cleanUp();
+  }
+});
+
 after(async () => {
   await cleanUp();
 });
