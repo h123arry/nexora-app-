@@ -147,7 +147,7 @@ test('GitHub Actions OIDC signer accepts only the NEXORA production restoration 
     const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
     const signingInput = `${header}.${body}`;
     const signature = sign('RSA-SHA256', Buffer.from(signingInput), privateKey).toString('base64url');
-    return `${signingInput}.${corruptSignature ? Buffer.from('invalid').toString('base64url') : signature}`;
+    return `${signingInput}.${corruptSignature ? Buffer.alloc(256).toString('base64url') : signature}`;
   };
 
   resetGitHubActionsOidcJwksCacheForTests();
