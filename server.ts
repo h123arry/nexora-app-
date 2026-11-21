@@ -8,6 +8,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { createHash } from 'node:crypto';
+import { setCreatorFollowStateForUser, SocialFollowError } from './server/socialFollow';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { resolveServerFirebaseConfig } from './server/runtimeConfig';
@@ -133,6 +134,29 @@ const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-
     : initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api'));
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
 const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(firebaseStorageBucket) : null;
+
+app.post('/api/social/follow-state', requireFirebaseUser, async (req, res) => {
+  const { creatorId, following } = req.body || {};
+  try {
+    const result = await setCreatorFollowStateForUser(
+      serverDb,
+      String(res.locals.userId || ''),
+      creatorId,
+      following,
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof SocialFollowError) {
+      const status = error.code === 'unauthenticated' ? 401
+        : error.code === 'invalid-argument' ? 400
+        : error.code === 'not-found' ? 404
+        : 409;
+      return res.status(status).json({ code: error.code, error: error.message });
+    }
+    console.error('[SocialFollow] Follow state could not be saved.', error);
+    return res.status(503).json({ code: 'follow_service_unavailable', error: 'NEXORA could not save this follow change. Please retry.' });
+  }
+});
 const r2Config = resolveR2Config();
 
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
