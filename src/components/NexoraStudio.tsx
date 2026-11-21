@@ -145,6 +145,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
   const [mp4Download, setMp4Download] = useState<{ downloadUrl: string; renditionHeight: number; expiresAt: number } | null>(null);
   const [cloudConflict, setCloudConflict] = useState(false);
   const [message, setMessage] = useState('');
+  const [isReversingClip, setIsReversingClip] = useState(false);
   const [ready, setReady] = useState(false);
   const [muted, setMuted] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
@@ -750,6 +751,100 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
     });
   };
 
+  const reverseSelectedClip = async () => {
+    if (!selectedClip || isReversingClip) return;
+    const duration = Math.max(0.25, selectedClip.end - selectedClip.start);
+    if (duration > 45) {
+      setMessage('For a smoother reverse render, trim this clip to 45 seconds or less first.');
+      return;
+    }
+    if (typeof MediaRecorder === 'undefined') {
+      setMessage('Reverse rendering is not supported by this browser. Your original clip is unchanged.');
+      return;
+    }
+    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
+    if (!mimeType) {
+      setMessage('This browser does not provide a supported reverse-render format. Your original clip is unchanged.');
+      return;
+    }
+    setIsReversingClip(true);
+    setPlaying(false);
+    videoRef.current?.pause();
+    const sourceUrl = URL.createObjectURL(selectedClip.blob);
+    const source = document.createElement('video');
+    source.preload = 'auto';
+    source.muted = true;
+    source.playsInline = true;
+    const canvas = document.createElement('canvas');
+    let recorder: MediaRecorder | null = null;
+    let frameTimer: number | null = null;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        source.onloadedmetadata = () => resolve();
+        source.onerror = () => reject(new Error('This clip could not be decoded for reverse editing.'));
+        source.src = sourceUrl;
+        source.load();
+      });
+      const start = Math.max(0, Math.min(selectedClip.start, source.duration));
+      const end = Math.max(start + 0.1, Math.min(selectedClip.end, source.duration));
+      const width = Math.max(2, Math.min(1920, source.videoWidth));
+      const height = Math.max(2, Math.round(source.videoHeight * (width / Math.max(1, source.videoWidth))));
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context || typeof canvas.captureStream !== 'function') throw new Error('Canvas video rendering is unavailable on this device.');
+      const stream = canvas.captureStream(24);
+      recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5_000_000 });
+      const chunks: Blob[] = [];
+      const stopped = new Promise<Blob>((resolve, reject) => {
+        recorder!.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+        recorder!.onerror = () => reject(new Error('The reverse render stopped unexpectedly.'));
+        recorder!.onstop = () => chunks.length ? resolve(new Blob(chunks, { type: recorder!.mimeType || mimeType })) : reject(new Error('The reverse render produced no video data.'));
+      });
+      const frameCount = Math.max(2, Math.ceil((end - start) * 24));
+      const frameInterval = 1000 / 24;
+      const seekTo = (time: number) => new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error('A frame could not be decoded while reversing this clip.')), 5000);
+        const finish = () => { window.clearTimeout(timeout); source.removeEventListener('seeked', finish); resolve(); };
+        source.addEventListener('seeked', finish, { once: true });
+        source.currentTime = time;
+      });
+      recorder.start(250);
+      for (let frame = 0; frame < frameCount; frame += 1) {
+        const sourceTime = Math.max(start, end - (frame / Math.max(1, frameCount - 1)) * (end - start));
+        await seekTo(sourceTime);
+        context.drawImage(source, 0, 0, width, height);
+        await new Promise<void>(resolve => { frameTimer = window.setTimeout(() => { frameTimer = null; resolve(); }, frameInterval); });
+      }
+      await new Promise<void>(resolve => { if (!recorder || recorder.state === 'inactive') resolve(); else { recorder.addEventListener('stop', () => resolve(), { once: true }); recorder.stop(); } });
+      const reversedBlob = await stopped;
+      if (!reversedBlob.size) throw new Error('The reversed clip is empty. Your original clip is unchanged.');
+      const reversedClip = normalizeStudioVideoLayer({
+        ...selectedClip,
+        blob: reversedBlob,
+        name: `${selectedClip.name.replace(/\s*·\s*Reverse$/, '')} · Reverse`,
+        start: 0,
+        end: duration,
+        duration,
+        // Reverse rendering exports video frames only. Keep source audio out of sync;
+        // creators can add a soundtrack or voiceover on the dedicated audio tracks.
+        volume: 0,
+      });
+      setClips(previous => previous.map(clip => clip.id === selectedClip.id ? reversedClip : clip));
+      setMessage('Reverse effect applied. The reversed clip is silent; add a soundtrack or voiceover for your edit.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not reverse this clip. Your original is unchanged.');
+    } finally {
+      if (frameTimer !== null) window.clearTimeout(frameTimer);
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      source.pause();
+      source.removeAttribute('src');
+      source.load();
+      URL.revokeObjectURL(sourceUrl);
+      setIsReversingClip(false);
+    }
+  };
+
   const togglePreview = async () => {
     const video = videoRef.current;
     if (!video || !selectedClip) return;
@@ -1267,7 +1362,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
               </div>
             </div>
             {selectedClip && <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
-              <div className="flex items-center gap-2"><Scissors size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Clip trim</h2></div>
+              <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Scissors size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Clip trim & effects</h2></div><button type="button" onClick={() => void reverseSelectedClip()} disabled={isReversingClip || rendering || publishing} className="rounded-lg border border-violet-400/35 bg-violet-500/10 px-2.5 py-1.5 text-[10px] font-bold text-violet-100 disabled:cursor-wait disabled:opacity-50">{isReversingClip ? 'Reversing…' : 'Reverse clip'}</button></div>
+              <p className="text-[9px] leading-relaxed text-[#8E88A7]">Reverse creates a new silent video version of the selected trimmed range. Your original project remains recoverable with Undo.</p>
               <label className="block text-[10px] text-[#A39BBF]">In · {selectedClip.start.toFixed(1)}s<input type="range" min="0" max={Math.max(0,selectedClip.end-0.25)} step=".1" value={selectedClip.start} onChange={event => updateSelected({start:Math.min(Number(event.target.value),selectedClip.end-0.25)})} className="mt-2 w-full accent-violet-500"/></label>
               <label className="block text-[10px] text-[#A39BBF]">Out · {selectedClip.end.toFixed(1)}s<input type="range" min={Math.min(selectedClip.duration,selectedClip.start+0.25)} max={selectedClip.duration} step=".1" value={selectedClip.end} onChange={event => updateSelected({end:Math.max(Number(event.target.value),selectedClip.start+0.25)})} className="mt-2 w-full accent-violet-500"/></label>
               <label className="block text-[10px] text-[#A39BBF]">Clip volume · {Math.round(selectedClip.volume * 100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.volume} onChange={event => updateSelected({volume:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Horizontal · {Math.round(selectedClip.x*100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.x} onChange={event=>updateSelected({x:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Vertical · {Math.round(selectedClip.y*100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.y} onChange={event=>updateSelected({y:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Scale · {selectedClip.scale.toFixed(2)}x<input type="range" min=".25" max="2" step=".05" value={selectedClip.scale} onChange={event=>updateSelected({scale:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Rotation · {selectedClip.rotation}°<input type="range" min="-180" max="180" step="5" value={selectedClip.rotation} onChange={event=>updateSelected({rotation:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Opacity · {Math.round(selectedClip.opacity*100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.opacity} onChange={event=>updateSelected({opacity:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label></div><div className="space-y-2 rounded-lg border border-[#34265E] bg-[#080611] p-2"><div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold text-violet-200">Video motion · {selectedClip.keyframes.length}/100</span><button type="button" onClick={addVideoKeyframe} disabled={selectedClip.keyframes.length>=100} className="rounded-md border border-violet-400/40 px-2 py-1 text-[9px] font-semibold text-violet-100 disabled:opacity-40">Add at {(previewGlobalTime-selectedClipGlobalOffset).toFixed(1)}s</button></div>{selectedClip.keyframes.map(frame=><div key={frame.time} className="flex items-center justify-between gap-2 text-[9px]"><button type="button" onClick={()=>seekToGlobalTime(selectedClipGlobalOffset+frame.time)} className="min-w-0 flex-1 text-left text-[#C7B5FF]">{frame.time.toFixed(1)}s · {Math.round(frame.opacity*100)}% · {frame.scale.toFixed(2)}x · {frame.rotation}°</button><button type="button" onClick={()=>updateSelected({keyframes:selectedClip.keyframes.filter(item=>item.time!==frame.time)})} className="rounded px-2 py-1 text-rose-300">Remove</button></div>)}{!selectedClip.keyframes.length && <p className="text-[9px] text-[#827B9C]">Move through the video, adjust its position or size, then save the change.</p>}</div>
