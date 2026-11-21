@@ -1304,7 +1304,7 @@ export default function MediaCreationEngine({
   const handleSelectDraft = (draft: DraftItem) => {
     setCaption(draft.caption);
     setTopics(draft.topics);
-    setAudience('public');
+    setAudience(draft.audience || 'public');
     setActiveMode(draft.type as any);
     setLocation(draft.location || '');
     setTaggedUsernames(draft.taggedUsernames || '');
@@ -2673,137 +2673,122 @@ export default function MediaCreationEngine({
               )}
 
               {currentStep === 7 && (
-                /* STEP 7: PUBLISHING OPTIONS & PROGRESS SCREEN */
+                /* SCREEN 5: FINAL REVIEW, AUDIENCE & PUBLISH */
                 <div className="space-y-4 animate-fadeIn">
-                  
                   {postingStatus === 'idle' ? (
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-bold text-white">{activeTab === 'story' ? 'Ready to share your story?' : 'Ready to share?'}</span>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <span className="mb-1 block text-[10px] font-mono uppercase tracking-[0.2em] text-violet-300">NEXORA · FINAL CHECK</span>
+                          <h3 className="text-base font-black text-white">Everything ready to go?</h3>
+                          <p className="mt-1 text-[11px] leading-relaxed text-[#A39BBF]">Review what you made, choose who can see it, then publish.</p>
+                        </div>
+                        <span className="shrink-0 rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1.5 text-[10px] font-bold text-violet-200">Screen 5 of 5</span>
                       </div>
 
-                      <div className="space-y-2.5 bg-[#07070d]/50 p-3.5 border border-[#292244] rounded-2xl text-left">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <span className="text-xs font-bold text-[#EEEAF8] block">{activeTab === 'story' ? 'Your story' : 'Public post'}</span>
-                            <p className="mt-1 text-[11px] leading-relaxed text-[var(--nx-muted)]">{activeTab === 'story' ? 'Your story will be visible on NEXORA for 24 hours.' : 'Anyone on NEXORA can see this post.'}</p>
-                          </div>
-                          <span className="shrink-0 rounded-full border border-[#7138FF]/40 bg-[#7138FF]/15 px-2.5 py-1 text-[10px] font-semibold text-[#C7B5FF]">Everyone</span>
-                        </div>
-                        {activeTab !== 'story' && (
-                          <label className="flex items-center justify-between gap-3 border-t border-[#292244] pt-3 text-xs text-[#EEEAF8]">
-                            <span>Allow comments</span>
-                            <input type="checkbox" checked={commentsAllowed} onChange={(event) => setCommentsAllowed(event.target.checked)} className="h-4 w-4 accent-violet-500" />
-                          </label>
-                        )}
-                        {activeTab !== 'story' ? (
-                          <>
-                            <div className="border-t border-[#292244] pt-3 space-y-2">
-                            <div>
-                              <span className="block text-xs font-bold text-[#EEEAF8]">NEXORA Origin · Remix permission</span>
-                              <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Let other people remix this post. You can change this later.</p>
+                      <div className="overflow-hidden rounded-2xl border border-[#34265E] bg-[#090714]">
+                        <div className="flex items-center justify-between border-b border-[#292244] px-3.5 py-3">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <img src={currentUser.avatar} alt="" className="h-9 w-9 rounded-full border border-white/10 object-cover"/>
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-extrabold text-white">{currentUser.name}</p>
+                              <p className="truncate text-[10px] text-[#8E88A7]">@{currentUser.username}</p>
                             </div>
-                            <select
-                              aria-label="NEXORA Origin remix permission"
-                              value={originRemixPolicy}
-                              onChange={(event) => setOriginRemixPolicyState(event.target.value as OriginRemixPolicy)}
-                              className="w-full rounded-xl border border-[#34265E] bg-[#120E2B] px-3 py-2.5 text-xs font-semibold text-white outline-none focus:border-violet-400"
-                            >
+                          </div>
+                          <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-[9px] font-bold text-violet-200">FINAL PREVIEW</span>
+                        </div>
+                        <div className="space-y-3 p-3.5">
+                          <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-[#EEEAF8]">{caption || 'No caption added.'}</p>
+                          {selectedImages.length > 0 && (
+                            <div className={selectedImages.length > 1 ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-1'}>
+                              {selectedImages.slice(0, 4).map((photo, index) => (
+                                <div key={`publish-photo-${index}`} className="relative aspect-square overflow-hidden rounded-xl border border-[#292244] bg-black">
+                                  <img src={photo.url} alt={index === 0 ? imageAltText || 'Selected post photo' : `Selected post photo ${index + 1}`} className="h-full w-full object-cover" style={{filter:`${photo.filterStyle || 'none'} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`,transform:`rotate(${photo.rotation}deg) scale(${photo.zoom})`}}/>
+                                  {stickerOverlay && <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl">{stickerOverlay}</span>}
+                                  {textOverlay.trim() && <span className="pointer-events-none absolute inset-x-2 bottom-2 rounded-lg bg-black/70 px-2 py-2 text-center text-xs font-bold" style={{color:textOverlayColor}}>{textOverlay}</span>}
+                                </div>
+                              ))}
+                              {selectedImages.length > 4 && <p className="col-span-2 text-center text-[10px] text-[#A39BBF]">+{selectedImages.length - 4} more photos in this post</p>}
+                            </div>
+                          )}
+                          {(videoFileUrl || recordedVideoUrl) && <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="max-h-[340px] w-full rounded-xl border border-[#292244] bg-black object-contain"/>}
+                          {voiceFileUrl && <div className="flex items-center gap-2 rounded-xl border border-[#292244] bg-[#120E2B] p-3 text-[11px] text-[#D9D1EA]"><Play className="h-4 w-4 text-violet-300"/> Voice recording attached <span className="ml-auto text-[9px] text-[#8E88A7]">{voiceDurationSecs}s</span></div>}
+                          {pollQuestion.trim() && <div className="rounded-xl border border-[#292244] bg-[#120E2B] p-3"><p className="text-xs font-bold text-white">{pollQuestion}</p>{pollOptionsList.filter(Boolean).map((option,index)=><p key={index} className="mt-2 rounded-lg bg-[#090714] px-3 py-2 text-[11px] text-[#C9C1D9]">{option}</p>)}</div>}
+                          <div className="flex flex-wrap gap-2 border-t border-[#292244] pt-3 text-[9px] text-[#A39BBF]">
+                            <span className="rounded-full bg-white/[0.05] px-2.5 py-1">{activeTab === 'story' ? '24-hour story' : activeMode === 'video' || activeMode === 'reel' ? 'Video post' : activeMode === 'carousel' ? 'Carousel post' : activeMode === 'poll' ? 'Poll' : activeMode === 'voice' ? 'Voice post' : 'NEXORA post'}</span>
+                            {selectedImages.length > 0 && <span className="rounded-full bg-white/[0.05] px-2.5 py-1">{selectedImages.length} photo{selectedImages.length === 1 ? '' : 's'}</span>}
+                            {location.trim() && <span className="rounded-full bg-white/[0.05] px-2.5 py-1">📍 {location}</span>}
+                            {taggedUsernames.trim() && <span className="rounded-full bg-white/[0.05] px-2.5 py-1">Mentions added</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {activeTab !== 'story' && (
+                        <div className="space-y-3 rounded-2xl border border-[#34265E] bg-[#0B0918] p-3.5 text-left">
+                          <div>
+                            <h4 className="text-xs font-extrabold text-white">Who can see this?</h4>
+                            <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Your audience choice is attached to the post when it is saved.</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {([
+                              {value:'public',label:'Everyone',detail:'Public on NEXORA',icon:'🌍'},
+                              {value:'followers',label:'Followers',detail:'People following you',icon:'👥'},
+                              {value:'circle',label:'My Circle',detail:'Your selected circle',icon:'💜'},
+                              {value:'community',label:'Community',detail:'Your community audience',icon:'◈'},
+                              {value:'onlyme',label:'Only me',detail:'Private to your account',icon:'🔒'}
+                            ] as const).map(option=>(
+                              <button key={option.value} type="button" onClick={()=>setAudience(option.value)} aria-pressed={audience===option.value} className={audience===option.value?'rounded-xl border border-violet-400/60 bg-violet-500/15 p-3 text-left ring-1 ring-violet-400/20':'rounded-xl border border-white/10 bg-white/[0.025] p-3 text-left hover:border-violet-400/30'}>
+                                <span className="flex items-center justify-between text-xs font-bold text-white"><span>{option.icon} {option.label}</span>{audience===option.value&&<Check className="h-3.5 w-3.5 text-violet-300"/>}</span>
+                                <span className="mt-1 block text-[9px] text-[#8E88A7]">{option.detail}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <label className="flex items-center justify-between gap-3 border-t border-[#292244] pt-3 text-xs text-[#EEEAF8]">
+                            <span><span className="block font-semibold">Allow comments</span><span className="mt-0.5 block text-[9px] text-[#8E88A7]">People can respond to your post</span></span>
+                            <input type="checkbox" checked={commentsAllowed} onChange={event=>setCommentsAllowed(event.target.checked)} className="h-4 w-4 accent-violet-500"/>
+                          </label>
+                          <div className="border-t border-[#292244] pt-3">
+                            <label className="block text-xs font-bold text-white">NEXORA Origin · Remix permission</label>
+                            <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Choose whether other creators can remix the original media you are uploading now.</p>
+                            <select aria-label="NEXORA Origin remix permission" value={originRemixPolicy} onChange={event=>setOriginRemixPolicyState(event.target.value as OriginRemixPolicy)} className="mt-2 w-full rounded-xl border border-[#34265E] bg-[#120E2B] px-3 py-2.5 text-xs font-semibold text-white outline-none focus:border-violet-400">
                               <option value="closed">Closed · Only me</option>
                               <option value="allow_with_attribution">Allow remixing · Attribution required</option>
                             </select>
-                            <p className="text-[10px] leading-relaxed text-[#A39BBF]">
-                              {originRemixPolicy === 'closed'
-                                ? 'Your uploaded media stays closed to cross-account remixes by default.'
-                                : 'NEXORA will record creator attribution when another account remixes this media. Permission applies only to newly uploaded media in this post.'}
-                            </p>
+                            <p className="mt-2 text-[10px] leading-relaxed text-[#A39BBF]">{originRemixPolicy==='closed'?'Remixing is off by default.':'Attribution will be recorded for supported NEXORA Origin remixes of the newly uploaded source media.'}</p>
                           </div>
-                            <p className="text-[10px] leading-relaxed text-[#8E88A7]"></p>
-                          </>
-                        ) : (
-                          <p className="border-t border-[#292244] pt-3 text-[10px] leading-relaxed text-[#8E88A7]">Stories are public and disappear automatically after 24 hours.</p>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
+                      <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3 text-[10px] leading-relaxed text-[#A39BBF]">
+                        <p className="font-bold text-[#E8E2F4]">Before you publish</p>
+                        <p className="mt-1">Check your caption, selected audience and media preview. Photo edits and overlays are rendered into uploaded images. Video edits must be exported from Studio before returning here.</p>
+                        {activeTab === 'story' && <p className="mt-1">Stories are shared through the existing 24-hour story flow.</p>}
+                      </div>
                     </div>
                   ) : (
-                    /* Publishing progress */
                     <div className="py-12 flex flex-col items-center justify-center text-center space-y-5">
                       {postingStatus === 'completed' ? (
-                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center animate-bounce">
-                          <Check className="w-9 h-9" />
-                        </div>
+                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center animate-bounce"><Check className="w-9 h-9"/></div>
                       ) : postingStatus === 'failed' ? (
-                        <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center">
-                          <X className="w-9 h-9" />
-                        </div>
+                        <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center"><X className="w-9 h-9"/></div>
                       ) : (
                         <div className="w-full max-w-xs space-y-3">
-                          <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
-                            <NexoraLoader size="md" />
-                          </div>
-                          <div className="flex items-center justify-between text-[11px] font-mono">
-                            <span className="text-violet-300">{publishStage}</span>
-                            <span className="text-violet-200 font-black tabular-nums">{uploadProgress}%</span>
-                          </div>
-                          <div
-                            className="h-2 w-full overflow-hidden rounded-full bg-[#19143A]"
-                            role="progressbar"
-                            aria-label="Upload progress"
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={uploadProgress}
-                          >
-                            <div className="h-full rounded-full bg-violet-500 transition-[width] duration-200" style={{ width: `${uploadProgress}%` }} />
-                          </div>
-                          <p className="text-[10px] text-[#8E88A7]">Upload progress. Large videos may take longer to upload.</p>
+                          <div className="relative mx-auto flex h-16 w-16 items-center justify-center"><NexoraLoader size="md"/></div>
+                          <div className="flex items-center justify-between text-[11px] font-mono"><span className="text-violet-300">{publishStage}</span><span className="font-black tabular-nums text-violet-200">{uploadProgress}%</span></div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-[#19143A]" role="progressbar" aria-label="Upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={uploadProgress}><div className="h-full rounded-full bg-violet-500 transition-[width] duration-200" style={{width:`${uploadProgress}%`}}/></div>
+                          <p className="text-[10px] text-[#8E88A7]">Your media is uploading. Large videos may take longer.</p>
                         </div>
                       )}
-
                       <div className="space-y-1">
-                        <span className="text-[10px] font-mono text-[#8E88A7] uppercase block tracking-wider">
-                          {postingStatus === 'publishing' && publishStage}
-                          {postingStatus === 'completed' && (activeTab === 'story' ? 'Your story is live!' : 'Your post is ready!')}
-                        </span>
-                        <p className="text-xs text-[#D1CBE3] font-sans">
-                          {postingStatus === 'completed' ? (activeTab === 'story' ? 'Your story will be available for 24 hours.' : 'Your post has been shared.') : postingStatus === 'failed' ? (errorMessage || 'Something went wrong. Your content is safe to try again.') : publishStage}
-                        </p>
+                        <span className="block text-[10px] font-mono uppercase tracking-wider text-[#8E88A7]">{postingStatus==='publishing'?publishStage:postingStatus==='completed'?(activeTab==='story'?'Your story is live!':'Your post is live!'):'Publishing paused'}</span>
+                        <p className="text-xs text-[#D1CBE3]">{postingStatus==='completed'?(activeTab==='story'?'Your story will be available for 24 hours.':'Your post has been shared on NEXORA.'):postingStatus==='failed'?(errorMessage||'Something went wrong. Your content is safe to try again.'):publishStage}</p>
                       </div>
-
-                      {postingStatus === 'failed' && (
-                        <div className="w-full max-w-sm rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-left space-y-2">
-                          <p className="text-[11px] leading-relaxed text-rose-200">{errorMessage || 'Something interrupted publishing.'}</p>
-                          <button
-                            type="button"
-                            onClick={() => { setPostingStatus('idle'); setErrorMessage(''); }}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-rose-100 hover:bg-rose-500/25"
-                          >
-                            <RefreshCw className="h-3.5 w-3.5" /> Try again
-                          </button>
-                        </div>
-                      )}
-
-                      {postingStatus !== 'completed' && postingStatus !== 'failed' && (
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => uploadAbortControllerRef.current?.abort()} 
-                            className="px-3 py-1.5 bg-[#120E2B] hover:bg-[#19143A] text-[#A39BBF] rounded-lg text-xs"
-                          >
-                            Cancel
-                          </button>
-                          <button 
-                            onClick={() => setIsMinimized(true)}
-                            className="px-3 py-1.5 bg-violet-600/20 text-violet-300 rounded-lg text-xs"
-                          >
-                            Minimize
-                          </button>
-                        </div>
-                      )}
+                      {postingStatus==='failed'&&<div className="w-full max-w-sm space-y-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-left"><p className="text-[11px] leading-relaxed text-rose-200">{errorMessage||'Something interrupted publishing.'}</p><button type="button" onClick={()=>{setPostingStatus('idle');setErrorMessage('');}} className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-rose-100"><RefreshCw className="h-3.5 w-3.5"/> Review and try again</button></div>}
+                      {postingStatus==='publishing'&&<div className="flex gap-2"><button type="button" onClick={()=>uploadAbortControllerRef.current?.abort()} className="rounded-lg bg-[#120E2B] px-3 py-1.5 text-xs text-[#A39BBF]">Cancel upload</button><button type="button" onClick={()=>setIsMinimized(true)} className="rounded-lg bg-violet-600/20 px-3 py-1.5 text-xs text-violet-300">Minimize</button></div>}
                     </div>
                   )}
-
                 </div>
-              )}
+              )} )}
 
             </div>
           )}
