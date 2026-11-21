@@ -17,10 +17,11 @@ const publicProfileSeed = (uid: string, source: Record<string, unknown>) => {
     'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram',
     'pinnedMusicSong', 'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts',
   ];
-  return Object.fromEntries([
-    ['id', uid],
-    ...allowed.filter(key => source[key] !== undefined).map(key => [key, source[key]]),
-  ]);
+  const projection: Record<string, unknown> = { id: uid };
+  for (const key of allowed) {
+    if (source[key] !== undefined) projection[key] = source[key];
+  }
+  return projection;
 };
 
 const safeCount = (value: unknown) => {
@@ -103,7 +104,7 @@ export async function setCreatorFollowStateForUser(
       tx.set(followerPublicRef, { ...publicProfileSeed(followerId, followerPrivate.data() || {}), following: nextFollowerCount }, { merge: true });
     }
     if (followerPrivate.exists) tx.update(followerPrivateRef, { following: nextFollowerCount, updatedAt: FieldValue.serverTimestamp() });
-    if (creatorPublic.exists && nextCreatorCount !== null) {
+    if ((creatorPublic.exists || creatorPrivate.exists) && nextCreatorCount !== null) {
       tx.set(dailyRef, {
         creatorId, day,
         follows: FieldValue.increment(shouldFollow ? 1 : 0),
