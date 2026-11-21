@@ -19,6 +19,7 @@ import {
 import { PrivacySettings, User, Post, Comment, Circle as Community, Page, Notification, Message, Chat } from '../types';
 import { functions } from '../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
+import { apiRequestUrl } from '../lib/apiBaseUrl';
 import { cacheManager } from './cache/cacheService';
 import { mergePendingActions, PendingAction } from './syncQueue';
 
@@ -442,6 +443,26 @@ export async function publishPostNow(post: any, signal?: AbortSignal): Promise<v
     await write;
   }
   cacheManager.setPost(sanitizedPost.id, sanitizedPost);
+}
+
+export async function setPostSparkState(uid: string, postId: string, liked: boolean): Promise<{ liked: boolean; likes: number; changed?: boolean }> {
+  const user = auth.currentUser;
+  if (!user || user.uid !== uid) throw new Error('Sign in to this account before sending a Spark.');
+  if (typeof postId !== 'string' || !postId.trim() || postId.length > 150 || typeof liked !== 'boolean') {
+    throw new Error('This Spark request is invalid.');
+  }
+  const token = await user.getIdToken();
+  const response = await fetch(apiRequestUrl('/api/social/post-spark-state'), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ postId, liked }),
+  });
+  const payload = await response.json().catch(() => ({})) as { liked?: boolean; likes?: number; changed?: boolean; error?: string };
+  if (!response.ok) throw new Error(payload.error || 'NEXORA could not save this Spark right now. Please try again.');
+  if (payload.liked !== liked || !Number.isSafeInteger(payload.likes) || (payload.likes as number) < 0) {
+    throw new Error('The Spark service returned an invalid confirmation.');
+  }
+  return { liked: payload.liked, likes: payload.likes as number, changed: payload.changed };
 }
 
 export async function addFollow(followerId: string, followingId: string) {
