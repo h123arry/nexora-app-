@@ -668,7 +668,9 @@ r2MediaRouter.delete('/:mediaId', async (req, res) => {
 });
 
 app.get('/api/media/:mediaId', async (req, res) => {
-  if (!r2Config) return res.status(404).end();
+  // A missing storage configuration is an operational outage, not proof that
+  // the requested media was deleted. Keep it retryable for clients.
+  if (!r2Config) return res.status(503).json({ code: 'media_storage_unavailable', retryable: true });
   const mediaId = req.params.mediaId;
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) return res.status(404).end();
   try {
@@ -714,8 +716,10 @@ app.get('/api/media/:mediaId', async (req, res) => {
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     return res.redirect(302, url);
   } catch (error) {
-    console.error('[R2Media] Public media resolution failed.', error);
-    return res.status(404).end();
+    console.error('[R2Media] Public media resolution failed.', error instanceof Error ? error.name : 'unknown');
+    // Preserve 404 for confirmed missing/private assets above; transient
+    // Firestore, signing, and upstream failures must remain retryable.
+    if (!res.headersSent) return res.status(503).json({ code: 'media_resolution_unavailable', retryable: true });
   }
 });
 
