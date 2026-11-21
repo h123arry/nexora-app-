@@ -19,6 +19,9 @@ test('comments sheet occupies at 60 percent of the viewport, scrolls independent
   assert.match(feed, /Hide replies/);
   assert.match(feed, /ChevronDown/);
   assert.match(feed, /ChevronUp/);
+  assert.match(feed, /handleSparkReply/);
+  assert.match(feed, /setPublicPostCommentReplyLikeState/);
+  assert.match(feed, /aria-label=\{replySparkStates/);
 });
 
 test('comment actions use persisted comment, reply and reaction flows', async () => {
