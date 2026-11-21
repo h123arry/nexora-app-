@@ -564,6 +564,22 @@ service cloud.firestore {
       }
     }
 
+    // Permit an owner to repair missing public projection fields only when the
+    // values exactly match their private profile. This keeps counters and reputation
+    // server-authoritative while allowing atomic profile edits to heal older projections.
+    function publicProjectionReadOnlyFieldsMatchPrivateProfile(userId) {
+      let privateData = get(/databases/$(database)/documents/users/$(userId)).data;
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return (!changed.hasAny(['followers']) || request.resource.data.followers == privateData.get('followers', 0))
+        && (!changed.hasAny(['following']) || request.resource.data.following == privateData.get('following', 0))
+        && (!changed.hasAny(['sparks']) || request.resource.data.sparks == privateData.get('sparks', 0))
+        && (!changed.hasAny(['hasStory']) || request.resource.data.hasStory == privateData.get('hasStory', false))
+        && (!changed.hasAny(['joinedDate']) || request.resource.data.joinedDate == privateData.get('joinedDate', null))
+        && (!changed.hasAny(['reputationPoints']) || request.resource.data.reputationPoints == privateData.get('reputationPoints', 0))
+        && (!changed.hasAny(['reputationBreakdown']) || request.resource.data.reputationBreakdown == privateData.get('reputationBreakdown', null))
+        && (!changed.hasAny(['skills']) || request.resource.data.skills == privateData.get('skills', []));
+    }
+
     // Public directory contains an allowlisted projection, never private account fields.
     match /publicProfiles/{userId} {
       allow get, list: if true;
@@ -576,7 +592,8 @@ service cloud.firestore {
       allow update: if owner(userId)
         && request.resource.data.id == userId
         && request.resource.data.keys().hasOnly(publicProfileKeys())
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(editableProfileKeys().concat(['interestDNA']))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(editableProfileKeys().concat(['interestDNA', 'followers', 'following', 'sparks', 'hasStory', 'joinedDate', 'reputationPoints', 'reputationBreakdown', 'skills']))
+        && publicProjectionReadOnlyFieldsMatchPrivateProfile(userId)
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['interestDNA'])
           || !request.resource.data.keys().hasAny(['interestDNA']))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
