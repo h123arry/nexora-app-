@@ -442,6 +442,7 @@ export default function MediaCreationEngine({
   const photoPreviewRef = useRef<HTMLVideoElement>(null);
   const photoStreamRef = useRef<MediaStream | null>(null);
   const [photoCameraReady, setPhotoCameraReady] = useState(false);
+  const [videoCameraReady, setVideoCameraReady] = useState(false);
   const mediaRecorderVideoRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -600,6 +601,7 @@ export default function MediaCreationEngine({
     let currentStream: MediaStream | null = null;
     let cancelled = false;
     if (activeMode === 'reel' && permissionState === 'granted' && currentStep === 2 && !isLensStudioOpen) {
+      setVideoCameraReady(false);
       if (!navigator.mediaDevices?.getUserMedia) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera recording is not supported by this browser. Please upload a video instead.' }));
       } else {
@@ -632,6 +634,7 @@ export default function MediaCreationEngine({
       cancelled = true;
       if (currentStream) currentStream.getTracks().forEach(track => track.stop());
       if (videoStreamRef.current === currentStream) videoStreamRef.current = null;
+      setVideoCameraReady(false);
     };
   }, [activeMode, permissionState, cameraFacing, currentStep, isLensStudioOpen]);
 
@@ -1966,51 +1969,38 @@ export default function MediaCreationEngine({
                       </div>
 
                       {/* Snap device simulation */}
-                      <div className="absolute inset-0 flex flex-col justify-between px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] text-center">
-                        <button type="button" aria-label="Back to Create" onClick={() => setCurrentStep(1)} className="absolute left-4 top-[max(1rem,env(safe-area-inset-top))] z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur"><X size={18}/></button>
-                        <video ref={photoPreviewRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full object-cover bg-black" aria-label="Live camera preview" />
-                        {permissionState !== 'granted' && (
-                          <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
+                      <div className="absolute inset-0 flex flex-col items-center justify-between px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] text-center">
+                        <button type="button" aria-label="Back to Create" onClick={() => setCurrentStep(1)} className="absolute left-4 top-[max(1rem,env(safe-area-inset-top))] z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white backdrop-blur-xl"><X size={18}/></button>
+                        <video ref={photoPreviewRef} autoPlay muted playsInline onLoadedMetadata={() => setPhotoCameraReady(true)} onCanPlay={() => setPhotoCameraReady(true)} className="absolute inset-0 h-full w-full object-cover bg-black" aria-label="Live camera preview" />
+                        {!photoCameraReady && (
+                          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/35 px-8">
+                            <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/25 border-t-violet-300" />
+                            <p className="text-xs font-semibold text-white">{permissionState === 'denied' ? 'Camera access is off' : 'Starting your camera…'}</p>
+                            {permissionState !== 'granted' && <button type="button" onClick={() => setPermissionTarget('camera')} className="rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-semibold text-white">Enable camera</button>}
+                          </div>
                         )}
-                        <div className="relative z-10 flex items-center justify-center gap-5 rounded-full border border-white/15 bg-black/55 px-4 py-3 backdrop-blur-xl">
-                          <label aria-label="Choose photos from gallery" className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-white/10 text-white"><FileImage size={19}/><input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} /></label>
-                          <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="flex h-[68px] w-[68px] items-center justify-center rounded-full border-[5px] border-white bg-gradient-to-br from-[#A855F7] to-[#4B10F2] text-sm font-black text-white shadow-[0_0_35px_rgba(113,56,255,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"><span className="h-12 w-12 rounded-full border border-white/60"/></button>
-                          <button type="button" aria-label="Switch camera" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white disabled:opacity-40"><RefreshCw size={19}/></button>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 justify-center mt-2">
-                          {selectedImages.map((img, i) => (
-                            <div key={i} className="relative w-12 h-12 rounded-lg border border-[#44376F] overflow-hidden shrink-0">
-                              <img src={img.url} className="w-full h-full object-cover" />
-                              <button 
-                                onClick={() => setSelectedImages(prev => prev.filter((_, idx) => idx !== i))}
-                                className="absolute top-0.5 right-0.5 bg-black/75 rounded-full p-0.5 text-rose-400"
-                              >
-                                <X className="w-2.5 h-2.5" />
-                              </button>
+                        <div className="relative z-20 mt-auto flex w-full flex-col items-center gap-3">
+                          <div className="flex items-center justify-center gap-5 rounded-full border border-white/15 bg-black/55 px-4 py-3 backdrop-blur-xl">
+                            <label aria-label="Choose photos from gallery" className="flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-white/10 text-white"><FileImage size={19}/><input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} /></label>
+                            <button onClick={captureCameraSnapshot} disabled={!photoCameraReady || selectedImages.length >= 20} aria-disabled={!photoCameraReady || selectedImages.length >= 20} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="flex h-[68px] w-[68px] items-center justify-center rounded-full border-[5px] border-white bg-gradient-to-br from-[#A855F7] to-[#4B10F2] text-sm font-black text-white shadow-[0_0_35px_rgba(113,56,255,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"><span className="h-12 w-12 rounded-full border border-white/60"/></button>
+                            <button type="button" aria-label="Switch camera" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white disabled:opacity-40"><RefreshCw size={19}/></button>
+                          </div>
+                          {selectedImages.length > 0 && (
+                            <div className="flex w-full max-w-full items-center gap-3">
+                              <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-1">
+                                {selectedImages.map((img, i) => (
+                                  <div key={i} className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/25">
+                                    <img src={img.url} alt={`Captured photo ${i + 1}`} className="h-full w-full object-cover" />
+                                    <span className="absolute bottom-0.5 left-0.5 rounded bg-black/70 px-1 text-[8px] font-bold text-white">{i + 1}</span>
+                                    <button type="button" aria-label={`Remove photo ${i + 1}`} onClick={() => setSelectedImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute right-0.5 top-0.5 rounded-full bg-black/80 p-0.5 text-white"><X className="h-3 w-3"/></button>
+                                  </div>
+                                ))}
+                              </div>
+                              <button type="button" onClick={nextStep} className="shrink-0 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-3 text-xs font-extrabold text-white shadow-lg">Use {selectedImages.length === 1 ? 'photo' : `${selectedImages.length} photos`}</button>
                             </div>
-                          ))}
+                          )}
                         </div>
                       </div>
-                      {isLensStudioOpen && (
-                        <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3 sm:col-span-2">
-                          <div className="flex items-center justify-between">
-                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Take a photo with your lens.</p></div>
-                            <div className="flex gap-2">
-                              <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
-                              <button type="button" onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white">Close</button>
-                            </div>
-                          </div>
-                          <NexoraLensStudio cameraFacing={cameraFacing} userId={currentUser.id} captureMode="photo" countdownTimer={countdownTimer}
-                            onStreamReady={stream => { videoStreamRef.current = stream; setIsLensStreamReady(Boolean(stream)); }}
-                            onCapture={blob => {
-                              const url = trackObjectUrl(URL.createObjectURL(blob));
-                              setSelectedImages(previous => [...previous, { url, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
-                              setIsLensStudioOpen(false);
-                              window.dispatchEvent(new CustomEvent('toast', { detail: 'Your filtered NEXORA photo is ready to share.' }));
-                            }}
-                          />
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -2127,26 +2117,34 @@ export default function MediaCreationEngine({
                         </div>
                       ) : (
                         <div className="fixed inset-0 z-[131] flex h-[100dvh] w-screen flex-col justify-between overflow-hidden bg-black px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
-                          <div className="z-10 flex items-center justify-between">
-                            <button type="button" onClick={() => setCurrentStep(1)} className="rounded-full border border-white/20 bg-black/50 px-3 py-2 text-xs font-semibold text-white backdrop-blur">Close</button>
-                            <span className="rounded-full border border-white/15 bg-black/50 px-3 py-2 text-[10px] font-semibold text-white backdrop-blur">NEXORA Camera</span>
+                          <div className="z-20 flex w-full items-center justify-start">
+                            <button type="button" aria-label="Back to Create" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCurrentStep(1)} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white backdrop-blur-xl disabled:opacity-40"><X size={18}/></button>
                           </div>
                           <div className="absolute inset-0 z-0 flex items-center justify-center">
-                            {countdownTimer !== null ? <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span> : recordedVideoUrl ? <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" /> : <video ref={videoPreviewRef} autoPlay muted playsInline className="h-full w-full bg-[#120E2B] object-cover" />}
+                            <video ref={videoPreviewRef} autoPlay muted playsInline onLoadedMetadata={() => setVideoCameraReady(true)} onCanPlay={() => setVideoCameraReady(true)} className={"absolute inset-0 h-full w-full bg-black object-cover " + (recordedVideoUrl ? "invisible" : "")} aria-label="Live video camera preview" />
+                            {recordedVideoUrl && <video src={recordedVideoUrl} autoPlay loop muted playsInline className="absolute inset-0 h-full w-full object-cover" aria-label="Recorded video preview" />}
+                            {countdownTimer !== null && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/15"><span className="text-6xl font-black text-white drop-shadow-lg">{countdownTimer}</span></div>}
+                            {!videoCameraReady && !recordedVideoUrl && countdownTimer === null && (
+                              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/40 px-8 text-center">
+                                <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/25 border-t-violet-300" />
+                                <p className="text-xs font-semibold text-white">{permissionState === 'denied' ? 'Camera access is off' : 'Starting your camera…'}</p>
+                                {permissionState !== 'granted' && <button type="button" onClick={() => setPermissionTarget('camera')} className="rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-semibold text-white">Enable camera</button>}
+                              </div>
+                            )}
                           </div>
-                          <div className="z-10 flex flex-col items-center gap-3">
+                          <div className="z-20 flex flex-col items-center gap-3">                          <div className="z-10 flex flex-col items-center gap-3">
                             <div className="flex w-full max-w-full items-center justify-center gap-1.5 overflow-x-auto rounded-full border border-white/15 bg-black/55 p-2 backdrop-blur-xl">
                               {RECORDING_DURATIONS.filter(duration => [15, 30, 60, 180, 600, 1200].includes(duration.seconds)).map(duration => (
                                 <button key={duration.seconds} type="button" aria-pressed={recordingLimitSecs === duration.seconds} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setRecordingLimitSecs(duration.seconds)} className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-bold transition-colors disabled:opacity-50 ${recordingLimitSecs === duration.seconds ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/40' : 'text-white/75 hover:bg-white/10'}`}>{duration.label}</button>
                               ))}
                             </div>
                             <div className="flex w-full items-center justify-center gap-7">
-                              <button type="button" aria-label="Choose a video from gallery" onClick={() => { setActiveMode('video'); setIsLensStudioOpen(false); }} className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white backdrop-blur"><FileImage size={19}/></button>
+                              <button type="button" aria-label="Choose a video from gallery" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => { setActiveMode('video'); setIsLensStudioOpen(false); }} className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white backdrop-blur disabled:opacity-40"><FileImage size={19}/></button>
                               {isRecording ? <button onClick={handleStopReelRecord} aria-label="Stop recording" className="flex h-[72px] w-[72px] items-center justify-center rounded-full border-[5px] border-white bg-rose-600 shadow-xl"><span className="h-7 w-7 rounded-md bg-white"/></button> : <button onClick={startReelRecording} disabled={isSavingRecordedVideo || countdownTimer !== null} aria-label="Start recording" className="flex h-[72px] w-[72px] items-center justify-center rounded-full border-[5px] border-white bg-gradient-to-tr from-[#8A3FFC] to-[#1600A3] shadow-xl disabled:opacity-50"><span className="h-12 w-12 rounded-full border border-white/70"/></button>}
                               <button type="button" aria-label="Switch camera" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white backdrop-blur disabled:opacity-40"><RefreshCw size={19}/></button>
                             </div>
                             {isRecording && <span className="rounded-full bg-black/60 px-3 py-1 text-[10px] font-mono text-white">Recording {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')} / {Math.floor(recordingLimitSecs / 60)}:{String(recordingLimitSecs % 60).padStart(2, '0')}</span>}
-                            {!isRecording && recordedVideoUrl && <div className="flex items-center gap-2"><span className="rounded-full bg-black/60 px-3 py-1 text-[10px] text-white">Video ready</span>{videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="rounded-full border border-violet-300/40 bg-violet-500/20 px-3 py-2 text-[10px] font-semibold text-violet-100">Edit in Studio</button>}</div>}
+                            {!isRecording && recordedVideoUrl && <div className="flex flex-wrap items-center justify-center gap-2"><span className="rounded-full bg-black/60 px-3 py-1 text-[10px] text-white">Video ready</span><button type="button" onClick={() => { revokeTrackedObjectUrl(recordedVideoUrl); setRecordedVideoUrl(null); setVideoRawBlob(null); setLoopTimerSecs(0); }} className="rounded-full border border-white/20 bg-black/55 px-3 py-2 text-[10px] font-semibold text-white">Retake</button><button type="button" onClick={nextStep} className="rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-2.5 text-[10px] font-extrabold text-white shadow-lg">Use video</button>{videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="rounded-full border border-violet-300/40 bg-violet-500/20 px-3 py-2.5 text-[10px] font-semibold text-violet-100">Edit in Studio</button>}</div>}
                           </div>
                         </div>
                       )}
