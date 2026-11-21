@@ -147,7 +147,7 @@ describe('NEXORA R2 video reconciliation eligibility', () => {
   it('retries uploaded and failed assets, but waits for an active processing lease', () => {
     assert.equal(shouldReconcileR2Asset({ ...original, status: 'uploaded', renditions: [] }, mediaId), true);
     assert.equal(shouldReconcileR2Asset({ ...original, status: 'failed', renditions: [] }, mediaId), true);
-    assert.equal(shouldReconcileR2Asset({ ...original, status: 'processing', processingStartedAt: { toMillis: () => 1_950_000 } }, mediaId, 2_000_000), false);
-    assert.equal(shouldReconcileR2Asset({ ...original, status: 'processing', processingStartedAt: { toMillis: () => 1_000_000 } }, mediaId, 2_000_000), true);
+    assert.equal(shouldReconcileR2Asset({ ...original, status: 'processing', processingStartedAt: { toMillis: () => 3_950_000 } }, mediaId, 4_000_000), false);
+    assert.equal(shouldReconcileR2Asset({ ...original, status: 'processing', processingStartedAt: { toMillis: () => 1_000_000 } }, mediaId, 4_000_000), true);
   });
 });
