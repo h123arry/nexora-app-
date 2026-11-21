@@ -977,7 +977,7 @@ export default function NewInboxView({
                 </button>
                 <button
                   type="button"
-                  aria-label={`View media and files shared with ${activeChat.partnerName}`
+                  aria-label={`View media and files shared with ${activeChat.partnerName}`}
                   onClick={() => setShowMediaGallery(true)}
                   className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
                   title="Media & Files"
