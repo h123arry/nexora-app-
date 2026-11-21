@@ -78,8 +78,10 @@ export async function setPostLike(
       const nextReceived = Math.max(0, currentReceived + (desiredLiked ? 1 : -1));
       if (recipientPublicSnapshot?.exists) {
         transaction.update(recipientPublicRef!, { sparks: nextReceived });
-      } else {
-        const privateProfile = recipientPrivateSnapshot?.data() || {};
+      } else if (recipientPrivateSnapshot?.exists) {
+        // Rebuild only from a real private account record; never create a
+        // ghost public profile for a deleted or malformed post author.
+        const privateProfile = recipientPrivateSnapshot.data() || {};
         transaction.set(recipientPublicRef!, {
           id: authorId,
           username: typeof privateProfile.username === 'string' ? privateProfile.username : 'member',
