@@ -91,3 +91,24 @@ test('feed settings transaction writes only the feed namespace and timestamp', (
   assert.equal('content' in patch, false);
   assert.equal('security' in patch, false);
 });
+
+
+test('normal feed and empty-feed recovery share the same exclusion policy', async () => {
+  const { isFeedPostAllowedByPreferences } = await import('../src/services/discovery/feedPreferences');
+  const preferences = normalizeFeedPreferences({
+    notInterestedTags: ['#sports'],
+    hiddenPostIds: ['hidden-post'],
+    blockedCreatorIds: ['blocked-user'],
+    mutedCreatorIds: ['muted-user'],
+  });
+  const allowed = (overrides: Record<string, unknown> = {}) => isFeedPostAllowedByPreferences({
+    id: 'post-1', userId: 'creator-1', tags: ['technology'], ...overrides,
+  }, preferences);
+
+  assert.equal(allowed(), true);
+  assert.equal(allowed({ tags: ['#SPORTS'] }), false);
+  assert.equal(allowed({ id: 'hidden-post' }), false);
+  assert.equal(allowed({ userId: 'blocked-user' }), false);
+  assert.equal(allowed({ userId: 'muted-user' }), false);
+  assert.equal(allowed({ isArchived: true }), false);
+});
