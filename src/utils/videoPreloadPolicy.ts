@@ -19,8 +19,8 @@ export interface VideoPreloadPlan {
 }
 
 /**
- * Keeps the active video ready and prepares only its immediate video
- * neighbors. Data-saving/slow connections use metadata-only preparation;
+ * Keeps the active video ready and prepares the next two video positions
+ * in either direction. Data-saving/slow connections use metadata-only preparation;
  * offline sessions never start speculative network requests.
  */
 export function getVideoPreloadPlan(input: VideoPreloadPlanInput): VideoPreloadPlan {
