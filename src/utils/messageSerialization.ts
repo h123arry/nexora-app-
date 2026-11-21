@@ -7,7 +7,7 @@ export function omitUndefinedFields<T extends object>(value: T): T {
 export function serializeOutgoingMessage<T extends { status: string }>(value: T): T {
   const allowedFields = [
     'id', 'chatId', 'senderId', 'content', 'timestamp', 'status', 'voiceDuration',
-    'voiceAudioUrl', 'fileName', 'replyToQuote', 'customMediaType', 'mediaStoragePath',
+    'voiceAudioUrl', 'fileName', 'replyToQuote', 'replyToMessageId', 'customMediaType', 'mediaStoragePath',
     'mediaType', 'mediaContentType', 'fileSize',
   ];
   const persisted = Object.fromEntries(Object.entries(value).filter(([key, fieldValue]) => allowedFields.includes(key) && fieldValue !== undefined));
