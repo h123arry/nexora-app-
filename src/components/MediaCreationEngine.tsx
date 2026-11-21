@@ -2414,10 +2414,14 @@ export default function MediaCreationEngine({
                           </>
                         ) : (videoFileUrl || recordedVideoUrl) ? (
                           <div className="space-y-3">
-                            <h4 className="text-xs font-extrabold text-white">Video editing</h4>
-                            <p className="text-[10px] leading-relaxed text-[#8E88A7]">Use NEXORA Studio for clip sequencing, audio, transitions, titles and a full export timeline.</p>
-                            {onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-3 text-xs font-extrabold text-white"><Clapperboard size={14} className="mr-2 inline"/> Open NEXORA Studio</button>}
-                            <p className="text-[9px] text-[#756D8A]">Your original video remains unchanged until you export the edited result.</p>
+                            <h4 className="text-xs font-extrabold text-white">Build the full edit</h4>
+                            <p className="text-[10px] leading-relaxed text-[#A59DBB]">Go beyond quick adjustments. NEXORA Studio opens over this step, so you can return here without losing your Create flow.</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {['Multi-clip timeline','Trim, split & reorder','Reverse clip effects','Music & voiceover tracks','Transitions & visual looks','Animated text & stickers','Timed subtitles','Layer motion keyframes'].map(item => <div key={item} className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-2.5 py-2 text-[9px] font-semibold text-[#C7BEDB]"><span className="mr-1.5 text-violet-300">✦</span>{item}</div>)}
+                            </div>
+                            <p className="text-[9px] leading-relaxed text-[#827B9C]">Import an audio file you have rights to use, including Brazilian funk and other styles. NEXORA does not present unlicensed sample tracks as a music catalogue.</p>
+                            {onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-3 text-xs font-extrabold text-white"><Clapperboard size={14} className="mr-2 inline"/> Enter full editing studio</button>}
+                            <p className="text-[9px] text-[#756D8A]">Your original source stays intact until you export the finished edit.</p>
                           </div>
                         ) : (
                           <div className="space-y-3">
