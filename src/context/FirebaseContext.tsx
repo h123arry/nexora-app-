@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { onIdTokenChanged, User as FirebaseUser, ConfirmationResult, setPersistence, indexedDBLocalPersistence, browserLocalPersistence } from 'firebase/auth';
 import { User } from '../types';
@@ -132,19 +132,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       console.warn('[NEXORA] Live private profile sync paused; keeping last confirmed profile', { code });
     });
   }, [firebaseUser?.uid, firebaseUser?.email, firebaseUser?.emailVerified, user?.id]);
-
-  useEffect(() => {
-    async function testConnection() {
-      try {
-        await getDocFromServer(doc(db, 'test', 'connection'));
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('the client is offline')) {
-          console.error("Please check your Firebase configuration.");
-        }
-      }
-    }
-    testConnection();
-  }, []);
 
   const loginWithEmail = async (email: string, pass: string) => {
     setLoading(true);
