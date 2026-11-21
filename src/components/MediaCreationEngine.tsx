@@ -2037,12 +2037,20 @@ export default function MediaCreationEngine({
                         </div>
                         <div className="mt-4 grid grid-cols-2 rounded-xl border border-white/10 bg-black/25 p-1">
                           <button type="button" onClick={() => setGalleryTab('photos')} aria-pressed={galleryTab === 'photos'} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${galleryTab === 'photos' ? 'bg-[#7138FF] text-white shadow-lg' : 'text-[#A59DBB] hover:text-white'}`}>Photos</button>
-                          <button type="button" onClick={() => { setGalleryTab('videos'); setActiveMode('video'); }} aria-pressed={galleryTab === 'videos'} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${galleryTab === 'videos' ? 'bg-[#7138FF] text-white shadow-lg' : 'text-[#A59DBB] hover:text-white'}`}>Videos</button>
+                          <button type="button" disabled={selectedImages.length > 0} onClick={() => setGalleryTab('videos')} aria-pressed={galleryTab === 'videos'} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${galleryTab === 'videos' ? 'bg-[#7138FF] text-white shadow-lg' : 'text-[#A59DBB] hover:text-white'}`}>Videos</button>
                         </div>
                       </header>
 
                       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
-                        {selectedImages.length === 0 ? (
+                        {galleryTab === 'videos' ? (
+                          <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#44376F] bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.14),transparent_65%)] px-6 text-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-500/10 text-violet-200"><Video size={28}/></div>
+                            <h4 className="mt-4 text-sm font-extrabold text-white">Bring your clips together</h4>
+                            <p className="mt-1 max-w-[270px] text-[11px] leading-relaxed text-[#938BAA]">Choose a video to trim it, or select multiple clips to open them together in NEXORA Studio.</p>
+                            <label className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-5 py-3 text-xs font-extrabold text-white shadow-[0_8px_24px_rgba(75,16,242,0.25)] active:scale-[0.98]"><Plus size={16}/> Browse videos<input type="file" accept="video/*" multiple className="hidden" onChange={event => { setActiveMode('video'); handleVideoUpload(event); }}/></label>
+                            <p className="mt-3 text-[9px] text-[#6F6884]">Video files are checked before they enter your editor.</p>
+                          </div>
+                        ) : selectedImages.length === 0 ? (
                           <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#44376F] bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.14),transparent_65%)] px-6 text-center">
                             <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-500/10 text-violet-200"><FolderHeart size={28}/></div>
                             <h4 className="mt-4 text-sm font-extrabold text-white">Your selection starts here</h4>
@@ -2089,10 +2097,10 @@ export default function MediaCreationEngine({
                       <footer className="shrink-0 border-t border-[#292244] bg-[#0D0A1A] px-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3">
                         <div className="flex items-center gap-3">
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs font-extrabold text-white">{selectedImages.length ? `${selectedImages.length} photo${selectedImages.length === 1 ? '' : 's'} selected` : 'Nothing selected yet'}</p>
-                            <p className="mt-0.5 text-[10px] text-[#817895]">{selectedImages.length ? 'Your order is ready for editing.' : 'Choose photos to continue.'}</p>
+                            <p className="text-xs font-extrabold text-white">{selectedImages.length ? `${selectedImages.length} photo${selectedImages.length === 1 ? '' : 's'} selected` : galleryTab === 'videos' ? 'Video import' : 'Nothing selected yet'}</p>
+                            <p className="mt-0.5 text-[10px] text-[#817895]">{selectedImages.length ? 'Your order is ready for editing.' : galleryTab === 'videos' ? 'Choose one clip or multiple clips for Studio.' : 'Choose photos to continue.'}</p>
                           </div>
-                          <button type="button" disabled={selectedImages.length === 0} onClick={nextStep} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-5 py-3 text-xs font-extrabold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-35">Add {selectedImages.length || ''} {selectedImages.length === 1 ? 'photo' : 'photos'} <ChevronRight size={15}/></button>
+                          <button type="button" disabled={selectedImages.length === 0} onClick={nextStep} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-5 py-3 text-xs font-extrabold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-35">{selectedImages.length ? `Add ${selectedImages.length} ${selectedImages.length === 1 ? 'photo' : 'photos'}` : 'Select photos'} <ChevronRight size={15}/></button>
                         </div>
                       </footer>
                     </section>
