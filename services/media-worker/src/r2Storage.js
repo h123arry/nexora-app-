@@ -8,8 +8,25 @@ export function resolveR2WorkerConfig(env = process.env) {
   const accessKeyId = env.R2_ACCESS_KEY_ID?.trim() || '';
   const secretAccessKey = env.R2_SECRET_ACCESS_KEY?.trim() || '';
   const bucket = env.R2_BUCKET_NAME?.trim() || '';
-  if (![accountId, accessKeyId, secretAccessKey, bucket].some(Boolean)) return null;
-  if (![accountId, accessKeyId, secretAccessKey, bucket].every(Boolean)) throw new Error('Incomplete Cloudflare R2 worker credentials');
+  const signingEndpoint = env.R2_SIGNING_API_URL?.trim() || '';
+  if (![accountId, accessKeyId, secretAccessKey, bucket, signingEndpoint].some(Boolean)) return null;
+
+  if (signingEndpoint && !accessKeyId && !secretAccessKey) {
+    if (!accountId || !bucket || !/^[a-f0-9]{32}$/i.test(accountId) || !/^[A-Za-z0-9_-]{3,63}$/.test(bucket)) {
+      throw new Error('Incomplete Cloudflare R2 signing broker configuration');
+    }
+    let parsed;
+    try { parsed = new URL(signingEndpoint); } catch { throw new Error('Invalid R2 signing broker URL'); }
+    if (parsed.protocol !== 'https:' || parsed.hostname !== 'nexora-o3od.onrender.com'
+      || parsed.pathname !== '/api/internal/r2-worker/sign' || parsed.search || parsed.hash) {
+      throw new Error('R2 signing broker must use the NEXORA production HTTPS endpoint');
+    }
+    return { accountId, bucket, signingEndpoint };
+  }
+
+  if (![accountId, accessKeyId, secretAccessKey, bucket].every(Boolean)) {
+    throw new Error('Incomplete Cloudflare R2 worker credentials');
+  }
   if (!/^[a-f0-9]{32}$/i.test(accountId) || !/^[A-Za-z0-9_-]{3,63}$/.test(bucket)) {
     throw new Error('Invalid Cloudflare R2 worker configuration');
   }
@@ -63,13 +80,43 @@ export function createR2WorkerUrl(config, method, objectKey, expiresSeconds = 90
   return `${config.endpoint}${uri}?${canonicalQuery(params)}`;
 }
 
+
+async function createR2WorkerSignedUrl(config, method, objectKey, expiresSeconds = 900, contentType) {
+  if (config.signingEndpoint) {
+    const requestUrl = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
+    const requestToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+    if (!requestUrl || !requestToken) throw new Error('GitHub Actions OIDC token exchange is unavailable.');
+    const oidcUrl = new URL(requestUrl);
+    oidcUrl.searchParams.set('audience', 'nexora-r2-media-worker');
+    const identityResponse = await fetch(oidcUrl, {
+      headers: { authorization: `Bearer ${requestToken}` },
+    });
+    if (!identityResponse.ok) throw new Error(`GitHub Actions OIDC token request failed (${identityResponse.status})`);
+    const identity = await identityResponse.json();
+    if (typeof identity?.value !== 'string' || !identity.value) throw new Error('GitHub Actions did not return an OIDC identity token.');
+
+    const response = await fetch(config.signingEndpoint, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${identity.value}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ method, objectKey, expiresSeconds, contentType }),
+    });
+    if (!response.ok) throw new Error(`NEXORA R2 signing broker rejected the request (${response.status})`);
+    const signed = await response.json();
+    if (typeof signed?.url !== 'string' || !signed.url.startsWith('https://')) {
+      throw new Error('NEXORA R2 signing broker returned an invalid URL.');
+    }
+    return signed.url;
+  }
+  return createR2WorkerUrl(config, method, objectKey, expiresSeconds);
+}
+
 export async function downloadR2Object(config, objectKey, destination) {
-  const response = await fetch(createR2WorkerUrl(config, 'GET', objectKey));
+  const response = await fetch(await createR2WorkerSignedUrl(config, 'GET', objectKey));
   if (!response.ok || !response.body) throw new Error(`R2 source download failed (${response.status})`);
   await pipeline(Readable.fromWeb(response.body), (await import('node:fs')).createWriteStream(destination));
 }
 export async function uploadR2Object(config, sourcePath, objectKey, contentType, cacheControl) {
-  const response = await fetch(createR2WorkerUrl(config, 'PUT', objectKey), {
+  const response = await fetch(await createR2WorkerSignedUrl(config, 'PUT', objectKey, 900, contentType), {
     method: 'PUT',
     headers: { 'content-type': contentType, 'cache-control': cacheControl },
     body: createReadStream(sourcePath),
