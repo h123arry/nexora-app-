@@ -999,6 +999,7 @@ export const academyBookMentorshipSession = onCall({ maxInstances: 10 }, async r
 
 export { startLiveSession, endLiveSession, joinLiveSession, leaveLiveSession, heartbeatLiveSession, sendLiveChatMessage, updateLiveSessionSettings, requestLiveGuestAccess, reviewLiveGuestAccess, reconcileLiveSessionViewers } from './liveSessions.js';
 export { getLiveKitToken } from './liveKitTransport.js';
+export { startDirectCall, respondToDirectCall, endDirectCall, getDirectCallToken } from './directCallTransport.js';
 
 export { startLiveRecording, stopLiveRecording, getLiveReplayPlayback } from './liveReplays.js';
 
