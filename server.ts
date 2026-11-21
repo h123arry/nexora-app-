@@ -267,8 +267,8 @@ app.post('/api/internal/r2-worker/sign', r2WorkerSigningLimiter, async (req, res
   }
 
   const { method, objectKey, expiresSeconds = 900, contentType } = req.body || {};
-  if (!isAllowedR2WorkerObject(method, objectKey, contentType)
-    || !Number.isInteger(expiresSeconds) || expiresSeconds < 1 || expiresSeconds > 900) {
+  if ((method !== 'GET' && method !== 'PUT') || !isAllowedR2WorkerObject(method, objectKey, contentType)
+    || typeof expiresSeconds !== 'number' || !Number.isInteger(expiresSeconds) || expiresSeconds < 1 || expiresSeconds > 900) {
     return res.status(400).json({ error: 'The R2 worker signing request is invalid.' });
   }
   try {
