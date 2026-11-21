@@ -66,10 +66,19 @@ export async function setCreatorFollowStateForUser(
       throw new HttpsError('failed-precondition', 'Your account profile is still being prepared. Please retry.');
     }
     if (follow.exists === shouldFollow) {
+      if (!creatorPublic.exists && creatorPrivate.exists) {
+        tx.set(creatorPublicRef, publicProfileSeed(creatorId, creatorPrivate.data() || {}), { merge: true });
+      }
+      if (!followerPublic.exists && followerPrivate.exists) {
+        tx.set(followerPublicRef, publicProfileSeed(followerId, followerPrivate.data() || {}), { merge: true });
+      }
       return {
         following: follow.exists,
         changed: false,
-        followerCount: creatorPublic.exists ? safeCount(creatorPublic.get('followers')) : creatorPage.exists ? safeCount(creatorPage.get('followersCount')) : null,
+        followerCount: creatorPublic.exists
+          ? safeCount(creatorPublic.get('followers'))
+          : creatorPrivate.exists ? safeCount(creatorPrivate.get('followers'))
+          : creatorPage.exists ? safeCount(creatorPage.get('followersCount')) : null,
       };
     }
 
