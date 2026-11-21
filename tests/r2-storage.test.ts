@@ -119,7 +119,8 @@ test('R2 playback prefers a valid 720p rendition and falls back to the immutable
   assert.equal(selectR2VideoPlaybackPath({ storagePath: 'users/other/media/asset-456', kind: 'video', status: 'ready' }, 'user_123', 'asset-456'), null);
 });
 
-\ntest('GitHub Actions OIDC signer accepts only the NEXORA production restoration workflow', async () => {
+
+test('GitHub Actions OIDC signer accepts only the NEXORA production restoration workflow', async () => {
   const nowMs = Date.now();
   const nowSeconds = Math.floor(nowMs / 1000);
   const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
