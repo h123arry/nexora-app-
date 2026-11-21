@@ -2331,7 +2331,7 @@ export default function FeedView({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: "100%", opacity: 0 }}
                       transition={{ type: "spring", damping: 28, stiffness: 260 }}
-                      className="comments-container fixed bottom-0 inset-x-0 h-[50dvh] min-h-[50dvh] max-h-[50dvh] rounded-t-[28px] bg-[#090714]/[0.98] backdrop-blur-2xl border-t border-violet-400/20 z-[90] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden touch-pan-y"
+                      className="comments-container fixed bottom-0 inset-x-0 h-[50dvh] min-h-[50dvh] max-h-[50dvh] bg-[#090714]/[0.98] z-[90] flex flex-col px-4 pt-3 pb-4 sm:px-5 overflow-hidden touch-pan-y"
                     >
                       {/* Header of Comments drawer */}
                       <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
@@ -2354,7 +2354,7 @@ export default function FeedView({
                           </p>
                         )}
                         {post.comments.map((c, commentIndex) => (
-                          <div key={c.id} className="p-3 rounded-2xl bg-slate-950/40 border border-white/5 space-y-2.5">
+                          <div key={c.id} className="py-3 border-b border-white/8 space-y-2.5">
                             <div className="flex items-start justify-between gap-2 text-xs">
                               <button type="button" onClick={() => onViewProfile?.(c.userId || c.username)} aria-label={`View @${c.username}'s profile`} className="flex min-h-11 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
                                 <img src={c.avatar} alt="" className="w-7 h-7 rounded-lg object-cover" />
@@ -2393,7 +2393,7 @@ export default function FeedView({
                             {c.replies && c.replies.length > 0 && (
                               <div className="pl-9 space-y-2.5 pt-1.5 border-l border-white/10 ml-3.5">
                                 {c.replies.map(rep => (
-                                  <div key={rep.id} className="text-xs bg-white/2 p-2 rounded-xl border border-white/3">
+                                  <div key={rep.id} className="text-xs py-2 border-b border-white/5">
                                     <button type="button" onClick={() => onViewProfile?.(rep.userId || rep.username)} aria-label={`View @${rep.username}'s profile`} className="mb-1 flex min-h-10 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
                                       <img src={rep.avatar} alt="" className="h-5 w-5 rounded-md object-cover" />
                                       <span>
