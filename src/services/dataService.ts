@@ -769,14 +769,30 @@ export async function getPages() {
 // 7. REAL-TIME SUBSCRIPTION ENGINE (GLOBAL SYNC)
 // ==========================================
 
-import { subscribeToPosts as subscribeToPostsOriginal, getGlobalPostsPage } from './posts/postService';
+import { getGlobalPostsPage } from './posts/postService';
 import type { FeedPage } from './posts/postService';
 
 export { getGlobalPostsPage };
 export type { FeedPage };
 
+/**
+ * Public feed bootstrap is intentionally a one-shot bounded read. A global
+ * realtime listener makes every anonymous browser pay for repeated full-page
+ * reads whenever a visitor reconnects or posts change. Feed pagination remains
+ * available through getGlobalPostsPage; active account-specific features keep
+ * their own scoped listeners.
+ */
 export function subscribeToPosts(callback: (posts: Post[], page?: FeedPage) => void) {
-  return subscribeToPostsOriginal(callback);
+  let active = true;
+  void getGlobalPostsPage(null, 30).then((page) => {
+    if (active) callback(page.posts, page);
+  }).catch((error) => {
+    console.warn('[NEXORA] Public feed bootstrap unavailable; retaining locally cached feed.', {
+      code: (error as { code?: string } | null)?.code || 'unknown',
+    });
+    if (active) callback([], undefined);
+  });
+  return () => { active = false; };
 }
 
 export function subscribeToNotifications(userId: string, callback: (notifications: Notification[]) => void) {
