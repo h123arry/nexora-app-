@@ -1,4 +1,5 @@
 import express from 'express';
+import { rateLimit } from 'express-rate-limit';
 import path from 'path';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
@@ -10,6 +11,8 @@ import { getStorage } from 'firebase-admin/storage';
 import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
+import { setPostLike } from './server/postEngagement';
+import { setCreatorFollowStateForUser, SocialFollowError } from './server/socialFollow';
 import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
@@ -28,6 +31,16 @@ if (!isProduction) dotenv.config();
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 app.disable('x-powered-by');
+
+// Global HTTP backstop; sensitive social mutations also have stricter per-user
+// HTTP and Firestore limits below. Keep this high enough for shared proxy IPs.
+const globalRequestLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 20_000,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(globalRequestLimiter);
 
 const firebaseRuntime = resolveServerFirebaseConfig();
 const firebaseProjectId = firebaseRuntime.projectId;
@@ -133,6 +146,78 @@ const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-
     : initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api'));
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
 const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(firebaseStorageBucket) : null;
+
+const socialFollowHttpLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (_req, res) => String(res.locals.userId || 'unauthenticated'),
+  message: { code: 'follow_rate_limited', error: 'Too many follow changes. Please wait before trying again.' },
+});
+const socialSparkHttpLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 90,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (_req, res) => String(res.locals.userId || 'unauthenticated'),
+  message: { code: 'spark_rate_limited', error: 'You are sparking too quickly. Please wait a moment.' },
+});
+
+app.use('/api/social/follow-state', requireFirebaseUser, socialFollowHttpLimiter);
+app.post('/api/social/follow-state', async (req, res) => {
+  const uid = res.locals.userId;
+  if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
+    return res.status(401).json({ code: 'unauthenticated', error: 'Sign in to follow creators.' });
+  }
+  const { creatorId, following } = req.body || {};
+  if (typeof creatorId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(creatorId) || typeof following !== 'boolean') {
+    return res.status(400).json({ code: 'invalid_follow_request', error: 'A valid creator and follow state are required.' });
+  }
+  try {
+    if (!await allowFollowMutation(uid)) {
+      res.setHeader('Retry-After', '60');
+      return res.status(429).json({ code: 'follow_rate_limited', error: 'Too many follow changes. Please wait before trying again.' });
+    }
+    const result = await setCreatorFollowStateForUser(serverDb, uid, creatorId, following);
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof SocialFollowError) {
+      const status = error.code === 'unauthenticated' ? 401
+        : error.code === 'invalid-argument' ? 400
+        : error.code === 'not-found' ? 404 : 409;
+      return res.status(status).json({ code: error.code, error: error.message });
+    }
+    console.error('[SocialFollow] Follow state could not be saved.', { uid, code: (error as { code?: string } | null)?.code || 'unknown' });
+    return res.status(503).json({ code: 'follow_service_unavailable', error: 'NEXORA could not save this follow change. Please retry.' });
+  }
+});
+
+app.use('/api/social/post-spark-state', requireFirebaseUser, socialSparkHttpLimiter);
+app.post('/api/social/post-spark-state', async (req, res) => {
+  const uid = res.locals.userId;
+  if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
+    return res.status(401).json({ code: 'unauthenticated', error: 'Sign in to Spark posts.' });
+  }
+  const { postId, liked } = req.body || {};
+  if (typeof postId !== 'string' || !/^[A-Za-z0-9_-]{1,150}$/.test(postId) || typeof liked !== 'boolean') {
+    return res.status(400).json({ code: 'invalid_spark_request', error: 'A valid post and Spark state are required.' });
+  }
+  try {
+    if (!await allowSparkMutation(uid)) {
+      res.setHeader('Retry-After', '30');
+      return res.status(429).json({ code: 'spark_rate_limited', error: 'You are sparking too quickly. Please wait a moment.' });
+    }
+    const result = await setPostLike(serverDb, uid, postId, liked);
+    return res.status(200).json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('unavailable')) return res.status(404).json({ code: 'post_unavailable', error: 'This post is no longer available.' });
+    if (message.includes('Invalid') || message.includes('desired like')) return res.status(400).json({ code: 'invalid_spark_request', error: 'This Spark request is invalid.' });
+    console.error('[SocialSpark] Spark state could not be saved.', { uid, code: (error as { code?: string } | null)?.code || 'unknown' });
+    return res.status(503).json({ code: 'spark_service_unavailable', error: 'NEXORA could not save this Spark right now. Please try again.' });
+  }
+});
 const r2Config = resolveR2Config();
 
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -176,6 +261,44 @@ async function requireFirebaseUser(req: express.Request, res: express.Response, 
   }
   res.locals.userId = decoded.uid;
   return next();
+}
+
+async function allowFollowMutation(uid: string): Promise<boolean> {
+  const windowMs = 60_000;
+  const limit = 60;
+  const ref = serverDb.collection('followMutationRateLimits').doc(createHash('sha256').update(uid).digest('hex'));
+  return serverDb.runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    const previous = snapshot.data();
+    const now = Date.now();
+    const cutoff = now - windowMs;
+    const timestamps = Array.isArray(previous?.requestTimestamps)
+      ? previous.requestTimestamps.filter((value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > cutoff)
+      : [];
+    if (timestamps.length >= limit) return false;
+    timestamps.push(now);
+    transaction.set(ref, { requestTimestamps: timestamps, count: timestamps.length, expiresAt: new Date(now + windowMs * 10), updatedAt: FieldValue.serverTimestamp() });
+    return true;
+  });
+}
+
+async function allowSparkMutation(uid: string): Promise<boolean> {
+  const windowMs = 60_000;
+  const limit = 90;
+  const ref = serverDb.collection('sparkMutationRateLimits').doc(createHash('sha256').update(uid).digest('hex'));
+  return serverDb.runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    const previous = snapshot.data();
+    const now = Date.now();
+    const cutoff = now - windowMs;
+    const timestamps = Array.isArray(previous?.requestTimestamps)
+      ? previous.requestTimestamps.filter((value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > cutoff)
+      : [];
+    if (timestamps.length >= limit) return false;
+    timestamps.push(now);
+    transaction.set(ref, { requestTimestamps: timestamps, count: timestamps.length, expiresAt: new Date(now + windowMs * 10), updatedAt: FieldValue.serverTimestamp() });
+    return true;
+  });
 }
 
 async function allowChatMediaUpload(uid: string): Promise<boolean> {

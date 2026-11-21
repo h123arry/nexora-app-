@@ -40,7 +40,8 @@ import {
   subscribeToFollows, 
   syncEngine,
   addFollow,
-  removeFollow
+  removeFollow,
+  setPostSparkState
 } from './services/dataService';
 import { ProfileService } from './services/firebase/profileService';
 import {
@@ -1698,8 +1699,7 @@ export default function App() {
       if (pendingLikeRequestsRef.current.has(postId)) return;
       const desiredLiked = !userSparks.includes(postId);
       pendingLikeRequestsRef.current.add(postId);
-      const setLike = httpsCallable<{ postId: string; liked: boolean }, { liked: boolean; likes: number }>(functions, 'setPublicPostLike');
-      void setLike({ postId, liked: desiredLiked }).then(({ data }) => {
+      void setPostSparkState(firebaseUser.uid, postId, desiredLiked).then(data => {
         if (typeof data.liked !== 'boolean' || !Number.isSafeInteger(data.likes) || data.likes < 0) {
           throw new Error('The server returned an invalid interaction result.');
         }
@@ -1711,8 +1711,11 @@ export default function App() {
           return next;
         });
         setPosts(previous => previous.map(post => post.id === postId ? { ...post, likes: data.likes } : post));
-      }).catch(() => {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your Spark could not be saved. Please try again.' }));
+      }).catch(error => {
+        const message = error instanceof Error && error.message.trim()
+          ? error.message
+          : 'NEXORA could not save this Spark right now. Please try again.';
+        window.dispatchEvent(new CustomEvent('toast', { detail: message }));
       }).finally(() => {
         pendingLikeRequestsRef.current.delete(postId);
       });

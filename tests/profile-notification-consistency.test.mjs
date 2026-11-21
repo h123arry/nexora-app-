@@ -150,18 +150,24 @@ test('loaded post authors and commenters receive live public profile subscriptio
   assert.match(app, /onSnapshot\(\s*doc\(db, 'publicProfiles', uid\)/);
   assert.match(app, /setGlobalUsersMap\(previous => \(/);
 });
-test('Spark and Follow actions use the trusted canonical state and deploy the required callable', async () => {
-  const [app, profile, workflow] = await Promise.all([
+test('Spark and Follow actions use authenticated transactional NEXORA APIs', async () => {
+  const [app, profile, dataService, server] = await Promise.all([
     read('../src/App.tsx'),
     read('../src/components/ProfileView.tsx'),
-    read('../.github/workflows/deploy-production-founding-members.yml'),
+    read('../src/services/dataService.ts'),
+    read('../server.ts'),
   ]);
   assert.match(app, /pendingFollowRequestsRef/);
   assert.match(app, /await addFollow\(followerId, creatorId\)/);
   assert.match(app, /await removeFollow\(followerId, creatorId\)/);
-  assert.match(app, /Your Spark could not be saved/);
+  assert.match(app, /setPostSparkState\(firebaseUser\.uid, postId, desiredLiked\)/);
+  assert.match(app, /NEXORA could not save this Spark right now/);
+  assert.match(dataService, /apiRequestUrl\('\/api\/social\/post-spark-state'\)/);
+  assert.match(dataService, /apiRequestUrl\('\/api\/social\/follow-state'\)/);
   assert.doesNotMatch(profile, /Spark synchronised!/);
   assert.match(profile, /onClick=\{\(\) => onToggleFollow\?\.\(currentUser\.id\)\}/);
-  assert.match(workflow, /functions:setCreatorFollowState/);
-  assert.match(workflow, /functions\/src\/creatorAudienceAnalytics\.ts/);
+  assert.match(server, /app\.post\('\/api\/social\/post-spark-state'/);
+  assert.match(server, /app\.post\('\/api\/social\/follow-state'/);
+  assert.match(server, /setCreatorFollowStateForUser/);
+  assert.match(server, /setPostLike/);
 });
