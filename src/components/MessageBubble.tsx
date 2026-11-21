@@ -99,7 +99,7 @@ export default function MessageBubble({
   useEffect(() => {
     const path = message.mediaStoragePath || '';
     const target = mediaPreviewRef.current;
-    if (message.mediaType !== 'image' || !path || !target || attemptedMediaPathRef.current === path) return;
+    if (!(message.mediaType === 'image' || message.mediaType === 'video') || !path || !target || attemptedMediaPathRef.current === path) return;
     let active = true;
     const loadVisibleImage = () => {
       if (!active || attemptedMediaPathRef.current === path) return;
@@ -162,7 +162,7 @@ export default function MessageBubble({
         const threshold = 72;
         if ((!isMe && info.offset.x > threshold) || (isMe && info.offset.x < -threshold)) onReply(message);
       }}
-      onTouchStart={(event) => {
+      onTouchStart={() => {
         clearLongPress();
         longPressTimer.current = setTimeout(() => {
           onToggleContextMenu(message.id);
@@ -310,10 +310,10 @@ export default function MessageBubble({
                 {message.mediaType === 'image' ? (
                   privateMediaUrl
                     ? <a href={privateMediaUrl} target="_blank" rel="noreferrer"><img src={privateMediaUrl} alt={message.fileName || 'Shared image'} className="max-h-[420px] w-full object-contain" loading="lazy" /></a>
-                    : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-28 w-full flex-col items-center justify-center gap-2 p-4 text-xs text-violet-200"><span>{loadingPrivateMedia ? 'Loading private photo…' : 'Tap to load photo'}</span>{privateMediaError && <span role="status" className="text-rose-300">{privateMediaError}</span>}</button>
+                    : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-28 w-full flex-col items-center justify-center gap-2 p-4 text-xs text-violet-200"><span>{loadingPrivateMedia ? 'Loading private media…' : 'Tap to load photo'}</span>{privateMediaError && <span role="status" className="text-rose-300">{privateMediaError}</span>}</button>
                 ) : message.mediaType === 'video' ? (
                   privateMediaUrl
-                    ? <video controls playsInline preload="metadata" src={privateMediaUrl} className="max-h-[420px] w-full bg-black" aria-label={message.fileName || 'Shared video'} />
+                    ? <video controls playsInline preload="auto" src={privateMediaUrl} className="max-h-[420px] w-full bg-black" aria-label={message.fileName || 'Shared video'} />
                     : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-28 w-full flex-col items-center justify-center gap-2 p-4 text-xs text-violet-200"><Play className="h-7 w-7"/>{loadingPrivateMedia ? 'Loading private video…' : 'Tap to load video'}{privateMediaError && <span role="status" className="text-rose-300">{privateMediaError}</span>}</button>
                 ) : message.mediaType === 'audio' ? (
                   privateMediaUrl
