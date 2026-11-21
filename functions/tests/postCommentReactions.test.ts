@@ -55,6 +55,7 @@ test('rejects missing, private and malformed comment targets', async () => {
 
 
 test('reply Sparks are idempotent and update only the selected reply count', async () => {
+  await db.doc(`posts/${postId}`).update({ audience: 'public' });
   assert.deepEqual(
     await setPublicPostCommentReplyLike(db, actorId, postId, commentId, 'comment-reaction-reply', true),
     { liked: true, likes: 1, changed: true },
