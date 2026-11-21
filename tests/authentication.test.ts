@@ -228,9 +228,9 @@ test('profile identity, media and creator details survive a fresh authenticated 
     const restoredPrivate = await ProfileService.getProfile(uid);
     const restoredPublic = await ProfileService.getPublicProfile(uid);
     for (const [field, value] of Object.entries(profilePatch)) {
-      assert.equal((restoredPrivate as any)?.[field], value, `private profile field ${field} must survive sign-in`);
+      assert.deepEqual((restoredPrivate as any)?.[field], value, `private profile field ${field} must survive sign-in`);
       if (!['lastDisplayNameChangeTime', 'lastUsernameChangeTime'].includes(field)) {
-        assert.equal((restoredPublic as any)?.[field], value, `public profile field ${field} must stay synchronized`);
+        assert.deepEqual((restoredPublic as any)?.[field], value, `public profile field ${field} must stay synchronized`);
       }
     }
   } finally {
