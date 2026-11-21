@@ -2372,8 +2372,9 @@ export default function MediaCreationEngine({
                                 <div><h4 className="text-xs font-extrabold text-white">NEXORA looks</h4><p className="mt-1 text-[10px] text-[#8E88A7]">Choose a visual style for this photo.</p></div>
                                 <div className="grid grid-cols-2 gap-2">
                                   {FILTER_PRESETS.map(preset => (
-                                    <button key={preset.name} type="button" onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,filterName:preset.name,filterStyle:preset.style} : image))} aria-pressed={(selectedImages[activeEditIndex ?? 0]?.filterName || 'Normal') === preset.name} className={`rounded-xl border px-3 py-3 text-left text-[10px] font-bold transition-colors ${(selectedImages[activeEditIndex ?? 0]?.filterName || 'Normal') === preset.name ? 'border-violet-400/60 bg-violet-500/15 text-violet-100' : 'border-white/10 bg-white/[0.025] text-[#B8B0C9] hover:border-violet-400/30'}`}>
-                                      <span className="block">{preset.name}</span><span className="mt-1 block text-[9px] font-normal text-[#827B9C]">Preview look</span>
+                                    <button key={preset.name} type="button" onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,filterName:preset.name,filterStyle:preset.style} : image))} aria-pressed={(selectedImages[activeEditIndex ?? 0]?.filterName || 'Normal') === preset.name} className={`overflow-hidden rounded-xl border text-left text-[10px] font-bold transition-colors ${(selectedImages[activeEditIndex ?? 0]?.filterName || 'Normal') === preset.name ? 'border-violet-400/60 bg-violet-500/15 text-violet-100 ring-1 ring-violet-400/30' : 'border-white/10 bg-white/[0.025] text-[#B8B0C9] hover:border-violet-400/30'}`}>
+                                      <img src={selectedImages[activeEditIndex ?? 0]?.url} alt="" aria-hidden="true" className="h-16 w-full bg-black object-cover" style={{filter:preset.style || 'none'}}/>
+                                      <span className="block px-2.5 py-2">{preset.name}</span>
                                     </button>
                                   ))}
                                 </div>
