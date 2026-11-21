@@ -217,6 +217,7 @@ export default function App() {
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
 
   const [showPublicAccountSetup, setShowPublicAccountSetup] = useState(false);
+  const [showAuthChoice, setShowAuthChoice] = useState(false);
   const [showEmailAuth, setShowEmailAuth] = useState(false);
   const [showUsernameLogin, setShowUsernameLogin] = useState(false);
   const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
@@ -246,34 +247,14 @@ export default function App() {
       setShowPublicAccountSetup(true);
       return;
     }
-    if (!isLoggedIn) {
-      window.dispatchEvent(new CustomEvent('toast', {
-        detail: authInitializing
-          ? 'Your private NEXORA session is getting ready. Please try again in a moment.'
-          : 'NEXORA could not prepare your session. Please refresh and try again.',
-      }));
-    }
+    if (!isLoggedIn && !authInitializing) setShowAuthChoice(true);
   };
 
   const requireAuth = (action: () => void, _reason?: string) => {
-    // A loaded Firebase profile can become available one render before the
-    // app-level currentUser state catches up. Never open media/create actions
-    // with a stale guest UID during that transition.
+    // Visitors stay signed out. Protected actions offer explicit login/signup.
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       setPendingAuthAction(() => action);
-      if (!authInitializing && !isLoggedIn) {
-        void retryProfileLoad().catch((error) => {
-          setPendingAuthAction(null);
-          const code = (error as { code?: string } | null)?.code;
-          window.dispatchEvent(new CustomEvent('toast', {
-            detail: code === 'permission-denied'
-              ? 'NEXORA signed you in, but Firestore denied profile access. Your session is safe; retry after the database rules are corrected.'
-              : code
-                ? `NEXORA session could not start (${code}). Please retry.`
-                : 'NEXORA could not start your private session. Please try again.',
-          }));
-        });
-      }
+      if (!authInitializing && !isLoggedIn) setShowAuthChoice(true);
       return false;
     }
     if (requiresPublicAccountSetup) {
@@ -284,6 +265,10 @@ export default function App() {
     action();
     return true;
   };
+
+  useEffect(() => {
+    if (!authInitializing && !isLoggedIn && pendingAuthAction) setShowAuthChoice(true);
+  }, [authInitializing, isLoggedIn, pendingAuthAction]);
 
   const handleRequestLogout = () => {
     if (firebaseUser?.isAnonymous) {
@@ -3649,7 +3634,24 @@ export default function App() {
                   <div className="flex gap-0.5 items-end h-6 pt-1">
                     {Array.from({ length: 24 }).map((_, i) => {
                       const h = Math.floor(10 + Math.sin(i * 0.5) * 5 + Math.random() * 8);
-                      return (
+                      // Do not render a guest/visitor shell while Firebase is restoring the real account.
+  if (authInitializing) return <NexoraLoader />;
+
+  // A Firebase identity without its profile is still a signed-in account,
+  // never a guest. Keep the account state explicit and offer safe recovery.
+  if (firebaseUser && !firebaseProfile) {
+    return (
+      <div className="min-h-screen bg-[#050914] text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-md space-y-4 text-center">
+          <h1 className="text-xl font-bold">Restoring your NEXORA account</h1>
+          <p className="text-sm text-slate-300">{authError || "Your sign-in is active. NEXORA is reconnecting your account profile."}</p>
+          <button type="button" onClick={() => void retryProfileLoad().catch(() => undefined)} className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white hover:bg-violet-500">Retry account sync</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
                         <div
                           key={i}
                           className="flex-1 rounded-xs transition-all"
@@ -3690,6 +3692,19 @@ export default function App() {
         onViewProfile={(u) => handleViewProfile(u.username)}
       /></Suspense>}
 
+      {showAuthChoice && !isLoggedIn && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050914]/95 p-4 backdrop-blur-xl">
+          <div className="relative w-full max-w-sm rounded-3xl border border-violet-400/20 bg-[#0B1424] p-6 text-center shadow-2xl">
+            <button type="button" aria-label="Close" onClick={() => { setShowAuthChoice(false); setPendingAuthAction(null); }} className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-white/10">×</button>
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15 text-2xl text-violet-200">N</div>
+            <h2 className="text-xl font-bold text-white">Join the conversation</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">Sign in or create a NEXORA account to follow people, post and connect.</p>
+            <button type="button" onClick={() => { setShowAuthChoice(false); setShowUsernameLogin(true); }} className="mt-6 w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white hover:bg-violet-500">Log in</button>
+            <button type="button" onClick={() => { setShowAuthChoice(false); setShowEmailAuth(true); }} className="mt-3 w-full rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-white hover:bg-white/5">Create account</button>
+          </div>
+        </div>
+      )}
+
       {showPublicAccountSetup && requiresPublicAccountSetup && firebaseProfile && (
         <PublicAccountSetup
           user={firebaseProfile}
@@ -3715,6 +3730,7 @@ export default function App() {
               onLoginSuccess={(user) => {
                 setCurrentUser(getRichUser(user));
                 setShowEmailAuth(false);
+                setShowAuthChoice(false);
                 setShowPublicAccountSetup(false);
                 void retryProfileLoad().catch(() => {
                   window.dispatchEvent(new CustomEvent('toast', { detail: 'Your account was created, but profile sync is still finishing. Please retry.' }));
@@ -3724,10 +3740,10 @@ export default function App() {
           </Suspense>
           <button
             type="button"
-            onClick={() => { setShowEmailAuth(false); setShowPublicAccountSetup(true); }}
+            onClick={() => { setShowEmailAuth(false); setShowPublicAccountSetup(false); setShowAuthChoice(true); }}
             className="fixed right-4 top-4 z-[110] rounded-xl border border-white/15 bg-[#0B1424]/95 px-3 py-2 text-xs font-semibold text-violet-200 shadow-lg backdrop-blur"
           >
-            Back to username signup
+            Back
           </button>
         </div>
       )}
@@ -3738,6 +3754,7 @@ export default function App() {
           onLogin={async (username, password) => {
             await loginWithUsername(username, password);
             setShowUsernameLogin(false);
+            setShowAuthChoice(false);
             setShowPublicAccountSetup(false);
             void retryProfileLoad().catch(() => undefined);
           }}

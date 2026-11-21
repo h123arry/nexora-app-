@@ -44,6 +44,23 @@ if (import.meta.env.PROD && !isNativeRuntime() && 'serviceWorker' in navigator) 
   });
 }
 
+// Recover once from a stale/missing lazy-loaded chunk instead of leaving startup stuck.
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', (event) => {
+    event.preventDefault();
+    try {
+      const key = 'nexora_chunk_recovery_at';
+      const previous = Number(sessionStorage.getItem(key) || 0);
+      if (Date.now() - previous > 30000) {
+        sessionStorage.setItem(key, String(Date.now()));
+        window.location.reload();
+      }
+    } catch {
+      window.location.reload();
+    }
+  });
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
