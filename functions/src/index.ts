@@ -9,7 +9,7 @@ import { setPostLike } from './postEngagement.js';
 import { createPublicPostRepost } from './postReposts.js';
 import { addPublicPostCommentReply } from './postReplies.js';
 import { addPublicPostComment } from './postComments.js';
-import { setPublicPostCommentLike } from './postCommentReactions.js';
+import { setPublicPostCommentLike, setPublicPostCommentReplyLike } from './postCommentReactions.js';
 import { deletePublicPostComment } from './postCommentDeletion.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
@@ -522,6 +522,22 @@ export const setPublicPostCommentLikeState = onCall({ maxInstances: 10 }, async 
     if (message.includes('valid post') || message.includes('desired reaction')) throw new HttpsError('invalid-argument', message);
     if (message.includes('unavailable') || message.includes('no longer available')) throw new HttpsError('not-found', message);
     throw new HttpsError('internal', 'Your comment reaction could not be saved. Please retry.');
+  }
+});
+
+export const setPublicPostCommentReplyLikeState = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to Spark a reply.');
+  const { postId, commentId, replyId, liked } = request.data || {};
+  if (typeof postId !== 'string' || typeof commentId !== 'string' || typeof replyId !== 'string' || typeof liked !== 'boolean') {
+    throw new HttpsError('invalid-argument', 'A valid reply reaction is required.');
+  }
+  try {
+    return await setPublicPostCommentReplyLike(adminDb, request.auth.uid, postId, commentId, replyId, liked);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (/valid post|valid post, comment|no longer available/.test(message)) throw new HttpsError('failed-precondition', message);
+    console.error('[Comment reply Spark] Reaction could not be saved.', error);
+    throw new HttpsError('internal', 'Your Spark could not be saved. Please retry.');
   }
 });
 
