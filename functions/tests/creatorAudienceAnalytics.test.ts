@@ -64,6 +64,22 @@ describe('Creator audience analytics', () => {
     assert.equal(daily.docs[0].get('netFollowerChange'), 0);
   });
 
+
+  it('repairs missing public profile projections from private account records before following', async () => {
+    await db.doc('users/creator-no-projection').set({ id: 'creator-no-projection', username: 'creator', name: 'Creator', email: 'private@example.test', followers: 3 });
+    await db.doc('users/follower-no-projection').set({ id: 'follower-no-projection', username: 'follower', name: 'Follower', email: 'private2@example.test', following: 1 });
+    const result = await setCreatorFollowStateForUser(db, 'follower-no-projection', 'creator-no-projection', true);
+    assert.equal(result.following, true);
+    assert.equal(result.followerCount, 4);
+    const creatorProjection = (await db.doc('publicProfiles/creator-no-projection').get()).data() || {};
+    const followerProjection = (await db.doc('publicProfiles/follower-no-projection').get()).data() || {};
+    assert.equal(creatorProjection.followers, 4);
+    assert.equal(followerProjection.following, 2);
+    assert.equal('email' in creatorProjection, false);
+    assert.equal('email' in followerProjection, false);
+    assert.equal((await db.doc('follows/follower-no-projection_creator-no-projection').get()).exists, true);
+  });
+
   it('preserves Page follows and updates Page follower totals', async () => {
     const followed = await setCreatorFollowStateForUser(db, followerId, pageId, true);
     assert.equal(followed.changed, true);
