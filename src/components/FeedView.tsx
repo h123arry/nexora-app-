@@ -18,6 +18,7 @@ import { rankPosts } from '../services/discovery/discoveryService';
 import { SettingsService } from '../services/firebase/settingsService';
 import { normalizeFeedPreferences, resetFeedPreferences } from '../services/discovery/feedPreferences';
 import { auth } from '../services/firebase/config';
+import { apiRequestUrl } from '../lib/apiBaseUrl';
 import { ProfileService } from '../services/firebase/profileService';
 import { readUserScopedJson, writeUserScopedJson } from '../utils/userScopedStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
@@ -1091,12 +1092,17 @@ export default function FeedView({
     const desiredLiked = !current.liked;
     setReplySparkStates(previous => ({ ...previous, [key]: { ...current, pending: true } }));
     try {
-      const setReplySpark = httpsCallable<
-        { postId: string; commentId: string; replyId: string; liked: boolean },
-        { liked: boolean; likes: number; changed: boolean }
-      >(functions, 'setPublicPostCommentReplyLikeState');
-      const result = await setReplySpark({ postId, commentId, replyId: reply.id, liked: desiredLiked });
-      setReplySparkStates(previous => ({ ...previous, [key]: { liked: result.data.liked, likes: result.data.likes, pending: false } }));
+      const user = auth.currentUser;
+      if (!user) throw new Error('Sign in to Spark replies.');
+      const token = await user.getIdToken();
+      const response = await fetch(apiRequestUrl('api/social/comment-reply-spark-state'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ postId, commentId, replyId: reply.id, liked: desiredLiked }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.error === 'string' ? result.error : 'Your Spark could not be saved. Please retry.');
+      setReplySparkStates(previous => ({ ...previous, [key]: { liked: result.liked, likes: result.likes, pending: false } }));
     } catch (error) {
       setReplySparkStates(previous => ({ ...previous, [key]: { ...current, pending: false } }));
       window.dispatchEvent(new CustomEvent('toast', {
