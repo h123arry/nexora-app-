@@ -5,7 +5,6 @@ export type StudioAutoCutClip = {
   end: number;
   duration: number;
   keyframes: Array<{ time: number; x: number; y: number; scale: number; rotation: number; opacity: number }>;
-  [key: string]: unknown;
 };
 
 export type StudioBeatAnalysis = {
