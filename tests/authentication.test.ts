@@ -188,7 +188,7 @@ test('password changes require the current Firebase credential and persist throu
 test('profile identity, media and creator details survive a fresh authenticated session', async () => {
   await cleanUp();
   const profileEmail = `nexora-profile-roundtrip-${Date.now()}@example.test`;
-  const updatedUsername = `profile_member_${Date.now().toString().slice(-8)}`;
+  const updatedUsername = `prof_${Date.now().toString().slice(-8)}`;
   try {
     const created = await AuthService.registerWithEmail(profileEmail, password, 'Profile Before Edit', `before_${Date.now().toString().slice(-8)}`);
     const uid = created.firebaseUser.uid;
