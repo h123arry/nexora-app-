@@ -11,7 +11,7 @@ const db = getFirestore(app);
 
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Engagement tests require the Firestore Emulator.');
-  const fixtureUsers = ['author', 'alice', 'author-missing-projection', 'deleted-author', ...Array.from({ length: 12 }, (_, index) => `user-${index}`)];
+  const fixtureUsers = ['author', 'server-api-author', 'alice', 'author-missing-projection', 'deleted-author', ...Array.from({ length: 12 }, (_, index) => `user-${index}`)];
   const fixturePosts = ['public-post', 'restricted-post', 'public-post-missing-projection', 'public-post-orphan-author', 'server-api-post'];
   await Promise.all([
     ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
@@ -19,13 +19,15 @@ before(async () => {
     ...fixtureUsers.map(id => db.doc(`publicProfiles/${id}`).delete()),
   ]);
   await db.doc('publicProfiles/author').set({ username: 'author', name: 'Author', avatar: '', sparks: 0 });
+  await db.doc('publicProfiles/server-api-author').set({ username: 'server-api-author', name: 'Server API Author', avatar: '', sparks: 0 });
+  await db.doc('users/server-api-author').set({ sparks: 0 });
   await db.doc('users/author').set({ sparks: 0 });
   await db.doc('publicProfiles/alice').set({ username: 'alice', avatar: 'https://example.test/alice.png' });
   for (let index = 0; index < 12; index += 1) {
     await db.doc(`publicProfiles/user-${index}`).set({ username: `user-${index}`, avatar: '' });
   }
   await db.doc('posts/public-post').set({ id: 'public-post', userId: 'author', audience: 'public', likes: 0 });
-  await db.doc('posts/server-api-post').set({ id: 'server-api-post', userId: 'author', audience: 'public', likes: 0 });
+  await db.doc('posts/server-api-post').set({ id: 'server-api-post', userId: 'server-api-author', audience: 'public', likes: 0 });
   await db.doc('posts/restricted-post').set({ id: 'restricted-post', userId: 'author', audience: 'followers', likes: 3 });
   await db.doc('users/author-missing-projection').set({ id: 'author-missing-projection', username: 'missing-projection', name: 'Missing Projection', avatar: '', sparks: 2, followers: 1, following: 0 });
   await db.doc('posts/public-post-missing-projection').set({ id: 'public-post-missing-projection', userId: 'author-missing-projection', audience: 'public', likes: 0 });
@@ -33,7 +35,7 @@ before(async () => {
 });
 after(async () => {
   const fixtureUsers = ['author', 'alice', 'author-missing-projection', 'deleted-author', ...Array.from({ length: 12 }, (_, index) => `user-${index}`)];
-  const fixturePosts = ['public-post', 'restricted-post', 'public-post-missing-projection', 'public-post-orphan-author'];
+  const fixturePosts = ['public-post', 'restricted-post', 'public-post-missing-projection', 'public-post-orphan-author', 'server-api-post'];
   await Promise.all([
     ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
     ...fixtureUsers.map(id => db.recursiveDelete(db.doc(`users/${id}`))),
@@ -68,9 +70,9 @@ describe('trusted post engagement', () => {
     assert.deepEqual(result, { liked: true, likes: 1, changed: true });
     assert.equal((await db.doc('posts/server-api-post').get()).get('likes'), 1);
     assert.equal((await db.doc('users/alice/postLikes/server-api-post').get()).exists, true);
-    assert.equal((await db.doc('users/author/sparkEvents').where('postId', '==', 'server-api-post').get()).size, 1);
-    assert.equal((await db.doc('publicProfiles/author').get()).get('sparks'), 1);
-    const notifications = await db.collection('users').doc('author').collection('notifications').where('targetId', '==', 'server-api-post').get();
+    assert.equal((await db.collection('users').doc('server-api-author').collection('sparkEvents').where('postId', '==', 'server-api-post').get()).size, 1);
+    assert.equal((await db.doc('publicProfiles/server-api-author').get()).get('sparks'), 1);
+    const notifications = await db.collection('users').doc('server-api-author').collection('notifications').where('targetId', '==', 'server-api-post').get();
     assert.equal(notifications.size, 1);
     assert.equal((await setServerPostLike(db, 'alice', 'server-api-post', true)).changed, false);
   });
