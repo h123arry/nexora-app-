@@ -1520,6 +1520,31 @@ service cloud.firestore {
             && nextReceipt.get('updatedAt', null) == request.time
             && (previousReceipt.get('status', '') != 'read' || nextReceipt.status == 'read');
         }
+        function validSenderMessageEdit() {
+          return resource.data.senderId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'isEdited', 'editedAt'])
+            && request.resource.data.content is string
+            && request.resource.data.content.size() > 0
+            && request.resource.data.content.size() <= 4000
+            && request.resource.data.isEdited == true
+            && request.resource.data.editedAt == request.time;
+        }
+        function validMessagePinUpdate() {
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned'])
+            && request.resource.data.isPinned is bool;
+        }
+        function validMessageStarUpdate() {
+          let previousStars = resource.data.get('starredBy', []);
+          let nextStars = request.resource.data.get('starredBy', []);
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['starredBy'])
+            && previousStars is list
+            && nextStars is list
+            && nextStars.size() <= previousStars.size() + 1
+            && previousStars.size() <= nextStars.size() + 1
+            && nextStars.hasOnly(previousStars.concat([request.auth.uid]))
+            && previousStars.hasOnly(nextStars.concat([request.auth.uid]))
+            && nextStars.size() <= 100;
+        }
         function validMessageReactionUpdate() {
           let previousUsers = resource.data.get('reactionUsers', {});
           let nextUsers = request.resource.data.get('reactionUsers', {});
@@ -1538,6 +1563,9 @@ service cloud.firestore {
         }
         allow update: if chatMember(chatId) && (
           validMessageReactionUpdate()
+          || validSenderMessageEdit()
+          || validMessagePinUpdate()
+          || validMessageStarUpdate()
           || (
             get(/databases/$(database)/documents/chats/$(chatId)).data.get('isGroup', false) != true
             && resource.data.senderId != request.auth.uid
