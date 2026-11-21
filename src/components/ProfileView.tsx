@@ -171,7 +171,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
             <motion.div
               key={post.id}
               layout
-              className="aspect-[3/4] min-w-0 overflow-hidden bg-gradient-to-br from-[#1d1242] to-[#050314] p-2.5 flex flex-col justify-between text-left"
+              className="aspect-[2/3] min-w-0 overflow-hidden bg-gradient-to-br from-[#1d1242] to-[#050314] p-2.5 flex flex-col justify-between text-left"
             >
               <div className="flex items-center justify-between gap-1">
                 <Mic className="h-4 w-4 shrink-0 text-violet-300" />
@@ -200,7 +200,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="group aspect-[3/4] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-3px]"
+            className="group aspect-[2/3] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-3px]"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
