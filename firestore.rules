@@ -78,7 +78,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.keys().hasOnly([
           'id', 'chatId', 'senderId', 'content', 'timestamp', 'status',
-          'voiceDuration', 'voiceAudioUrl', 'fileName', 'replyToQuote', 'customMediaType',
+          'voiceDuration', 'voiceAudioUrl', 'fileName', 'replyToQuote', 'replyToMessageId', 'customMediaType', 'customMediaData',
           'mediaStoragePath', 'mediaType', 'mediaContentType', 'fileSize'
         ])
         && data.id == messageId
@@ -89,7 +89,7 @@ service cloud.firestore {
         && data.timestamp is string
         && data.timestamp.size() <= 40
         && data.status == 'sent'
-        && (!data.keys().hasAny(['customMediaType']) || data.customMediaType in ['voice', 'image', 'video', 'audio', 'document'])
+        && (!data.keys().hasAny(['customMediaType']) || data.customMediaType in ['voice', 'image', 'video', 'audio', 'document', 'sticker'])
         && (!data.keys().hasAny(['mediaType']) || data.mediaType in ['image', 'video', 'audio', 'document'])
         && (!data.keys().hasAny(['mediaContentType']) || (data.mediaContentType is string && data.mediaContentType.size() <= 128))
         && (!data.keys().hasAny(['fileSize']) || (data.fileSize is string && data.fileSize.size() <= 24))
@@ -103,6 +103,16 @@ service cloud.firestore {
           || (data.fileName is string && data.fileName.size() <= 255))
         && (!data.keys().hasAny(['replyToQuote'])
           || (data.replyToQuote is string && data.replyToQuote.size() <= 1000))
+        && (!data.keys().hasAny(['replyToMessageId'])
+          || (data.replyToMessageId is string && data.replyToMessageId.size() <= 160))
+        && (!data.keys().hasAny(['customMediaData'])
+          || (data.customMediaType == 'sticker'
+            && data.customMediaData is map
+            && data.customMediaData.keys().hasOnly(['emoji', 'label'])
+            && data.customMediaData.emoji is string
+            && data.customMediaData.emoji.size() <= 16
+            && data.customMediaData.label is string
+            && data.customMediaData.label.size() <= 40))
         && (!data.keys().hasAny(['voiceAudioUrl'])
           || (data.voiceAudioUrl is string
             && data.voiceAudioUrl.size() <= 300
