@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from '../src/postEngagement.js';
+import { setPostLike as setServerPostLike } from '../../server/postEngagement.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-engagement';
 const app = initializeApp({ projectId }, 'post-engagement-tests');
@@ -11,7 +12,7 @@ const db = getFirestore(app);
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Engagement tests require the Firestore Emulator.');
   const fixtureUsers = ['author', 'alice', 'author-missing-projection', 'deleted-author', ...Array.from({ length: 12 }, (_, index) => `user-${index}`)];
-  const fixturePosts = ['public-post', 'restricted-post', 'public-post-missing-projection', 'public-post-orphan-author'];
+  const fixturePosts = ['public-post', 'restricted-post', 'public-post-missing-projection', 'public-post-orphan-author', 'server-api-post'];
   await Promise.all([
     ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
     ...fixtureUsers.map(id => db.recursiveDelete(db.doc(`users/${id}`))),
@@ -24,6 +25,7 @@ before(async () => {
     await db.doc(`publicProfiles/user-${index}`).set({ username: `user-${index}`, avatar: '' });
   }
   await db.doc('posts/public-post').set({ id: 'public-post', userId: 'author', audience: 'public', likes: 0 });
+  await db.doc('posts/server-api-post').set({ id: 'server-api-post', userId: 'author', audience: 'public', likes: 0 });
   await db.doc('posts/restricted-post').set({ id: 'restricted-post', userId: 'author', audience: 'followers', likes: 3 });
   await db.doc('users/author-missing-projection').set({ id: 'author-missing-projection', username: 'missing-projection', name: 'Missing Projection', avatar: '', sparks: 2, followers: 1, following: 0 });
   await db.doc('posts/public-post-missing-projection').set({ id: 'public-post-missing-projection', userId: 'author-missing-projection', audience: 'public', likes: 0 });
@@ -60,6 +62,18 @@ describe('trusted post engagement', () => {
     assert.equal(notifications.docs[0].get('content'), 'sparked your post.');
   });
 
+
+  it('Render API Spark transaction persists the same creator records and counters', async () => {
+    const result = await setServerPostLike(db, 'alice', 'server-api-post', true);
+    assert.deepEqual(result, { liked: true, likes: 1, changed: true });
+    assert.equal((await db.doc('posts/server-api-post').get()).get('likes'), 1);
+    assert.equal((await db.doc('users/alice/postLikes/server-api-post').get()).exists, true);
+    assert.equal((await db.doc('users/author/sparkEvents').where('postId', '==', 'server-api-post').get()).size, 1);
+    assert.equal((await db.doc('publicProfiles/author').get()).get('sparks'), 1);
+    const notifications = await db.collection('users').doc('author').collection('notifications').where('targetId', '==', 'server-api-post').get();
+    assert.equal(notifications.size, 1);
+    assert.equal((await setServerPostLike(db, 'alice', 'server-api-post', true)).changed, false);
+  });
 
   it('records Sparks and repairs the creator projection when a public profile is missing', async () => {
     const result = await setPostLike(db, 'alice', 'public-post-missing-projection', true);
