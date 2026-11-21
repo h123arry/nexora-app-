@@ -8,6 +8,7 @@ import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
 import { getStudioVisualFilterCss, normalizeStudioVisualFilter, type StudioVisualFilter } from '../utils/studioVisualFilterPolicy';
 import { createStudioTitleTemplate, STUDIO_TITLE_TEMPLATES, type StudioTitleTemplateId } from '../utils/studioTitleTemplatePolicy';
 import { createStudioEditTemplate, searchStudioEditTemplates, STUDIO_EDIT_TEMPLATE_CATEGORIES, type StudioEditTemplateId } from '../utils/studioEditTemplatePolicy';
+import { analyzeStudioAudioBeats, buildStudioAutoCutSegments, createStudioFallbackBeatGrid } from '../utils/studioAutoCutPolicy';
 import { getNextStudioClipTimelinePosition, getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
 import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
 import { getStudioExportDimensions, getStudioExpectedExportDuration, type StudioExportResolution } from '../utils/studioExportPolicy';
@@ -153,6 +154,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
   const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateCategory, setTemplateCategory] = useState('All');
+  const [autoCutting, setAutoCutting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextPreviewRef = useRef<HTMLVideoElement>(null);
   const soundtrackPreviewRef = useRef<HTMLAudioElement>(null);
@@ -641,6 +643,49 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
     setTextLayers(previous => [...previous, layer]);
     setSelectedTextLayerId(id);
     setMessage(`${STUDIO_TITLE_TEMPLATES.find(template => template.id === templateId)?.name || 'Title'} template added as an editable text layer.`);
+  };
+
+  const runAutoCut = async () => {
+    if (!clips.length || autoCutting) return;
+    setAutoCutting(true);
+    setMessage('Auto Cut is analysing your soundtrack and arranging the footage…');
+    let audioContext: AudioContext | null = null;
+    try {
+      let beats: number[] = [];
+      let bpm: number | null = null;
+      if (soundtrack) {
+        const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (AudioContextClass) {
+          audioContext = new AudioContextClass();
+          const decoded = await audioContext.decodeAudioData(await soundtrack.arrayBuffer());
+          const mono = new Float32Array(decoded.length);
+          for (let channel = 0; channel < decoded.numberOfChannels; channel += 1) {
+            const data = decoded.getChannelData(channel);
+            for (let index = 0; index < data.length; index += 1) mono[index] += data[index] / decoded.numberOfChannels;
+          }
+          const analysis = analyzeStudioAudioBeats(mono, decoded.sampleRate);
+          bpm = analysis.bpm;
+          beats = analysis.beats;
+        }
+      }
+      if (beats.length < 2) beats = createStudioFallbackBeatGrid(totalDuration, 1.2);
+      const arranged = buildStudioAutoCutSegments(clips, beats, makeId);
+      if (!arranged.length) throw new Error('Auto Cut could not create a usable edit from these clips.');
+      setClips(arranged);
+      setSelectedId(arranged[0].id);
+      setPreviewGlobalTime(0);
+      setPlaying(false);
+      setTransition('cross-dissolve');
+      setExportBlob(null);
+      setMessage(soundtrack && bpm
+        ? `Auto Cut complete · approximately ${bpm} BPM · ${arranged.length} editable cuts synced to your music.`
+        : `Auto Cut complete · ${arranged.length} paced, editable cuts created. Add a soundtrack in Stage 4 to sync cuts to music beats.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Auto Cut could not analyse this project. Your original timeline is unchanged.');
+    } finally {
+      await audioContext?.close().catch(() => undefined);
+      setAutoCutting(false);
+    }
   };
 
   const applyEditTemplate = (templateId: StudioEditTemplateId) => {
@@ -1224,7 +1269,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
             <button type="button" onClick={onClose} aria-label="Close Studio" className="rounded-xl border border-white/10 p-2 text-[#C7B5FF]"><ArrowLeft size={18}/></button>
             <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.24em] text-violet-300">NEXORA</p><h1 className="truncate text-lg font-black tracking-tight sm:text-xl">Studio</h1></div>
           </div>
-          <div className="flex items-center gap-2"><span className="hidden text-[10px] text-[#8E88A7] sm:inline">{currentUser.name || currentUser.username || 'Creator'} · {Math.round(totalDuration)}s</span><button type="button" onClick={undo} disabled={!canUndo} aria-label="Undo edit" title="Undo · Ctrl/⌘ Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Undo2 size={16}/></button><button type="button" onClick={redo} disabled={!canRedo} aria-label="Redo edit" title="Redo · Ctrl/⌘ Shift Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Redo2 size={16}/></button><button type="button" onClick={() => setTemplateLibraryOpen(true)} className="rounded-xl border border-violet-400/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-100">Templates</button><select aria-label="Export resolution" value={exportResolution} onChange={event => setExportResolution(event.target.value as StudioExportResolution)} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="720p">720p</option><option value="1080p">1080p</option></select><select aria-label="Export quality" value={exportQuality} onChange={event => setExportQuality(event.target.value as 'balanced' | 'high')} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="balanced">Balanced bitrate</option><option value="high">High bitrate</option></select><button type="button" onClick={handleExport} disabled={rendering || mp4Exporting || publishing || !clips.length} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-2 text-xs font-bold disabled:opacity-50">{rendering ? 'Rendering…' : 'Export video'}</button></div>
+          <div className="flex items-center gap-2"><span className="hidden text-[10px] text-[#8E88A7] sm:inline">{currentUser.name || currentUser.username || 'Creator'} · {Math.round(totalDuration)}s</span><button type="button" onClick={undo} disabled={!canUndo} aria-label="Undo edit" title="Undo · Ctrl/⌘ Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Undo2 size={16}/></button><button type="button" onClick={redo} disabled={!canRedo} aria-label="Redo edit" title="Redo · Ctrl/⌘ Shift Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Redo2 size={16}/></button><button type="button" onClick={() => setTemplateLibraryOpen(true)} className="rounded-xl border border-violet-400/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-100">Templates</button><button type="button" onClick={() => void runAutoCut()} disabled={!clips.length || autoCutting || rendering || publishing} className="rounded-xl border border-[#8A3FFC]/50 bg-[#4B10F2]/20 px-3 py-2 text-xs font-bold text-violet-100 disabled:opacity-40">{autoCutting ? 'Auto Cutting…' : 'Auto Cut'}</button><select aria-label="Export resolution" value={exportResolution} onChange={event => setExportResolution(event.target.value as StudioExportResolution)} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="720p">720p</option><option value="1080p">1080p</option></select><select aria-label="Export quality" value={exportQuality} onChange={event => setExportQuality(event.target.value as 'balanced' | 'high')} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="balanced">Balanced bitrate</option><option value="high">High bitrate</option></select><button type="button" onClick={handleExport} disabled={rendering || mp4Exporting || publishing || !clips.length} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-2 text-xs font-bold disabled:opacity-50">{rendering ? 'Rendering…' : 'Export video'}</button></div>
         </header>
         {templateLibraryOpen && <div className="fixed inset-0 z-[160] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label="Studio template library"><section className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl border border-[#34265E] bg-[#090714] shadow-2xl sm:rounded-3xl"><header className="flex items-center justify-between gap-3 border-b border-[#292244] px-4 py-4 sm:px-6"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-violet-300">NEXORA STUDIO</p><h2 className="text-lg font-black">Edit templates</h2><p className="mt-1 text-[11px] text-[#A39BBF]">{visibleEditTemplates.length} ready-to-edit starting styles</p></div><button type="button" onClick={() => setTemplateLibraryOpen(false)} aria-label="Close template library" className="rounded-full border border-[#34265E] p-2 text-[#D7CCF7]"><X size={17}/></button></header><div className="space-y-3 overflow-y-auto p-4 sm:p-6"><input type="search" value={templateSearch} onChange={event => setTemplateSearch(event.target.value)} placeholder="Search templates, styles or tags…" aria-label="Search Studio templates" className="w-full rounded-xl border border-[#34265E] bg-[#100C20] px-4 py-3 text-sm text-white outline-none focus:border-violet-400"/><div className="flex gap-2 overflow-x-auto pb-1">{STUDIO_EDIT_TEMPLATE_CATEGORIES.map(category => <button key={category} type="button" onClick={() => setTemplateCategory(category)} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-bold ${templateCategory===category?'border-violet-400 bg-violet-500/20 text-white':'border-[#34265E] text-[#A39BBF]'}`}>{category}</button>)}</div>{visibleEditTemplates.length ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{visibleEditTemplates.map((template,index) => <article key={template.id} className="overflow-hidden rounded-2xl border border-[#292244] bg-[#100C20]"><div className={`relative flex h-28 items-end overflow-hidden bg-gradient-to-br ${index%4===0?'from-[#6D36E8] via-[#27105C] to-[#090714]':index%4===1?'from-[#C18B54] via-[#40264A] to-[#090714]':index%4===2?'from-[#426A8B] via-[#252052] to-[#090714]':'from-[#8A3FFC] via-[#24134E] to-[#090714]'}`}><div className="absolute inset-0 opacity-30" style={{backgroundImage:'radial-gradient(circle at 20% 20%, white 0, transparent 35%), linear-gradient(135deg, transparent 45%, rgba(255,255,255,.18) 46%, transparent 70%)'}}/><span className="relative p-4 text-xl font-black tracking-tight text-white drop-shadow-lg">{template.sample}</span><span className="absolute right-3 top-3 rounded-full border border-white/20 bg-black/25 px-2 py-1 text-[9px] font-bold text-white">{template.category}</span></div><div className="space-y-2 p-3"><div className="flex items-start justify-between gap-2"><h3 className="text-xs font-bold text-white">{template.name}</h3><span className="shrink-0 text-[9px] text-[#A39BBF]">{template.aspectRatio==='portrait'?'9:16':template.aspectRatio==='square'?'1:1':'16:9'}</span></div><p className="min-h-8 text-[10px] leading-relaxed text-[#A39BBF]">{template.description}</p><div className="flex flex-wrap gap-1">{template.tags.slice(0,3).map(tag=><span key={tag} className="rounded-full bg-[#211A36] px-2 py-1 text-[9px] text-[#C7B5FF]">#{tag}</span>)}</div><button type="button" onClick={() => applyEditTemplate(template.id)} className="mt-1 w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-3 py-2.5 text-[11px] font-black text-white">Use template</button></div></article>)}</div> : <div className="rounded-2xl border border-dashed border-[#44376F] px-4 py-10 text-center"><p className="text-sm font-bold">No templates found</p><p className="mt-1 text-xs text-[#A39BBF]">Try another search or category.</p><button type="button" onClick={() => {setTemplateSearch('');setTemplateCategory('All');}} className="mt-3 text-xs font-bold text-violet-300">Clear filters</button></div>}</div><footer className="border-t border-[#292244] px-4 py-3 text-[10px] text-[#8E88A7] sm:px-6">Templates apply editable settings to your existing timeline. Your original clips stay in place.</footer></section></div>}
         <main className="grid min-h-0 flex-1 grid-rows-[minmax(220px,1fr)_auto] overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1">
