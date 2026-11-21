@@ -6,9 +6,10 @@ test('comments sheet occupies exactly the bottom half, scrolls independently and
   const feed = await readFile(new URL('../src/components/FeedView.tsx', import.meta.url), 'utf8');
   assert.match(feed, /comments-container fixed bottom-0 inset-x-0 h-\[50dvh\] min-h-\[50dvh\] max-h-\[50dvh\]/);
   assert.match(feed, /overflow-y-auto overscroll-contain touch-pan-y/);
-  assert.match(feed, /comments-container[^\n]*bg-\\[#090714\\]/);
-  assert.doesNotMatch(feed, /comments-container[^\n]*rounded-t|p-3 rounded-2xl bg-slate-950\\/40 border border-white\\/5/);
-  assert.doesNotMatch(feed, /text-xs bg-white\\/2 p-2 rounded-xl border border-white\\/3/);
+  assert.ok(feed.includes('className="comments-container fixed bottom-0 inset-x-0 h-[50dvh] min-h-[50dvh] max-h-[50dvh] bg-[#090714]/[0.98]'));
+  assert.ok(!feed.includes('comments-container fixed bottom-0 inset-x-0 h-[50dvh] min-h-[50dvh] max-h-[50dvh] rounded-t-'));
+  assert.ok(!feed.includes('p-3 rounded-2xl bg-slate-950/40 border border-white/5'));
+  assert.ok(!feed.includes('text-xs bg-white/2 p-2 rounded-xl border border-white/3'));
   assert.match(feed, /feed\.style\.overflowY = 'hidden'/);
   assert.match(feed, /document\.body\.style\.overflow = 'hidden'/);
 });
