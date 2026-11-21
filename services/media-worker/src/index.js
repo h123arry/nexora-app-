@@ -207,6 +207,7 @@ if(r2Config){
 
 http('processMedia',async(req,res)=>{
   try {
+    if(req.method==='GET') return res.status(200).json({status:'ok',service:'nexora-media-worker',r2Configured:!!r2Config});
     if(req.method!=='POST') return res.status(405).send('Method not allowed');
     if(req.body?.provider==='r2') {
       const token=process.env.MEDIA_WORKER_TOKEN;
