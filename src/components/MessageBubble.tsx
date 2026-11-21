@@ -39,6 +39,7 @@ interface MessageBubbleProps {
   groupRecipientCount?: number;
   onStar?: (msg: ExtendedMessage) => void;
   onSelectMessage?: (msg: ExtendedMessage) => void;
+  onJumpToReply?: (messageId: string) => void;
 }
 
 export default function MessageBubble({
@@ -73,6 +74,7 @@ export default function MessageBubble({
   groupRecipientCount = 0,
   onStar,
   onSelectMessage,
+  onJumpToReply,
 }: MessageBubbleProps) {
   const [privateVoiceUrl, setPrivateVoiceUrl] = useState('');
   const [loadingPrivateVoice, setLoadingPrivateVoice] = useState(false);
@@ -151,6 +153,7 @@ export default function MessageBubble({
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
+      data-message-id={message.id}
       className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isGrouped ? 'mt-0.25' : 'mt-2'} relative group/bubble`}
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
@@ -233,10 +236,10 @@ export default function MessageBubble({
 
             {/* Reply Quote Block */}
             {message.replyToQuote && (
-              <div className="mb-2 px-2.5 py-1.5 bg-black/25 border-l-2 border-white/10 rounded text-[10px] text-zinc-300 italic truncate max-w-full flex items-center gap-1">
-                <span className="text-violet-400 font-bold not-italic">↳</span>
-                <span>{message.replyToQuote}</span>
-              </div>
+              <button type="button" onClick={() => message.replyToMessageId && onJumpToReply?.(message.replyToMessageId)} className="mb-2 flex max-w-full items-center gap-1 truncate rounded border-l-2 border-violet-400/60 bg-black/25 px-2.5 py-1.5 text-left text-[10px] italic text-zinc-300 hover:bg-black/40">
+                <span className="font-bold not-italic text-violet-400">↳</span>
+                <span className="truncate">{message.replyToQuote}</span>
+              </button>
             )}
 
             {/* Story Reply Render Block */}
