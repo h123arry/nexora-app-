@@ -85,6 +85,7 @@ export default function MessageBubble({
   const [showMessageInfo, setShowMessageInfo] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearLongPress = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); longPressTimer.current = null; };
+  useEffect(() => () => clearLongPress(), []);
   const copyMessage = async () => {
     try { await navigator.clipboard.writeText(message.content || message.fileName || ''); window.dispatchEvent(new CustomEvent('toast', { detail: 'Message copied.' })); }
     catch { window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not copy this message on this device.' })); }
@@ -210,10 +211,10 @@ export default function MessageBubble({
             } ${isLastInGroup ? (isMe ? 'rounded-br-sm' : 'rounded-bl-sm') : ''} shadow-lg relative group/item`}
           >
             {/* Top row with Pin Indicator */}
-            {isPinned && (
-              <div className="mb-1.5 flex items-center gap-1 text-[8px] font-mono text-yellow-400 font-bold uppercase tracking-wider select-none">
-                <Pin className="w-2.5 h-2.5 rotate-45 text-yellow-400 fill-current" />
-                <span>Pinned Message</span>
+            {(isPinned || message.isStarred) && (
+              <div className="mb-1.5 flex items-center gap-1 text-[8px] font-mono font-bold uppercase tracking-wider text-yellow-300 select-none">
+                {isPinned && <><Pin className="h-2.5 w-2.5 rotate-45 fill-current" /><span>Pinned</span></>}
+                {message.isStarred && <><Star className="ml-1 h-2.5 w-2.5 fill-current"/><span>Starred</span></>}
               </div>
             )}
             {/* Context menu trigger on hover */}
@@ -530,12 +531,12 @@ export default function MessageBubble({
             <button type="button" role="menuitem" onClick={() => onReply(message)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Quote className="h-4 w-4"/><span className="text-[10px]">Reply</span></button>
             <button type="button" role="menuitem" onClick={() => void copyMessage()} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Copy className="h-4 w-4"/><span className="text-[10px]">Copy</span></button>
             <button type="button" role="menuitem" onClick={() => { onReact(message.id, '❤️'); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><span className="text-lg">❤️</span><span className="text-[10px]">React</span></button>
-            <button type="button" role="menuitem" onClick={() => { onStar?.(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Star className="h-4 w-4"/><span className="text-[10px]">Star</span></button>
-            {isMe && <button type="button" role="menuitem" onClick={() => { onEdit(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Edit className="h-4 w-4"/><span className="text-[10px]">Edit</span></button>}
+            <button type="button" role="menuitem" onClick={() => { onStar?.(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Star className="h-4 w-4"/><span className="text-[10px]">{message.isStarred ? 'Unstar' : 'Star'}</span></button>
+            {isMe && !message.mediaStoragePath && message.customMediaType !== 'sticker' && <button type="button" role="menuitem" onClick={() => { onEdit(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Edit className="h-4 w-4"/><span className="text-[10px]">Edit</span></button>}
             <button type="button" role="menuitem" onClick={() => { onPin(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Pin className="h-4 w-4"/><span className="text-[10px]">{isPinned ? 'Unpin' : 'Pin'}</span></button>
             <button type="button" role="menuitem" onClick={() => setShowMessageInfo(value => !value)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Info className="h-4 w-4"/><span className="text-[10px]">Info</span></button>
             <button type="button" role="menuitem" onClick={() => { onSelectMessage?.(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><CheckSquare className="h-4 w-4"/><span className="text-[10px]">Select</span></button>
-            <button type="button" role="menuitem" onClick={() => { onDelete(message.id, true); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-rose-300 hover:bg-rose-500/10"><Trash2 className="h-4 w-4"/><span className="text-[10px]">Delete</span></button>
+            {isMe && <button type="button" role="menuitem" onClick={() => { onDelete(message.id, true); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-rose-300 hover:bg-rose-500/10"><Trash2 className="h-4 w-4"/><span className="text-[10px]">Delete</span></button>}
           </div>
           {showMessageInfo && (
             <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-[11px] text-zinc-300">
