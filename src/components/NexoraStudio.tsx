@@ -11,7 +11,7 @@ import { createStudioEditTemplate, searchStudioEditTemplates, STUDIO_EDIT_TEMPLA
 import { analyzeStudioAudioBeats, buildStudioAutoCutSegments, createStudioFallbackBeatGrid } from '../utils/studioAutoCutPolicy';
 import { getNextStudioClipTimelinePosition, getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
 import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
-import { getStudioExportDimensions, getStudioExpectedExportDuration, type StudioExportResolution } from '../utils/studioExportPolicy';
+import { getStudioExportDimensions, getStudioExpectedExportDuration, getStudioExportBitrates, type StudioExportResolution } from '../utils/studioExportPolicy';
 import { getStudioExportValidationError } from '../utils/studioExportValidationPolicy';
 import { isStudioCloudDraftNewer } from '../utils/studioCloudDraftPolicy';
 import { getStudioCloudDraftRevision, loadStudioCloudDraft, saveStudioCloudDraft } from '../services/studioCloudDraftService';
@@ -795,6 +795,17 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
     setMessage('Clip split at the playhead.');
   };
 
+  const duplicateSelectedClip = () => {
+    if (!selectedClip) return;
+    if (clips.length >= 40) { setMessage('A Studio project can contain up to 40 video clips.'); return; }
+    const duplicate = normalizeStudioVideoLayer({ ...selectedClip, id: makeId(), name: `${selectedClip.name} · Copy`, keyframes: selectedClip.keyframes.map(frame => ({ ...frame })) });
+    const index = clips.findIndex(clip => clip.id === selectedClip.id);
+    setClips(previous => [...previous.slice(0, index + 1), duplicate, ...previous.slice(index + 1)]);
+    setSelectedId(duplicate.id);
+    setExportBlob(null);
+    setMessage('Clip duplicated with its trim, volume and motion settings. Adjust the copy independently.');
+  };
+
   const removeClip = (id: string) => {
     setClips(previous => {
       const next = previous.filter(clip => clip.id !== id);
@@ -912,7 +923,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
       }
       mixedAudio.stream.getAudioTracks().forEach(track => stream.addTrack(track));
     }
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: exportQuality === 'high' ? 8_000_000 : 4_000_000, audioBitsPerSecond: 128_000 });
+    const bitrates = getStudioExportBitrates(exportResolution, exportQuality);
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrates.video, audioBitsPerSecond: bitrates.audio });
     const chunks: Blob[] = [];
     const imageAssets = new Map<string, CanvasImageSource>();
     const stopped = new Promise<Blob>((resolve, reject) => {
@@ -1290,6 +1302,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
             <div className="flex items-center gap-2">
               <button type="button" onClick={togglePreview} disabled={!selectedClip} className="rounded-full border border-violet-400/40 bg-violet-500/15 p-3 text-violet-100"><span className="sr-only">{playing ? 'Pause' : 'Play'}</span>{playing ? <Pause size={18}/> : <Play size={18}/>}</button>
               <button type="button" onClick={splitAtPlayhead} disabled={!selectedClip} className="inline-flex items-center gap-2 rounded-xl border border-[#34265E] px-3 py-2 text-xs text-[#D7CCF7]"><Scissors size={14}/> Split at playhead</button>
+              <button type="button" onClick={duplicateSelectedClip} disabled={!selectedClip || clips.length >= 40} className="inline-flex items-center gap-2 rounded-xl border border-[#34265E] px-3 py-2 text-xs text-[#D7CCF7] disabled:opacity-40"><Plus size={14}/> Duplicate clip</button>
               <button type="button" onClick={() => setMuted(value => !value)} className="rounded-xl border border-[#34265E] p-2 text-[#D7CCF7]"><Volume2 size={15}/><span className="sr-only">{muted ? 'Unmute preview' : 'Mute preview'}</span></button>
             </div>
             <canvas ref={canvasRef} className="hidden"/>
