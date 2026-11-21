@@ -10,7 +10,7 @@ import { inspectSourceCredential } from './originCredentials.js';
 import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { classifyStorageObject, classifyR2StorageObject, imageRenditionWidths, videoRenditionsForSize, videoRenditionDimensions, canClaimMediaProcessing, MAX_DURATION_SECONDS } from './policies.js';
+import { classifyStorageObject, classifyR2StorageObject, hasR2VideoRendition, shouldReconcileR2Asset, imageRenditionWidths, videoRenditionsForSize, videoRenditionDimensions, canClaimMediaProcessing, MAX_DURATION_SECONDS } from './policies.js';
 import { resolveR2WorkerConfig, downloadR2Object, uploadR2Object } from './r2Storage.js';
 
 const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
@@ -90,7 +90,9 @@ async function processObject(event){
   const accepted=await db.runTransaction(async tx=>{
     const snap=await tx.get(ref); const current=snap.data();
     if(provider==='r2' && (!snap.exists || current?.storageProvider!=='r2' || current?.storagePath!==object.name)) return false;
-    if(current && (current.ownerId!==ownerId || !canClaimMediaProcessing(current))) return false;
+    const rebuildReadyR2Video = provider==='r2' && isVideo && current?.status==='ready'
+      && !hasR2VideoRendition(current, ownerId, mediaId);
+    if(current && (current.ownerId!==ownerId || (!canClaimMediaProcessing(current) && !rebuildReadyR2Video))) return false;
     tx.set(ref,{
       ownerId,status:'processing',processor:'nexora-ffmpeg-v1',processingToken:token,
       processingStartedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp(),
@@ -185,8 +187,7 @@ async function reconcileR2Uploads(){
     const inventory = await db.collection('mediaAssets').where('storageProvider','==','r2').limit(200).get();
     const videosOnly = process.env.R2_WORKER_RECONCILE_VIDEOS_ONLY === 'true';
     const candidates = inventory.docs
-      .filter(snapshot => ['uploaded','failed','processing'].includes(String(snapshot.get('status')))
-        && canClaimMediaProcessing(snapshot.data(), Date.now(), R2_STALE_PROCESSING_MS))
+      .filter(snapshot => shouldReconcileR2Asset(snapshot.data(), snapshot.id, Date.now(), R2_STALE_PROCESSING_MS))
       .filter(snapshot => !videosOnly || snapshot.get('kind') === 'video')
       .sort((a,b) => Number(b.get('kind') === 'video') - Number(a.get('kind') === 'video'))
       .slice(0,10);
