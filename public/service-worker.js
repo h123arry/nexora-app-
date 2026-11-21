@@ -27,7 +27,7 @@ try {
   console.warn('[NEXORA] Firebase Messaging is unavailable in this browser.', error);
 }
 
-const CACHE_NAME = 'nexora-shell-cache-v3';
+const CACHE_NAME = 'nexora-shell-cache-v4';
 const MAX_DYNAMIC_ENTRIES = 80;
 const ASSETS_TO_CACHE = [
   '/',
@@ -74,33 +74,42 @@ function isCacheableShellRequest(request, url) {
 }
 
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  if (!isCacheableShellRequest(event.request, url)) return;
+  const request = event.request;
+  const url = new URL(request.url);
+  if (!isCacheableShellRequest(request, url)) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const networkResponse = fetch(event.request).then((response) => {
+  // Fetch HTML first: stale HTML can point at removed Vite chunks and prevent startup.
+  if (request.mode === 'navigate') {
+    event.respondWith((async () => {
+      try {
+        const response = await fetch(request, { cache: 'no-store' });
         if (response && response.ok && response.type === 'basic') {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(async (cache) => {
-            await cache.put(event.request, copy);
-            await trimCache(cache);
-          });
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put('/index.html', response.clone());
         }
         return response;
-      });
-
-      if (cachedResponse) {
-        event.waitUntil(networkResponse.catch(() => undefined));
-        return cachedResponse;
+      } catch {
+        const cached = await caches.match('/index.html') || await caches.match('/');
+        return cached || new Response('NEXORA is temporarily offline. Please reconnect and try again.', {
+          status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+        });
       }
+    })());
+    return;
+  }
 
-      return networkResponse.catch(() => {
-        if (event.request.mode === 'navigate') return caches.match('/index.html');
-        throw new Error('Offline and resource is not cached.');
-      });
-    })
-  );
+  // Vite's production JS/CSS assets are content-hashed and safe to cache by URL.
+  event.respondWith((async () => {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    const response = await fetch(request);
+    if (response && response.ok && response.type === 'basic') {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(request, response.clone());
+      await trimCache(cache);
+    }
+    return response;
+  })());
 });
 
 
