@@ -203,6 +203,24 @@ export function isCurrentPublicProfileMedia(
     : publicProfile.coverImage === gatewayUrl;
 }
 
+/** Choose an R2 rendition only when it is scoped to the exact owner and asset. Originals remain the safe fallback during/after processing. */
+export function selectR2VideoPlaybackPath(asset: Record<string, unknown>, ownerId: string, mediaId: string): string | null {
+  const original = asset.storagePath;
+  if (typeof original !== 'string' || original !== `users/${ownerId}/media/${mediaId}`) return null;
+  if (asset.kind !== 'video' || asset.status !== 'ready' || !Array.isArray(asset.renditions)) return original;
+  const prefix = `processed/${ownerId}/${mediaId}/`;
+  const renditions = asset.renditions.flatMap((item: any) => {
+    if (!item || !Number.isSafeInteger(item.height) || item.height < 144 || item.height > 4320
+      || typeof item.mp4Path !== 'string' || !item.mp4Path.startsWith(prefix)
+      || item.mp4Path.split('/').some((part: string) => !part || part === '.' || part === '..')
+      || item.mp4Path.includes('\\\\')) return [];
+    return [{ height: item.height as number, path: item.mp4Path as string }];
+  }).sort((a, b) => a.height - b.height);
+  return (renditions.find(item => item.height === 720)
+    || renditions.filter(item => item.height <= 720).at(-1)
+    || renditions[0])?.path || original;
+}
+
 export function r2MediaGatewayUrl(mediaId: string): string {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) throw new Error('Invalid media asset identifier.');
   return `/api/media/${encodeURIComponent(mediaId)}`;
