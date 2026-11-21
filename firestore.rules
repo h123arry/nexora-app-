@@ -1519,7 +1519,8 @@ service cloud.firestore {
           let nextReceipts = request.resource.data.get('recipientReceipts', {});
           let previousReceipt = previousReceipts.get(request.auth.uid, {});
           let nextReceipt = nextReceipts.get(request.auth.uid, {});
-          return chat.get('isGroup', false) == true
+          return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+            && chat.get('isGroup', false) == true
             && resource.data.senderId != request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipientReceipts'])
             && request.resource.data.diff(resource.data).affectedKeys().hasAny(['recipientReceipts'])
@@ -1531,7 +1532,8 @@ service cloud.firestore {
             && (previousReceipt.get('status', '') != 'read' || nextReceipt.status == 'read');
         }
         function validSenderMessageEdit() {
-          return resource.data.senderId == request.auth.uid
+          return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+            && resource.data.senderId == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'isEdited', 'editedAt'])
             && request.resource.data.content is string
             && request.resource.data.content.size() > 0
@@ -1540,14 +1542,16 @@ service cloud.firestore {
             && request.resource.data.editedAt == request.time;
         }
         function validMessagePinUpdate() {
-          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned'])
+          return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned'])
             && request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPinned'])
             && request.resource.data.isPinned is bool;
         }
         function validMessageStarUpdate() {
           let previousStars = resource.data.get('starredBy', []);
           let nextStars = request.resource.data.get('starredBy', []);
-          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['starredBy'])
+          return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['starredBy'])
             && request.resource.data.diff(resource.data).affectedKeys().hasAny(['starredBy'])
             && previousStars is list
             && nextStars is list
@@ -1561,7 +1565,8 @@ service cloud.firestore {
           let previousUsers = resource.data.get('reactionUsers', {});
           let nextUsers = request.resource.data.get('reactionUsers', {});
           let ownReactions = nextUsers.get(request.auth.uid, []);
-          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactionUsers'])
+          return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactionUsers'])
             && request.resource.data.diff(resource.data).affectedKeys().hasAny(['reactionUsers'])
             && nextUsers.diff(previousUsers).affectedKeys().hasOnly([request.auth.uid])
             && nextUsers.diff(previousUsers).affectedKeys().hasAny([request.auth.uid])
