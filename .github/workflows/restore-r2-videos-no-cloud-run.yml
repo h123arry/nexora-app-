@@ -41,7 +41,7 @@ jobs:
       - name: Check out the reviewed NEXORA release
         uses: actions/checkout@v4
 
-      - name: Require existing production identity and R2 credentials
+      - name: Require existing production workload identity
         shell: bash
         env:
           GCP_WIF_PROVIDER: ${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}
