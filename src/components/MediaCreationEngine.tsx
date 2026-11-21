@@ -2351,16 +2351,18 @@ export default function MediaCreationEngine({
                         </div>
                       )}
 
-                      <div className="grid shrink-0 grid-cols-4 gap-1 border-b border-white/[0.07] p-2">
-                        {([
-                          {id:'looks',label:'Looks'},
-                          {id:'adjust',label:'Adjust'},
-                          {id:'crop',label:'Crop'},
-                          {id:'text',label:'Text'}
-                        ] as const).map(tab => (
-                          <button key={tab.id} type="button" onClick={() => setEditorToolTab(tab.id)} aria-pressed={editorToolTab === tab.id} className={`rounded-lg px-2 py-2 text-[10px] font-bold transition-colors ${editorToolTab === tab.id ? 'bg-[#7138FF] text-white shadow-lg' : 'text-[#9A92AF] hover:bg-white/[0.05] hover:text-white'}`}>{tab.label}</button>
-                        ))}
-                      </div>
+                      {selectedImages.length > 0 && (
+                        <div className="grid shrink-0 grid-cols-4 gap-1 border-b border-white/[0.07] p-2">
+                          {([
+                            {id:'looks',label:'Looks'},
+                            {id:'adjust',label:'Adjust'},
+                            {id:'crop',label:'Crop'},
+                            {id:'text',label:'Text'}
+                          ] as const).map(tab => (
+                            <button key={tab.id} type="button" onClick={() => setEditorToolTab(tab.id)} aria-pressed={editorToolTab === tab.id} className={`rounded-lg px-2 py-2 text-[10px] font-bold transition-colors ${editorToolTab === tab.id ? 'bg-[#7138FF] text-white shadow-lg' : 'text-[#9A92AF] hover:bg-white/[0.05] hover:text-white'}`}>{tab.label}</button>
+                          ))}
+                        </div>
+                      )}
 
                       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
                         {selectedImages.length > 0 ? (
