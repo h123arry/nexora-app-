@@ -1208,6 +1208,89 @@ export default function ProfileView({
     }
   };
 
+  // Persist each profile field as soon as the user finishes editing it.
+  // Media uploads are completed before the public/private profile transaction.
+  const saveProfileField = async (updates: Partial<User>) => {
+    if (!isLoggedIn || auth.currentUser?.uid !== currentUser.id || isSavingProfile) return;
+    const patch: Partial<User> = { ...updates };
+
+    if (patch.name !== undefined && patch.name !== currentUser.name) {
+      const lastChange = currentUser.lastDisplayNameChangeTime;
+      if (lastChange && Date.now() - new Date(lastChange).getTime() < 7 * 24 * 60 * 60 * 1000) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Display name changes are locked for 7 days.' }));
+        setEditName(currentUser.name);
+        return;
+      }
+      patch.lastDisplayNameChangeTime = new Date().toISOString();
+    }
+    if (patch.username !== undefined && patch.username !== currentUser.username) {
+      const usernameError = validateUsername(patch.username, currentUser.id);
+      if (usernameError) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: usernameError }));
+        setEditUsername(currentUser.username);
+        return;
+      }
+      const lastChange = currentUser.lastUsernameChangeTime;
+      if (lastChange && Date.now() - new Date(lastChange).getTime() < 30 * 24 * 60 * 60 * 1000) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Username changes are locked for 30 days.' }));
+        setEditUsername(currentUser.username);
+        return;
+      }
+      patch.lastUsernameChangeTime = new Date().toISOString();
+    }
+
+    const changed = Object.entries(patch).some(([key, value]) =>
+      value !== undefined && value !== (currentUser as any)[key]
+    );
+    if (!changed) return;
+
+    setIsSavingProfile(true);
+    try {
+      await onUpdateProfile(patch);
+    } catch (error) {
+      const message = error instanceof Error && error.message.trim()
+        ? error.message
+        : 'NEXORA could not save this profile change. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleCoverPhotoSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size <= 0 || file.size > 8 * 1024 * 1024) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a JPG, PNG or WebP photo under 8 MB.' }));
+      return;
+    }
+    if (!isLoggedIn || auth.currentUser?.uid !== currentUser.id || isSavingProfile) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Sign in to this account before changing its cover photo.' }));
+      return;
+    }
+    setIsSavingProfile(true);
+    try {
+      const uploaded = await uploadMediaFile({
+        file,
+        userId: currentUser.id,
+        fileName: 'profile-cover',
+        metadata: { purpose: 'profile-cover' },
+      });
+      await onUpdateProfile({ coverImage: uploaded.downloadUrl });
+      setEditCover(uploaded.downloadUrl);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Cover photo uploaded and saved.' }));
+    } catch (error) {
+      const message = error instanceof Error && error.message.trim()
+        ? error.message
+        : 'NEXORA could not save your cover photo. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   const hasUnsavedProfileChanges =
     editName !== currentUser.name ||
     editUsername !== currentUser.username ||
@@ -3363,10 +3446,7 @@ export default function ProfileView({
                   <ArrowLeft className="h-4 w-4" /> Cancel
                 </button>
                 <h2 className="text-base font-bold text-white">Edit profile</h2>
-                <button type="button" onClick={handleSaveProfile} disabled={isSavingProfile || showSavedFeedback}
-                  className="min-w-[76px] rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
-                  {isSavingProfile ? 'Saving…' : showSavedFeedback ? 'Saved' : 'Save'}
-                </button>
+                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile ? 'Saving…' : 'Auto-save on edit'}</span>
               </header>
 
               <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 py-3">
@@ -3389,24 +3469,16 @@ export default function ProfileView({
                       <button type="button" disabled={isSavingProfile || showSavedFeedback}
                         onClick={() => coverInputRef.current?.click()}
                         className="mt-1 text-xs font-semibold text-violet-300">{editCover ? 'Change photo' : 'Add photo'}</button>
-                      {editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => setEditCover('')}
+                      {editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => { setEditCover(''); void saveProfileField({ coverImage: '' }); }}
                         className="ml-2 text-xs text-zinc-400">Remove</button>}
                     </div>
-                    <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={event => {
-                      const file = event.target.files?.[0]; event.target.value = ''; if (!file) return;
-                      if (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 8 * 1024 * 1024) {
-                        window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a JPG, PNG or WebP photo under 8 MB.' })); return;
-                      }
-                      const reader = new FileReader(); reader.onload = () => { if (typeof reader.result === 'string') setEditCover(reader.result); };
-                      reader.onerror = () => window.dispatchEvent(new CustomEvent('toast', { detail: 'This photo could not be opened. Please try another one.' }));
-                      reader.readAsDataURL(file);
-                    }} />
+                    <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={isSavingProfile} onChange={handleCoverPhotoSelection} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
                   <label className="min-w-0 text-xs text-zinc-300">Name
-                    <input value={editName} onChange={e => setEditName(e.target.value)} maxLength={80} disabled={isSavingProfile || showSavedFeedback}
+                    <input value={editName} onChange={e => setEditName(e.target.value)} onBlur={() => void saveProfileField({ name: editName })} maxLength={80} disabled={isSavingProfile || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-50" placeholder="Your name" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Username
@@ -3417,25 +3489,25 @@ export default function ProfileView({
                     </div>
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Website
-                    <input value={editWebsite} onChange={e => setEditWebsite(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                    <input value={editWebsite} onChange={e => setEditWebsite(e.target.value)} onBlur={() => void saveProfileField({ website: editWebsite })} disabled={isSavingProfile || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="yourwebsite.com" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Location
-                    <input value={editLocation} onChange={e => setEditLocation(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                    <input value={editLocation} onChange={e => setEditLocation(e.target.value)} onBlur={() => void saveProfileField({ location: editLocation })} disabled={isSavingProfile || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="City, country" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Pronouns
-                    <input value={editPronouns} onChange={e => setEditPronouns(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                    <input value={editPronouns} onChange={e => setEditPronouns(e.target.value)} onBlur={() => void saveProfileField({ pronouns: editPronouns.trim() })} disabled={isSavingProfile || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="Optional" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Profile type
-                    <select value={editCategory} onChange={e => setEditCategory(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                    <select value={editCategory} onChange={e => setEditCategory(e.target.value)} onBlur={() => void saveProfileField({ profileCategory: editCategory })} disabled={isSavingProfile || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
                       <option value="Digital Creator">Digital creator</option><option value="Founder Mindset">Founder</option><option value="Community Leader">Community leader</option><option value="Technical Support">Technical support</option>
                     </select>
                   </label>
                   <label className="col-span-2 min-w-0 text-xs text-zinc-300">Bio
-                    <textarea value={editBio} onChange={e => setEditBio(e.target.value)} maxLength={160} rows={2} disabled={isSavingProfile || showSavedFeedback}
+                    <textarea value={editBio} onChange={e => setEditBio(e.target.value)} onBlur={() => void saveProfileField({ bio: editBio })} maxLength={160} rows={2} disabled={isSavingProfile || showSavedFeedback}
                       className="mt-1 block w-full resize-none rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2 text-sm text-white outline-none focus:border-violet-500" placeholder="Tell people a little about yourself." />
                   </label>
                   <div className="col-span-2 flex items-center justify-between text-[11px] text-zinc-500">
@@ -3445,22 +3517,22 @@ export default function ProfileView({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <label className="min-w-0 text-xs text-zinc-300">Creator type
-                    <select value={editCreatorType} onChange={e => setEditCreatorType(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                    <select value={editCreatorType} onChange={e => setEditCreatorType(e.target.value)} onBlur={() => void saveProfileField({ creatorType: editCreatorType })} disabled={isSavingProfile || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
                       <option value="Premium creator">Premium</option><option value="Creator">Creator</option><option value="Collaborator">Collaborator</option>
                     </select>
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">X profile
-                    <input value={editSocialTwitter} onChange={e => setEditSocialTwitter(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                    <input value={editSocialTwitter} onChange={e => setEditSocialTwitter(e.target.value)} onBlur={() => void saveProfileField({ socialTwitter: editSocialTwitter.trim() })} disabled={isSavingProfile || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
                   </label>
                   <label className="col-span-2 min-w-0 text-xs text-zinc-300">Instagram
-                    <input value={editSocialInsta} onChange={e => setEditSocialInsta(e.target.value)} disabled={isSavingProfile || showSavedFeedback}
+                    <input value={editSocialInsta} onChange={e => setEditSocialInsta(e.target.value)} onBlur={() => void saveProfileField({ socialInstagram: editSocialInsta.trim() })} disabled={isSavingProfile || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
                   </label>
                 </div>
               </div>
-              <p className="shrink-0 pb-1 text-center text-[10px] text-zinc-500">Your changes will appear on your profile after you save.</p>
+              <p className="shrink-0 pb-1 text-center text-[10px] text-zinc-500">Your changes save automatically when you finish editing each field.</p>
             </div>
           </motion.div>
         )}

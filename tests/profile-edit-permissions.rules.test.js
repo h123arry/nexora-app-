@@ -73,7 +73,10 @@ describe('profile editing Firestore permissions', () => {
       await setDoc(doc(db, 'users', 'alice'), {
         id: 'alice', email: 'alice@example.test', username: 'alice', name: 'Alice',
         bio: '', avatar: '', location: '', website: '', coverImage: '',
-        followers: 0, following: 0, sparks: 0
+        followers: 0, following: 0, sparks: 0, hasStory: false,
+        joinedDate: 'Joined November 2026', reputationPoints: 0,
+        reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+        skills: ['Community building']
       });
       await setDoc(doc(db, 'publicProfiles', 'alice'), {
         id: 'alice', username: 'alice', name: 'Alice', avatar: '', bio: '',
@@ -106,6 +109,11 @@ describe('profile editing Firestore permissions', () => {
         followers: 0,
         following: 0,
         sparks: 0,
+        hasStory: privateSnapshot.get('hasStory'),
+        joinedDate: privateSnapshot.get('joinedDate'),
+        reputationPoints: privateSnapshot.get('reputationPoints'),
+        reputationBreakdown: privateSnapshot.get('reputationBreakdown'),
+        skills: privateSnapshot.get('skills'),
         coverImage: updates.coverImage,
         location: settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone' ? '' : deleteField(),
         interestDNA: deleteField()
@@ -118,6 +126,9 @@ describe('profile editing Firestore permissions', () => {
     assert.equal(privateSnapshot.get('coverImage'), 'https://media.example.test/alice-cover.webp');
     assert.equal(publicSnapshot.get('avatar'), 'https://media.example.test/alice-avatar.webp');
     assert.equal(publicSnapshot.get('coverImage'), 'https://media.example.test/alice-cover.webp');
+    assert.equal(publicSnapshot.get('reputationPoints'), 0);
+    assert.deepEqual(publicSnapshot.get('reputationBreakdown'), { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 });
+    assert.deepEqual(publicSnapshot.get('skills'), ['Community building']);
   });
 
   it('does not allow profile editing to change private account or moderation fields', async () => {
