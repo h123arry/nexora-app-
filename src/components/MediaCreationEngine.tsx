@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import NexoraLensStudio from './NexoraLensStudio';
 import { NEXORA_LENS_CATALOG } from '../services/nexoraLensCatalog';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Sparkles, Settings, Info, Tag } from 'lucide-react';
+import { X, Check, Plus, Camera, Video, Mic, Clapperboard, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Sparkles, Settings, Info, Tag } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { User } from '../types';
 import { videoFileExtension } from '../services/media/videoFileExtension';
@@ -218,6 +218,8 @@ interface MediaCreationEngineProps {
 
 interface SelectedImage {
   url: string;
+  fileName?: string;
+  capturedAt?: number;
   rotation: number;
   zoom: number;
   cropOffset: { x: number; y: number };
@@ -849,29 +851,43 @@ export default function MediaCreationEngine({
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+    const files = Array.from(e.target.files || []).filter(file => file.type.startsWith('image/'));
+    e.target.value = '';
+    if (!files.length) return;
+
     requestPermission('gallery', () => {
-      void Promise.all(Array.from(files).slice(0, 10).map(async (file: File) => {
-        try {
-          await validateMediaFile(file, 'image');
-        } catch (error) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This photo could not be checked.'}` }));
+      void (async () => {
+        const remaining = Math.max(0, 20 - selectedImages.length);
+        if (remaining === 0) {
+          window.dispatchEvent(new CustomEvent('toast', { detail: 'You can add up to 20 photos to one NEXORA post.' }));
           return;
         }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          if (ev.target?.result) {
-            setSelectedImages(prev => [
-              ...prev,
-              { url: ev.target!.result as string, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }
-            ]);
+        const chosen = files.slice(0, remaining);
+        if (files.length > remaining) {
+          window.dispatchEvent(new CustomEvent('toast', { detail: `Only ${remaining} more photo${remaining === 1 ? '' : 's'} can be added to this post.` }));
+        }
+        const imported: Array<SelectedImage | null> = await Promise.all(chosen.map(async (file): Promise<SelectedImage | null> => {
+          try {
+            await validateMediaFile(file, 'image');
+            const url = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Photo could not be read.'));
+              reader.onerror = () => reject(new Error('Photo could not be read from your device.'));
+              reader.readAsDataURL(file);
+            });
+            return { url, fileName: file.name, capturedAt: file.lastModified || Date.now(), rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } } satisfies SelectedImage;
+          } catch (error) {
+            window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'This photo could not be imported.' }));
+            return null;
           }
-        };
-        reader.readAsDataURL(file);
-      }));
+        }));
+        const valid = imported.filter((item): item is SelectedImage => item !== null);
+        if (valid.length) {
+          setSelectedImages(previous => [...previous, ...valid].slice(0, 20));
+          setActiveEditIndex(previous => previous === null ? 0 : previous);
+        }
+      })();
     });
-    e.target.value = '';
   };
 
   const openVideoInStudio = () => {
@@ -1857,37 +1873,54 @@ export default function MediaCreationEngine({
             <div className="space-y-4">
               
               {currentStep === 1 && (
-                /* STEP 1: CHOOSE CONTENT TYPE */
-                <div className="space-y-4 animate-fadeIn">
-                  <div>
-                    <span className="text-xs font-semibold text-violet-300 block mb-1">Create</span>
-                    <h3 className="text-base font-bold text-white">What's on your mind?</h3>
+                /* STEP 1: CREATION HOME */
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="relative overflow-hidden rounded-[26px] border border-violet-400/20 bg-[radial-gradient(ellipse_at_top_right,rgba(113,56,255,0.28),transparent_58%),linear-gradient(145deg,#17102F_0%,#0B1020_58%,#080B16_100%)] p-5">
+                    <div className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-violet-500/15 blur-3xl" />
+                    <div className="relative flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200"><Sparkles size={12}/> Your creative space</span>
+                        <h3 className="max-w-[250px] text-[22px] font-black leading-tight tracking-tight text-white">Make something worth sharing.</h3>
+                        <p className="mt-2 max-w-[260px] text-xs leading-relaxed text-[#B9B2D0]">Capture a moment, tell a story or bring an idea to life.</p>
+                      </div>
+                      <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-400/10 text-violet-200 shadow-[0_0_35px_rgba(113,56,255,0.16)]"><Camera size={23}/></div>
+                    </div>
+                    <div className="relative mt-5 grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => { setActiveMode('photo'); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-3 py-3 text-xs font-extrabold text-white shadow-[0_8px_24px_rgba(75,16,242,0.25)] transition-transform active:scale-[0.98]"><Camera size={16}/> Open camera</button>
+                      <button type="button" onClick={() => { setActiveMode('carousel'); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 py-3 text-xs font-bold text-white transition-colors hover:bg-white/10 active:scale-[0.98]"><FileImage size={16}/> Choose from gallery</button>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="flex items-center justify-between px-0.5">
+                    <div><h4 className="text-sm font-extrabold text-white">Create a post</h4><p className="mt-0.5 text-[10px] text-[#8E88A7]">Choose the format that fits your moment.</p></div>
+                    <span className="text-[10px] font-semibold text-[#756B91]">8 formats</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
                     {[
-                      { id: 'text', icon: FileText, label: 'Write something', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a thought or update.' },
-                      { id: 'photo', icon: Camera, label: 'Take a photo', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Use your camera or choose a photo.' },
-                      { id: 'carousel', icon: FileImage, label: 'Choose photos', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Pick several photos from your gallery.' },
-                      { id: 'video', icon: Video, label: 'Choose a video', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Add a video from your gallery.' },
-                      { id: 'reel', icon: Sparkle, label: 'Record a video', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Open the camera and record a moment.' },
-                      { id: 'voice', icon: Mic, label: 'Record a voice note', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Record something in your own voice.' },
-                      { id: 'poll', icon: BarChart2, label: 'Ask a question', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Let people vote on your question.' },
-                      { id: 'pulse', icon: MapPin, label: 'Local update', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share what is happening nearby.' },
-                      { id: 'community', icon: Users, label: 'Share with a Circle', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share something with your Circle.' }
+                      { id: 'text', icon: FileText, label: 'Text post', desc: 'A thought or update', tint: 'text-[#C4B2FF]', glow: 'bg-violet-500/10' },
+                      { id: 'video', icon: Video, label: 'Video', desc: 'Upload a video', tint: 'text-[#B7A3FF]', glow: 'bg-violet-500/10' },
+                      { id: 'reel', icon: Sparkle, label: 'Record video', desc: 'Shoot a new moment', tint: 'text-[#D0B8FF]', glow: 'bg-purple-500/10' },
+                      { id: 'voice', icon: Mic, label: 'Voice note', desc: 'Let your voice lead', tint: 'text-[#B8ACFF]', glow: 'bg-indigo-500/10' },
+                      { id: 'carousel', icon: FileImage, label: 'Photo carousel', desc: 'Share multiple photos', tint: 'text-[#C4B2FF]', glow: 'bg-violet-500/10' },
+                      { id: 'poll', icon: BarChart2, label: 'Poll', desc: 'Ask people to vote', tint: 'text-[#B7A3FF]', glow: 'bg-violet-500/10' },
+                      { id: 'pulse', icon: MapPin, label: 'Local update', desc: 'What is happening nearby', tint: 'text-[#C4B2FF]', glow: 'bg-purple-500/10' },
+                      { id: 'community', icon: Users, label: 'Circle post', desc: 'Share with your Circle', tint: 'text-[#B8ACFF]', glow: 'bg-indigo-500/10' },
                     ].map((item) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => { setActiveMode(item.id as any); setCurrentStep(2); }}
-                        className={`p-3.5 text-left rounded-2xl bg-[#090812] border transition-all hover:bg-[#120E2B]/70 group cursor-pointer ${item.color}`}
-                      >
-                        <item.icon className="w-5 h-5 mb-1.5" />
-                        <span className="block text-xs font-black text-white group-hover:text-violet-300">{item.label}</span>
-                        <p className="text-[10px] text-[#8E88A7] leading-tight mt-1">{item.desc}</p>
+                      <button key={item.id} type="button" onClick={() => { setActiveMode(item.id as any); setCurrentStep(2); }} className="group flex min-h-[82px] items-center gap-3 rounded-2xl border border-[#292244] bg-[#0C0A19] p-3 text-left transition-all hover:border-violet-400/40 hover:bg-[#14102A] active:scale-[0.985]">
+                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] ${item.glow} ${item.tint}`}><item.icon size={19}/></span>
+                        <span className="min-w-0"><span className="block text-xs font-extrabold text-white group-hover:text-violet-200">{item.label}</span><span className="mt-1 block text-[10px] leading-snug text-[#89839F]">{item.desc}</span></span>
+                        <ChevronRight size={14} className="ml-auto shrink-0 text-[#625A78] transition-transform group-hover:translate-x-0.5 group-hover:text-violet-300"/>
                       </button>
                     ))}
                   </div>
+
+                  {onOpenStudio && (
+                    <button type="button" onClick={() => onOpenStudio([])} className="group flex w-full items-center gap-3 rounded-2xl border border-violet-400/25 bg-[linear-gradient(100deg,rgba(113,56,255,0.14),rgba(15,12,32,0.88))] p-3.5 text-left transition-all hover:border-violet-300/50 hover:bg-violet-500/10">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Clapperboard size={21}/></span>
+                      <span className="min-w-0 flex-1"><span className="block text-xs font-extrabold text-white">Open NEXORA Studio</span><span className="mt-1 block text-[10px] text-[#A39BBF]">Edit clips, add music, captions, transitions and more.</span></span>
+                      <ChevronRight size={17} className="text-violet-300 transition-transform group-hover:translate-x-1"/>
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -1930,7 +1963,7 @@ export default function MediaCreationEngine({
                           <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
                         )}
                         <div className="relative z-10 flex items-center justify-center gap-3 rounded-3xl border border-white/15 bg-black/45 p-3 backdrop-blur-xl">
-                          <label className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white">Gallery<input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} /></label>
+                          <label className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white">Gallery<input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} /></label>
                           <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Flip</button>
                           <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="rounded-full bg-gradient-to-br from-[#A855F7] to-[#4B10F2] px-7 py-4 text-sm font-black text-white shadow-[0_0_35px_rgba(113,56,255,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">Capture</button>
                         </div>
@@ -1978,30 +2011,34 @@ export default function MediaCreationEngine({
                         <FileImage className="w-8 h-8 text-[#8E88A7] mx-auto" />
                         <p className="text-xs text-[#D1CBE3] font-bold">Add photos to your collection</p>
                         <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
-                          Add multiple images
+                          Choose photos
                           <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
                         </label>
                       </div>
 
                       {selectedImages.length > 0 && (
                         <div className="space-y-2 bg-[#120E2B]/70 p-3 rounded-xl border border-[#292244]">
-                          <span className="text-[9px] font-mono text-[#A39BBF] uppercase">Your photos ({selectedImages.length}) · Arrange them in the order you want</span>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#B9AED8]">Selected media · {selectedImages.length}/20</span><span className="text-[10px] text-[#817895]">Hold your order · move items below</span></div>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-px overflow-hidden rounded-xl border border-[#292244] bg-[#292244]">
                             {selectedImages.map((img, index) => (
-                              <div key={index} className="relative aspect-square rounded-lg border border-[#292244] overflow-hidden group">
-                                <img src={img.url} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                              <div key={index} className={`group relative aspect-[4/5] overflow-hidden bg-[#090714] ${activeEditIndex === index ? 'ring-2 ring-inset ring-violet-400' : ''}`}>
+                                <button type="button" onClick={() => setActiveEditIndex(index)} aria-label={`Preview photo ${index + 1}`} aria-pressed={activeEditIndex === index} className="absolute inset-0 z-0 h-full w-full cursor-pointer">
+                                  <img src={img.url} alt={img.fileName || `Selected photo ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
+                                </button>
+                                <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-bold text-white">{index + 1}</span>
+                                {activeEditIndex === index && <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-md bg-violet-600 px-1.5 py-0.5 text-[8px] font-bold text-white">EDITING</span>}
+                                <div className="absolute inset-0 z-10 flex items-center justify-center gap-1 bg-black/55 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                                   {index > 0 && (
-                                    <button onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index - 1]; next[index - 1] = tmp; setSelectedImages(next); }} className="p-1 bg-[#120E2B] rounded text-white">
+                                    <button type="button" aria-label={`Move photo ${index + 1} left`} onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index - 1]; next[index - 1] = tmp; setSelectedImages(next); setActiveEditIndex(index - 1); }} className="p-1.5 bg-[#120E2B] rounded text-white">
                                       <ChevronLeft className="w-3.5 h-3.5" />
                                     </button>
                                   )}
                                   {index < selectedImages.length - 1 && (
-                                    <button onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index + 1]; next[index + 1] = tmp; setSelectedImages(next); }} className="p-1 bg-[#120E2B] rounded text-white">
+                                    <button type="button" aria-label={`Move photo ${index + 1} right`} onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index + 1]; next[index + 1] = tmp; setSelectedImages(next); setActiveEditIndex(index + 1); }} className="p-1.5 bg-[#120E2B] rounded text-white">
                                       <ChevronRight className="w-3.5 h-3.5" />
                                     </button>
                                   )}
-                                  <button onClick={() => setSelectedImages(prev => prev.filter((_, idx) => idx !== index))} className="p-1 bg-rose-950/80 rounded text-rose-400">
+                                  <button type="button" aria-label={`Remove photo ${index + 1}`} onClick={() => { setSelectedImages(prev => prev.filter((_, idx) => idx !== index)); setActiveEditIndex(previous => previous === null ? null : previous > index ? previous - 1 : previous === index ? Math.max(0, selectedImages.length - 2) : previous); }} className="p-1.5 bg-rose-950/80 rounded text-rose-300">
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
@@ -2022,7 +2059,7 @@ export default function MediaCreationEngine({
                       </div>
                       <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
                         Choose from gallery
-                        <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
+                        <input type="file" accept="video/*" capture={undefined} className="hidden" onChange={handleVideoUpload} />
                       </label>
                       {(videoFileUrl || recordedVideoUrl) && (
                         <div className="max-w-sm mx-auto p-3 bg-[#120E2B] border border-[#292244] rounded-xl space-y-3 text-left">
