@@ -22,7 +22,7 @@ jobs:
     if: inputs.confirm_staging_deploy == true
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    environment: nexora-staging
+    environment: "nexora-staging."
     env:
       NEXORA_ENV: staging
       NODE_ENV: staging
