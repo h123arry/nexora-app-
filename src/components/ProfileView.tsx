@@ -710,6 +710,7 @@ export default function ProfileView({
   // Realistic Saving UX states
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [showSavedFeedback, setShowSavedFeedback] = useState(false);
+  const profileFieldSavesRef = useRef(new Set<string>());
 
   // Relationship states (Muted / Blocked lists)
   const [relationsTab, setRelationsTab] = useState<'followers' | 'following' | 'close-friends' | 'blocked' | 'muted'>('followers');
@@ -753,6 +754,12 @@ export default function ProfileView({
   const [editSocialTwitter, setEditSocialTwitter] = useState(currentUser.socialTwitter || '');
   const [editSocialInsta, setEditSocialInsta] = useState(currentUser.socialInstagram || '');
   const coverInputRef = useRef<HTMLInputElement | null>(null);
+  const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
+  const [pendingCoverPreview, setPendingCoverPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => { if (pendingCoverPreview) URL.revokeObjectURL(pendingCoverPreview); };
+  }, [pendingCoverPreview]);
 
   // Webcam capture states
   const [isWebcamActive, setIsWebcamActive] = useState(false);
@@ -1216,8 +1223,11 @@ export default function ProfileView({
   // Persist each profile field as soon as the user finishes editing it.
   // Media uploads are completed before the public/private profile transaction.
   const saveProfileField = async (updates: Partial<User>) => {
-    if (!isLoggedIn || auth.currentUser?.uid !== currentUser.id || isSavingProfile) return;
+    if (!isLoggedIn || auth.currentUser?.uid !== currentUser.id) return;
     const patch: Partial<User> = { ...updates };
+    const fieldKeys = Object.keys(patch);
+    if (fieldKeys.some(key => profileFieldSavesRef.current.has(key))) return;
+    fieldKeys.forEach(key => profileFieldSavesRef.current.add(key));
 
     if (patch.name !== undefined && patch.name !== currentUser.name) {
       const lastChange = currentUser.lastDisplayNameChangeTime;
@@ -1247,9 +1257,11 @@ export default function ProfileView({
     const changed = Object.entries(patch).some(([key, value]) =>
       value !== undefined && value !== (currentUser as any)[key]
     );
-    if (!changed) return;
+    if (!changed) {
+      fieldKeys.forEach(key => profileFieldSavesRef.current.delete(key));
+      return;
+    }
 
-    setIsSavingProfile(true);
     try {
       await onUpdateProfile(patch);
     } catch (error) {
@@ -1261,11 +1273,11 @@ export default function ProfileView({
         : rawMessage.trim() || 'NEXORA could not save this profile change. Please try again.';
       window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     } finally {
-      setIsSavingProfile(false);
+      fieldKeys.forEach(key => profileFieldSavesRef.current.delete(key));
     }
   };
 
-  const handleCoverPhotoSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverPhotoSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
     const file = input.files?.[0];
     input.value = '';
@@ -1274,20 +1286,28 @@ export default function ProfileView({
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a JPG, PNG or WebP photo under 8 MB.' }));
       return;
     }
-    if (!isLoggedIn || auth.currentUser?.uid !== currentUser.id || isSavingProfile) {
+    if (!isLoggedIn || auth.currentUser?.uid !== currentUser.id) {
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Sign in to this account before changing its cover photo.' }));
       return;
     }
+    setPendingCoverFile(file);
+    setPendingCoverPreview(URL.createObjectURL(file));
+  };
+
+  const handleSaveCoverPhoto = async () => {
+    if (!pendingCoverFile || isSavingProfile || !isLoggedIn || auth.currentUser?.uid !== currentUser.id) return;
     setIsSavingProfile(true);
     try {
       const uploaded = await uploadMediaFile({
-        file,
+        file: pendingCoverFile,
         userId: currentUser.id,
         fileName: 'profile-cover',
         metadata: { purpose: 'profile-cover' },
       });
       await onUpdateProfile({ coverImage: uploaded.downloadUrl });
       setEditCover(uploaded.downloadUrl);
+      setPendingCoverFile(null);
+      setPendingCoverPreview(null);
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Cover photo uploaded and saved.' }));
     } catch (error) {
       const code = (error as { code?: string } | null)?.code;
@@ -1330,6 +1350,8 @@ export default function ProfileView({
     setEditSocialInsta(currentUser.socialInstagram || '');
     setEditAvatar(currentUser.avatar);
     setEditCover(currentUser.coverImage || '');
+    setPendingCoverFile(null);
+    setPendingCoverPreview(null);
     setActivePanel('profile');
     window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Changes cancelled. Nothing was saved.' }));
   };
@@ -1642,7 +1664,7 @@ export default function ProfileView({
             <div className="absolute left-4 -bottom-6">
               <div className="relative">
                 {currentUser.hasStory && <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 blur-[2px] opacity-80" />}
-                <button type="button" onClick={() => setProfilePicExpanded(true)} aria-label="View profile photo" className="relative z-10 h-14 w-14 sm:h-16 sm:w-16 rounded-full border-[3px] border-[#080617] bg-black overflow-visible shadow-lg cursor-zoom-in focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4">
+                <button type="button" onClick={() => setProfilePicExpanded(true)} aria-label="View profile photo" className="relative z-10 h-20 w-20 sm:h-24 sm:w-24 rounded-full border-[3px] border-[#080617] bg-black overflow-visible shadow-lg cursor-zoom-in focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4">
                   <img src={currentUser.avatar} className="h-full w-full rounded-full object-cover" alt="" referrerPolicy="no-referrer" />
                   {profileFrameAsset && <img src={profileFrameAsset.path} alt="" aria-hidden="true" className="pointer-events-none absolute -inset-[6px] z-20 h-[calc(100%+12px)] w-[calc(100%+12px)] object-contain" />}
                 </button>
@@ -3469,7 +3491,7 @@ export default function ProfileView({
               <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 py-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#120E2B] p-2.5">
-                    <img src={editAvatar} alt="Profile photo" className="h-14 w-14 shrink-0 rounded-full border border-white/10 object-cover" />
+                    <img src={editAvatar} alt="Profile photo" className="h-20 w-20 shrink-0 rounded-full border border-white/10 object-cover" />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-white">Profile photo</p>
                       <button type="button" disabled={isSavingProfile || showSavedFeedback}
@@ -3478,15 +3500,19 @@ export default function ProfileView({
                     </div>
                   </div>
                   <div className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#120E2B] p-2.5">
-                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#211B49]">
-                      {editCover ? <img src={editCover} alt="Cover photo" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><ImageIcon className="h-5 w-5 text-violet-300" /></div>}
+                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#211B49]">
+                      {(pendingCoverPreview || editCover) ? <img src={pendingCoverPreview || editCover} alt="Cover photo preview" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><ImageIcon className="h-5 w-5 text-violet-300" /></div>}
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-white">Cover photo</p>
                       <button type="button" disabled={isSavingProfile || showSavedFeedback}
                         onClick={() => coverInputRef.current?.click()}
-                        className="mt-1 text-xs font-semibold text-violet-300">{editCover ? 'Change photo' : 'Add photo'}</button>
-                      {editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => { setEditCover(''); void saveProfileField({ coverImage: '' }); }}
+                        className="mt-1 text-xs font-semibold text-violet-300">{pendingCoverFile ? 'Choose another' : editCover ? 'Change photo' : 'Add photo'}</button>
+                      {pendingCoverFile && <div className="mt-1 flex items-center gap-2">
+                        <button type="button" aria-label="Confirm cover photo" disabled={isSavingProfile} onClick={() => void handleSaveCoverPhoto()} className="rounded-full bg-violet-600 p-1.5 text-white disabled:opacity-50"><Check className="h-3.5 w-3.5" /></button>
+                        <button type="button" aria-label="Cancel cover photo" disabled={isSavingProfile} onClick={() => { setPendingCoverFile(null); setPendingCoverPreview(null); }} className="rounded-full border border-white/15 p-1.5 text-zinc-300"><X className="h-3.5 w-3.5" /></button>
+                      </div>}
+                      {!pendingCoverFile && editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => void saveProfileField({ coverImage: '' })}
                         className="ml-2 text-xs text-zinc-400">Remove</button>}
                     </div>
                     <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={isSavingProfile} onChange={handleCoverPhotoSelection} />
@@ -3501,7 +3527,7 @@ export default function ProfileView({
                   <label className="min-w-0 text-xs text-zinc-300">Username
                     <div className="mt-1 flex h-10 items-center rounded-xl border border-white/10 bg-[#120E2B] px-3 focus-within:border-violet-500">
                       <span className="text-violet-300">@</span>
-                      <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} maxLength={30} disabled={isSavingProfile || showSavedFeedback}
+                      <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} onBlur={() => void saveProfileField({ username: editUsername })} maxLength={30} disabled={isSavingProfile || showSavedFeedback}
                         className="min-w-0 w-full bg-transparent pl-1 text-sm text-white outline-none disabled:opacity-50" placeholder="username" />
                     </div>
                   </label>
