@@ -1812,7 +1812,7 @@ export default function MediaCreationEngine({
         id="creation-studio-frame"
       >
         {/* Header toolbar */}
-        <div className="flex justify-between items-start border-b border-white/10 pb-3 mb-4 shrink-0">
+        <div className={currentStep === 2 && activeMode === "carousel" ? "hidden" : "flex justify-between items-start border-b border-white/10 pb-3 mb-4 shrink-0"}>
           <div>
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-violet-600/10 border border-white/10 rounded-lg text-violet-400">
@@ -1838,7 +1838,7 @@ export default function MediaCreationEngine({
         </div>
 
         {/* Global Tab Navigation */}
-        <div className="flex gap-1.5 p-1 bg-[#070511]/80 border border-[#292244] rounded-xl mb-4 shrink-0">
+        <div className={currentStep === 2 && activeMode === "carousel" ? "hidden" : "flex gap-1.5 p-1 bg-[#070511]/80 border border-[#292244] rounded-xl mb-4 shrink-0"}>
           <button 
             onClick={() => { setActiveTab('feed'); setCurrentStep(1); }}
             className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'feed' ? 'bg-[#19143A] text-white' : 'text-[#8E88A7] hover:text-[#D1CBE3]'}`}
@@ -1860,7 +1860,7 @@ export default function MediaCreationEngine({
         </div>
 
         {/* A quiet progress line keeps the focus on creating, not on navigating a dashboard. */}
-        {activeTab !== 'drafts' && (
+        {activeTab !== 'drafts' && !(currentStep === 2 && activeMode === 'carousel') && (
           <div className="mb-4 shrink-0 px-1" aria-label={`Creation step ${currentStep} of 6`}>
             <div className="h-1 overflow-hidden rounded-full bg-[#292244]">
               <div className="h-full rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] transition-all duration-300" style={{ width: `${(currentStep / 6) * 100}%` }} />
