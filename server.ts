@@ -364,6 +364,41 @@ function storyExpiryIsActive(value: unknown): boolean {
   return timestamp > Date.now();
 }
 
+function dispatchR2MediaProcessing(mediaId: string, asset: Record<string, any>): void {
+  if (!r2Config || asset.storageProvider !== 'r2' || !['video', 'image'].includes(String(asset.kind))) return;
+  const workerUrl = process.env.MEDIA_WORKER_URL?.trim();
+  const token = process.env.MEDIA_WORKER_TOKEN?.trim();
+  if (!workerUrl || !token || typeof asset.storagePath !== 'string' || !/^\\d{1,32}$/.test(String(asset.generation || ''))) {
+    console.warn('[R2Media] Processing dispatch is not configured; original remains available.', { mediaId });
+    return;
+  }
+  let parsed: URL;
+  try { parsed = new URL(workerUrl); } catch { console.error('[R2Media] Processing worker URL is invalid.'); return; }
+  if (parsed.protocol !== 'https:') { console.error('[R2Media] Processing worker URL must use HTTPS.'); return; }
+  const payload = {
+    provider: 'r2',
+    object: {
+      bucket: r2Config.bucket,
+      name: asset.storagePath,
+      size: String(asset.size),
+      contentType: String(asset.contentType || ''),
+      generation: String(asset.generation),
+      metadata: { ownerId: String(asset.ownerId), mediaId, purpose: String(asset.purpose || 'post') },
+    },
+  };
+  // Dispatch off the upload response path. The worker claims the media asset
+  // transactionally, so repeated completion requests are safe to retry.
+  void fetch(parsed.toString(), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  }).then(response => {
+    if (!response.ok) console.error('[R2Media] Processing worker rejected the job.', { mediaId, status: response.status });
+  }).catch(error => {
+    console.error('[R2Media] Processing dispatch failed; completion can be retried.', { mediaId, message: error instanceof Error ? error.message : 'unknown' });
+  });
+}
+
 async function hashR2Object(objectKey: string): Promise<{ digest: string; size: number }> {
   if (!r2Config) throw new Error('R2 storage is not configured.');
   const url = createR2PresignedUrl(r2Config, 'GET', objectKey, 900);
@@ -477,6 +512,7 @@ r2MediaRouter.post('/:mediaId/complete', async (req, res) => {
       return res.status(404).json({ error: 'The media upload could not be found.' });
     }
     if (asset.status === 'uploaded') {
+      dispatchR2MediaProcessing(mediaId, asset);
       return res.status(200).json({ mediaId, storagePath: asset.storagePath, downloadUrl: r2MediaGatewayUrl(mediaId), contentType: asset.contentType, size: asset.size });
     }
     if (asset.status !== 'pending_upload' || typeof asset.storagePath !== 'string') {
@@ -531,6 +567,10 @@ r2MediaRouter.post('/:mediaId/complete', async (req, res) => {
         uploadedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
+    });
+    dispatchR2MediaProcessing(mediaId, {
+      ...asset, ownerId: uid, storageProvider: 'r2', status: 'uploaded',
+      generation, contentType: actualType, size: actualSize,
     });
     return res.status(200).json({
       mediaId,
