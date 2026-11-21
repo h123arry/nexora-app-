@@ -224,7 +224,7 @@ body { background: var(--nx-canvas); }
   max-width: none !important;
   padding-inline: 0 !important;
 }
-.nx-profile-media-grid {
+.nx-profile-shell .nx-profile-media-grid {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   grid-auto-flow: row !important;
@@ -233,14 +233,14 @@ body { background: var(--nx-canvas); }
   overflow: hidden !important;
   background: var(--nx-canvas) !important;
 }
-.nx-profile-media-grid > * {
+.nx-profile-shell .nx-profile-media-grid > * {
   min-width: 0 !important;
   min-height: 0 !important;
   aspect-ratio: 3 / 5 !important;
   border-radius: 0 !important;
   overflow: hidden !important;
 }
-.nx-profile-media-grid > button {
+.nx-profile-shell .nx-profile-media-grid > button {
   width: 100% !important;
   min-height: 0 !important;
   aspect-ratio: 3 / 5 !important;
