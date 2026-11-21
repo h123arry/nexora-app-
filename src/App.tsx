@@ -3634,7 +3634,10 @@ export default function App() {
                   <div className="flex gap-0.5 items-end h-6 pt-1">
                     {Array.from({ length: 24 }).map((_, i) => {
                       const h = Math.floor(10 + Math.sin(i * 0.5) * 5 + Math.random() * 8);
-                      return (
+                      // Do not render a guest/visitor shell while Firebase is restoring the real account.
+  if (authInitializing) return <NexoraLoader />;
+
+  return (
                         <div
                           key={i}
                           className="flex-1 rounded-xs transition-all"
