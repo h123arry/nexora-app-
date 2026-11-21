@@ -164,7 +164,7 @@ app.post('/api/social/follow-state', requireFirebaseUser, async (req, res) => {
 app.post('/api/social/post-spark-state', requireFirebaseUser, async (req, res) => {
   const uid = String(res.locals.userId || '');
   const { postId, liked } = req.body || {};
-  if (typeof postId !== 'string' || postId.length < 1 || postId.length > 150 || postId.includes('/') || typeof liked !== 'boolean') {
+  if (typeof postId !== 'string' || !/^[A-Za-z0-9_-]{1,150}$/.test(postId) || typeof liked !== 'boolean') {
     return res.status(400).json({ code: 'invalid_spark_request', error: 'A valid post and Spark state are required.' });
   }
   try {
