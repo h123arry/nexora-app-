@@ -32,6 +32,16 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 app.disable('x-powered-by');
 
+// Global HTTP backstop; sensitive social mutations also have stricter per-user
+// HTTP and Firestore limits below. Keep this high enough for shared proxy IPs.
+const globalRequestLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 20_000,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(globalRequestLimiter);
+
 const firebaseRuntime = resolveServerFirebaseConfig();
 const firebaseProjectId = firebaseRuntime.projectId;
 const firestoreDatabaseId = firebaseRuntime.firestoreDatabaseId;
