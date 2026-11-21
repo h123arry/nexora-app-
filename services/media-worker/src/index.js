@@ -181,7 +181,7 @@ async function reconcileR2Uploads(){
     // Use the single-field provider index so this reconciler does not depend
     // on a new composite Firestore index being deployed first.
     const inventory = await db.collection('mediaAssets').where('storageProvider','==','r2').limit(200).get();
-    const candidates = inventory.docs.filter(snapshot => ['uploaded','failed','processing'].includes(String(snapshot.get('status')))).slice(0,10);
+    const candidates = inventory.docs.filter(snapshot => ['uploaded','failed','processing'].includes(String(snapshot.get('status'))) && canClaimMediaProcessing(snapshot.data())).slice(0,10);
     for(const snapshot of candidates){
       const asset=snapshot.data();
       if(!asset || !['video','image'].includes(String(asset.kind)) || typeof asset.ownerId!=='string'
