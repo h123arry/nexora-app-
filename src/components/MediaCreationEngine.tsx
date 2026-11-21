@@ -1949,7 +1949,7 @@ export default function MediaCreationEngine({
                       { id: 'pulse', icon: MapPin, label: 'Local update', desc: 'What is happening nearby', tint: 'text-[#C4B2FF]', glow: 'bg-purple-500/10' },
                       { id: 'community', icon: Users, label: 'Circle post', desc: 'Share with your Circle', tint: 'text-[#B8ACFF]', glow: 'bg-indigo-500/10' },
                     ].map((item) => (
-                      <button key={item.id} type="button" onClick={() => { setActiveMode(item.id as any); if (item.id === 'carousel') { setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(false); } setCurrentStep(2); }} className="group flex min-h-[82px] items-center gap-3 rounded-2xl border border-[#292244] bg-[#0C0A19] p-3 text-left transition-all hover:border-violet-400/40 hover:bg-[#14102A] active:scale-[0.985]">
+                      <button key={item.id} type="button" onClick={() => { setActiveMode(item.id as any); if (item.id === 'carousel') { setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(false); } else { setGalleryTab('photos'); setGalleryReturnToCamera(false); } setCurrentStep(2); }} className="group flex min-h-[82px] items-center gap-3 rounded-2xl border border-[#292244] bg-[#0C0A19] p-3 text-left transition-all hover:border-violet-400/40 hover:bg-[#14102A] active:scale-[0.985]">
                         <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] ${item.glow} ${item.tint}`}><item.icon size={19}/></span>
                         <span className="min-w-0"><span className="block text-xs font-extrabold text-white group-hover:text-violet-200">{item.label}</span><span className="mt-1 block text-[10px] leading-snug text-[#89839F]">{item.desc}</span></span>
                         <ChevronRight size={14} className="ml-auto shrink-0 text-[#625A78] transition-transform group-hover:translate-x-0.5 group-hover:text-violet-300"/>
@@ -1973,7 +1973,7 @@ export default function MediaCreationEngine({
                   {activeMode !== 'photo' && activeMode !== 'reel' && (
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-semibold text-[#B69BFF]">{activeMode === 'video' ? 'Choose a video' : 'Add your content'}</span>
-                      <button onClick={() => setCurrentStep(1)} className="text-xs text-violet-400 hover:underline flex items-center gap-1 font-bold">Choose another</button>
+                      <button onClick={() => { if (galleryTab === "videos") { setActiveMode("carousel"); setCurrentStep(2); } else { setCurrentStep(1); } }} className="text-xs text-violet-400 hover:underline flex items-center gap-1 font-bold">{galleryTab === "videos" ? "Back to gallery" : "Choose another"}</button>
                     </div>
                   )}
 
