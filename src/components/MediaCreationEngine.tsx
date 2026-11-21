@@ -605,7 +605,7 @@ export default function MediaCreationEngine({
       if (!navigator.mediaDevices?.getUserMedia) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera recording is not supported by this browser. Please upload a video instead.' }));
       } else {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true })
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1080 }, height: { ideal: 1920 }, aspectRatio: { ideal: 9 / 16 } }, audio: true })
           .then(stream => {
             if (cancelled) {
               stream.getTracks().forEach(track => track.stop());
@@ -658,7 +658,7 @@ export default function MediaCreationEngine({
     }
 
     navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1080 }, height: { ideal: 1920 }, aspectRatio: { ideal: 9 / 16 } },
       audio: false,
     }).then(async stream => {
       if (cancelled) {
@@ -908,15 +908,32 @@ export default function MediaCreationEngine({
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera is not ready yet. Wait for the preview, then try again.' }));
         return;
       }
+      const previewBounds = video.getBoundingClientRect();
+      const targetAspect = previewBounds.width > 0 && previewBounds.height > 0
+        ? previewBounds.width / previewBounds.height
+        : 9 / 16;
+      const sourceAspect = video.videoWidth / video.videoHeight;
+      let sourceX = 0;
+      let sourceY = 0;
+      let sourceWidth = video.videoWidth;
+      let sourceHeight = video.videoHeight;
+      // Match the still photo to the exact edge-to-edge camera framing shown on screen.
+      if (sourceAspect > targetAspect) {
+        sourceWidth = video.videoHeight * targetAspect;
+        sourceX = (video.videoWidth - sourceWidth) / 2;
+      } else if (sourceAspect < targetAspect) {
+        sourceHeight = video.videoWidth / targetAspect;
+        sourceY = (video.videoHeight - sourceHeight) / 2;
+      }
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      canvas.width = Math.max(1, Math.round(sourceWidth));
+      canvas.height = Math.max(1, Math.round(sourceHeight));
       const context = canvas.getContext('2d');
       if (!context) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not capture the frame. Please try again.' }));
         return;
       }
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      context.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
       const snapUrl = canvas.toDataURL('image/jpeg', 0.92);
       setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
       window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Photo captured.' }));
