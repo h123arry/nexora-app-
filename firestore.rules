@@ -238,6 +238,13 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Direct-call records are server-owned; only the two participants can read call state.
+    match /directCalls/{callId} {
+      allow get: if signedIn() && request.auth.uid in resource.data.participants;
+      allow list: if signedIn() && (resource.data.callerId == request.auth.uid || resource.data.recipientId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
     // Default-deny for every path not explicitly listed below.
     match /{document=**} { allow read, write: if false; }
 
@@ -475,7 +482,7 @@ service cloud.firestore {
           && request.resource.data.token is string
           && request.resource.data.token.size() >= 20
           && request.resource.data.token.size() <= 4096
-          && request.resource.data.platform == 'web'
+          && request.resource.data.platform in ['web', 'android', 'ios']
           && request.resource.data.updatedAt == request.time;
         allow delete: if owner(userId);
       }
