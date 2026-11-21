@@ -1967,10 +1967,7 @@ export default function MediaCreationEngine({
 
                       {/* Snap device simulation */}
                       <div className="absolute inset-0 flex flex-col justify-between px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] text-center">
-                        <div className="relative z-10 self-start rounded-2xl border border-white/15 bg-black/45 px-4 py-2 text-left backdrop-blur-xl">
-                          <span className="text-sm font-semibold text-white block">NEXORA Camera</span>
-                          <p className="text-[10px] text-white/70">Your moment, your space.</p>
-                        </div>
+
                         <video ref={photoPreviewRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full object-cover bg-black" aria-label="Live camera preview" />
                         {permissionState !== 'granted' && (
                           <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
