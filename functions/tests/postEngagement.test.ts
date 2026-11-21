@@ -29,8 +29,8 @@ before(async () => {
   await db.doc('posts/public-post-missing-projection').set({ id: 'public-post-missing-projection', userId: 'author-missing-projection', audience: 'public', likes: 0 });
 });
 after(async () => {
-  const fixtureUsers = ['author', 'alice', ...Array.from({ length: 12 }, (_, index) => `user-${index}`)];
-  const fixturePosts = ['public-post', 'restricted-post'];
+  const fixtureUsers = ['author', 'alice', 'author-missing-projection', ...Array.from({ length: 12 }, (_, index) => `user-${index}`)];
+  const fixturePosts = ['public-post', 'restricted-post', 'public-post-missing-projection'];
   await Promise.all([
     ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
     ...fixtureUsers.map(id => db.recursiveDelete(db.doc(`users/${id}`))),
