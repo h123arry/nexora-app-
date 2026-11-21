@@ -39,6 +39,53 @@ import {
   getDefaultAvatar
 } from '../data/database';
 
+
+/** Convert profile cover uploads to a predictable, browser-friendly JPEG before signing the R2 PUT. */
+async function prepareProfileCoverImage(source: File): Promise<File> {
+  let bitmap: ImageBitmap | null = null;
+  let image: HTMLImageElement | null = null;
+  let objectUrl: string | null = null;
+  try {
+    let width = 0;
+    let height = 0;
+    let draw: CanvasImageSource;
+    if (typeof createImageBitmap === 'function') {
+      bitmap = await createImageBitmap(source, { imageOrientation: 'from-image' });
+      width = bitmap.width;
+      height = bitmap.height;
+      draw = bitmap;
+    } else {
+      objectUrl = URL.createObjectURL(source);
+      image = new Image();
+      image.src = objectUrl;
+      await new Promise<void>((resolve, reject) => {
+        image!.onload = () => resolve();
+        image!.onerror = () => reject(new Error('NEXORA could not read this cover photo. Choose another image.'));
+      });
+      width = image.naturalWidth;
+      height = image.naturalHeight;
+      draw = image;
+    }
+    if (!width || !height) throw new Error('This cover photo has invalid image dimensions.');
+    const scale = Math.min(1, 2400 / width, 1200 / height);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Your browser could not prepare this cover photo.');
+    context.fillStyle = '#090714';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(draw, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(result => result ? resolve(result) : reject(new Error('NEXORA could not prepare this cover photo. Please choose another image.')), 'image/jpeg', 0.9);
+    });
+    return new File([blob], 'profile-cover.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+  } finally {
+    bitmap?.close();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }
+}
+
 interface MediaGridProps {
   gridPosts: Post[];
   pinnedPostIds: string[];
@@ -713,6 +760,7 @@ export default function ProfileView({
   const [showSavedFeedback, setShowSavedFeedback] = useState(false);
   const profileFieldSavesRef = useRef(new Set<string>());
   const [savingProfileFields, setSavingProfileFields] = useState<Set<string>>(new Set());
+  const [savedProfileFields, setSavedProfileFields] = useState<Set<string>>(new Set());
 
   // Relationship states (Muted / Blocked lists)
   const [relationsTab, setRelationsTab] = useState<'followers' | 'following' | 'close-friends' | 'blocked' | 'muted'>('followers');
@@ -1264,6 +1312,12 @@ export default function ProfileView({
 
     try {
       await onUpdateProfile(patch);
+      setSavedProfileFields(previous => new Set([...previous, ...fieldKeys]));
+      window.setTimeout(() => setSavedProfileFields(previous => {
+        const next = new Set(previous);
+        fieldKeys.forEach(key => next.delete(key));
+        return next;
+      }), 2500);
       return true;
     } catch (error) {
       const code = (error as { code?: string } | null)?.code;
@@ -1305,8 +1359,9 @@ export default function ProfileView({
     if (!pendingCoverFile || isSavingCoverPhoto || !isLoggedIn || auth.currentUser?.uid !== currentUser.id) return;
     setIsSavingCoverPhoto(true);
     try {
+      const preparedCover = await prepareProfileCoverImage(pendingCoverFile);
       const uploaded = await uploadMediaFile({
-        file: pendingCoverFile,
+        file: preparedCover,
         userId: currentUser.id,
         fileName: 'profile-cover',
         metadata: { purpose: 'profile-cover' },
@@ -3493,7 +3548,7 @@ export default function ProfileView({
                   <ArrowLeft className="h-4 w-4" /> Cancel
                 </button>
                 <h2 className="text-base font-bold text-white">Edit profile</h2>
-                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile || isSavingCoverPhoto || savingProfileFields.size > 0 ? 'Saving…' : 'Auto-save on edit'}</span>
+                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile || isSavingCoverPhoto || savingProfileFields.size > 0 ? 'Saving…' : savedProfileFields.size > 0 ? 'Saved' : 'Auto-save on edit'}</span>
               </header>
 
               <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 py-3">
@@ -3513,10 +3568,12 @@ export default function ProfileView({
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-white">Cover photo</p>
+                      <p className="mt-0.5 text-[10px] text-zinc-400">JPG, PNG or WebP · up to 8 MB. Optimised automatically before upload.</p>
                       <button type="button" disabled={isSavingCoverPhoto || savingProfileFields.has('coverImage') || showSavedFeedback}
                         onClick={() => coverInputRef.current?.click()}
                         className="mt-1 text-xs font-semibold text-violet-300">{pendingCoverFile ? 'Choose another' : editCover ? 'Change photo' : 'Add photo'}</button>
                       {pendingCoverFile && <div className="mt-1 flex items-center gap-2">
+                        {isSavingCoverPhoto && <span className="text-[10px] text-violet-300" aria-live="polite">Preparing and uploading…</span>}
                         <button type="button" aria-label="Confirm cover photo" disabled={isSavingCoverPhoto} onClick={() => void handleSaveCoverPhoto()} className="rounded-full bg-violet-600 p-1.5 text-white disabled:opacity-50"><Check className="h-3.5 w-3.5" /></button>
                         <button type="button" aria-label="Cancel cover photo" disabled={isSavingCoverPhoto} onClick={() => { setPendingCoverFile(null); setPendingCoverPreview(null); }} className="rounded-full border border-white/15 p-1.5 text-zinc-300"><X className="h-3.5 w-3.5" /></button>
                       </div>}
@@ -3529,10 +3586,12 @@ export default function ProfileView({
 
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
                   <label className="min-w-0 text-xs text-zinc-300">Name
+                    <span className="mt-0.5 block text-[10px] text-zinc-500">Display name can be changed once every 7 days.</span>
                     <input value={editName} onChange={e => setEditName(e.target.value)} onBlur={() => void saveProfileField({ name: editName })} maxLength={80} disabled={isSavingProfile || savingProfileFields.has('name') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-50" placeholder="Your name" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Username
+                    <span className="mt-0.5 block text-[10px] text-zinc-500">Username can be changed once every 30 days.</span>
                     <div className="mt-1 flex h-10 items-center rounded-xl border border-white/10 bg-[#120E2B] px-3 focus-within:border-violet-500">
                       <span className="text-violet-300">@</span>
                       <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} onBlur={() => void saveProfileField({ username: editUsername })} maxLength={30} disabled={isSavingProfile || savingProfileFields.has('username') || showSavedFeedback}
@@ -3558,12 +3617,13 @@ export default function ProfileView({
                     </select>
                   </label>
                   <label className="col-span-2 min-w-0 text-xs text-zinc-300">Bio
+                    <span className="mt-0.5 block text-[10px] text-zinc-500">Up to 160 characters. No change cooldown. Saves automatically when you leave the field.</span>
                     <textarea value={editBio} onChange={e => setEditBio(e.target.value)} onBlur={() => void saveProfileField({ bio: editBio })} maxLength={160} rows={2} disabled={isSavingProfile || savingProfileFields.has('bio') || showSavedFeedback}
                       className="mt-1 block w-full resize-none rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2 text-sm text-white outline-none focus:border-violet-500" placeholder="Tell people a little about yourself." />
                   </label>
                   <div className="col-span-2 flex items-center justify-between text-[11px] text-zinc-500">
-                    <span>{editBio.length}/160</span>
-                    <span>Keep it simple. You can update this anytime.</span>
+                    <span>{editBio.length}/160 characters</span>
+                    <span>{savingProfileFields.has('bio') ? 'Saving bio…' : savedProfileFields.has('bio') ? 'Bio saved' : 'Saved automatically on blur'}</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
