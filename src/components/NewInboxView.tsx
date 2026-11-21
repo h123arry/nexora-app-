@@ -408,8 +408,9 @@ export default function NewInboxView({
       replyToQuote: replyQuoteText || undefined,
       replyToMessageId: replyMessageId || undefined,
       customMediaType: mediaData?.type,
-      mediaStoragePath: mediaData?.url || undefined,
-      mediaType: mediaData?.type === 'voice' ? 'audio' : (mediaData?.type as 'image' | 'video' | 'audio' | 'document' | undefined),
+      mediaStoragePath: mediaData?.type === 'sticker' ? undefined : (mediaData?.url || undefined),
+      mediaType: mediaData?.type === 'sticker' ? undefined : mediaData?.type === 'voice' ? 'audio' : (mediaData?.type as 'image' | 'video' | 'audio' | 'document' | undefined),
+      customMediaData: mediaData?.type === 'sticker' ? { emoji: mediaData.url, label: mediaData.name || 'NEXORA sticker' } : undefined,
       mediaContentType: mediaData?.contentType,
       fileSize: typeof mediaData?.size === 'number' ? String(mediaData.size) : undefined,
       voiceAudioUrl: undefined,
@@ -426,7 +427,7 @@ export default function NewInboxView({
       [activeChatId]: [...(prev[activeChatId] || []), newMsg]
     }));
 
-    const previewText = mediaData ? (mediaData.type === 'voice' ? 'Voice message' : `Sent ${mediaData.type === 'image' ? 'a photo' : mediaData.type === 'video' ? 'a video' : mediaData.type === 'audio' ? 'an audio file' : 'a document'}`) : contentToSend;
+    const previewText = mediaData ? (mediaData.type === 'voice' ? 'Voice message' : mediaData.type === 'sticker' ? 'Sent a sticker' : `Sent ${mediaData.type === 'image' ? 'a photo' : mediaData.type === 'video' ? 'a video' : mediaData.type === 'audio' ? 'an audio file' : 'a document'}`) : contentToSend;
     const previousChat = chats.find(chat => chat.id === activeChatId);
     const previousLastMessage = previousChat?.lastMessage || '';
     const previousLastTimestamp = previousChat?.lastTimestamp || '';
@@ -1251,6 +1252,9 @@ export default function NewInboxView({
           onSelect={(emoji) => {
             setNewMessageText(prev => prev + emoji);
             setShowEmojiPicker(false);
+          }}
+          onSelectSticker={(sticker) => {
+            void handleSendMessage('', { type: 'sticker', url: sticker.emoji, name: sticker.label });
           }}
         />
       )}
