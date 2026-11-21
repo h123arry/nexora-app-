@@ -56,12 +56,14 @@ test('follow mutation writes one canonical edge and keeps counters idempotent', 
 
 test('follow mutation reverses a follow without allowing negative counters', async () => {
   const { store, records } = createStore({
-    'users/follower': { following: 0, username: 'follower' },
-    'users/creator': { followers: 0, username: 'creator' },
-    'publicProfiles/follower': { id: 'follower', following: 0 },
-    'publicProfiles/creator': { id: 'creator', followers: 0 },
+    'users/follower': { following: 1, username: 'follower' },
+    'users/creator': { followers: 1, username: 'creator' },
+    'publicProfiles/follower': { id: 'follower', following: 1 },
+    'publicProfiles/creator': { id: 'creator', followers: 1 },
+    'follows/follower_creator': { followerId: 'follower', followingId: 'creator' },
   });
-  await setCreatorFollowStateForUser(store, 'follower', 'creator', false);
+  const result = await setCreatorFollowStateForUser(store, 'follower', 'creator', false);
+  assert.deepEqual(result, { following: false, changed: true, followerCount: 0 });
   assert.equal(records.get('publicProfiles/creator')?.followers, 0);
   assert.equal(records.get('publicProfiles/follower')?.following, 0);
   assert.equal(records.has('follows/follower_creator'), false);
