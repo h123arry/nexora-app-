@@ -254,7 +254,7 @@ app.post('/api/social/comment-reply-spark-state', async (req, res) => {
 
 const r2Config = resolveR2Config();
 
-const r2WorkerSigningLimiter = rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false });
+const r2WorkerSigningLimiter = rateLimit({ windowMs: 60_000, max: 1000, standardHeaders: true, legacyHeaders: false });
 
 app.post('/api/internal/r2-worker/sign', r2WorkerSigningLimiter, async (req, res) => {
   if (!r2Config) return res.status(503).json({ error: 'R2 signing is not configured.' });
