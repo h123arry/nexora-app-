@@ -456,6 +456,7 @@ export default function FeedView({
   const [submittingComments, setSubmittingComments] = useState<Record<string, boolean>>({});
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [activeReplyFieldId, setActiveReplyFieldId] = useState<string | null>(null);
+  const [expandedCommentReplyIds, setExpandedCommentReplyIds] = useState<Record<string, boolean>>({});
   const [quoteTargetPost, setQuoteTargetPost] = useState<Post | null>(null);
   const [quoteDraft, setQuoteDraft] = useState('');
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
@@ -2392,7 +2393,7 @@ export default function FeedView({
                             {/* Standard Threaded/Nested Replies */}
                             {c.replies && c.replies.length > 0 && (
                               <div className="pl-9 space-y-2.5 pt-1.5 border-l border-white/10 ml-3.5">
-                                {c.replies.map(rep => (
+                                {c.replies.slice(0, expandedCommentReplyIds[c.id] ? c.replies.length : 1).map(rep => (
                                   <div key={rep.id} className="text-xs py-2 border-b border-white/5">
                                     <button type="button" onClick={() => onViewProfile?.(rep.userId || rep.username)} aria-label={`View @${rep.username}'s profile`} className="mb-1 flex min-h-10 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
                                       <img src={rep.avatar} alt="" className="h-5 w-5 rounded-md object-cover" />
@@ -2404,6 +2405,18 @@ export default function FeedView({
                                     <p className="text-violet-200 pl-7 text-[11.5px] leading-relaxed">{rep.content}</p>
                                   </div>
                                 ))}
+                                {c.replies.length > 1 && (
+                                  <button
+                                    type="button"
+                                    aria-expanded={!!expandedCommentReplyIds[c.id]}
+                                    aria-label={expandedCommentReplyIds[c.id] ? `Collapse replies to ${c.username}'s comment` : `Show ${c.replies.length - 1} more replies to ${c.username}'s comment`}
+                                    onClick={() => setExpandedCommentReplyIds(previous => ({ ...previous, [c.id]: !previous[c.id] }))}
+                                    className="flex items-center gap-1.5 py-2 text-[11px] font-semibold text-violet-300 hover:text-white focus-visible:outline-2 focus-visible:outline-violet-300"
+                                  >
+                                    {expandedCommentReplyIds[c.id] ? 'Hide replies' : `View ${c.replies.length - 1} more ${c.replies.length - 1 === 1 ? 'reply' : 'replies'}`}
+                                    {expandedCommentReplyIds[c.id] ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                  </button>
+                                )}
                               </div>
                             )}
 
