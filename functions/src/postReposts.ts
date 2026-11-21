@@ -11,6 +11,22 @@ function validId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 150 && !value.includes('/');
 }
 
+/** Convert legacy/rich-text post bodies into safe plain text without leaking object placeholders. */
+function extractPostText(value: unknown, depth = 0): string {
+  if (depth > 8 || value == null) return '';
+  if (typeof value === 'string') return value.trim();
+  if (Array.isArray(value)) return value.map(item => extractPostText(item, depth + 1)).filter(Boolean).join('\n');
+  if (typeof value !== 'object') return '';
+  const record = value as Record<string, unknown>;
+  for (const key of ['text', 'plainText', 'content', 'children', 'blocks', 'value']) {
+    if (record[key] !== undefined) {
+      const text = extractPostText(record[key], depth + 1);
+      if (text) return text;
+    }
+  }
+  return '';
+}
+
 /** Create a durable, attributed repost and its private idempotency marker atomically. */
 export async function createPublicPostRepost(
   db: Firestore,
@@ -51,6 +67,7 @@ export async function createPublicPostRepost(
 
     const profile = actor.data() || {};
     const originalPostId = validId(sourceData.sourcePostId) ? sourceData.sourcePostId : postId;
+    const sourcePostText = extractPostText(sourceData.sourcePostContent) || extractPostText(sourceData.content);
     const repost = {
       id: repostId,
       userId: uid,
@@ -59,8 +76,8 @@ export async function createPublicPostRepost(
       name: String(profile.name || profile.username || 'NEXORA member').slice(0, 100),
       avatar: typeof profile.avatar === 'string' ? profile.avatar.slice(0, 1000) : '',
       isVerified: profile.isVerified === true,
-      content: quoteText || String(sourceData.sourcePostContent || sourceData.content || '').slice(0, 5000),
-      sourcePostContent: String(sourceData.sourcePostContent || sourceData.content || '').slice(0, 5000),
+      content: quoteText || sourcePostText.slice(0, 5000),
+      sourcePostContent: sourcePostText.slice(0, 5000),
       sourceAuthorId: String(sourceData.sourceAuthorId || sourceData.userId || sourceData.authorId || ''),
       sourceAuthorUsername: String(sourceData.sourceAuthorUsername || sourceData.username || 'member').slice(0, 80),
       sourceAuthorName: String(sourceData.sourceAuthorName || sourceData.name || 'NEXORA member').slice(0, 100),

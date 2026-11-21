@@ -753,6 +753,21 @@ export default function FeedView({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Keep the feed anchored while the comments sheet is open. The sheet owns
+  // its own scroll area; the active video remains mounted and keeps playing.
+  useEffect(() => {
+    if (!activeCommentsPostId) return;
+    const feed = scrollContainerRef.current;
+    const previousFeedOverflow = feed?.style.overflowY || '';
+    const previousBodyOverflow = document.body.style.overflow;
+    if (feed) feed.style.overflowY = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      if (feed) feed.style.overflowY = previousFeedOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [activeCommentsPostId]);
+
   // State to hold pending posts received in the background while scrolling
   const [pendingPosts, setPendingPosts] = useState<RefactoredPost[]>([]);
 
@@ -2298,12 +2313,25 @@ export default function FeedView({
                 {/* 5. THREADED COMMENTS DRAWER ACCORDION (Floating bottom sheet drawer style) */}
                 <AnimatePresence>
                   {isCommentsOpen && (
+                    <>
+                    <motion.button
+                      type="button"
+                      aria-label="Close comments"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => setActiveCommentsPostId(null)}
+                      className="fixed inset-0 z-[89] bg-black/35"
+                    />
                     <motion.div
+                      role="dialog"
+                      aria-modal="true"
+                      aria-label={`Comments on @${post.username}'s post`}
                       initial={{ y: "100%", opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: "100%", opacity: 0 }}
-                      transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                      className="comments-container absolute bottom-0 inset-x-0 h-[65%] rounded-t-[32px] bg-zinc-950/95 backdrop-blur-xl border-t border-white/10 z-40 flex flex-col p-5 shadow-md overflow-hidden"
+                      transition={{ type: "spring", damping: 28, stiffness: 260 }}
+                      className="comments-container fixed bottom-0 inset-x-0 h-[88dvh] max-h-[94dvh] rounded-t-[28px] bg-[#090714]/[0.98] backdrop-blur-2xl border-t border-violet-400/20 z-[90] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden touch-pan-y"
                     >
                       {/* Header of Comments drawer */}
                       <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
@@ -2319,7 +2347,7 @@ export default function FeedView({
                       </div>
 
                       {/* Comments stream scroll */}
-                      <div className="space-y-3.5 flex-1 overflow-y-auto pr-1 mb-4 custom-scrollbar">
+                      <div className="space-y-3.5 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y pr-1 mb-3 custom-scrollbar">
                         {post.comments.length === 0 && (
                           <p className="text-[11px] font-mono text-violet-300/40 italic py-2 text-center">
                             No comments yet. Start the conversation!
@@ -2442,6 +2470,7 @@ export default function FeedView({
                         </button>
                       </div>
                     </motion.div>
+                    </>
                   )}
                 </AnimatePresence>
             </React.Fragment>

@@ -1277,7 +1277,7 @@ export default function NexoraVideoPlayer({
                    <span className="block truncate text-[10px] text-white/75">@{post.username}</span>
                  </span>
                </button>
-               {!isOwnPost && onToggleFollow && (
+               {!isOwnPost && onToggleFollow && !isFollowing && (
                  <button type="button" onClick={(e) => { e.stopPropagation(); onToggleFollow(); }}
                    aria-pressed={isFollowing}
                    aria-label={isFollowing ? `Following ${post.username}. Unfollow` : `Follow ${post.username}`}
