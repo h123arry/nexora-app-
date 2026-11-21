@@ -31,6 +31,7 @@ after(async () => {
     db.doc(`publicProfiles/${actorId}`).delete(),
     db.doc(`publicProfiles/${authorId}`).delete(),
     db.recursiveDelete(db.collection('users').doc(actorId).collection('commentLikes')),
+    db.recursiveDelete(db.collection('users').doc(actorId).collection('commentReplyLikes')),
     db.recursiveDelete(db.collection('users').doc(authorId).collection('notifications')),
   ]);
   await deleteApp(app);
