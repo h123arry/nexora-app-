@@ -950,6 +950,9 @@ export default function MediaCreationEngine({
       void (async () => {
         if (files.length > 1 && onOpenStudio) {
           const validFiles: File[] = [];
+          if (files.length > 12) {
+            window.dispatchEvent(new CustomEvent('toast', { detail: 'NEXORA Studio can import up to 12 clips at once. The first 12 selected clips will be used.' }));
+          }
           for (const file of files.slice(0, 12)) {
             try {
               await validateMediaFile(file, 'video');
