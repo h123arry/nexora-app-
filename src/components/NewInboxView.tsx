@@ -104,6 +104,8 @@ export default function NewInboxView({
   }, []);
   const [inboxTab, setInboxTab] = useState<'chats' | 'groups' | 'circles' | 'requests' | 'archived'>('chats');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showMessageSearch, setShowMessageSearch] = useState(false);
+  const [messageSearchQuery, setMessageSearchQuery] = useState('');
   const [newMessageText, setNewMessageText] = useState('');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
@@ -130,6 +132,7 @@ export default function NewInboxView({
   // Message context / reply / edit
   const [activeContextMessageId, setActiveContextMessageId] = useState<string | null>(null);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
+  useEffect(() => { setSelectedMessageIds([]); setActiveContextMessageId(null); setMessageSearchQuery(''); setShowMessageSearch(false); }, [activeChatId]);
   const [replyQuoteText, setReplyQuoteText] = useState<string | null>(null);
   const [replyMessageId, setReplyMessageId] = useState<string | null>(null);
 
@@ -411,7 +414,7 @@ export default function NewInboxView({
       content: contentToSend || (mediaData ? `[${mediaData.type.toUpperCase()}]` : ''),
       timestamp: nowIso,
       status: 'sending',
-      replyToQuote: replyQuoteText || undefined,
+      replyToQuote: replyQuoteText ? replyQuoteText.slice(0, 1000) : undefined,
       replyToMessageId: replyMessageId || undefined,
       customMediaType: mediaData?.type,
       mediaStoragePath: mediaData?.type === 'sticker' ? undefined : (mediaData?.url || undefined),
@@ -939,6 +942,17 @@ export default function NewInboxView({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  aria-label="Search messages in this conversation"
+                  aria-pressed={showMessageSearch}
+                  onClick={() => { setShowMessageSearch(value => !value); setMessageSearchQuery(''); }}
+                  className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
+                  title="Search messages"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
                   aria-label={`Start a voice call with ${activeChat.partnerName}`}
                   onClick={() => setActiveCall({ type: 'voice', partnerName: activeChat.partnerName, partnerAvatar: activeChat.partnerAvatar })}
                   className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
@@ -957,6 +971,24 @@ export default function NewInboxView({
                 </button>
               </div>
             </div>
+
+            {showMessageSearch && (
+              <div className="flex items-center gap-2 border-b border-white/10 bg-[#0c0920] px-4 py-2.5">
+                <Search className="h-4 w-4 shrink-0 text-violet-300" />
+                <input
+                  type="search"
+                  autoFocus
+                  value={messageSearchQuery}
+                  onChange={event => setMessageSearchQuery(event.target.value)}
+                  onKeyDown={event => { if (event.key === 'Escape') { setShowMessageSearch(false); setMessageSearchQuery(''); } }}
+                  placeholder="Search messages in this chat..."
+                  aria-label="Search messages in this chat"
+                  className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-zinc-500"
+                />
+                {messageSearchQuery && <span className="text-[10px] text-violet-300">Highlighting matches</span>}
+                <button type="button" onClick={() => { setShowMessageSearch(false); setMessageSearchQuery(''); }} aria-label="Close message search" className="rounded-lg p-1 text-zinc-400 hover:bg-white/10"><X className="h-4 w-4" /></button>
+              </div>
+            )}
 
             {/* Messages Body */}
             <div
@@ -1009,7 +1041,7 @@ export default function NewInboxView({
                       onEdit={handleEditMessage}
                       onPin={handlePinMessage}
                       onTranslate={() => {}}
-                      searchQuery=""
+                      searchQuery={messageSearchQuery}
                       onToggleContextMenu={(messageId) => setActiveContextMessageId(previous => previous === messageId ? null : messageId)}
                       activeContextMessageId={activeContextMessageId}
                       onTogglePlayVoice={() => {}}
