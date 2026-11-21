@@ -1248,9 +1248,12 @@ export default function ProfileView({
     try {
       await onUpdateProfile(patch);
     } catch (error) {
-      const message = error instanceof Error && error.message.trim()
-        ? error.message
-        : 'NEXORA could not save this profile change. Please try again.';
+      const code = (error as { code?: string } | null)?.code;
+      const rawMessage = error instanceof Error ? error.message : '';
+      const isPermissionFailure = code === 'permission-denied' || /missing or insufficient permissions/i.test(rawMessage);
+      const message = isPermissionFailure
+        ? 'NEXORA could not save this change right now. Please try again.'
+        : rawMessage.trim() || 'NEXORA could not save this profile change. Please try again.';
       window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     } finally {
       setIsSavingProfile(false);
@@ -1282,9 +1285,12 @@ export default function ProfileView({
       setEditCover(uploaded.downloadUrl);
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Cover photo uploaded and saved.' }));
     } catch (error) {
-      const message = error instanceof Error && error.message.trim()
-        ? error.message
-        : 'NEXORA could not save your cover photo. Please try again.';
+      const code = (error as { code?: string } | null)?.code;
+      const rawMessage = error instanceof Error ? error.message : '';
+      const isPermissionFailure = code === 'permission-denied' || /missing or insufficient permissions/i.test(rawMessage);
+      const message = isPermissionFailure
+        ? 'NEXORA could not save your cover photo right now. Please try again.'
+        : rawMessage.trim() || 'NEXORA could not save your cover photo. Please try again.';
       window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     } finally {
       setIsSavingProfile(false);
@@ -2276,6 +2282,8 @@ export default function ProfileView({
                               type="text"
                               value={editName}
                               onChange={(e) => setEditName(e.target.value)}
+                              onBlur={() => void saveProfileField({ name: editName })}
+                              disabled={isSavingProfile}
                               className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 text-xs font-medium"
                             />
                           </div>
@@ -2286,7 +2294,9 @@ export default function ProfileView({
                             <input
                               type="text"
                               value={editUsername}
-                              onChange={(e) => setEditUsername(e.target.value)}
+                              onChange={(e) => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))}
+                              onBlur={() => void saveProfileField({ username: editUsername })}
+                              disabled={isSavingProfile}
                               className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white font-mono focus:outline-hidden focus:border-violet-500 text-xs font-medium"
                             />
                           </div>
@@ -2299,6 +2309,8 @@ export default function ProfileView({
                               value={editWebsite}
                               placeholder="e.g. nexora.ai"
                               onChange={(e) => setEditWebsite(e.target.value)}
+                              onBlur={() => void saveProfileField({ website: editWebsite })}
+                              disabled={isSavingProfile}
                               className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 text-xs"
                             />
                           </div>
@@ -2310,6 +2322,8 @@ export default function ProfileView({
                               value={editBio}
                               rows={3}
                               onChange={(e) => setEditBio(e.target.value)}
+                              onBlur={() => void saveProfileField({ bio: editBio })}
+                              disabled={isSavingProfile}
                               className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 text-xs leading-relaxed"
                             />
                           </div>
@@ -2321,17 +2335,15 @@ export default function ProfileView({
                               type="text"
                               value={editLocation}
                               onChange={(e) => setEditLocation(e.target.value)}
+                              onBlur={() => void saveProfileField({ location: editLocation })}
+                              disabled={isSavingProfile}
                               className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 text-xs"
                             />
                           </div>
 
-                          {/* Save parameters */}
-                          <button
-                            onClick={handleSaveProfile}
-                            className="w-full py-2.5 bg-linear-to-r from-violet-600 to-violet-500 text-white rounded-xl text-[10px] font-mono font-black uppercase tracking-widest"
-                          >
-                            Save Changes
-                          </button>
+                          <p className="px-1 text-[10px] font-semibold text-violet-300" aria-live="polite">
+                            {isSavingProfile ? 'Saving this change…' : 'Changes save automatically when you finish editing each field.'}
+                          </p>
                         </div>
 
                         {/* Camera Setup block */}
