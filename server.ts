@@ -19,6 +19,7 @@ import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy'
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
 import { shapeAuthenticatedVohAccountContext } from './server/vohAccountContext';
 import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, isCurrentPublicProfileMedia, buildR2OriginUploadRecords, selectR2VideoPlaybackPath } from './server/r2Storage';
+import { isAllowedR2WorkerObject, verifyGitHubActionsOidcToken } from './server/githubActionsOidc';
 import { runVohContextTool, VOH_CONTEXT_TOOL_DECLARATIONS } from './server/vohTools';
 import { createGeminiVohProvider, createSelfHostedVohProvider, resolveVohContextScope, runVohIntelligence, VohEmptyModelResponseError, VohToolRegistry } from './server/vohIntelligenceCore';
 import { resolveVohFeatureScopes, selectVohToolsForScopes } from './server/vohToolScopes';
@@ -252,6 +253,40 @@ app.post('/api/social/comment-reply-spark-state', async (req, res) => {
 });
 
 const r2Config = resolveR2Config();
+
+const r2WorkerSigningLimiter = rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false });
+
+app.post('/api/internal/r2-worker/sign', r2WorkerSigningLimiter, async (req, res) => {
+  if (!r2Config) return res.status(503).json({ error: 'R2 signing is not configured.' });
+  const authorization = req.headers.authorization?.match(/^Bearer ([^\\s]+)$/);
+  if (!authorization) return res.status(401).json({ error: 'A GitHub Actions identity token is required.' });
+  try {
+    await verifyGitHubActionsOidcToken(authorization[1]);
+  } catch {
+    return res.status(401).json({ error: 'The GitHub Actions identity is not authorized.' });
+  }
+
+  const { method, objectKey, expiresSeconds = 900, contentType } = req.body || {};
+  if (!isAllowedR2WorkerObject(method, objectKey, contentType)
+    || !Number.isInteger(expiresSeconds) || expiresSeconds < 1 || expiresSeconds > 900) {
+    return res.status(400).json({ error: 'The R2 worker signing request is invalid.' });
+  }
+  try {
+    const signedUrl = createR2PresignedUrl(
+      r2Config,
+      method,
+      objectKey,
+      expiresSeconds,
+      method === 'PUT' ? String(contentType).toLowerCase() : undefined,
+    );
+    res.setHeader('Cache-Control', 'no-store, private, max-age=0');
+    return res.status(200).json({ url: signedUrl });
+  } catch {
+    return res.status(503).json({ error: 'NEXORA could not sign the R2 worker request.' });
+  }
+});
+
+
 
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
   const match = req.headers.authorization?.match(/^Bearer ([^\s]+)$/);
