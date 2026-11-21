@@ -126,6 +126,7 @@ export default function NewInboxView({
   
   // Message context / reply / edit
   const [activeContextMessageId, setActiveContextMessageId] = useState<string | null>(null);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   const [replyQuoteText, setReplyQuoteText] = useState<string | null>(null);
   const [replyMessageId, setReplyMessageId] = useState<string | null>(null);
 
@@ -1013,6 +1014,7 @@ export default function NewInboxView({
                       currentUserId={currentUser.id}
                       isPinned={Boolean((msg as ExtendedMessage & { isPinned?: boolean }).isPinned)}
                       onStar={handleStarMessage}
+                      onSelectMessage={(message) => setSelectedMessageIds(previous => previous.includes(message.id) ? previous.filter(id => id !== message.id) : [...previous, message.id].slice(-100))}
                       groupReadCount={activeChat?.isGroup ? Object.values(msg.recipientReceipts || {}).filter(receipt => receipt.status === 'read').length : 0}
                       groupRecipientCount={activeChat?.isGroup ? Math.max(0, (activeChat.membersCount || 0) - 1) : 0}
                     />
@@ -1021,6 +1023,26 @@ export default function NewInboxView({
               )}
               <div ref={messagesEndRef} />
             </div>
+
+            {selectedMessageIds.length > 0 && (
+              <div className="flex items-center justify-between gap-3 border-t border-violet-300/15 bg-[#100c28] px-4 py-2.5">
+                <span className="text-xs font-semibold text-violet-100">{selectedMessageIds.length} selected</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => {
+                    const selected = activeMessages.filter(message => selectedMessageIds.includes(message.id));
+                    void navigator.clipboard.writeText(selected.map(message => message.content).filter(Boolean).join('\n')).then(() => {
+                      window.dispatchEvent(new CustomEvent('toast', { detail: 'Selected messages copied.' }));
+                    }).catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not copy selected messages.' })));
+                  }} className="rounded-lg px-3 py-2 text-xs text-violet-200 hover:bg-white/5">Copy</button>
+                  <button type="button" onClick={() => {
+                    const selected = activeMessages.filter(message => selectedMessageIds.includes(message.id) && message.senderId === currentUser.id);
+                    void Promise.all(selected.map(message => handleDeleteMessage(message.id, true)));
+                    setSelectedMessageIds([]);
+                  }} className="rounded-lg px-3 py-2 text-xs text-rose-300 hover:bg-rose-500/10">Delete mine</button>
+                  <button type="button" onClick={() => setSelectedMessageIds([])} className="rounded-lg px-3 py-2 text-xs text-zinc-400 hover:bg-white/5">Cancel</button>
+                </div>
+              </div>
+            )}
 
             {/* Reply Preview Bar */}
             {replyQuoteText && (
