@@ -176,8 +176,9 @@ async function processObject(event){
 }
 let r2ReconciliationRunning=false;
 async function reconcileR2Uploads(){
-  if(!r2Config || r2ReconciliationRunning) return;
+  if(!r2Config || r2ReconciliationRunning) return {scanned:0,processed:0,failed:0};
   r2ReconciliationRunning=true;
+  let scanned=0,processed=0,failed=0;
   try {
     // Use the single-field provider index so this reconciler does not depend
     // on a new composite Firestore index being deployed first.
@@ -185,6 +186,7 @@ async function reconcileR2Uploads(){
     const candidates = inventory.docs.filter(snapshot => ['uploaded','failed','processing'].includes(String(snapshot.get('status'))) && canClaimMediaProcessing(snapshot.data(), Date.now(), R2_STALE_PROCESSING_MS)).slice(0,10);
     for(const snapshot of candidates){
       const asset=snapshot.data();
+      scanned++;
       if(!asset || !['video','image'].includes(String(asset.kind)) || typeof asset.ownerId!=='string'
         || typeof asset.storagePath!=='string' || !/^users\/[A-Za-z0-9_-]{1,128}\/media\/[A-Za-z0-9_-]{1,128}$/.test(asset.storagePath)
         || !/^\d{1,32}$/.test(String(asset.generation||''))) continue;
@@ -193,26 +195,32 @@ async function reconcileR2Uploads(){
         contentType:String(asset.contentType||''),generation:String(asset.generation),
         metadata:{ownerId:asset.ownerId,mediaId:snapshot.id,purpose:String(asset.purpose||'post')},
       }};
-      await processObject(event).catch(error=>{
+      try {
+        const result=await processObject(event);
+        if(result?.ready===true) processed++;
+      } catch(error) {
+        failed++;
         console.error('[MediaWorker] R2 reconciliation failed.',{mediaId:snapshot.id,message:String(error.message||error)});
-      });
+      }
     }
   } catch(error) {
+    failed++;
     console.error('[MediaWorker] R2 reconciliation scan failed.',{message:String(error.message||error)});
   } finally { r2ReconciliationRunning=false; }
-}
-if(r2Config){
-  setTimeout(()=>void reconcileR2Uploads(),5000).unref?.();
-  setInterval(()=>void reconcileR2Uploads(),60_000).unref?.();
+  return {scanned,processed,failed};
 }
 
 http('processMedia',async(req,res)=>{
   try {
     if(req.method==='GET') return res.status(200).json({status:'ok',service:'nexora-media-worker',r2Configured:!!r2Config});
     if(req.method!=='POST') return res.status(405).send('Method not allowed');
-    if(req.body?.provider==='r2') {
+    if(req.body?.provider==='r2' || req.body?.action==='reconcile') {
       const token=process.env.MEDIA_WORKER_TOKEN;
       if(!token || req.header('authorization')!==`Bearer ${token}`) return res.status(401).json({error:'unauthorized'});
+    }
+    if(req.body?.action==='reconcile') {
+      const result=await reconcileR2Uploads();
+      return res.status(200).json({ok:true,...result});
     }
     const type=req.header('ce-type') || req.body?.type;
     if(type && type!=='google.cloud.storage.object.v1.finalized') return res.status(204).send();
