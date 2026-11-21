@@ -18,7 +18,7 @@ import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
 import { shapeAuthenticatedVohAccountContext } from './server/vohAccountContext';
-import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, isCurrentPublicProfileMedia, buildR2OriginUploadRecords } from './server/r2Storage';
+import { resolveR2Config, validateR2Upload, createR2ObjectKey, createR2PresignedUrl, r2MediaGatewayUrl, isCurrentPublicProfileMedia, buildR2OriginUploadRecords, selectR2VideoPlaybackPath } from './server/r2Storage';
 import { runVohContextTool, VOH_CONTEXT_TOOL_DECLARATIONS } from './server/vohTools';
 import { createGeminiVohProvider, createSelfHostedVohProvider, resolveVohContextScope, runVohIntelligence, VohEmptyModelResponseError, VohToolRegistry } from './server/vohIntelligenceCore';
 import { resolveVohFeatureScopes, selectVohToolsForScopes } from './server/vohToolScopes';
@@ -397,6 +397,41 @@ function storyExpiryIsActive(value: unknown): boolean {
   return timestamp > Date.now();
 }
 
+function dispatchR2MediaProcessing(mediaId: string, asset: Record<string, any>): void {
+  if (!r2Config || asset.storageProvider !== 'r2' || !['video', 'image'].includes(String(asset.kind))) return;
+  const workerUrl = process.env.MEDIA_WORKER_URL?.trim();
+  const token = process.env.MEDIA_WORKER_TOKEN?.trim();
+  if (!workerUrl || !token || typeof asset.storagePath !== 'string' || !/^[0-9]{1,32}$/.test(String(asset.generation || ''))) {
+    console.warn('[R2Media] Processing dispatch is not configured; original remains available.', { mediaId });
+    return;
+  }
+  let parsed: URL;
+  try { parsed = new URL(workerUrl); } catch { console.error('[R2Media] Processing worker URL is invalid.'); return; }
+  if (parsed.protocol !== 'https:') { console.error('[R2Media] Processing worker URL must use HTTPS.'); return; }
+  const payload = {
+    provider: 'r2',
+    object: {
+      bucket: r2Config.bucket,
+      name: asset.storagePath,
+      size: String(asset.size),
+      contentType: String(asset.contentType || ''),
+      generation: String(asset.generation),
+      metadata: { ownerId: String(asset.ownerId), mediaId, purpose: String(asset.purpose || 'post') },
+    },
+  };
+  // Dispatch off the upload response path. The worker claims the media asset
+  // transactionally, so repeated completion requests are safe to retry.
+  void fetch(parsed.toString(), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  }).then(response => {
+    if (!response.ok) console.error('[R2Media] Processing worker rejected the job.', { mediaId, status: response.status });
+  }).catch(error => {
+    console.error('[R2Media] Processing dispatch failed; completion can be retried.', { mediaId, message: error instanceof Error ? error.message : 'unknown' });
+  });
+}
+
 async function hashR2Object(objectKey: string): Promise<{ digest: string; size: number }> {
   if (!r2Config) throw new Error('R2 storage is not configured.');
   const url = createR2PresignedUrl(r2Config, 'GET', objectKey, 900);
@@ -509,7 +544,8 @@ r2MediaRouter.post('/:mediaId/complete', async (req, res) => {
     if (!assetSnapshot.exists || asset?.ownerId !== uid || asset?.storageProvider !== 'r2') {
       return res.status(404).json({ error: 'The media upload could not be found.' });
     }
-    if (asset.status === 'uploaded') {
+    if (['uploaded', 'processing', 'failed'].includes(String(asset.status))) {
+      dispatchR2MediaProcessing(mediaId, asset);
       return res.status(200).json({ mediaId, storagePath: asset.storagePath, downloadUrl: r2MediaGatewayUrl(mediaId), contentType: asset.contentType, size: asset.size });
     }
     if (asset.status !== 'pending_upload' || typeof asset.storagePath !== 'string') {
@@ -564,6 +600,10 @@ r2MediaRouter.post('/:mediaId/complete', async (req, res) => {
         uploadedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
+    });
+    dispatchR2MediaProcessing(mediaId, {
+      ...asset, ownerId: uid, storageProvider: 'r2', status: 'uploaded',
+      generation, contentType: actualType, size: actualSize,
     });
     return res.status(200).json({
       mediaId,
@@ -634,7 +674,8 @@ app.get('/api/media/:mediaId', async (req, res) => {
   try {
     const assetSnapshot = await serverDb.collection('mediaAssets').doc(mediaId).get();
     const asset = assetSnapshot.data();
-    if (!assetSnapshot.exists || asset?.storageProvider !== 'r2' || asset?.status !== 'uploaded'
+    if (!assetSnapshot.exists || asset?.storageProvider !== 'r2'
+      || !['uploaded', 'processing', 'failed', 'ready'].includes(String(asset?.status))
       || typeof asset.ownerId !== 'string' || typeof asset.storagePath !== 'string') return res.status(404).end();
     const ownerId = asset.ownerId;
     const [story, byArray, bySingle, ownerProfile, ownerSettings, ownerStatus, publicProfileSnapshot] = await Promise.all([
@@ -667,7 +708,10 @@ app.get('/api/media/:mediaId', async (req, res) => {
       || privacy.isPrivate === true || privacy.isPrivateAccount === true
       || profile.isSeedProfile === true || profile.isBanned === true || profile.isSuspended === true
       || status.banned === true || status.suspended === true) return res.status(404).end();
-    const url = createR2PresignedUrl(r2Config, 'GET', asset.storagePath, 60);
+    const playbackPath = selectR2VideoPlaybackPath(asset, ownerId, mediaId);
+    if (!playbackPath) return res.status(404).end();
+    const url = createR2PresignedUrl(r2Config, 'GET', playbackPath, 300);
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     return res.redirect(302, url);
   } catch (error) {
     console.error('[R2Media] Public media resolution failed.', error);

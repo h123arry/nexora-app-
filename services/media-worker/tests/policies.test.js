@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  classifyStorageObject, imageRenditionWidths, videoRenditionsForHeight, videoRenditionsForSize, videoRenditionDimensions, canClaimMediaProcessing,
+  classifyStorageObject, classifyR2StorageObject, imageRenditionWidths, videoRenditionsForHeight, videoRenditionsForSize, videoRenditionDimensions, canClaimMediaProcessing,
   MAX_INPUT_BYTES, MAX_IMAGE_BYTES,
 } from '../src/policies.js';
 
@@ -90,4 +90,38 @@ it('processing leases are protected while active and recover after expiry', () =
   assert.equal(canClaimMediaProcessing({ status: 'processing', processingStartedAt: { toMillis: () => now - 16 * 60_000 } }, now), true);
   assert.equal(canClaimMediaProcessing({ status: 'ready' }, now), false);
   assert.equal(canClaimMediaProcessing({ status: 'failed' }, now), true);
+});
+
+
+describe('NEXORA R2 media event validation', () => {
+  const event = (overrides = {}) => ({
+    provider: 'r2',
+    object: {
+      name: 'users/creator-1/media/media-1',
+      bucket: 'nexora-media',
+      size: '1048576',
+      contentType: 'video/mp4',
+      generation: '1795090000000',
+      metadata: { ownerId: 'creator-1', mediaId: 'media-1' },
+      ...overrides,
+    },
+  });
+  it('accepts verified R2 user-media events with immutable generation identity', () => {
+    const result = classifyR2StorageObject(event(), 'nexora-media');
+    assert.equal(result.ignored, false);
+    assert.equal(result.provider, 'r2');
+    assert.equal(result.ownerId, 'creator-1');
+    assert.equal(result.mediaId, 'media-1');
+    assert.equal(result.isVideo, true);
+  });
+  it('never accepts private chat paths or mismatched bucket/owner metadata', () => {
+    assert.equal(classifyR2StorageObject(event({ name: 'chats/dm/media/user/media-1' }), 'nexora-media').ignored, true);
+    assert.equal(classifyR2StorageObject(event({ bucket: 'other' }), 'nexora-media').ignored, true);
+    assert.equal(classifyR2StorageObject(event({ metadata: { ownerId: 'other', mediaId: 'media-1' } }), 'nexora-media').ignored, true);
+  });
+  it('rejects missing or unsafe immutable generations', () => {
+    for (const generation of ['', 'latest', '../1']) {
+      assert.throws(() => classifyR2StorageObject(event({ generation }), 'nexora-media'), /generation/);
+    }
+  });
 });
