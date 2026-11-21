@@ -1426,6 +1426,8 @@ export default function FeedView({
         if (blockedUserIds.includes(post.userId)) return false;
         if (mutedUserIds.includes(post.userId)) return false;
         if (mutedCreatorIds.includes(post.userId)) return false;
+        // The empty-feed recovery path must preserve every user moderation and interest preference.
+        if (post.tags.some(tag => notInterestedTags.includes(tag))) return false;
         return !post.isBroadcastPost;
       });
       if (fallbackList.length > 0) {
