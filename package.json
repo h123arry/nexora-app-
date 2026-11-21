@@ -55,7 +55,8 @@
     "react-dom": "^19.0.1",
     "@capacitor/core": "^8.6.0",
     "@capacitor/android": "^8.6.0",
-    "@capacitor/ios": "^8.6.0"
+    "@capacitor/ios": "^8.6.0",
+    "express-rate-limit": "^7.5.0"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
