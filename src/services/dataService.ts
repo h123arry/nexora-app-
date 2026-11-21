@@ -17,8 +17,6 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { PrivacySettings, User, Post, Comment, Circle as Community, Page, Notification, Message, Chat } from '../types';
-import { functions } from '../lib/firebase';
-import { httpsCallable } from 'firebase/functions';
 import { cacheManager } from './cache/cacheService';
 import { mergePendingActions, PendingAction } from './syncQueue';
 
@@ -252,8 +250,21 @@ async function setFollowStateDirect(followerId: string, followingId: string, fol
   if (!auth.currentUser || auth.currentUser.uid !== followerId) {
     throw new Error('Only the signed-in account can change its follow relationships.');
   }
-  const setState = httpsCallable(functions, 'setCreatorFollowState');
-  return setState({ creatorId: followingId, following });
+  const token = await auth.currentUser.getIdToken();
+  const response = await fetch('https://nexora-follow-edge.nexora-edge.workers.dev/follow-state', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'X-Request-Id': typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `follow-${Date.now()}`,
+    },
+    body: JSON.stringify({ creatorId: followingId, following }),
+  });
+  const payload = await response.json().catch(() => ({})) as { error?: string; code?: string; following?: boolean; changed?: boolean; followerCount?: number | null };
+  if (!response.ok) {
+    throw new Error(payload.error || 'NEXORA could not save this follow change. Please retry.');
+  }
+  return { data: payload };
 }
 
 async function addFollowDirect(followerId: string, followingId: string) {
