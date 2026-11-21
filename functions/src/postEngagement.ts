@@ -67,14 +67,29 @@ export async function setPostLike(
     const nextCount = Math.max(0, count + (desiredLiked ? 1 : -1));
     transaction.update(postRef, { likes: nextCount });
 
-    // Keep the creator's visible Sparks count and their Spark activity in the
-    // same transaction as the post reaction. A notification is only an alert;
-    // the profile activity is the durable record.
-    if (sparkEventRef && authorId && recipientPublicSnapshot?.exists) {
-      const received = Number(recipientPublicSnapshot.get('sparks'));
-      const currentReceived = Number.isSafeInteger(received) && received >= 0 ? received : 0;
+    // A Spark is a durable relationship with the post author, not merely a
+    // notification. Persist the event even when a best-effort public profile
+    // projection has not finished provisioning yet.
+    if (sparkEventRef && authorId) {
+      const publicSparks = recipientPublicSnapshot?.exists ? recipientPublicSnapshot.get('sparks') : undefined;
+      const privateSparks = recipientPrivateSnapshot?.exists ? recipientPrivateSnapshot.get('sparks') : undefined;
+      const currentValue = publicSparks ?? privateSparks ?? 0;
+      const currentReceived = Number.isSafeInteger(currentValue) && Number(currentValue) >= 0 ? Number(currentValue) : 0;
       const nextReceived = Math.max(0, currentReceived + (desiredLiked ? 1 : -1));
-      transaction.update(recipientPublicRef!, { sparks: nextReceived });
+      if (recipientPublicSnapshot?.exists) {
+        transaction.update(recipientPublicRef!, { sparks: nextReceived });
+      } else {
+        const privateProfile = recipientPrivateSnapshot?.data() || {};
+        transaction.set(recipientPublicRef!, {
+          id: authorId,
+          username: typeof privateProfile.username === 'string' ? privateProfile.username : 'member',
+          name: typeof privateProfile.name === 'string' ? privateProfile.name : 'NEXORA member',
+          avatar: typeof privateProfile.avatar === 'string' ? privateProfile.avatar : '',
+          followers: Number.isSafeInteger(privateProfile.followers) ? privateProfile.followers : 0,
+          following: Number.isSafeInteger(privateProfile.following) ? privateProfile.following : 0,
+          sparks: nextReceived,
+        }, { merge: true });
+      }
       if (recipientPrivateSnapshot?.exists) {
         transaction.update(recipientPrivateRef!, { sparks: nextReceived, updatedAt: FieldValue.serverTimestamp() });
       }
