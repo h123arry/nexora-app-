@@ -35,3 +35,19 @@ test('R2 worker rejects traversal and invalid expiry before signing', () => {
   assert.throws(() => createR2WorkerUrl(config, 'DELETE', 'users/user_1/media/asset_1'), /Invalid R2 worker request/);
   assert.throws(() => createR2WorkerUrl(config, 'GET', 'users/user_1/media/asset_1', 0), /expiry/);
 });
+
+\ntest('R2 worker accepts the production OIDC signing broker without long-lived R2 keys', () => {
+  const config = resolveR2WorkerConfig({
+    R2_ACCOUNT_ID: 'a'.repeat(32),
+    R2_BUCKET_NAME: 'nexora-media',
+    R2_SIGNING_API_URL: 'https://nexora-o3od.onrender.com/api/internal/r2-worker/sign',
+  });
+  assert.equal(config.signingEndpoint, 'https://nexora-o3od.onrender.com/api/internal/r2-worker/sign');
+  assert.equal(config.accessKeyId, undefined);
+  assert.equal(config.secretAccessKey, undefined);
+  assert.throws(() => resolveR2WorkerConfig({
+    R2_ACCOUNT_ID: 'a'.repeat(32),
+    R2_BUCKET_NAME: 'nexora-media',
+    R2_SIGNING_API_URL: 'https://attacker.example/sign',
+  }), /NEXORA production HTTPS endpoint/);
+});
