@@ -33,10 +33,12 @@ export function getVideoPreloadPlan(input: VideoPreloadPlanInput): VideoPreloadP
   }
 
   const hasActiveVideo = input.activeVideoIndex >= 0;
-  const isAdjacentVideo = hasActiveVideo
-    && Math.abs(input.postVideoIndex - input.activeVideoIndex) === 1;
+  // Warm two video stops in either scroll direction before they enter view.
+  const isWithinPreloadWindow = hasActiveVideo
+    && Math.abs(input.postVideoIndex - input.activeVideoIndex) <= 2
+    && input.postVideoIndex !== input.activeVideoIndex;
   const isReleased = hasActiveVideo
-    ? !isAdjacentVideo
+    ? !isWithinPreloadWindow
     : input.activePostIndex < 0 || Math.abs(input.postIndex - input.activePostIndex) > 2;
 
   if (input.isOffline) {
@@ -45,7 +47,7 @@ export function getVideoPreloadPlan(input: VideoPreloadPlanInput): VideoPreloadP
     return { shouldPreload: false, isReleased, preloadMode: 'none' };
   }
 
-  const shouldPreload = isAdjacentVideo;
+  const shouldPreload = isWithinPreloadWindow;
   return {
     shouldPreload,
     isReleased,
