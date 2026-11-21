@@ -711,6 +711,49 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
     });
   };
 
+  const runAutoCut = async () => {
+    if (!clips.length || autoCutting) return;
+    setAutoCutting(true);
+    setMessage('Auto Cut is analysing your soundtrack and arranging the footage…');
+    let audioContext: AudioContext | null = null;
+    try {
+      let beats: number[] = [];
+      let bpm: number | null = null;
+      if (soundtrack) {
+        const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (AudioContextClass) {
+          audioContext = new AudioContextClass();
+          const decoded = await audioContext.decodeAudioData(await soundtrack.arrayBuffer());
+          const mono = new Float32Array(decoded.length);
+          for (let channel = 0; channel < decoded.numberOfChannels; channel += 1) {
+            const data = decoded.getChannelData(channel);
+            for (let index = 0; index < data.length; index += 1) mono[index] += data[index] / decoded.numberOfChannels;
+          }
+          const analysis = analyzeStudioAudioBeats(mono, decoded.sampleRate);
+          bpm = analysis.bpm;
+          beats = analysis.beats;
+        }
+      }
+      if (beats.length < 2) beats = createStudioFallbackBeatGrid(totalDuration, 1.2);
+      const arranged = buildStudioAutoCutSegments(clips, beats, makeId);
+      if (!arranged.length) throw new Error('Auto Cut could not create a usable edit from these clips.');
+      setClips(arranged);
+      setSelectedId(arranged[0].id);
+      setPreviewGlobalTime(0);
+      setPlaying(false);
+      setTransition('cross-dissolve');
+      setExportBlob(null);
+      setMessage(soundtrack && bpm
+        ? `Auto Cut complete · approximately ${bpm} BPM · ${arranged.length} editable cuts synced to your music.`
+        : `Auto Cut complete · ${arranged.length} paced, editable cuts created. Add a soundtrack in Stage 4 to sync cuts to music beats.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Auto Cut could not analyse this project. Your original timeline is unchanged.');
+    } finally {
+      await audioContext?.close().catch(() => undefined);
+      setAutoCutting(false);
+    }
+  };
+
   const splitAtPlayhead = () => {
     const video = videoRef.current;
     if (!selectedClip || !video) return;
