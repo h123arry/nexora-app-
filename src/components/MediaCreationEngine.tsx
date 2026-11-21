@@ -377,6 +377,7 @@ export default function MediaCreationEngine({
   });
   const [activeEditIndex, setActiveEditIndex] = useState<number | null>(null);
   const [galleryTab, setGalleryTab] = useState<'photos' | 'videos'>('photos');
+  const [galleryReturnToCamera, setGalleryReturnToCamera] = useState(false);
   const [galleryPreviewIndex, setGalleryPreviewIndex] = useState<number | null>(null);
   const [videoFileUrl, setVideoFileUrl] = useState<string | null>(() => initialAutosave?.videoUrl || null);
   const [videoRawBlob, setVideoRawBlob] = useState<Blob | null>(null);
@@ -1929,7 +1930,7 @@ export default function MediaCreationEngine({
                     </div>
                     <div className="relative mt-5 grid grid-cols-2 gap-2">
                       <button type="button" onClick={() => { setActiveMode('photo'); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-3 py-3 text-xs font-extrabold text-white shadow-[0_8px_24px_rgba(75,16,242,0.25)] transition-transform active:scale-[0.98]"><Camera size={16}/> Open camera</button>
-                      <button type="button" onClick={() => { setActiveMode('carousel'); setGalleryTab('photos'); setGalleryPreviewIndex(null); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 py-3 text-xs font-bold text-white transition-colors hover:bg-white/10 active:scale-[0.98]"><FileImage size={16}/> Choose from gallery</button>
+                      <button type="button" onClick={() => { setActiveMode('carousel'); setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(false); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 py-3 text-xs font-bold text-white transition-colors hover:bg-white/10 active:scale-[0.98]"><FileImage size={16}/> Choose from gallery</button>
                     </div>
                   </div>
 
@@ -1948,7 +1949,7 @@ export default function MediaCreationEngine({
                       { id: 'pulse', icon: MapPin, label: 'Local update', desc: 'What is happening nearby', tint: 'text-[#C4B2FF]', glow: 'bg-purple-500/10' },
                       { id: 'community', icon: Users, label: 'Circle post', desc: 'Share with your Circle', tint: 'text-[#B8ACFF]', glow: 'bg-indigo-500/10' },
                     ].map((item) => (
-                      <button key={item.id} type="button" onClick={() => { setActiveMode(item.id as any); if (item.id === 'carousel') { setGalleryTab('photos'); setGalleryPreviewIndex(null); } setCurrentStep(2); }} className="group flex min-h-[82px] items-center gap-3 rounded-2xl border border-[#292244] bg-[#0C0A19] p-3 text-left transition-all hover:border-violet-400/40 hover:bg-[#14102A] active:scale-[0.985]">
+                      <button key={item.id} type="button" onClick={() => { setActiveMode(item.id as any); if (item.id === 'carousel') { setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(false); } setCurrentStep(2); }} className="group flex min-h-[82px] items-center gap-3 rounded-2xl border border-[#292244] bg-[#0C0A19] p-3 text-left transition-all hover:border-violet-400/40 hover:bg-[#14102A] active:scale-[0.985]">
                         <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] ${item.glow} ${item.tint}`}><item.icon size={19}/></span>
                         <span className="min-w-0"><span className="block text-xs font-extrabold text-white group-hover:text-violet-200">{item.label}</span><span className="mt-1 block text-[10px] leading-snug text-[#89839F]">{item.desc}</span></span>
                         <ChevronRight size={14} className="ml-auto shrink-0 text-[#625A78] transition-transform group-hover:translate-x-0.5 group-hover:text-violet-300"/>
@@ -2004,7 +2005,7 @@ export default function MediaCreationEngine({
                         )}
                         <div className="relative z-20 mt-auto flex w-full flex-col items-center gap-3">
                           <div className="flex items-center justify-center gap-5 rounded-full border border-white/15 bg-black/55 px-4 py-3 backdrop-blur-xl">
-                            <button type="button" aria-label="Open photo gallery" onClick={() => { setActiveMode('carousel'); setGalleryTab('photos'); setGalleryPreviewIndex(null); }} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white"><FileImage size={19}/></button>
+                            <button type="button" aria-label="Open photo gallery" onClick={() => { setActiveMode('carousel'); setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(true); }} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white"><FileImage size={19}/></button>
                             <button onClick={captureCameraSnapshot} disabled={!photoCameraReady || selectedImages.length >= 20} aria-disabled={!photoCameraReady || selectedImages.length >= 20} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="flex h-[68px] w-[68px] items-center justify-center rounded-full border-[5px] border-white bg-gradient-to-br from-[#A855F7] to-[#4B10F2] text-sm font-black text-white shadow-[0_0_35px_rgba(113,56,255,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"><span className="h-12 w-12 rounded-full border border-white/60"/></button>
                             <button type="button" aria-label="Switch camera" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white disabled:opacity-40"><RefreshCw size={19}/></button>
                           </div>
@@ -2036,7 +2037,7 @@ export default function MediaCreationEngine({
                             <h3 className="mt-1 text-lg font-black text-white">Choose your moments</h3>
                             <p className="mt-0.5 text-[11px] text-[#9189AA]">Select up to 20 photos in the order you want to share them.</p>
                           </div>
-                          <button type="button" aria-label="Close gallery" onClick={() => { setGalleryPreviewIndex(null); setCurrentStep(1); }} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white"><X size={17}/></button>
+                          <button type="button" aria-label="Close gallery" onClick={() => { setGalleryPreviewIndex(null); if (galleryReturnToCamera) { setActiveMode('photo'); setCurrentStep(2); setGalleryReturnToCamera(false); } else { setCurrentStep(1); } }} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white"><X size={17}/></button>
                         </div>
                         <div className="mt-4 grid grid-cols-2 rounded-xl border border-white/10 bg-black/25 p-1">
                           <button type="button" onClick={() => setGalleryTab('photos')} aria-pressed={galleryTab === 'photos'} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${galleryTab === 'photos' ? 'bg-[#7138FF] text-white shadow-lg' : 'text-[#A59DBB] hover:text-white'}`}>Photos</button>
