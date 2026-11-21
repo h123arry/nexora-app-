@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 test('comments sheet occupies at 60 percent of the viewport, scrolls independently and locks the feed', async () => {
   const feed = await readFile(new URL('../src/components/FeedView.tsx', import.meta.url), 'utf8');
-  assert.match(feed, /comments-container fixed bottom-0 inset-x-0 h-\[50dvh\] min-h-\[50dvh\] max-h-\[50dvh\]/);
+  assert.match(feed, /comments-container fixed bottom-0 inset-x-0 h-\[60dvh\] min-h-\[60dvh\] max-h-\[60dvh\]/);
   assert.match(feed, /overflow-y-auto overscroll-y-contain overscroll-contain touch-pan-y/);
   assert.ok(feed.includes('className="comments-container fixed bottom-0 inset-x-0 h-[60dvh] min-h-[60dvh] max-h-[60dvh] bg-[#090714]/[0.98]'));
   assert.ok(!feed.includes('comments-container fixed bottom-0 inset-x-0 h-[60dvh] min-h-[60dvh] max-h-[60dvh] rounded-t-'));
