@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { generateKeyPairSync, sign } from 'node:crypto';
+import { isAllowedR2WorkerObject, resetGitHubActionsOidcJwksCacheForTests, verifyGitHubActionsOidcToken } from '../server/githubActionsOidc';
 import {
   createR2ObjectKey,
   createR2PresignedUrl,
@@ -115,4 +117,63 @@ test('R2 playback prefers a valid 720p rendition and falls back to the immutable
     renditions: [{ height: 720, mp4Path: 'processed/user_123/asset-456/../../private.mp4' }],
   }, 'user_123', 'asset-456'), original);
   assert.equal(selectR2VideoPlaybackPath({ storagePath: 'users/other/media/asset-456', kind: 'video', status: 'ready' }, 'user_123', 'asset-456'), null);
+});
+
+\ntest('GitHub Actions OIDC signer accepts only the NEXORA production restoration workflow', async () => {
+  const nowMs = Date.now();
+  const nowSeconds = Math.floor(nowMs / 1000);
+  const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'nexora-oidc-test-key', use: 'sig' };
+  const fetchImpl: typeof fetch = async () => new Response(JSON.stringify({ keys: [jwk] }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  });
+  const claims = {
+    iss: 'https://token.actions.githubusercontent.com',
+    aud: 'nexora-r2-media-worker',
+    sub: 'repo:h123arry/nexora-app-:environment:nexora-production',
+    repository: 'h123arry/nexora-app-',
+    ref: 'refs/heads/main',
+    workflow_ref: 'h123arry/nexora-app-/.github/workflows/restore-r2-videos-no-cloud-run.yml@refs/heads/main',
+    environment: 'nexora-production',
+    event_name: 'push',
+    iat: nowSeconds,
+    nbf: nowSeconds - 1,
+    exp: nowSeconds + 300,
+  };
+  const makeToken = (payload: Record<string, unknown>, corruptSignature = false) => {
+    const header = Buffer.from(JSON.stringify({ alg: 'RS256', kid: 'nexora-oidc-test-key' })).toString('base64url');
+    const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+    const signingInput = `${header}.${body}`;
+    const signature = sign('RSA-SHA256', Buffer.from(signingInput), privateKey).toString('base64url');
+    return `${signingInput}.${corruptSignature ? Buffer.from('invalid').toString('base64url') : signature}`;
+  };
+
+  resetGitHubActionsOidcJwksCacheForTests();
+  const verified = await verifyGitHubActionsOidcToken(makeToken(claims), { fetchImpl, nowMs });
+  assert.equal(verified.repository, 'h123arry/nexora-app-');
+
+  await assert.rejects(
+    verifyGitHubActionsOidcToken(makeToken({ ...claims, repository: 'attacker/other-repo' }), { fetchImpl, nowMs }),
+    /not authorized/,
+  );
+  await assert.rejects(
+    verifyGitHubActionsOidcToken(makeToken({ ...claims, ref: 'refs/heads/feature' }), { fetchImpl, nowMs }),
+    /not authorized/,
+  );
+  await assert.rejects(
+    verifyGitHubActionsOidcToken(makeToken(claims, true), { fetchImpl, nowMs }),
+    /signature is invalid/,
+  );
+});
+
+test('R2 worker signer allows only owner-scoped user source reads and processed rendition writes', () => {
+  assert.equal(isAllowedR2WorkerObject('GET', 'users/user_1/media/asset_1'), true);
+  assert.equal(isAllowedR2WorkerObject('GET', 'chats/dm/media/user_1/asset_1'), false);
+  assert.equal(isAllowedR2WorkerObject('GET', 'processed/user_1/asset_1/123/720p/video.mp4'), false);
+  assert.equal(isAllowedR2WorkerObject('PUT', 'processed/user_1/asset_1/123/720p/video.mp4', 'video/mp4'), true);
+  assert.equal(isAllowedR2WorkerObject('PUT', 'processed/user_1/asset_1/123/720p/index.m3u8', 'application/vnd.apple.mpegurl'), true);
+  assert.equal(isAllowedR2WorkerObject('PUT', 'processed/user_1/asset_1/123/720p/video.mp4', 'text/plain'), false);
+  assert.equal(isAllowedR2WorkerObject('PUT', 'users/user_1/media/asset_1', 'video/mp4'), false);
+  assert.equal(isAllowedR2WorkerObject('PUT', 'processed/user_1/asset_1/123/../../private.mp4', 'video/mp4'), false);
 });
