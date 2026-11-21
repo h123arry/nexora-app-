@@ -469,9 +469,8 @@ export default function NexoraVideoPlayer({
 
 
   useEffect(() => {
-    setHasVideoError(false);
     setIsReady(false);
-    setRetryCount(0);
+    playbackRetryAttemptRef.current = 0;
     lastObservedMediaTimeRef.current = null;
     creditedWatchSecondsRef.current = 0;
     lastWatchSignalWriteRef.current = 0;
@@ -498,8 +497,8 @@ export default function NexoraVideoPlayer({
     const handleOnline = () => {
       if (isActive && videoRef.current) {
         window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ Connection restored! Restabilizing playback stream...' }));
-        setHasVideoError(false);
         setIsReady(false);
+        playbackRetryAttemptRef.current = 0;
         videoRef.current.load();
         globalVideoPlaybackManager.play(playerId, videoRef.current, finalVideoUrl).catch(() => {});
       }
@@ -526,7 +525,6 @@ export default function NexoraVideoPlayer({
   const markVideoReady = () => {
     setIsReady(true);
     setIsBuffering(false);
-    setHasVideoError(false);
   };
 
   const lastSavedPosTimeRef = useRef<number>(0);
