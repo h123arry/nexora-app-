@@ -19,6 +19,16 @@ test('keeps the active video playing and does not mark it released', () => {
   });
 });
 
+test('prepares two videos behind the active video before they enter view', () => {
+  const plan = getVideoPreloadPlan({ ...base, isActive: false, postVideoIndex: 0 });
+  assert.deepEqual(plan, { shouldPreload: true, isReleased: false, preloadMode: 'auto' });
+});
+
+test('releases videos outside the two-position preload window', () => {
+  const plan = getVideoPreloadPlan({ ...base, isActive: false, postVideoIndex: 4 });
+  assert.deepEqual(plan, { shouldPreload: false, isReleased: true, preloadMode: 'none' });
+});
+
 test('prepares videos within two video positions and downgrades it on a slow connection', () => {
   assert.deepEqual(getVideoPreloadPlan({
     ...base,
