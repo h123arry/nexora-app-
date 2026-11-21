@@ -11,7 +11,7 @@ const db = getFirestore(app);
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Engagement tests require the Firestore Emulator.');
   const fixtureUsers = ['author', 'alice', 'author-missing-projection', ...Array.from({ length: 12 }, (_, index) => `user-${index}`)];
-  const fixturePosts = ['public-post', 'restricted-post', 'public-post-missing-projection'];
+  const fixturePosts = ['public-post', 'restricted-post', 'public-post-missing-projection', 'public-post-orphan-author'];
   await Promise.all([
     ...fixturePosts.map(id => db.recursiveDelete(db.doc(`posts/${id}`))),
     ...fixtureUsers.map(id => db.recursiveDelete(db.doc(`users/${id}`))),
@@ -27,6 +27,7 @@ before(async () => {
   await db.doc('posts/restricted-post').set({ id: 'restricted-post', userId: 'author', audience: 'followers', likes: 3 });
   await db.doc('users/author-missing-projection').set({ id: 'author-missing-projection', username: 'missing-projection', name: 'Missing Projection', avatar: '', sparks: 2, followers: 1, following: 0 });
   await db.doc('posts/public-post-missing-projection').set({ id: 'public-post-missing-projection', userId: 'author-missing-projection', audience: 'public', likes: 0 });
+  await db.doc('posts/public-post-orphan-author').set({ id: 'public-post-orphan-author', userId: 'deleted-author', audience: 'public', likes: 0 });
 });
 after(async () => {
   const fixtureUsers = ['author', 'alice', 'author-missing-projection', ...Array.from({ length: 12 }, (_, index) => `user-${index}`)];
@@ -68,6 +69,14 @@ describe('trusted post engagement', () => {
     assert.equal(projection.sparks, 3);
     assert.equal(projection.username, 'missing-projection');
     assert.equal((await db.doc('users/author-missing-projection').get()).get('sparks'), 3);
+  });
+
+  it('does not create a ghost public profile for a deleted post author', async () => {
+    const result = await setPostLike(db, 'alice', 'public-post-orphan-author', true);
+    assert.deepEqual(result, { liked: true, likes: 1, changed: true });
+    assert.equal((await db.doc('publicProfiles/deleted-author').get()).exists, false);
+    assert.equal((await db.doc('users/deleted-author').get()).exists, false);
+    assert.equal((await db.collection('users/deleted-author/sparkEvents').get()).size, 1);
   });
 
   it('serializes concurrent users without lost counter updates', async () => {
