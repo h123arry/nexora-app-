@@ -19,11 +19,11 @@ test('keeps the active video playing and does not mark it released', () => {
   });
 });
 
-test('prepares only an adjacent video and downgrades it on a slow connection', () => {
+test('prepares videos within two video positions and downgrades them on a slow connection', () => {
   assert.deepEqual(getVideoPreloadPlan({
     ...base,
     isActive: false,
-    postVideoIndex: 2,
+    postVideoIndex: 3,
     isSlowConnection: true,
   }), {
     shouldPreload: true,
@@ -36,7 +36,7 @@ test('uses metadata-only preparation on constrained devices', () => {
   assert.deepEqual(getVideoPreloadPlan({
     ...base,
     isActive: false,
-    postVideoIndex: 2,
+    postVideoIndex: 3,
     isConstrainedDevice: true,
   }), {
     shouldPreload: true,
@@ -49,7 +49,7 @@ test('does not start speculative video requests while offline', () => {
   assert.deepEqual(getVideoPreloadPlan({
     ...base,
     isActive: false,
-    postVideoIndex: 2,
+    postVideoIndex: 3,
     isOffline: true,
   }), {
     shouldPreload: false,
