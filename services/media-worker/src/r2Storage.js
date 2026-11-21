@@ -8,7 +8,8 @@ export function resolveR2WorkerConfig(env = process.env) {
   const accessKeyId = env.R2_ACCESS_KEY_ID?.trim() || '';
   const secretAccessKey = env.R2_SECRET_ACCESS_KEY?.trim() || '';
   const bucket = env.R2_BUCKET_NAME?.trim() || '';
-  if (![accountId, accessKeyId, secretAccessKey, bucket].every(Boolean)) return null;
+  if (![accountId, accessKeyId, secretAccessKey, bucket].some(Boolean)) return null;
+  if (![accountId, accessKeyId, secretAccessKey, bucket].every(Boolean)) throw new Error('Incomplete Cloudflare R2 worker credentials');
   if (!/^[a-f0-9]{32}$/i.test(accountId) || !/^[A-Za-z0-9_-]{3,63}$/.test(bucket)) {
     throw new Error('Invalid Cloudflare R2 worker configuration');
   }
