@@ -445,10 +445,8 @@ export default function ProfileView({
   const [profileFollows, setProfileFollows] = useState<Array<{ followerId: string; followingId: string }>>([]);
   const [authorProfilePosts, setAuthorProfilePosts] = useState<Post[]>([]);
   useEffect(() => {
-    if (!currentUser.id) {
-      setAuthorProfilePosts([]);
-      return;
-    }
+    setAuthorProfilePosts([]);
+    if (!currentUser.id) return;
     const authorPostsQuery = query(
       collection(db, 'posts'),
       where('userId', '==', currentUser.id),
