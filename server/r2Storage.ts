@@ -212,6 +212,9 @@ export function selectR2VideoPlaybackPath(asset: Record<string, unknown>, ownerI
   const renditions = asset.renditions.flatMap((item: any) => {
     if (!item || !Number.isSafeInteger(item.height) || item.height < 144 || item.height > 4320
       || typeof item.mp4Path !== 'string' || !item.mp4Path.startsWith(prefix)
+      || item.mp4Path.split('/').length !== 5
+      || item.mp4Path.split('/')[3] !== `${item.height}p`
+      || item.mp4Path.split('/')[4] !== 'video.mp4'
       || item.mp4Path.split('/').some((part: string) => !part || part === '.' || part === '..')
       || item.mp4Path.includes(String.fromCharCode(92))) return [];
     return [{ height: item.height as number, path: item.mp4Path as string }];
