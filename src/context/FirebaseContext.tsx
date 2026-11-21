@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { doc, getDocFromServer } from 'firebase/firestore';
+import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { onIdTokenChanged, signInAnonymously, User as FirebaseUser, ConfirmationResult, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { User } from '../types';
@@ -143,6 +143,27 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       unsubscribe();
     };
   }, []);
+
+  // Keep the authenticated account model subscribed to its canonical private
+  // Firestore document. This makes profile edits from another device/session
+  // converge without relying on a refresh or a public-directory cache.
+  useEffect(() => {
+    const uid = firebaseUser?.uid;
+    if (!uid || user?.id !== uid || auth.currentUser?.uid !== uid) return;
+    return onSnapshot(doc(db, 'users', uid), snapshot => {
+      if (!snapshot.exists() || auth.currentUser?.uid !== uid) return;
+      const latest = {
+        ...snapshot.data(),
+        id: uid,
+        ...(firebaseUser.email ? { email: firebaseUser.email } : {}),
+        isVerified: firebaseUser.emailVerified,
+      } as User;
+      setUser(previous => previous?.id === uid ? { ...previous, ...latest } : latest);
+    }, error => {
+      const code = (error as { code?: string } | null)?.code || 'unknown';
+      console.warn('[NEXORA] Live private profile sync paused; keeping last confirmed profile', { code });
+    });
+  }, [firebaseUser?.uid, firebaseUser?.email, firebaseUser?.emailVerified, user?.id]);
 
   useEffect(() => {
     async function testConnection() {
