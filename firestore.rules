@@ -1541,12 +1541,14 @@ service cloud.firestore {
         }
         function validMessagePinUpdate() {
           return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPinned'])
             && request.resource.data.isPinned is bool;
         }
         function validMessageStarUpdate() {
           let previousStars = resource.data.get('starredBy', []);
           let nextStars = request.resource.data.get('starredBy', []);
           return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['starredBy'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['starredBy'])
             && previousStars is list
             && nextStars is list
             && nextStars.size() <= previousStars.size() + 1
