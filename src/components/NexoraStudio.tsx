@@ -148,6 +148,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
   const [mp4Download, setMp4Download] = useState<{ downloadUrl: string; renditionHeight: number; expiresAt: number } | null>(null);
   const [cloudConflict, setCloudConflict] = useState(false);
   const [message, setMessage] = useState('');
+  const [isReversingClip, setIsReversingClip] = useState(false);
   const [ready, setReady] = useState(false);
   const [muted, setMuted] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
@@ -807,6 +808,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
     });
   };
 
+
+
   const splitAtPlayhead = () => {
     const video = videoRef.current;
     if (!selectedClip || !video) return;
@@ -842,6 +845,100 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
       if (selectedId === id) setSelectedId(next[0]?.id || null);
       return next;
     });
+  };
+
+  const reverseSelectedClip = async () => {
+    if (!selectedClip || isReversingClip) return;
+    const duration = Math.max(0.25, selectedClip.end - selectedClip.start);
+    if (duration > 45) {
+      setMessage('For a smoother reverse render, trim this clip to 45 seconds or less first.');
+      return;
+    }
+    if (typeof MediaRecorder === 'undefined') {
+      setMessage('Reverse rendering is not supported by this browser. Your original clip is unchanged.');
+      return;
+    }
+    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
+    if (!mimeType) {
+      setMessage('This browser does not provide a supported reverse-render format. Your original clip is unchanged.');
+      return;
+    }
+    setIsReversingClip(true);
+    setPlaying(false);
+    videoRef.current?.pause();
+    const sourceUrl = URL.createObjectURL(selectedClip.blob);
+    const source = document.createElement('video');
+    source.preload = 'auto';
+    source.muted = true;
+    source.playsInline = true;
+    const canvas = document.createElement('canvas');
+    let recorder: MediaRecorder | null = null;
+    let frameTimer: number | null = null;
+    try {
+      await new Promise<void>((resolve, reject) => {
+        source.onloadedmetadata = () => resolve();
+        source.onerror = () => reject(new Error('This clip could not be decoded for reverse editing.'));
+        source.src = sourceUrl;
+        source.load();
+      });
+      const start = Math.max(0, Math.min(selectedClip.start, source.duration));
+      const end = Math.max(start + 0.1, Math.min(selectedClip.end, source.duration));
+      const width = Math.max(2, Math.min(1920, source.videoWidth));
+      const height = Math.max(2, Math.round(source.videoHeight * (width / Math.max(1, source.videoWidth))));
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context || typeof canvas.captureStream !== 'function') throw new Error('Canvas video rendering is unavailable on this device.');
+      const stream = canvas.captureStream(24);
+      recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5_000_000 });
+      const chunks: Blob[] = [];
+      const stopped = new Promise<Blob>((resolve, reject) => {
+        recorder!.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+        recorder!.onerror = () => reject(new Error('The reverse render stopped unexpectedly.'));
+        recorder!.onstop = () => chunks.length ? resolve(new Blob(chunks, { type: recorder!.mimeType || mimeType })) : reject(new Error('The reverse render produced no video data.'));
+      });
+      const frameCount = Math.max(2, Math.ceil((end - start) * 24));
+      const frameInterval = 1000 / 24;
+      const seekTo = (time: number) => new Promise<void>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error('A frame could not be decoded while reversing this clip.')), 5000);
+        const finish = () => { window.clearTimeout(timeout); source.removeEventListener('seeked', finish); resolve(); };
+        source.addEventListener('seeked', finish, { once: true });
+        source.currentTime = time;
+      });
+      recorder.start(250);
+      for (let frame = 0; frame < frameCount; frame += 1) {
+        const sourceTime = Math.max(start, end - (frame / Math.max(1, frameCount - 1)) * (end - start));
+        await seekTo(sourceTime);
+        context.drawImage(source, 0, 0, width, height);
+        await new Promise<void>(resolve => { frameTimer = window.setTimeout(() => { frameTimer = null; resolve(); }, frameInterval); });
+      }
+      await new Promise<void>(resolve => { if (!recorder || recorder.state === 'inactive') resolve(); else { recorder.addEventListener('stop', () => resolve(), { once: true }); recorder.stop(); } });
+      const reversedBlob = await stopped;
+      if (!reversedBlob.size) throw new Error('The reversed clip is empty. Your original clip is unchanged.');
+      const reversedClip = normalizeStudioVideoLayer({
+        ...selectedClip,
+        blob: reversedBlob,
+        name: `${selectedClip.name.replace(/\s*·\s*Reverse$/, '')} · Reverse`,
+        start: 0,
+        end: duration,
+        duration,
+        // Reverse rendering exports video frames only. Keep source audio out of sync;
+        // creators can add a soundtrack or voiceover on the dedicated audio tracks.
+        volume: 0,
+      });
+      setClips(previous => previous.map(clip => clip.id === selectedClip.id ? reversedClip : clip));
+      setMessage('Reverse effect applied. The reversed clip is silent; add a soundtrack or voiceover for your edit.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Could not reverse this clip. Your original is unchanged.');
+    } finally {
+      if (frameTimer !== null) window.clearTimeout(frameTimer);
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      source.pause();
+      source.removeAttribute('src');
+      source.load();
+      URL.revokeObjectURL(sourceUrl);
+      setIsReversingClip(false);
+    }
   };
 
   const togglePreview = async () => {
@@ -1316,6 +1413,14 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
         {templateLibraryOpen && <div className="fixed inset-0 z-[160] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label="Studio template library"><section className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl border border-[#34265E] bg-[#090714] shadow-2xl sm:rounded-3xl"><header className="flex items-center justify-between gap-3 border-b border-[#292244] px-4 py-4 sm:px-6"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-violet-300">NEXORA STUDIO</p><h2 className="text-lg font-black">Edit templates</h2><p className="mt-1 text-[11px] text-[#A39BBF]">{visibleEditTemplates.length} ready-to-edit starting styles</p></div><button type="button" onClick={() => setTemplateLibraryOpen(false)} aria-label="Close template library" className="rounded-full border border-[#34265E] p-2 text-[#D7CCF7]"><X size={17}/></button></header><div className="space-y-3 overflow-y-auto p-4 sm:p-6"><input type="search" value={templateSearch} onChange={event => setTemplateSearch(event.target.value)} placeholder="Search templates, styles or tags…" aria-label="Search Studio templates" className="w-full rounded-xl border border-[#34265E] bg-[#100C20] px-4 py-3 text-sm text-white outline-none focus:border-violet-400"/><div className="flex gap-2 overflow-x-auto pb-1">{STUDIO_EDIT_TEMPLATE_CATEGORIES.map(category => <button key={category} type="button" onClick={() => setTemplateCategory(category)} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-bold ${templateCategory===category?'border-violet-400 bg-violet-500/20 text-white':'border-[#34265E] text-[#A39BBF]'}`}>{category}</button>)}</div>{visibleEditTemplates.length ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{visibleEditTemplates.map((template,index) => <article key={template.id} className="overflow-hidden rounded-2xl border border-[#292244] bg-[#100C20]"><div className={`relative flex h-28 items-end overflow-hidden bg-gradient-to-br ${index%4===0?'from-[#6D36E8] via-[#27105C] to-[#090714]':index%4===1?'from-[#C18B54] via-[#40264A] to-[#090714]':index%4===2?'from-[#426A8B] via-[#252052] to-[#090714]':'from-[#8A3FFC] via-[#24134E] to-[#090714]'}`}><div className="absolute inset-0 opacity-30" style={{backgroundImage:'radial-gradient(circle at 20% 20%, white 0, transparent 35%), linear-gradient(135deg, transparent 45%, rgba(255,255,255,.18) 46%, transparent 70%)'}}/><span className="relative p-4 text-xl font-black tracking-tight text-white drop-shadow-lg">{template.sample}</span><span className="absolute right-3 top-3 rounded-full border border-white/20 bg-black/25 px-2 py-1 text-[9px] font-bold text-white">{template.category}</span></div><div className="space-y-2 p-3"><div className="flex items-start justify-between gap-2"><h3 className="text-xs font-bold text-white">{template.name}</h3><span className="shrink-0 text-[9px] text-[#A39BBF]">{template.aspectRatio==='portrait'?'9:16':template.aspectRatio==='square'?'1:1':'16:9'}</span></div><p className="min-h-8 text-[10px] leading-relaxed text-[#A39BBF]">{template.description}</p><div className="flex flex-wrap gap-1">{template.tags.slice(0,3).map(tag=><span key={tag} className="rounded-full bg-[#211A36] px-2 py-1 text-[9px] text-[#C7B5FF]">#{tag}</span>)}</div><button type="button" onClick={() => applyEditTemplate(template.id)} className="mt-1 w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-3 py-2.5 text-[11px] font-black text-white">Use template</button></div></article>)}</div> : <div className="rounded-2xl border border-dashed border-[#44376F] px-4 py-10 text-center"><p className="text-sm font-bold">No templates found</p><p className="mt-1 text-xs text-[#A39BBF]">Try another search or category.</p><button type="button" onClick={() => {setTemplateSearch('');setTemplateCategory('All');}} className="mt-3 text-xs font-bold text-violet-300">Clear filters</button></div>}</div><footer className="border-t border-[#292244] px-4 py-3 text-[10px] text-[#8E88A7] sm:px-6">Templates apply editable settings to your existing timeline. Your original clips stay in place.</footer></section></div>}
         <main className="grid min-h-0 flex-1 grid-rows-[minmax(220px,1fr)_auto] overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1">
           <section className="flex min-h-[260px] flex-col items-center justify-center gap-3 border-b border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(75,16,242,.16),transparent_65%)] p-4 lg:border-b-0 lg:border-r">
+            <div className="flex w-full max-w-5xl items-center gap-2 overflow-x-auto pb-1" aria-label="Quick editing tools">
+              <button type="button" onClick={runAutoCut} disabled={clips.length < 2} title="Create a quick-cut montage from your clips" className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-violet-400/40 bg-violet-500/15 px-3 py-2 text-xs font-bold text-violet-100 transition hover:bg-violet-500/25 disabled:opacity-40"><Scissors size={15}/> AutoCut</button>
+              <button type="button" onClick={splitAtPlayhead} disabled={!selectedClip} title="Split selected clip at the playhead" className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-[#34265E] bg-[#100C20] px-3 py-2 text-xs font-semibold text-[#D7CCF7] hover:border-violet-400/50 disabled:opacity-40"><Scissors size={14}/> Split</button>
+              <button type="button" onClick={addTextLayer} disabled={!clips.length} title="Add an editable text layer" className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-[#34265E] bg-[#100C20] px-3 py-2 text-xs font-semibold text-[#D7CCF7] hover:border-violet-400/50 disabled:opacity-40"><Type size={14}/> Text</button>
+              <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-[#34265E] bg-[#100C20] px-3 py-2 text-xs font-semibold text-[#D7CCF7] hover:border-violet-400/50" title="Add a soundtrack"><Music2 size={14}/> Music<input className="hidden" type="file" accept="audio/*" onChange={event => { const file = event.target.files?.[0]; if (file) { setSoundtrack(file); setMessage('Soundtrack added to your Studio project.'); } event.target.value = ''; }}/></label>
+              <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 rounded-xl border border-[#34265E] bg-[#100C20] px-3 py-2 text-xs font-semibold text-[#D7CCF7] hover:border-violet-400/50" title="Add an image overlay"><Upload size={14}/> Overlay<input className="hidden" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => { const file = event.target.files?.[0]; if (file) addImageLayer(file); event.target.value = ''; }}/></label>
+              <button type="button" onClick={addSubtitleSegment} disabled={!clips.length} title="Add an editable subtitle segment" className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-[#34265E] bg-[#100C20] px-3 py-2 text-xs font-semibold text-[#D7CCF7] hover:border-violet-400/50 disabled:opacity-40"><Film size={14}/> Captions</button>
+            </div>
             <div className={`relative flex ${aspectRatio === 'portrait' ? 'aspect-[9/16] max-w-sm' : aspectRatio === 'square' ? 'aspect-square max-w-2xl' : 'aspect-video max-w-5xl'} w-full items-center justify-center overflow-hidden rounded-2xl border border-[#34265E] bg-black shadow-[0_20px_80px_rgba(75,16,242,.14)]`}>
               {soundtrack && <audio ref={soundtrackPreviewRef} src={getUrlForClip(soundtrack)} loop preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
               {voiceover && <audio ref={voiceoverPreviewRef} src={getUrlForClip(voiceover)} preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
@@ -1356,7 +1461,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
               </div>
             </div>
             {selectedClip && <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
-              <div className="flex items-center gap-2"><Scissors size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Clip trim</h2></div>
+              <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Scissors size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Clip trim & effects</h2></div><button type="button" onClick={() => void reverseSelectedClip()} disabled={isReversingClip || rendering || publishing} className="rounded-lg border border-violet-400/35 bg-violet-500/10 px-2.5 py-1.5 text-[10px] font-bold text-violet-100 disabled:cursor-wait disabled:opacity-50">{isReversingClip ? 'Reversing…' : 'Reverse clip'}</button></div>
+              <p className="text-[9px] leading-relaxed text-[#8E88A7]">Reverse creates a new silent video version of the selected trimmed range. Your original project remains recoverable with Undo.</p>
               <label className="block text-[10px] text-[#A39BBF]">In · {selectedClip.start.toFixed(1)}s<input type="range" min="0" max={Math.max(0,selectedClip.end-0.25)} step=".1" value={selectedClip.start} onChange={event => updateSelected({start:Math.min(Number(event.target.value),selectedClip.end-0.25)})} className="mt-2 w-full accent-violet-500"/></label>
               <label className="block text-[10px] text-[#A39BBF]">Out · {selectedClip.end.toFixed(1)}s<input type="range" min={Math.min(selectedClip.duration,selectedClip.start+0.25)} max={selectedClip.duration} step=".1" value={selectedClip.end} onChange={event => updateSelected({end:Math.max(Number(event.target.value),selectedClip.start+0.25)})} className="mt-2 w-full accent-violet-500"/></label>
               <label className="block text-[10px] text-[#A39BBF]">Clip volume · {Math.round(selectedClip.volume * 100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.volume} onChange={event => updateSelected({volume:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Horizontal · {Math.round(selectedClip.x*100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.x} onChange={event=>updateSelected({x:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Vertical · {Math.round(selectedClip.y*100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.y} onChange={event=>updateSelected({y:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Scale · {selectedClip.scale.toFixed(2)}x<input type="range" min=".25" max="2" step=".05" value={selectedClip.scale} onChange={event=>updateSelected({scale:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Rotation · {selectedClip.rotation}°<input type="range" min="-180" max="180" step="5" value={selectedClip.rotation} onChange={event=>updateSelected({rotation:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Opacity · {Math.round(selectedClip.opacity*100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.opacity} onChange={event=>updateSelected({opacity:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label></div><div className="space-y-2 rounded-lg border border-[#34265E] bg-[#080611] p-2"><div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold text-violet-200">Video motion · {selectedClip.keyframes.length}/100</span><button type="button" onClick={addVideoKeyframe} disabled={selectedClip.keyframes.length>=100} className="rounded-md border border-violet-400/40 px-2 py-1 text-[9px] font-semibold text-violet-100 disabled:opacity-40">Add at {(previewGlobalTime-selectedClipGlobalOffset).toFixed(1)}s</button></div>{selectedClip.keyframes.map(frame=><div key={frame.time} className="flex items-center justify-between gap-2 text-[9px]"><button type="button" onClick={()=>seekToGlobalTime(selectedClipGlobalOffset+frame.time)} className="min-w-0 flex-1 text-left text-[#C7B5FF]">{frame.time.toFixed(1)}s · {Math.round(frame.opacity*100)}% · {frame.scale.toFixed(2)}x · {frame.rotation}°</button><button type="button" onClick={()=>updateSelected({keyframes:selectedClip.keyframes.filter(item=>item.time!==frame.time)})} className="rounded px-2 py-1 text-rose-300">Remove</button></div>)}{!selectedClip.keyframes.length && <p className="text-[9px] text-[#827B9C]">Move through the video, adjust its position or size, then save the change.</p>}</div>

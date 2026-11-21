@@ -376,6 +376,12 @@ export default function MediaCreationEngine({
     return [];
   });
   const [activeEditIndex, setActiveEditIndex] = useState<number | null>(null);
+  const [galleryTab, setGalleryTab] = useState<'photos' | 'videos'>('photos');
+  const [galleryReturnToCamera, setGalleryReturnToCamera] = useState(false);
+  const [galleryPreviewIndex, setGalleryPreviewIndex] = useState<number | null>(null);
+  const [editorToolTab, setEditorToolTab] = useState<'looks' | 'adjust' | 'crop' | 'text'>('looks');
+  const [creativeToolTab, setCreativeToolTab] = useState<'looks' | 'effects' | 'text' | 'stickers' | 'audio' | 'presets'>('looks');
+  const [isComparingOriginal, setIsComparingOriginal] = useState(false);
   const [videoFileUrl, setVideoFileUrl] = useState<string | null>(() => initialAutosave?.videoUrl || null);
   const [videoRawBlob, setVideoRawBlob] = useState<Blob | null>(null);
   const [videoMuted, setVideoMuted] = useState(false);
@@ -442,6 +448,7 @@ export default function MediaCreationEngine({
   const photoPreviewRef = useRef<HTMLVideoElement>(null);
   const photoStreamRef = useRef<MediaStream | null>(null);
   const [photoCameraReady, setPhotoCameraReady] = useState(false);
+  const [videoCameraReady, setVideoCameraReady] = useState(false);
   const mediaRecorderVideoRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -600,10 +607,11 @@ export default function MediaCreationEngine({
     let currentStream: MediaStream | null = null;
     let cancelled = false;
     if (activeMode === 'reel' && permissionState === 'granted' && currentStep === 2 && !isLensStudioOpen) {
+      setVideoCameraReady(false);
       if (!navigator.mediaDevices?.getUserMedia) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera recording is not supported by this browser. Please upload a video instead.' }));
       } else {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true })
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1080 }, height: { ideal: 1920 }, aspectRatio: { ideal: 9 / 16 } }, audio: true })
           .then(stream => {
             if (cancelled) {
               stream.getTracks().forEach(track => track.stop());
@@ -614,6 +622,7 @@ export default function MediaCreationEngine({
             if (videoPreviewRef.current) {
               videoPreviewRef.current.srcObject = stream;
               void videoPreviewRef.current.play().catch(() => {
+                setVideoCameraReady(false);
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview could not start. Allow camera access in your phone settings and try again.' }));
               });
             }
@@ -632,6 +641,7 @@ export default function MediaCreationEngine({
       cancelled = true;
       if (currentStream) currentStream.getTracks().forEach(track => track.stop());
       if (videoStreamRef.current === currentStream) videoStreamRef.current = null;
+      setVideoCameraReady(false);
     };
   }, [activeMode, permissionState, cameraFacing, currentStep, isLensStudioOpen]);
 
@@ -654,7 +664,7 @@ export default function MediaCreationEngine({
     }
 
     navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1080 }, height: { ideal: 1920 }, aspectRatio: { ideal: 9 / 16 } },
       audio: false,
     }).then(async stream => {
       if (cancelled) {
@@ -904,15 +914,32 @@ export default function MediaCreationEngine({
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera is not ready yet. Wait for the preview, then try again.' }));
         return;
       }
+      const previewBounds = video.getBoundingClientRect();
+      const targetAspect = previewBounds.width > 0 && previewBounds.height > 0
+        ? previewBounds.width / previewBounds.height
+        : 9 / 16;
+      const sourceAspect = video.videoWidth / video.videoHeight;
+      let sourceX = 0;
+      let sourceY = 0;
+      let sourceWidth = video.videoWidth;
+      let sourceHeight = video.videoHeight;
+      // Match the still photo to the exact edge-to-edge camera framing shown on screen.
+      if (sourceAspect > targetAspect) {
+        sourceWidth = video.videoHeight * targetAspect;
+        sourceX = (video.videoWidth - sourceWidth) / 2;
+      } else if (sourceAspect < targetAspect) {
+        sourceHeight = video.videoWidth / targetAspect;
+        sourceY = (video.videoHeight - sourceHeight) / 2;
+      }
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      canvas.width = Math.max(1, Math.round(sourceWidth));
+      canvas.height = Math.max(1, Math.round(sourceHeight));
       const context = canvas.getContext('2d');
       if (!context) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not capture the frame. Please try again.' }));
         return;
       }
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      context.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
       const snapUrl = canvas.toDataURL('image/jpeg', 0.92);
       setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
       window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Photo captured.' }));
@@ -920,10 +947,30 @@ export default function MediaCreationEngine({
   };
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const files = Array.from(e.target.files || []).filter(file => file.type.startsWith('video/'));
+    e.target.value = '';
+    if (!files.length) return;
     requestPermission('gallery', () => {
       void (async () => {
+        if (files.length > 1 && onOpenStudio) {
+          const validFiles: File[] = [];
+          if (files.length > 12) {
+            window.dispatchEvent(new CustomEvent('toast', { detail: 'NEXORA Studio can import up to 12 clips at once. The first 12 selected clips will be used.' }));
+          }
+          for (const file of files.slice(0, 12)) {
+            try {
+              await validateMediaFile(file, 'video');
+              validFiles.push(file);
+            } catch (error) {
+              window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${file.name}: ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
+            }
+          }
+          if (validFiles.length) {
+            onOpenStudio(validFiles);
+            return;
+          }
+          return;
+        }
         const file = files[0];
         try {
           const metadata = await validateMediaFile(file, 'video');
@@ -942,7 +989,6 @@ export default function MediaCreationEngine({
         }
       })();
     });
-    e.target.value = '';
   };
 
   const applyVideoTrim = async () => {
@@ -1258,7 +1304,7 @@ export default function MediaCreationEngine({
   const handleSelectDraft = (draft: DraftItem) => {
     setCaption(draft.caption);
     setTopics(draft.topics);
-    setAudience('public');
+    setAudience(draft.audience || 'public');
     setActiveMode(draft.type as any);
     setLocation(draft.location || '');
     setTaggedUsernames(draft.taggedUsernames || '');
@@ -1631,7 +1677,7 @@ export default function MediaCreationEngine({
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Complete this step before continuing.' }));
       return;
     }
-    if (currentStep < 6) setCurrentStep(prev => prev + 1);
+    if (currentStep < 7) setCurrentStep(prev => prev + 1);
   };
 
   const prevStep = () => {
@@ -1773,7 +1819,7 @@ export default function MediaCreationEngine({
         id="creation-studio-frame"
       >
         {/* Header toolbar */}
-        <div className="flex justify-between items-start border-b border-white/10 pb-3 mb-4 shrink-0">
+        <div className={currentStep === 3 || (currentStep === 2 && activeMode === "carousel") ? "hidden" : "flex justify-between items-start border-b border-white/10 pb-3 mb-4 shrink-0"}>
           <div>
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-violet-600/10 border border-white/10 rounded-lg text-violet-400">
@@ -1799,7 +1845,7 @@ export default function MediaCreationEngine({
         </div>
 
         {/* Global Tab Navigation */}
-        <div className="flex gap-1.5 p-1 bg-[#070511]/80 border border-[#292244] rounded-xl mb-4 shrink-0">
+        <div className={currentStep === 3 || (currentStep === 2 && activeMode === "carousel") ? "hidden" : "flex gap-1.5 p-1 bg-[#070511]/80 border border-[#292244] rounded-xl mb-4 shrink-0"}>
           <button 
             onClick={() => { setActiveTab('feed'); setCurrentStep(1); }}
             className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'feed' ? 'bg-[#19143A] text-white' : 'text-[#8E88A7] hover:text-[#D1CBE3]'}`}
@@ -1821,16 +1867,16 @@ export default function MediaCreationEngine({
         </div>
 
         {/* A quiet progress line keeps the focus on creating, not on navigating a dashboard. */}
-        {activeTab !== 'drafts' && (
-          <div className="mb-4 shrink-0 px-1" aria-label={`Creation step ${currentStep} of 6`}>
+        {activeTab !== 'drafts' && currentStep !== 3 && !(currentStep === 2 && activeMode === 'carousel') && (
+          <div className="mb-4 shrink-0 px-1" aria-label={`Creation step ${currentStep} of 7`}>
             <div className="h-1 overflow-hidden rounded-full bg-[#292244]">
-              <div className="h-full rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] transition-all duration-300" style={{ width: `${(currentStep / 6) * 100}%` }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] transition-all duration-300" style={{ width: `${(currentStep / 7) * 100}%` }} />
             </div>
           </div>
         )}
 
         {/* Dynamic Core Body */}
-        <div className={`flex-1 min-h-0 pr-1 space-y-4 text-left font-sans ${currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel') ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
+        <div className={`flex-1 min-h-0 pr-1 space-y-4 text-left font-sans ${currentStep === 3 || (currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel' || activeMode === 'carousel')) ? 'flex flex-col overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
           
           {activeTab === 'drafts' ? (
             /* Draft Organizer Screen */
@@ -1870,7 +1916,7 @@ export default function MediaCreationEngine({
             </div>
           ) : (
             /* WIZARD SCREENS */
-            <div className="space-y-4">
+            <div className={currentStep === 2 && (activeMode === 'photo' || activeMode === 'reel') ? "fixed inset-0 z-[130] flex h-[100dvh] w-screen flex-col overflow-hidden bg-black p-0" : currentStep === 3 ? "flex h-full min-h-0 flex-col overflow-hidden" : "space-y-4"}>
               
               {currentStep === 1 && (
                 /* STEP 1: CREATION HOME */
@@ -1887,7 +1933,7 @@ export default function MediaCreationEngine({
                     </div>
                     <div className="relative mt-5 grid grid-cols-2 gap-2">
                       <button type="button" onClick={() => { setActiveMode('photo'); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-3 py-3 text-xs font-extrabold text-white shadow-[0_8px_24px_rgba(75,16,242,0.25)] transition-transform active:scale-[0.98]"><Camera size={16}/> Open camera</button>
-                      <button type="button" onClick={() => { setActiveMode('carousel'); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 py-3 text-xs font-bold text-white transition-colors hover:bg-white/10 active:scale-[0.98]"><FileImage size={16}/> Choose from gallery</button>
+                      <button type="button" onClick={() => { setActiveMode('carousel'); setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(false); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 py-3 text-xs font-bold text-white transition-colors hover:bg-white/10 active:scale-[0.98]"><FileImage size={16}/> Choose from gallery</button>
                     </div>
                   </div>
 
@@ -1906,7 +1952,7 @@ export default function MediaCreationEngine({
                       { id: 'pulse', icon: MapPin, label: 'Local update', desc: 'What is happening nearby', tint: 'text-[#C4B2FF]', glow: 'bg-purple-500/10' },
                       { id: 'community', icon: Users, label: 'Circle post', desc: 'Share with your Circle', tint: 'text-[#B8ACFF]', glow: 'bg-indigo-500/10' },
                     ].map((item) => (
-                      <button key={item.id} type="button" onClick={() => { setActiveMode(item.id as any); setCurrentStep(2); }} className="group flex min-h-[82px] items-center gap-3 rounded-2xl border border-[#292244] bg-[#0C0A19] p-3 text-left transition-all hover:border-violet-400/40 hover:bg-[#14102A] active:scale-[0.985]">
+                      <button key={item.id} type="button" onClick={() => { setActiveMode(item.id as any); if (item.id === 'carousel') { setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(false); } else { setGalleryTab('photos'); setGalleryReturnToCamera(false); } setCurrentStep(2); }} className="group flex min-h-[82px] items-center gap-3 rounded-2xl border border-[#292244] bg-[#0C0A19] p-3 text-left transition-all hover:border-violet-400/40 hover:bg-[#14102A] active:scale-[0.985]">
                         <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] ${item.glow} ${item.tint}`}><item.icon size={19}/></span>
                         <span className="min-w-0"><span className="block text-xs font-extrabold text-white group-hover:text-violet-200">{item.label}</span><span className="mt-1 block text-[10px] leading-snug text-[#89839F]">{item.desc}</span></span>
                         <ChevronRight size={14} className="ml-auto shrink-0 text-[#625A78] transition-transform group-hover:translate-x-0.5 group-hover:text-violet-300"/>
@@ -1926,19 +1972,16 @@ export default function MediaCreationEngine({
 
               {currentStep === 2 && (
                 /* STEP 2: MEDIA IMPORT & RECORDING */
-                <div className="flex h-full min-h-0 flex-col space-y-4 animate-fadeIn">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-semibold text-[#B69BFF]">{activeMode === 'photo' ? 'Choose a photo or take one' : activeMode === 'reel' ? 'Record a video or choose one' : activeMode === 'video' ? 'Choose a video' : 'Add your content'}</span>
-                    <button 
-                      onClick={() => setCurrentStep(1)} 
-                      className="text-xs text-violet-400 hover:underline flex items-center gap-1 font-bold"
-                    >
-                      Choose another
-                    </button>
-                  </div>
+                <div className={activeMode === 'photo' || activeMode === 'reel' ? "relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-black animate-fadeIn" : "flex h-full min-h-0 flex-col space-y-4 animate-fadeIn"}>
+                  {activeMode !== 'photo' && activeMode !== 'reel' && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-semibold text-[#B69BFF]">{activeMode === 'video' ? 'Choose a video' : 'Add your content'}</span>
+                      <button onClick={() => { if (galleryTab === "videos") { setActiveMode("carousel"); setCurrentStep(2); } else { setCurrentStep(1); } }} className="text-xs text-violet-400 hover:underline flex items-center gap-1 font-bold">{galleryTab === "videos" ? "Back to gallery" : "Choose another"}</button>
+                    </div>
+                  )}
 
                   {activeMode === 'photo' && (
-                    <div className="relative flex-1 min-h-0 w-full overflow-hidden rounded-3xl bg-[#050914]">
+                    <div className="absolute inset-0 h-full min-h-0 w-full overflow-hidden bg-black">
                       {/* Drag upload zone */}
                       <div className="hidden">
                         <FileImage className="w-8 h-8 text-[#8E88A7] animate-bounce" />
@@ -1948,108 +1991,127 @@ export default function MediaCreationEngine({
                         </div>
                         <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all">
                           Choose from gallery
-                          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                          <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
                         </label>
                       </div>
 
                       {/* Snap device simulation */}
-                      <div className="absolute inset-0 flex flex-col justify-between p-4 text-center">
-                        <div className="relative z-10 self-start rounded-2xl border border-white/15 bg-black/45 px-4 py-2 text-left backdrop-blur-xl">
-                          <span className="text-sm font-semibold text-white block">NEXORA Camera</span>
-                          <p className="text-[10px] text-white/70">Your moment, your space.</p>
-                        </div>
-                        <video ref={photoPreviewRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full rounded-3xl object-cover bg-[#050914]" aria-label="Live camera preview" />
-                        {permissionState !== 'granted' && (
-                          <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
+                      <div className="absolute inset-0 flex flex-col items-center justify-between px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] text-center">
+                        <button type="button" aria-label="Back to Create" onClick={() => setCurrentStep(1)} className="absolute left-4 top-[max(1rem,env(safe-area-inset-top))] z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white backdrop-blur-xl"><X size={18}/></button>
+                        <video ref={photoPreviewRef} autoPlay muted playsInline onLoadedMetadata={() => setPhotoCameraReady(true)} onCanPlay={() => setPhotoCameraReady(true)} className="absolute inset-0 h-full w-full object-cover bg-black" aria-label="Live camera preview" />
+                        {!photoCameraReady && (
+                          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/35 px-8">
+                            <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/25 border-t-violet-300" />
+                            <p className="text-xs font-semibold text-white">{permissionState === 'denied' ? 'Camera access is off' : 'Starting your camera…'}</p>
+                            <button type="button" onClick={() => { setPermissionState('prompt'); setPermissionTarget('camera'); }} className="rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-semibold text-white">{permissionState === 'denied' ? 'Enable camera' : 'Retry camera'}</button>
+                          </div>
                         )}
-                        <div className="relative z-10 flex items-center justify-center gap-3 rounded-3xl border border-white/15 bg-black/45 p-3 backdrop-blur-xl">
-                          <label className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white">Gallery<input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} /></label>
-                          <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="rounded-full border border-white/20 bg-white/10 px-4 py-3 text-xs font-semibold text-white disabled:opacity-40">Flip</button>
-                          <button onClick={captureCameraSnapshot} disabled={!photoCameraReady} aria-disabled={!photoCameraReady} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="rounded-full bg-gradient-to-br from-[#A855F7] to-[#4B10F2] px-7 py-4 text-sm font-black text-white shadow-[0_0_35px_rgba(113,56,255,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50">Capture</button>
-                        </div>
-                        <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="relative z-10 self-center rounded-full border border-violet-300/40 bg-violet-600/80 px-5 py-2.5 text-xs font-bold text-white shadow-lg backdrop-blur-xl transition-all hover:brightness-110"><Sparkles className="mr-1 inline h-3.5 w-3.5" /> Open Filters & Lenses</button>
-                        <div className="flex flex-wrap gap-1.5 justify-center mt-2">
-                          {selectedImages.map((img, i) => (
-                            <div key={i} className="relative w-12 h-12 rounded-lg border border-[#44376F] overflow-hidden shrink-0">
-                              <img src={img.url} className="w-full h-full object-cover" />
-                              <button 
-                                onClick={() => setSelectedImages(prev => prev.filter((_, idx) => idx !== i))}
-                                className="absolute top-0.5 right-0.5 bg-black/75 rounded-full p-0.5 text-rose-400"
-                              >
-                                <X className="w-2.5 h-2.5" />
-                              </button>
+                        <div className="relative z-20 mt-auto flex w-full flex-col items-center gap-3">
+                          <div className="flex items-center justify-center gap-5 rounded-full border border-white/15 bg-black/55 px-4 py-3 backdrop-blur-xl">
+                            <button type="button" aria-label="Open photo gallery" onClick={() => { setActiveMode('carousel'); setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(true); }} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white"><FileImage size={19}/></button>
+                            <button onClick={captureCameraSnapshot} disabled={!photoCameraReady || selectedImages.length >= 20} aria-disabled={!photoCameraReady || selectedImages.length >= 20} title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'} className="flex h-[68px] w-[68px] items-center justify-center rounded-full border-[5px] border-white bg-gradient-to-br from-[#A855F7] to-[#4B10F2] text-sm font-black text-white shadow-[0_0_35px_rgba(113,56,255,0.45)] transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"><span className="h-12 w-12 rounded-full border border-white/60"/></button>
+                            <button type="button" aria-label="Switch camera" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} disabled={!photoCameraReady} className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white disabled:opacity-40"><RefreshCw size={19}/></button>
+                          </div>
+                          {selectedImages.length > 0 && (
+                            <div className="flex w-full max-w-full items-center gap-3">
+                              <div className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto py-1">
+                                {selectedImages.map((img, i) => (
+                                  <div key={i} className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/25">
+                                    <img src={img.url} alt={`Captured photo ${i + 1}`} className="h-full w-full object-cover" />
+                                    <span className="absolute bottom-0.5 left-0.5 rounded bg-black/70 px-1 text-[8px] font-bold text-white">{i + 1}</span>
+                                    <button type="button" aria-label={`Remove photo ${i + 1}`} onClick={() => setSelectedImages(prev => prev.filter((_, idx) => idx !== i))} className="absolute right-0.5 top-0.5 rounded-full bg-black/80 p-0.5 text-white"><X className="h-3 w-3"/></button>
+                                  </div>
+                                ))}
+                              </div>
+                              <button type="button" onClick={nextStep} className="shrink-0 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-3 text-xs font-extrabold text-white shadow-lg">Use {selectedImages.length === 1 ? 'photo' : `${selectedImages.length} photos`}</button>
                             </div>
-                          ))}
+                          )}
                         </div>
                       </div>
-                      {isLensStudioOpen && (
-                        <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3 sm:col-span-2">
-                          <div className="flex items-center justify-between">
-                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Take a photo with your lens.</p></div>
-                            <div className="flex gap-2">
-                              <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
-                              <button type="button" onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white">Close</button>
-                            </div>
-                          </div>
-                          <NexoraLensStudio cameraFacing={cameraFacing} userId={currentUser.id} captureMode="photo" countdownTimer={countdownTimer}
-                            onStreamReady={stream => { videoStreamRef.current = stream; setIsLensStreamReady(Boolean(stream)); }}
-                            onCapture={blob => {
-                              const url = trackObjectUrl(URL.createObjectURL(blob));
-                              setSelectedImages(previous => [...previous, { url, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
-                              setIsLensStudioOpen(false);
-                              window.dispatchEvent(new CustomEvent('toast', { detail: 'Your filtered NEXORA photo is ready to share.' }));
-                            }}
-                          />
-                        </div>
-                      )}
                     </div>
                   )}
 
                   {activeMode === 'carousel' && (
-                    <div className="space-y-3">
-                      <div className="border border-[#292244] border-dashed rounded-2xl p-6 text-center space-y-3 bg-[#080712]/30">
-                        <FileImage className="w-8 h-8 text-[#8E88A7] mx-auto" />
-                        <p className="text-xs text-[#D1CBE3] font-bold">Add photos to your collection</p>
-                        <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
-                          Choose photos
-                          <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
-                        </label>
+                    <section className="flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-[#292244] bg-[#090714] shadow-[0_20px_70px_rgba(0,0,0,0.35)]" aria-label="Media gallery">
+                      <header className="shrink-0 border-b border-[#292244] px-4 pb-3 pt-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300">NEXORA Gallery</p>
+                            <h3 className="mt-1 text-lg font-black text-white">Choose your moments</h3>
+                            <p className="mt-0.5 text-[11px] text-[#9189AA]">Select up to 20 photos in the order you want to share them.</p>
+                          </div>
+                          <button type="button" aria-label="Close gallery" onClick={() => { setGalleryPreviewIndex(null); if (galleryReturnToCamera) { setActiveMode('photo'); setCurrentStep(2); setGalleryReturnToCamera(false); } else { setCurrentStep(1); } }} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white"><X size={17}/></button>
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 rounded-xl border border-white/10 bg-black/25 p-1">
+                          <button type="button" onClick={() => setGalleryTab('photos')} aria-pressed={galleryTab === 'photos'} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${galleryTab === 'photos' ? 'bg-[#7138FF] text-white shadow-lg' : 'text-[#A59DBB] hover:text-white'}`}>Photos</button>
+                          <button type="button" disabled={selectedImages.length > 0} onClick={() => setGalleryTab('videos')} aria-pressed={galleryTab === 'videos'} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${galleryTab === 'videos' ? 'bg-[#7138FF] text-white shadow-lg' : 'text-[#A59DBB] hover:text-white'}`}>Videos</button>
+                        </div>
+                      </header>
+
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
+                        {galleryTab === 'videos' ? (
+                          <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#44376F] bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.14),transparent_65%)] px-6 text-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-500/10 text-violet-200"><Video size={28}/></div>
+                            <h4 className="mt-4 text-sm font-extrabold text-white">Bring your clips together</h4>
+                            <p className="mt-1 max-w-[270px] text-[11px] leading-relaxed text-[#938BAA]">Choose a video to trim it, or select multiple clips to open them together in NEXORA Studio.</p>
+                            <label className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-5 py-3 text-xs font-extrabold text-white shadow-[0_8px_24px_rgba(75,16,242,0.25)] active:scale-[0.98]"><Plus size={16}/> Browse videos<input type="file" accept="video/*" multiple className="hidden" onChange={event => { setActiveMode('video'); handleVideoUpload(event); }}/></label>
+                            <p className="mt-3 text-[9px] text-[#6F6884]">Video files are checked before they enter your editor.</p>
+                          </div>
+                        ) : selectedImages.length === 0 ? (
+                          <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#44376F] bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.14),transparent_65%)] px-6 text-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-500/10 text-violet-200"><FolderHeart size={28}/></div>
+                            <h4 className="mt-4 text-sm font-extrabold text-white">Your selection starts here</h4>
+                            <p className="mt-1 max-w-[260px] text-[11px] leading-relaxed text-[#938BAA]">Open your device’s photo picker, select one or more images, and they’ll appear here ready to arrange.</p>
+                            <label className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-5 py-3 text-xs font-extrabold text-white shadow-[0_8px_24px_rgba(75,16,242,0.25)] active:scale-[0.98]"><Plus size={16}/> Browse photos<input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload}/></label>
+                            <p className="mt-3 text-[9px] text-[#6F6884]">Your device controls which local files NEXORA can access.</p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                              <div><p className="text-xs font-extrabold text-white">Selected photos</p><p className="mt-0.5 text-[10px] text-[#8E88A7]">Tap a photo to preview. Use arrows to change its order.</p></div>
+                              <span className="shrink-0 rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold tabular-nums text-violet-200">{selectedImages.length} / 20</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                              {selectedImages.map((img, index) => (
+                                <article key={`${img.fileName || 'photo'}-${index}`} className={`group relative aspect-[3/4] overflow-hidden rounded-xl border bg-[#120E2B] ${galleryPreviewIndex === index ? 'border-violet-300 ring-2 ring-violet-500/60' : 'border-white/10'}`}>
+                                  <button type="button" onClick={() => setGalleryPreviewIndex(index)} aria-label={`Preview photo ${index + 1}`} aria-pressed={galleryPreviewIndex === index} className="absolute inset-0 h-full w-full">
+                                    <img src={img.url} alt={img.fileName || `Selected photo ${index + 1}`} loading="lazy" className="h-full w-full object-cover"/>
+                                  </button>
+                                  <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-black text-white">{index + 1}</span>
+                                  <button type="button" aria-label={`Remove photo ${index + 1}`} onClick={() => { setSelectedImages(previous => previous.filter((_, itemIndex) => itemIndex !== index)); setGalleryPreviewIndex(previous => previous === null ? null : previous === index ? null : previous > index ? previous - 1 : previous); }} className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/75 text-white"><X size={13}/></button>
+                                  <div className="absolute inset-x-1 bottom-1 flex items-center justify-between gap-1">
+                                    <button type="button" aria-label={`Move photo ${index + 1} earlier`} disabled={index === 0} onClick={() => { const next = [...selectedImages]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; setSelectedImages(next); setGalleryPreviewIndex(index - 1); }} className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/75 text-white disabled:opacity-25"><ArrowUp size={13}/></button>
+                                    <button type="button" aria-label={`Move photo ${index + 1} later`} disabled={index === selectedImages.length - 1} onClick={() => { const next = [...selectedImages]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; setSelectedImages(next); setGalleryPreviewIndex(index + 1); }} className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/75 text-white disabled:opacity-25"><ArrowDown size={13}/></button>
+                                  </div>
+                                </article>
+                              ))}
+                              {selectedImages.length < 20 && (
+                                <label className="flex aspect-[3/4] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#514078] bg-violet-500/[0.06] text-violet-200 transition-colors hover:bg-violet-500/[0.12]">
+                                  <Plus size={22}/><span className="text-[10px] font-bold">Add more</span><input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload}/>
+                                </label>
+                              )}
+                            </div>
+                            {galleryPreviewIndex !== null && selectedImages[galleryPreviewIndex] && (
+                              <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                                <div className="flex items-center justify-between px-3 py-2"><span className="text-[10px] font-bold text-white">Preview · {galleryPreviewIndex + 1} of {selectedImages.length}</span><button type="button" onClick={() => { setActiveEditIndex(galleryPreviewIndex); nextStep(); }} className="text-[10px] font-bold text-violet-300">Edit photo</button></div>
+                                <img src={selectedImages[galleryPreviewIndex].url} alt="Selected photo preview" className="max-h-56 w-full bg-black object-contain"/>
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
 
-                      {selectedImages.length > 0 && (
-                        <div className="space-y-2 bg-[#120E2B]/70 p-3 rounded-xl border border-[#292244]">
-                          <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#B9AED8]">Selected media · {selectedImages.length}/20</span><span className="text-[10px] text-[#817895]">Hold your order · move items below</span></div>
-                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-px overflow-hidden rounded-xl border border-[#292244] bg-[#292244]">
-                            {selectedImages.map((img, index) => (
-                              <div key={index} className={`group relative aspect-[4/5] overflow-hidden bg-[#090714] ${activeEditIndex === index ? 'ring-2 ring-inset ring-violet-400' : ''}`}>
-                                <button type="button" onClick={() => setActiveEditIndex(index)} aria-label={`Preview photo ${index + 1}`} aria-pressed={activeEditIndex === index} className="absolute inset-0 z-0 h-full w-full cursor-pointer">
-                                  <img src={img.url} alt={img.fileName || `Selected photo ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
-                                </button>
-                                <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-bold text-white">{index + 1}</span>
-                                {activeEditIndex === index && <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-md bg-violet-600 px-1.5 py-0.5 text-[8px] font-bold text-white">EDITING</span>}
-                                <div className="absolute inset-0 z-10 flex items-center justify-center gap-1 bg-black/55 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                                  {index > 0 && (
-                                    <button type="button" aria-label={`Move photo ${index + 1} left`} onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index - 1]; next[index - 1] = tmp; setSelectedImages(next); setActiveEditIndex(index - 1); }} className="p-1.5 bg-[#120E2B] rounded text-white">
-                                      <ChevronLeft className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                  {index < selectedImages.length - 1 && (
-                                    <button type="button" aria-label={`Move photo ${index + 1} right`} onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index + 1]; next[index + 1] = tmp; setSelectedImages(next); setActiveEditIndex(index + 1); }} className="p-1.5 bg-[#120E2B] rounded text-white">
-                                      <ChevronRight className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                  <button type="button" aria-label={`Remove photo ${index + 1}`} onClick={() => { setSelectedImages(prev => prev.filter((_, idx) => idx !== index)); setActiveEditIndex(previous => previous === null ? null : previous > index ? previous - 1 : previous === index ? Math.max(0, selectedImages.length - 2) : previous); }} className="p-1.5 bg-rose-950/80 rounded text-rose-300">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
+                      <footer className="shrink-0 border-t border-[#292244] bg-[#0D0A1A] px-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3">
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-extrabold text-white">{selectedImages.length ? `${selectedImages.length} photo${selectedImages.length === 1 ? '' : 's'} selected` : galleryTab === 'videos' ? 'Video import' : 'Nothing selected yet'}</p>
+                            <p className="mt-0.5 text-[10px] text-[#817895]">{selectedImages.length ? 'Your order is ready for editing.' : galleryTab === 'videos' ? 'Choose one clip or multiple clips for Studio.' : 'Choose photos to continue.'}</p>
                           </div>
+                          <button type="button" disabled={selectedImages.length === 0} onClick={nextStep} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-5 py-3 text-xs font-extrabold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-35">{selectedImages.length ? `Add ${selectedImages.length} ${selectedImages.length === 1 ? 'photo' : 'photos'}` : 'Select photos'} <ChevronRight size={15}/></button>
                         </div>
-                      )}
-                    </div>
+                      </footer>
+                    </section>
                   )}
-
                   {activeMode === 'video' && (
                     <div className="border border-[#292244] border-dashed rounded-2xl p-6 text-center space-y-4 bg-[#120E2B]/45">
                       <Video className="w-8 h-8 text-[#8E88A7] mx-auto animate-pulse" />
@@ -2117,29 +2179,35 @@ export default function MediaCreationEngine({
                           </div>
                         </div>
                       ) : (
-                        <div className="relative mx-auto flex aspect-[4/5] w-full max-w-[320px] flex-col justify-between overflow-hidden rounded-2xl border border-[#44376F] bg-black p-3.5 shadow-md">
-                          <div className="z-10 flex items-center justify-between text-[8px] font-mono text-[#A39BBF]">
-                            <span className="rounded border border-white/5 bg-black/70 px-2 py-0.5">Camera</span>
-                            <button type="button" onClick={() => { setActiveMode('video'); setIsLensStudioOpen(false); }} className="rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[9px] font-semibold text-white">Choose from gallery</button>
-                            <div className="flex items-center gap-2">
-                              <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="rounded-full border border-[#A78BFA]/40 bg-[#7138FF]/25 px-3 py-1.5 text-[9px] font-bold text-white"><Sparkles className="mr-1 inline h-3 w-3" /> Filters & Lenses</button>
-                              <button disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button>
-                            </div>
+                        <div className="fixed inset-0 z-[131] flex h-[100dvh] w-screen flex-col justify-between overflow-hidden bg-black px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))]">
+                          <div className="z-20 flex w-full items-center justify-start">
+                            <button type="button" aria-label="Back to Create" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCurrentStep(1)} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white backdrop-blur-xl disabled:opacity-40"><X size={18}/></button>
                           </div>
                           <div className="absolute inset-0 z-0 flex items-center justify-center">
-                            {countdownTimer !== null ? <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span> : recordedVideoUrl ? <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" /> : <video ref={videoPreviewRef} autoPlay muted playsInline className="h-full w-full bg-[#120E2B] object-cover" />}
+                            <video ref={videoPreviewRef} autoPlay muted playsInline onLoadedMetadata={() => setVideoCameraReady(true)} onCanPlay={() => setVideoCameraReady(true)} className={"absolute inset-0 h-full w-full bg-black object-cover " + (recordedVideoUrl ? "invisible" : "")} aria-label="Live video camera preview" />
+                            {recordedVideoUrl && <video src={recordedVideoUrl} autoPlay loop muted playsInline className="absolute inset-0 h-full w-full object-cover" aria-label="Recorded video preview" />}
+                            {countdownTimer !== null && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/15"><span className="text-6xl font-black text-white drop-shadow-lg">{countdownTimer}</span></div>}
+                            {!videoCameraReady && !recordedVideoUrl && countdownTimer === null && (
+                              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/40 px-8 text-center">
+                                <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/25 border-t-violet-300" />
+                                <p className="text-xs font-semibold text-white">{permissionState === 'denied' ? 'Camera access is off' : 'Starting your camera…'}</p>
+                                <button type="button" onClick={() => { setPermissionState('prompt'); setPermissionTarget('camera'); }} className="rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-semibold text-white">{permissionState === 'denied' ? 'Enable camera' : 'Retry camera'}</button>
+                              </div>
+                            )}
                           </div>
-                          <div className="z-10 flex flex-col items-center gap-2">
-                            <label className="flex items-center gap-2 rounded-full border border-white/15 bg-black/65 px-3 py-1.5 text-[10px] font-semibold text-white">
-                              Video length
-                              <select aria-label="Video recording length" value={recordingLimitSecs} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onChange={event => setRecordingLimitSecs(Number(event.target.value))} className="bg-transparent text-white outline-none">
-                                {RECORDING_DURATIONS.map(duration => <option key={duration.seconds} value={duration.seconds} className="bg-[#120E2B]">{duration.label}</option>)}
-                              </select>
-                            </label>
-                            {isRecording ? <button onClick={handleStopReelRecord} className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-rose-600 text-[10px] font-bold text-white">Stop</button> : <button onClick={startReelRecording} className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-black bg-gradient-to-tr from-[#8A3FFC] to-[#1600A3] text-[10px] font-black text-white shadow-md">{recordedVideoUrl ? 'Again' : 'Record'}</button>}
-                            {isRecording && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-mono text-white">Recording: {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')} / {Math.floor(recordingLimitSecs / 60)}:{String(recordingLimitSecs % 60).padStart(2, '0')}</span>}
-                            {!isRecording && recordedVideoUrl && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] text-white">Video ready</span>}
-                             {!isRecording && videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="rounded-full border border-violet-300/40 bg-violet-500/15 px-4 py-2 text-[10px] font-semibold text-violet-100">Edit in NEXORA Studio</button>}
+                          <div className="z-20 flex flex-col items-center gap-3">
+                            <div className="flex w-full max-w-full items-center justify-center gap-1.5 overflow-x-auto rounded-full border border-white/15 bg-black/55 p-2 backdrop-blur-xl">
+                              {RECORDING_DURATIONS.filter(duration => [15, 30, 60, 180, 600, 1200].includes(duration.seconds)).map(duration => (
+                                <button key={duration.seconds} type="button" aria-pressed={recordingLimitSecs === duration.seconds} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setRecordingLimitSecs(duration.seconds)} className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-bold transition-colors disabled:opacity-50 ${recordingLimitSecs === duration.seconds ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/40' : 'text-white/75 hover:bg-white/10'}`}>{duration.label}</button>
+                              ))}
+                            </div>
+                            <div className="flex w-full items-center justify-center gap-7">
+                              <button type="button" aria-label="Choose a video from gallery" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => { setActiveMode('video'); setIsLensStudioOpen(false); }} className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white backdrop-blur disabled:opacity-40"><FileImage size={19}/></button>
+                              {isRecording ? <button onClick={handleStopReelRecord} aria-label="Stop recording" className="flex h-[72px] w-[72px] items-center justify-center rounded-full border-[5px] border-white bg-rose-600 shadow-xl"><span className="h-7 w-7 rounded-md bg-white"/></button> : <button onClick={startReelRecording} disabled={isSavingRecordedVideo || countdownTimer !== null || Boolean(recordedVideoUrl)} aria-label="Start recording" className="flex h-[72px] w-[72px] items-center justify-center rounded-full border-[5px] border-white bg-gradient-to-tr from-[#8A3FFC] to-[#1600A3] shadow-xl disabled:opacity-50"><span className="h-12 w-12 rounded-full border border-white/70"/></button>}
+                              <button type="button" aria-label="Switch camera" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null || Boolean(recordedVideoUrl)} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white backdrop-blur disabled:opacity-40"><RefreshCw size={19}/></button>
+                            </div>
+                            {isRecording && <span className="rounded-full bg-black/60 px-3 py-1 text-[10px] font-mono text-white">Recording {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')} / {Math.floor(recordingLimitSecs / 60)}:{String(recordingLimitSecs % 60).padStart(2, '0')}</span>}
+                            {!isRecording && recordedVideoUrl && <div className="flex flex-wrap items-center justify-center gap-2"><span className="rounded-full bg-black/60 px-3 py-1 text-[10px] text-white">Video ready</span><button type="button" onClick={() => { revokeTrackedObjectUrl(recordedVideoUrl); setRecordedVideoUrl(null); setVideoRawBlob(null); setLoopTimerSecs(0); }} className="rounded-full border border-white/20 bg-black/55 px-3 py-2 text-[10px] font-semibold text-white">Retake</button><button type="button" onClick={nextStep} className="rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-2.5 text-[10px] font-extrabold text-white shadow-lg">Use video</button>{videoRawBlob && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="rounded-full border border-violet-300/40 bg-violet-500/20 px-3 py-2.5 text-[10px] font-semibold text-violet-100">Edit in Studio</button>}</div>}
                           </div>
                         </div>
                       )}
@@ -2226,164 +2294,186 @@ export default function MediaCreationEngine({
               )}
 
               {currentStep === 3 && (
-                /* STEP 3: CREATIVE EDIT WORKSPACE */
-                <div className="space-y-4 animate-fadeIn">
-                  <div>
-                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[#B69BFF]">STEP 3 OF 6</span>
-                    <h3 className="text-base font-bold text-white">Preview</h3>
-                    <p className="mt-1 text-xs leading-relaxed text-[#A39BBF]">Review your post before sharing.</p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Media render wrapper */}
-                    <div className="aspect-square rounded-2xl border border-[#292244] bg-black flex items-center justify-center relative overflow-hidden">
-                      {selectedImages.length > 0 ? (
-                        <div className="relative w-full h-full">
-                          <img 
-                            src={selectedImages[activeEditIndex || 0]?.url} 
-                            style={{ 
-                              filter: `${selectedImages[activeEditIndex || 0]?.filterStyle || 'none'} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`,
-                              transform: `rotate(${selectedImages[activeEditIndex || 0]?.rotation}deg) scale(${selectedImages[activeEditIndex || 0]?.zoom})`,
-                              transition: 'all 0.2s'
-                            }}
-                            className="w-full h-full object-contain"
-                          />
-                          {stickerOverlay && (
-                            <span className="absolute inset-0 flex items-center justify-center text-5xl animate-bounce pointer-events-none select-none">
-                              {stickerOverlay}
-                            </span>
-                          )}
-                          {textOverlay && (
-                            <p 
-                              className="absolute bottom-6 inset-x-4 text-center font-sans font-black tracking-tight text-xs bg-black/60 py-2 px-3 rounded-lg backdrop-blur-xs"
-                              style={{ color: textOverlayColor }}
-                            >
-                              {textOverlay}
-                            </p>
-                          )}
-                        </div>
-                      ) : (videoFileUrl || recordedVideoUrl) ? (
-                        <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="h-full w-full bg-black object-contain" />
-                      ) : (
-                        <div className="text-center p-6 space-y-2 text-[#8E88A7]">
-                          <Sliders className="w-8 h-8 mx-auto" />
-                          <p className="text-xs"></p>
-                        </div>
-                      )}
+                <section className="flex h-full min-h-0 flex-col gap-3 animate-fadeIn" aria-label="NEXORA editing workspace">
+                  <header className="flex shrink-0 items-center justify-between gap-3">
+                    <button type="button" onClick={prevStep} className="inline-flex h-9 items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold text-[#D8D0EB] hover:bg-white/[0.08]"><ChevronLeft size={15}/> Back</button>
+                    <div className="min-w-0 text-center">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-violet-300">NEXORA STUDIO</p>
+                      <h3 className="text-sm font-black text-white">Edit your creation</h3>
+                      <p className="text-[9px] text-[#8E88A7]">{selectedImages.length ? `Photo ${Math.min((activeEditIndex ?? 0) + 1, selectedImages.length)} of ${selectedImages.length}` : videoFileUrl || recordedVideoUrl ? 'Video workspace' : 'Post preview'}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button type="button" onClick={saveAsDraftLocally} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-violet-400/25 bg-violet-500/10 px-3 text-[10px] font-bold text-violet-200 hover:bg-violet-500/15"><Save size={13}/> Save</button>
+                      <button type="button" aria-label="Close editor" onClick={handleExitClick} className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#AFA6C3] hover:bg-white/[0.08] hover:text-white"><X size={15}/></button>
+                    </div>
+                  </header>
+
+                  <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
+                    <div className="flex min-h-[30vh] flex-1 flex-col items-center justify-center overflow-hidden rounded-[22px] border border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.13),transparent_58%),#03040A] p-3">
+                      <div className="relative flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden">
+                        {selectedImages.length > 0 ? (
+                          <div className="relative flex h-full max-h-full w-full items-center justify-center overflow-hidden">
+                            <img
+                              src={selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.url}
+                              alt={selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.fileName || 'Photo being edited'}
+                              className="max-h-full max-w-full object-contain transition-[filter,transform] duration-200"
+                              style={{
+                                filter: `${selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.filterStyle || 'none'} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`,
+                                transform: `rotate(${selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.rotation || 0}deg) scale(${selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.zoom || 1})`
+                              }}
+                            />
+                            {stickerOverlay && <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl">{stickerOverlay}</span>}
+                            {textOverlay.trim() && <p className="pointer-events-none absolute inset-x-4 bottom-5 rounded-xl bg-black/65 px-3 py-2 text-center text-sm font-black backdrop-blur-sm" style={{color:textOverlayColor}}>{textOverlay}</p>}
+                          </div>
+                        ) : (videoFileUrl || recordedVideoUrl) ? (
+                          <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="max-h-full max-w-full rounded-xl bg-black object-contain"/>
+                        ) : (
+                          <div className="max-w-xs text-center text-[#8E88A7]"><Sliders size={28} className="mx-auto mb-3 text-violet-300"/><p className="text-sm font-bold text-white">Your preview</p><p className="mt-1 text-xs">Your selected content will appear here as you edit.</p></div>
+                        )}
+                      </div>
+                      <div className="mt-2 flex shrink-0 items-center justify-between gap-3 self-stretch">
+                        <span className="truncate text-[9px] text-[#827B9C]">{selectedImages.length ? 'Changes apply to the selected photo.' : 'Preview your media before moving on.'}</span>
+                        {selectedImages.length > 1 && <span className="shrink-0 text-[9px] font-semibold text-violet-200">{selectedImages.length} images</span>}
+                        {(videoFileUrl || recordedVideoUrl) && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="shrink-0 rounded-lg border border-violet-400/30 bg-violet-500/10 px-2.5 py-1.5 text-[9px] font-bold text-violet-200">Open full Studio</button>}
+                      </div>
                     </div>
 
-                    {/* Photo adjustments are only shown when a photo is selected. */}
-                    <div className={`${selectedImages.length > 0 ? 'space-y-3.5 bg-[#120E2B]/70 p-4 rounded-2xl border border-[#292244]/60' : 'hidden'}`}>
-                      <span className="text-[10px] font-mono text-[#A39BBF] uppercase block tracking-wider pt-1">Photo adjustments</span>
-                      
-                      {/* Interactive CSS filters row */}
-                      {selectedImages.length > 0 && (
-                        <div className="space-y-1.5">
-                          <span className="text-[9px] font-mono text-[#8E88A7] block uppercase">Choose a NEXORA look · {FILTER_PRESETS.length} original styles</span>
-                          <div className="flex gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
-                            {FILTER_PRESETS.map((p) => (
-                              <button
-                                key={p.name}
-                                onClick={() => {
-                                  setSelectedImages(prev => prev.map((img, idx) => {
-                                    if (idx === (activeEditIndex || 0)) {
-                                      return { ...img, filterName: p.name, filterStyle: p.style };
-                                    }
-                                    return img;
-                                  }));
-                                }}
-                                className={`px-2.5 py-1 text-[10px] font-sans font-bold border rounded-lg transition-all shrink-0 ${
-                                  (selectedImages[activeEditIndex || 0]?.filterName || 'Normal') === p.name 
-                                    ? 'bg-violet-600 text-white border-violet-500' 
-                                    : 'bg-[#120E2B] text-[#A39BBF] border-[#292244] hover:text-white'
-                                }`}
-                              >
-                                {p.name}
+                    <aside className="flex min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-[22px] border border-[#292244] bg-[#0B0918] lg:w-[min(390px,42%)]">
+                      {selectedImages.length > 1 && (
+                        <div className="shrink-0 border-b border-white/[0.07] px-3 py-2.5">
+                          <div className="mb-2 flex items-center justify-between"><span className="text-[10px] font-bold text-white">Your sequence</span><span className="text-[9px] text-[#827B9C]">Tap to edit</span></div>
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {selectedImages.map((image, index) => (
+                              <button key={`${image.fileName || 'image'}-${index}`} type="button" onClick={() => setActiveEditIndex(index)} aria-pressed={(activeEditIndex ?? 0) === index} className={`relative h-14 w-12 shrink-0 overflow-hidden rounded-lg border ${(activeEditIndex ?? 0) === index ? 'border-violet-300 ring-2 ring-violet-500/50' : 'border-white/10'}`}>
+                                <img src={image.url} alt={image.fileName || `Photo ${index + 1}`} className="h-full w-full object-cover"/>
+                                <span className="absolute bottom-0.5 left-0.5 rounded bg-black/75 px-1 text-[8px] font-bold text-white">{index + 1}</span>
                               </button>
                             ))}
                           </div>
                         </div>
                       )}
 
-                      {/* Crop/Rotate utilities */}
-                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#292244]">
-                        <button 
-                          onClick={() => {
-                            setSelectedImages(prev => prev.map((img, idx) => {
-                              if (idx === (activeEditIndex || 0)) {
-                                return { ...img, rotation: (img.rotation + 90) % 360 };
-                              }
-                              return img;
-                            }));
-                          }}
-                          className="py-1.5 bg-[#120E2B] hover:bg-[#19143A] text-[10px] font-mono text-[#D1CBE3] rounded-lg flex items-center justify-center gap-1"
-                        >
-                          <RotateCw className="w-3.5 h-3.5" /> Rotate photo
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setSelectedImages(prev => prev.map((img, idx) => {
-                              if (idx === (activeEditIndex || 0)) {
-                                return { ...img, zoom: img.zoom === 1 ? 1.5 : 1 };
-                              }
-                              return img;
-                            }));
-                          }}
-                          className="py-1.5 bg-[#120E2B] hover:bg-[#19143A] text-[10px] font-mono text-[#D1CBE3] rounded-lg flex items-center justify-center gap-1"
-                        >
-                          <Crop className="w-3.5 h-3.5" /> Zoom photo
-                        </button>
-                      </div>
-
-                      {/* Adjust Sliders */}
-                      <div className="space-y-2 border-t border-[#292244] pt-3">
-                        <div className="flex justify-between text-[9px] font-mono text-[#A39BBF]">
-                          <span>🔆 Brightness: {brightness}%</span>
-                          <input type="range" min="50" max="150" value={brightness} onChange={(e) => setBrightness(parseInt(e.target.value))} className="accent-violet-500" />
-                        </div>
-                        <div className="flex justify-between text-[9px] font-mono text-[#A39BBF]">
-                          <span>🌓 Contrast: {contrast}%</span>
-                          <input type="range" min="50" max="150" value={contrast} onChange={(e) => setContrast(parseInt(e.target.value))} className="accent-violet-500" />
-                        </div>
-                        <div className="flex justify-between text-[9px] font-mono text-[#A39BBF]">
-                          <span>🎨 Saturation: {saturation}%</span>
-                          <input type="range" min="50" max="150" value={saturation} onChange={(e) => setSaturation(parseInt(e.target.value))} className="accent-violet-500" />
-                        </div>
-                      </div>
-
-                      {/* Stickers Overlay & Text Overlays */}
-                      <div className="space-y-2 border-t border-[#292244] pt-3 text-left">
-                        <span className="text-[9px] font-mono text-[#8E88A7] uppercase block">Stickers and text</span>
-                        <div className="flex gap-2">
-                          {['🔥', '⚡', '✨', '🏆', '👾', '🚀', '💯'].map((emo) => (
-                            <button key={emo} onClick={() => setStickerOverlay(stickerOverlay === emo ? null : emo)} className={`text-lg p-1 hover:scale-110 transition-transform ${stickerOverlay === emo ? 'bg-violet-600/20 rounded-lg border border-white/10' : ''}`}>
-                              {emo}
-                            </button>
+                      {selectedImages.length > 0 && (
+                        <div className="grid shrink-0 grid-cols-4 gap-1 border-b border-white/[0.07] p-2">
+                          {([
+                            {id:'looks',label:'Looks'},
+                            {id:'adjust',label:'Adjust'},
+                            {id:'crop',label:'Crop'},
+                            {id:'text',label:'Text'}
+                          ] as const).map(tab => (
+                            <button key={tab.id} type="button" onClick={() => setEditorToolTab(tab.id)} aria-pressed={editorToolTab === tab.id} className={`rounded-lg px-2 py-2 text-[10px] font-bold transition-colors ${editorToolTab === tab.id ? 'bg-[#7138FF] text-white shadow-lg' : 'text-[#9A92AF] hover:bg-white/[0.05] hover:text-white'}`}>{tab.label}</button>
                           ))}
                         </div>
-                        <div className="space-y-1">
-                          <input 
-                            type="text" 
-                            placeholder="Add text to your photo"
-                            value={textOverlay}
-                            onChange={(e) => setTextOverlay(e.target.value)}
-                            className="w-full bg-[#120E2B] border border-[#292244] rounded-lg px-2.5 py-1 text-[11px] text-white"
-                          />
-                        </div>
-                      </div>
+                      )}
 
-                    </div>
-                    {selectedImages.length === 0 && (videoFileUrl || recordedVideoUrl) && (
-                      <div className="flex flex-col justify-center rounded-2xl border border-[#7138FF]/25 bg-[#120E2B] p-5">
-                        <span className="mb-2 text-xs font-semibold text-[#B69BFF]">Your video is ready</span>
-                        <p className="text-sm leading-relaxed text-[#EEEAF8]">Add a caption, check your video, then share it.</p>
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+                        {selectedImages.length > 0 ? (
+                          <>
+                            {editorToolTab === 'looks' && (
+                              <div className="space-y-3">
+                                <div><h4 className="text-xs font-extrabold text-white">NEXORA looks</h4><p className="mt-1 text-[10px] text-[#8E88A7]">Choose a visual style for this photo.</p></div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  {FILTER_PRESETS.map(preset => (
+                                    <button key={preset.name} type="button" onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,filterName:preset.name,filterStyle:preset.style} : image))} aria-pressed={(selectedImages[activeEditIndex ?? 0]?.filterName || 'Original') === preset.name} className={`overflow-hidden rounded-xl border text-left text-[10px] font-bold transition-colors ${(selectedImages[activeEditIndex ?? 0]?.filterName || 'Original') === preset.name ? 'border-violet-400/60 bg-violet-500/15 text-violet-100 ring-1 ring-violet-400/30' : 'border-white/10 bg-white/[0.025] text-[#B8B0C9] hover:border-violet-400/30'}`}>
+                                      <img src={selectedImages[activeEditIndex ?? 0]?.url} alt="" aria-hidden="true" className="h-16 w-full bg-black object-cover" style={{filter:preset.style || 'none'}}/>
+                                      <span className="block px-2.5 py-2">{preset.name}</span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {editorToolTab === 'adjust' && (
+                              <div className="space-y-4">
+                                <div><h4 className="text-xs font-extrabold text-white">Fine adjustments</h4><p className="mt-1 text-[10px] text-[#8E88A7]">Tune light, depth and colour.</p></div>
+                                {([{label:'Brightness',value:brightness,set:setBrightness,min:50,max:150},{label:'Contrast',value:contrast,set:setContrast,min:50,max:150},{label:'Saturation',value:saturation,set:setSaturation,min:50,max:150},{label:'Blur',value:blur,set:setBlur,min:0,max:12}] as const).map(control => (
+                                  <label key={control.label} className="block space-y-2">
+                                    <span className="flex items-center justify-between text-[10px] font-semibold text-[#BDB5CE]"><span>{control.label}</span><span className="tabular-nums text-violet-200">{control.value}{control.label === 'Blur' ? 'px' : '%'}</span></span>
+                                    <input type="range" min={control.min} max={control.max} value={control.value} onChange={event => control.set(Number(event.target.value))} className="w-full accent-violet-500"/>
+                                  </label>
+                                ))}
+                                <button type="button" onClick={() => {setBrightness(100);setContrast(100);setSaturation(100);setBlur(0);}} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-[#B8B0C9] hover:text-white">Reset adjustments</button>
+                              </div>
+                            )}
+                            {editorToolTab === 'crop' && (
+                              <div className="space-y-4">
+                                <div><h4 className="text-xs font-extrabold text-white">Frame and crop</h4><p className="mt-1 text-[10px] text-[#8E88A7]">Rotate and scale the selected image.</p></div>
+                                <button type="button" onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,rotation:(image.rotation + 90) % 360} : image))} className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs font-bold text-white"><RotateCw size={15}/> Rotate 90°</button>
+                                <label className="block space-y-2"><span className="flex items-center justify-between text-[10px] font-semibold text-[#BDB5CE]"><span>Scale</span><span className="tabular-nums text-violet-200">{(selectedImages[activeEditIndex ?? 0]?.zoom || 1).toFixed(2)}×</span></span><input type="range" min="1" max="2.5" step="0.05" value={selectedImages[activeEditIndex ?? 0]?.zoom || 1} onChange={event => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,zoom:Number(event.target.value)} : image))} className="w-full accent-violet-500"/></label>
+                                <button type="button" onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,rotation:0,zoom:1,cropOffset:{x:0,y:0}} : image))} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-[#B8B0C9] hover:text-white">Reset frame</button>
+                              </div>
+                            )}
+                            {editorToolTab === 'text' && (
+                              <div className="space-y-4">
+                                <div><h4 className="text-xs font-extrabold text-white">Text and stickers</h4><p className="mt-1 text-[10px] text-[#8E88A7]">Add a simple overlay to your image.</p></div>
+                                <div className="flex flex-wrap gap-2">
+                                  {['🔥','⚡','✨','🏆','👾','🚀','💯'].map(emoji => <button key={emoji} type="button" onClick={() => setStickerOverlay(stickerOverlay === emoji ? null : emoji)} aria-pressed={stickerOverlay === emoji} className={`rounded-lg border px-3 py-2 text-lg ${stickerOverlay === emoji ? 'border-violet-400/50 bg-violet-500/15' : 'border-white/10 bg-white/[0.03]'}`}>{emoji}</button>)}
+                                </div>
+                                <label className="block space-y-2"><span className="text-[10px] font-semibold text-[#BDB5CE]">Overlay text</span><input type="text" maxLength={80} value={textOverlay} onChange={event => setTextOverlay(event.target.value)} placeholder="Write something…" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-xs text-white placeholder:text-[#6E6682]"/></label>
+                                <div className="flex items-center justify-between gap-3"><span className="text-[10px] text-[#9A92AF]">Text colour</span><input aria-label="Overlay text colour" type="color" value={textOverlayColor} onChange={event => setTextOverlayColor(event.target.value)} className="h-8 w-12 cursor-pointer rounded border-0 bg-transparent"/></div>
+                                {(stickerOverlay || textOverlay) && <button type="button" onClick={() => {setStickerOverlay(null);setTextOverlay('');}} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-[#B8B0C9] hover:text-white">Clear overlays</button>}
+                              </div>
+                            )}
+                          </>
+                        ) : (videoFileUrl || recordedVideoUrl) ? (
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-extrabold text-white">Build the full edit</h4>
+                            <p className="text-[10px] leading-relaxed text-[#A59DBB]">Go beyond quick adjustments. NEXORA Studio opens over this step, so you can return here without losing your Create flow.</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {['Multi-clip timeline','Trim, split & reorder','Reverse clip effects','Music & voiceover tracks','Transitions & visual looks','Animated text & stickers','Timed subtitles','Layer motion keyframes'].map(item => <div key={item} className="rounded-lg border border-white/[0.07] bg-white/[0.025] px-2.5 py-2 text-[9px] font-semibold text-[#C7BEDB]"><span className="mr-1.5 text-violet-300">✦</span>{item}</div>)}
+                            </div>
+                            <p className="text-[9px] leading-relaxed text-[#827B9C]">Import an audio file you have rights to use, including Brazilian funk and other styles. NEXORA does not present unlicensed sample tracks as a music catalogue.</p>
+                            {onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-3 text-xs font-extrabold text-white"><Clapperboard size={14} className="mr-2 inline"/> Enter full editing studio</button>}
+                            <p className="text-[9px] text-[#756D8A]">Your original source stays intact until you export the finished edit.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-extrabold text-white">Ready to shape your post</h4>
+                            <p className="text-[10px] leading-relaxed text-[#8E88A7]">There are no media adjustments for this format. Continue to add your caption and publishing details.</p>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </aside>
                   </div>
-                </div>
+
+                  <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] pt-3">
+                    <div className="min-w-0"><p className="text-[10px] font-bold text-white">{selectedImages.length ? 'Photo edits are ready' : videoFileUrl || recordedVideoUrl ? 'Video ready for Studio' : 'Preview your post'}</p><p className="mt-0.5 text-[9px] text-[#827B9C]">You can refine this later before publishing.</p></div>
+                    <button type="button" onClick={nextStep} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-5 py-3 text-xs font-extrabold text-white shadow-lg">Continue <ChevronRight size={15}/></button>
+                  </footer>
+                </section>
               )}
 
+              
               {currentStep === 4 && (
-                /* STEP 4: SMART CAPTION & METADATA DETAILS */
+                <section className="flex min-h-[520px] flex-col gap-4 animate-fadeIn">
+                  <header><span className="text-[10px] font-mono uppercase tracking-[0.18em] text-violet-300">NEXORA CREATIVE TOOLS</span><h3 className="mt-1 text-lg font-black text-white">Give your creation its signature.</h3><p className="mt-1 text-[10px] text-[#8E88A7]">A focused home for visual treatments, overlays and sound.</p></header>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                    {([{id:'looks',label:'Looks',mark:'◈'},{id:'effects',label:'Effects',mark:'✧'},{id:'text',label:'Text',mark:'T'},{id:'stickers',label:'Stickers',mark:'☺'},{id:'audio',label:'Audio',mark:'♫'},{id:'presets',label:'Presets',mark:'✦'}] as const).map(tool => <button key={tool.id} type="button" onClick={() => setCreativeToolTab(tool.id)} aria-pressed={creativeToolTab === tool.id} className={creativeToolTab === tool.id ? 'flex min-h-[66px] flex-col items-center justify-center gap-1.5 rounded-xl border border-violet-400/60 bg-violet-500/15 px-2 py-2 text-white' : 'flex min-h-[66px] flex-col items-center justify-center gap-1.5 rounded-xl border border-[#292244] bg-[#0C0A19] px-2 py-2 text-[#A39BBF]'}><span className="text-lg font-black text-violet-200">{tool.mark}</span><span className="text-[10px] font-bold">{tool.label}</span></button>)}
+                  </div>
+                  <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.85fr)]">
+                    <div className="relative flex min-h-[260px] flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.15),transparent_60%),#03040A] p-3">
+                      {selectedImages.length > 0 && <button type="button" onClick={() => setIsComparingOriginal(value => !value)} aria-pressed={isComparingOriginal} className="absolute right-3 top-3 z-10 rounded-full border border-white/15 bg-black/70 px-3 py-1.5 text-[9px] font-bold text-white backdrop-blur">{isComparingOriginal ? 'Show edits' : 'Compare original'}</button>}
+                      {selectedImages.length ? <div className="relative flex min-h-[190px] flex-1 items-center justify-center"><img src={selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.url} alt="Creative tools preview" className="max-h-[300px] max-w-full rounded-lg object-contain" style={{filter:isComparingOriginal ? 'none' : (selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.filterStyle || 'none') + ' brightness(' + brightness + '%) contrast(' + contrast + '%) saturate(' + saturation + '%) blur(' + blur + 'px)',transform:isComparingOriginal ? 'none' : 'rotate(' + (selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.rotation || 0) + 'deg) scale(' + (selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.zoom || 1) + ')'}} />
+                        {!isComparingOriginal && stickerOverlay && <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl">{stickerOverlay}</span>}
+                        {!isComparingOriginal && textOverlay.trim() && <span className="pointer-events-none absolute bottom-2 inset-x-3 rounded-lg bg-black/70 px-2 py-2 text-center text-xs font-bold" style={{color:textOverlayColor}}>{textOverlay}</span>}
+                      </div> : (videoFileUrl || recordedVideoUrl) ? <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="max-h-[300px] max-w-full rounded-lg object-contain"/> : <div className="text-center text-xs text-[#8E88A7]">Your creative preview will appear here.</div>}
+                      {selectedImages.length > 1 && <div className="flex w-full gap-2 overflow-x-auto border-t border-white/10 pt-2">{selectedImages.map((image,index) => <button key={`${image.fileName || 'creative-photo'}-${index}`} type="button" onClick={() => {setActiveEditIndex(index);setIsComparingOriginal(false);}} aria-pressed={(activeEditIndex ?? 0) === index} className={'relative h-12 w-10 shrink-0 overflow-hidden rounded-lg border ' + ((activeEditIndex ?? 0) === index ? 'border-violet-300 ring-2 ring-violet-500/40' : 'border-white/10')}><img src={image.url} alt={`Select photo ${index + 1}`} className="h-full w-full object-cover"/><span className="absolute bottom-0 left-0 right-0 bg-black/70 text-center text-[8px] text-white">{index + 1}</span></button>)}</div>}
+                    </div>
+                    <div className="min-h-[220px] overflow-y-auto rounded-2xl border border-[#292244] bg-[#0B0918] p-3">
+                      {creativeToolTab === 'looks' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">NEXORA looks</h4><p className="text-[10px] text-[#8E88A7]">Apply a look to the selected photo. Video looks are available in Studio.</p>{selectedImages.length ? <><div className="grid grid-cols-2 gap-2">{FILTER_PRESETS.map(preset => <button key={preset.name} type="button" onClick={() => {setIsComparingOriginal(false);setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,filterName:preset.name,filterStyle:preset.style} : image));}} aria-pressed={(selectedImages[activeEditIndex ?? 0]?.filterName || 'Original') === preset.name} className="overflow-hidden rounded-xl border border-white/10 text-left text-[10px] font-bold text-[#B8B0C9]"><img src={selectedImages[activeEditIndex ?? 0]?.url} alt="" className="h-14 w-full object-cover" style={{filter:preset.style || 'none'}}/><span className="block px-2 py-2">{preset.name}</span></button>)}</div><button type="button" disabled={selectedImages.length < 2} onClick={() => setSelectedImages(previous => {const active = previous[Math.min(activeEditIndex ?? 0, previous.length - 1)];return previous.map(image => ({...image,filterName:active?.filterName,filterStyle:active?.filterStyle}));})} className="w-full rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2.5 text-[10px] font-bold text-violet-100 disabled:opacity-40">Sync this look across all {selectedImages.length} photos</button><p className="text-[9px] text-[#827B9C]">Keep a multi-photo post visually consistent with one tap.</p></> : <p className="rounded-xl border border-white/10 p-3 text-[10px] text-[#A39BBF]">Choose a photo to apply NEXORA looks, or open Studio for video-grade looks.</p>}</div>}
+                      {creativeToolTab === 'effects' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">Fine visual effects</h4><p className="text-[10px] text-[#8E88A7]">Tune light, depth and colour in real time.</p>{([{label:'Brightness',value:brightness,set:setBrightness,min:50,max:150},{label:'Contrast',value:contrast,set:setContrast,min:50,max:150},{label:'Saturation',value:saturation,set:setSaturation,min:50,max:150},{label:'Soft focus',value:blur,set:setBlur,min:0,max:12}] as const).map(control => <label key={control.label} className="block space-y-2"><span className="flex justify-between text-[10px] text-[#BDB5CE]"><span>{control.label}</span><span className="tabular-nums text-violet-200">{control.value}{control.label === 'Soft focus' ? 'px' : '%'}</span></span><input type="range" min={control.min} max={control.max} value={control.value} onChange={event => control.set(Number(event.target.value))} disabled={!selectedImages.length} className="w-full accent-violet-500 disabled:opacity-40"/></label>)}<button type="button" onClick={() => {setBrightness(100);setContrast(100);setSaturation(100);setBlur(0);}} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-[#B8B0C9]">Reset effects</button></div>}
+                      {creativeToolTab === 'text' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">Text overlays</h4><p className="text-[10px] text-[#8E88A7]">Add a message to the media preview.</p><input type="text" maxLength={80} value={textOverlay} onChange={event => setTextOverlay(event.target.value)} placeholder="Write your overlay…" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-xs text-white"/><div className="flex items-center justify-between text-[10px] text-[#A39BBF]">Text colour<input aria-label="Creative overlay text colour" type="color" value={textOverlayColor} onChange={event => setTextOverlayColor(event.target.value)} className="h-8 w-12 bg-transparent"/></div><p className="text-[9px] text-[#827B9C]">For animated text, timing and motion, use the full NEXORA Studio timeline.</p></div>}
+                      {creativeToolTab === 'stickers' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">Stickers and reactions</h4><p className="text-[10px] text-[#8E88A7]">Choose one overlay or tap it again to remove.</p><div className="grid grid-cols-4 gap-2">{['🔥','⚡','✨','🏆','👾','🚀','💯','💜','🎧','🌹','🦋','⭐'].map(emoji => <button key={emoji} type="button" onClick={() => setStickerOverlay(stickerOverlay === emoji ? null : emoji)} aria-pressed={stickerOverlay === emoji} className={stickerOverlay === emoji ? 'rounded-xl border border-violet-400/60 bg-violet-500/15 py-3 text-xl' : 'rounded-xl border border-white/10 bg-white/[0.03] py-3 text-xl'}>{emoji}</button>)}</div><button type="button" onClick={() => setStickerOverlay(null)} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-[#B8B0C9]">Remove sticker</button></div>}
+                      {creativeToolTab === 'audio' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">Music and sound</h4><p className="text-[10px] leading-relaxed text-[#A39BBF]">Add Brazilian funk, other music styles, sound effects or voiceover using audio you own or are licensed to use.</p>{(videoFileUrl || recordedVideoUrl) && onOpenStudio ? <button type="button" onClick={openVideoInStudio} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-3 text-xs font-extrabold text-white">Open Studio audio timeline</button> : <p className="rounded-xl border border-white/10 p-3 text-[10px] text-[#8E88A7]">Audio mixing is available for video projects in NEXORA Studio.</p>}</div>}
+                      {creativeToolTab === 'presets' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">Quick creative recipes</h4><p className="text-[10px] text-[#8E88A7]">One-tap colour and mood combinations.</p>{[{name:'NEXORA Signature',style:'contrast(1.12) saturate(1.16) hue-rotate(8deg) brightness(.98)'},{name:'Violet glow',style:'saturate(1.18) contrast(1.08) hue-rotate(8deg)'},{name:'Golden hour',style:'sepia(.18) saturate(1.22) brightness(1.04)'},{name:'Night cinema',style:'contrast(1.22) saturate(.82) brightness(.9)'},{name:'Clean detail',style:'contrast(1.12) saturate(1.08)'}].map(preset => <button key={preset.name} type="button" disabled={!selectedImages.length} onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,filterName:preset.name,filterStyle:preset.style} : image))} className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.025] px-3 py-3 text-left text-[11px] font-bold text-white disabled:opacity-40"><span>{preset.name}</span><span className="text-[9px] text-violet-300">Apply →</span></button>)}</div>}
+                    </div>
+                  </div>
+                  <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] pt-3"><button type="button" onClick={prevStep} className="rounded-xl border border-white/10 px-4 py-3 text-xs font-bold text-[#B8B0C9]">← Back to editor</button><button type="button" onClick={nextStep} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-5 py-3 text-xs font-extrabold text-white">Continue to details <ChevronRight size={14} className="ml-1 inline"/></button></footer>
+                </section>
+              )}
+
+
+              {currentStep === 5 && (
+                /* STEP 5: SMART CAPTION & METADATA DETAILS */
                 <div className="space-y-4 animate-fadeIn">
                   <div className="space-y-1 text-left">
                     <label className="text-[10px] font-mono text-[#A39BBF] uppercase">Write a caption</label>
@@ -2495,8 +2585,8 @@ export default function MediaCreationEngine({
                 </div>
               )}
 
-              {currentStep === 5 && (
-                /* STEP 5: VISUAL PREVIEW & ACCESSIBILITY COMPLIANCE */
+              {currentStep === 6 && (
+                /* STEP 6: VISUAL PREVIEW & ACCESSIBILITY COMPLIANCE */
                 <div className="space-y-4 animate-fadeIn">
                   <div>
                     <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block mb-1">{activeTab === 'story' ? 'STORY PREVIEW' : 'POST PREVIEW'}</span>
@@ -2582,136 +2672,121 @@ export default function MediaCreationEngine({
                 </div>
               )}
 
-              {currentStep === 6 && (
-                /* STEP 6: PUBLISHING OPTIONS & PROGRESS SCREEN */
+              {currentStep === 7 && (
+                /* SCREEN 5: FINAL REVIEW, AUDIENCE & PUBLISH */
                 <div className="space-y-4 animate-fadeIn">
-                  
                   {postingStatus === 'idle' ? (
                     <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-bold text-white">{activeTab === 'story' ? 'Ready to share your story?' : 'Ready to share?'}</span>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <span className="mb-1 block text-[10px] font-mono uppercase tracking-[0.2em] text-violet-300">NEXORA · FINAL CHECK</span>
+                          <h3 className="text-base font-black text-white">Everything ready to go?</h3>
+                          <p className="mt-1 text-[11px] leading-relaxed text-[#A39BBF]">Review what you made, choose who can see it, then publish.</p>
+                        </div>
+                        <span className="shrink-0 rounded-full border border-violet-400/30 bg-violet-500/10 px-3 py-1.5 text-[10px] font-bold text-violet-200">Screen 5 of 5</span>
                       </div>
 
-                      <div className="space-y-2.5 bg-[#07070d]/50 p-3.5 border border-[#292244] rounded-2xl text-left">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <span className="text-xs font-bold text-[#EEEAF8] block">{activeTab === 'story' ? 'Your story' : 'Public post'}</span>
-                            <p className="mt-1 text-[11px] leading-relaxed text-[var(--nx-muted)]">{activeTab === 'story' ? 'Your story will be visible on NEXORA for 24 hours.' : 'Anyone on NEXORA can see this post.'}</p>
-                          </div>
-                          <span className="shrink-0 rounded-full border border-[#7138FF]/40 bg-[#7138FF]/15 px-2.5 py-1 text-[10px] font-semibold text-[#C7B5FF]">Everyone</span>
-                        </div>
-                        {activeTab !== 'story' && (
-                          <label className="flex items-center justify-between gap-3 border-t border-[#292244] pt-3 text-xs text-[#EEEAF8]">
-                            <span>Allow comments</span>
-                            <input type="checkbox" checked={commentsAllowed} onChange={(event) => setCommentsAllowed(event.target.checked)} className="h-4 w-4 accent-violet-500" />
-                          </label>
-                        )}
-                        {activeTab !== 'story' ? (
-                          <>
-                            <div className="border-t border-[#292244] pt-3 space-y-2">
-                            <div>
-                              <span className="block text-xs font-bold text-[#EEEAF8]">NEXORA Origin · Remix permission</span>
-                              <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Let other people remix this post. You can change this later.</p>
+                      <div className="overflow-hidden rounded-2xl border border-[#34265E] bg-[#090714]">
+                        <div className="flex items-center justify-between border-b border-[#292244] px-3.5 py-3">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <img src={currentUser.avatar} alt="" className="h-9 w-9 rounded-full border border-white/10 object-cover"/>
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-extrabold text-white">{currentUser.name}</p>
+                              <p className="truncate text-[10px] text-[#8E88A7]">@{currentUser.username}</p>
                             </div>
-                            <select
-                              aria-label="NEXORA Origin remix permission"
-                              value={originRemixPolicy}
-                              onChange={(event) => setOriginRemixPolicyState(event.target.value as OriginRemixPolicy)}
-                              className="w-full rounded-xl border border-[#34265E] bg-[#120E2B] px-3 py-2.5 text-xs font-semibold text-white outline-none focus:border-violet-400"
-                            >
+                          </div>
+                          <span className="rounded-full border border-violet-400/30 bg-violet-500/10 px-2.5 py-1 text-[9px] font-bold text-violet-200">FINAL PREVIEW</span>
+                        </div>
+                        <div className="space-y-3 p-3.5">
+                          <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-[#EEEAF8]">{caption || 'No caption added.'}</p>
+                          {selectedImages.length > 0 && (
+                            <div className={selectedImages.length > 1 ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-1'}>
+                              {selectedImages.slice(0, 4).map((photo, index) => (
+                                <div key={`publish-photo-${index}`} className="relative aspect-square overflow-hidden rounded-xl border border-[#292244] bg-black">
+                                  <img src={photo.url} alt={index === 0 ? imageAltText || 'Selected post photo' : `Selected post photo ${index + 1}`} className="h-full w-full object-cover" style={{filter:`${photo.filterStyle || 'none'} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`,transform:`rotate(${photo.rotation}deg) scale(${photo.zoom})`}}/>
+                                  {stickerOverlay && <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl">{stickerOverlay}</span>}
+                                  {textOverlay.trim() && <span className="pointer-events-none absolute inset-x-2 bottom-2 rounded-lg bg-black/70 px-2 py-2 text-center text-xs font-bold" style={{color:textOverlayColor}}>{textOverlay}</span>}
+                                </div>
+                              ))}
+                              {selectedImages.length > 4 && <p className="col-span-2 text-center text-[10px] text-[#A39BBF]">+{selectedImages.length - 4} more photos in this post</p>}
+                            </div>
+                          )}
+                          {(videoFileUrl || recordedVideoUrl) && <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="max-h-[340px] w-full rounded-xl border border-[#292244] bg-black object-contain"/>}
+                          {voiceFileUrl && <div className="flex items-center gap-2 rounded-xl border border-[#292244] bg-[#120E2B] p-3 text-[11px] text-[#D9D1EA]"><Play className="h-4 w-4 text-violet-300"/> Voice recording attached <span className="ml-auto text-[9px] text-[#8E88A7]">{voiceDurationSecs}s</span></div>}
+                          {pollQuestion.trim() && <div className="rounded-xl border border-[#292244] bg-[#120E2B] p-3"><p className="text-xs font-bold text-white">{pollQuestion}</p>{pollOptionsList.filter(Boolean).map((option,index)=><p key={index} className="mt-2 rounded-lg bg-[#090714] px-3 py-2 text-[11px] text-[#C9C1D9]">{option}</p>)}</div>}
+                          <div className="flex flex-wrap gap-2 border-t border-[#292244] pt-3 text-[9px] text-[#A39BBF]">
+                            <span className="rounded-full bg-white/[0.05] px-2.5 py-1">{activeTab === 'story' ? '24-hour story' : activeMode === 'video' || activeMode === 'reel' ? 'Video post' : activeMode === 'carousel' ? 'Carousel post' : activeMode === 'poll' ? 'Poll' : activeMode === 'voice' ? 'Voice post' : 'NEXORA post'}</span>
+                            {selectedImages.length > 0 && <span className="rounded-full bg-white/[0.05] px-2.5 py-1">{selectedImages.length} photo{selectedImages.length === 1 ? '' : 's'}</span>}
+                            {location.trim() && <span className="rounded-full bg-white/[0.05] px-2.5 py-1">📍 {location}</span>}
+                            {taggedUsernames.trim() && <span className="rounded-full bg-white/[0.05] px-2.5 py-1">Mentions added</span>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {activeTab !== 'story' && (
+                        <div className="space-y-3 rounded-2xl border border-[#34265E] bg-[#0B0918] p-3.5 text-left">
+                          <div>
+                            <h4 className="text-xs font-extrabold text-white">Who can see this?</h4>
+                            <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Your audience choice is attached to the post when it is saved.</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            {([
+                              {value:'public',label:'Everyone',detail:'Public on NEXORA',icon:'🌍'},
+                              {value:'followers',label:'Followers',detail:'People following you',icon:'👥'},
+                              {value:'circle',label:'My Circle',detail:'Your selected circle',icon:'💜'},
+                              {value:'community',label:'Community',detail:'Your community audience',icon:'◈'},
+                              {value:'onlyme',label:'Only me',detail:'Private to your account',icon:'🔒'}
+                            ] as const).map(option=>(
+                              <button key={option.value} type="button" onClick={()=>setAudience(option.value)} aria-pressed={audience===option.value} className={audience===option.value?'rounded-xl border border-violet-400/60 bg-violet-500/15 p-3 text-left ring-1 ring-violet-400/20':'rounded-xl border border-white/10 bg-white/[0.025] p-3 text-left hover:border-violet-400/30'}>
+                                <span className="flex items-center justify-between text-xs font-bold text-white"><span>{option.icon} {option.label}</span>{audience===option.value&&<Check className="h-3.5 w-3.5 text-violet-300"/>}</span>
+                                <span className="mt-1 block text-[9px] text-[#8E88A7]">{option.detail}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <label className="flex items-center justify-between gap-3 border-t border-[#292244] pt-3 text-xs text-[#EEEAF8]">
+                            <span><span className="block font-semibold">Allow comments</span><span className="mt-0.5 block text-[9px] text-[#8E88A7]">People can respond to your post</span></span>
+                            <input type="checkbox" checked={commentsAllowed} onChange={event=>setCommentsAllowed(event.target.checked)} className="h-4 w-4 accent-violet-500"/>
+                          </label>
+                          <div className="border-t border-[#292244] pt-3">
+                            <label className="block text-xs font-bold text-white">NEXORA Origin · Remix permission</label>
+                            <p className="mt-1 text-[10px] leading-relaxed text-[#8E88A7]">Choose whether other creators can remix the original media you are uploading now.</p>
+                            <select aria-label="NEXORA Origin remix permission" value={originRemixPolicy} onChange={event=>setOriginRemixPolicyState(event.target.value as OriginRemixPolicy)} className="mt-2 w-full rounded-xl border border-[#34265E] bg-[#120E2B] px-3 py-2.5 text-xs font-semibold text-white outline-none focus:border-violet-400">
                               <option value="closed">Closed · Only me</option>
                               <option value="allow_with_attribution">Allow remixing · Attribution required</option>
                             </select>
-                            <p className="text-[10px] leading-relaxed text-[#A39BBF]">
-                              {originRemixPolicy === 'closed'
-                                ? 'Your uploaded media stays closed to cross-account remixes by default.'
-                                : 'NEXORA will record creator attribution when another account remixes this media. Permission applies only to newly uploaded media in this post.'}
-                            </p>
+                            <p className="mt-2 text-[10px] leading-relaxed text-[#A39BBF]">{originRemixPolicy==='closed'?'Remixing is off by default.':'Attribution will be recorded for supported NEXORA Origin remixes of the newly uploaded source media.'}</p>
                           </div>
-                            <p className="text-[10px] leading-relaxed text-[#8E88A7]"></p>
-                          </>
-                        ) : (
-                          <p className="border-t border-[#292244] pt-3 text-[10px] leading-relaxed text-[#8E88A7]">Stories are public and disappear automatically after 24 hours.</p>
-                        )}
-                      </div>
+                        </div>
+                      )}
 
+                      <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3 text-[10px] leading-relaxed text-[#A39BBF]">
+                        <p className="font-bold text-[#E8E2F4]">Before you publish</p>
+                        <p className="mt-1">Check your caption, selected audience and media preview. Photo edits and overlays are rendered into uploaded images. Video edits must be exported from Studio before returning here.</p>
+                        {activeTab === 'story' && <p className="mt-1">Stories are shared through the existing 24-hour story flow.</p>}
+                      </div>
                     </div>
                   ) : (
-                    /* Publishing progress */
                     <div className="py-12 flex flex-col items-center justify-center text-center space-y-5">
                       {postingStatus === 'completed' ? (
-                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center animate-bounce">
-                          <Check className="w-9 h-9" />
-                        </div>
+                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center animate-bounce"><Check className="w-9 h-9"/></div>
                       ) : postingStatus === 'failed' ? (
-                        <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center">
-                          <X className="w-9 h-9" />
-                        </div>
+                        <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center"><X className="w-9 h-9"/></div>
                       ) : (
                         <div className="w-full max-w-xs space-y-3">
-                          <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
-                            <NexoraLoader size="md" />
-                          </div>
-                          <div className="flex items-center justify-between text-[11px] font-mono">
-                            <span className="text-violet-300">{publishStage}</span>
-                            <span className="text-violet-200 font-black tabular-nums">{uploadProgress}%</span>
-                          </div>
-                          <div
-                            className="h-2 w-full overflow-hidden rounded-full bg-[#19143A]"
-                            role="progressbar"
-                            aria-label="Upload progress"
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-valuenow={uploadProgress}
-                          >
-                            <div className="h-full rounded-full bg-violet-500 transition-[width] duration-200" style={{ width: `${uploadProgress}%` }} />
-                          </div>
-                          <p className="text-[10px] text-[#8E88A7]">Upload progress. Large videos may take longer to upload.</p>
+                          <div className="relative mx-auto flex h-16 w-16 items-center justify-center"><NexoraLoader size="md"/></div>
+                          <div className="flex items-center justify-between text-[11px] font-mono"><span className="text-violet-300">{publishStage}</span><span className="font-black tabular-nums text-violet-200">{uploadProgress}%</span></div>
+                          <div className="h-2 w-full overflow-hidden rounded-full bg-[#19143A]" role="progressbar" aria-label="Upload progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={uploadProgress}><div className="h-full rounded-full bg-violet-500 transition-[width] duration-200" style={{width:`${uploadProgress}%`}}/></div>
+                          <p className="text-[10px] text-[#8E88A7]">Your media is uploading. Large videos may take longer.</p>
                         </div>
                       )}
-
                       <div className="space-y-1">
-                        <span className="text-[10px] font-mono text-[#8E88A7] uppercase block tracking-wider">
-                          {postingStatus === 'publishing' && publishStage}
-                          {postingStatus === 'completed' && (activeTab === 'story' ? 'Your story is live!' : 'Your post is ready!')}
-                        </span>
-                        <p className="text-xs text-[#D1CBE3] font-sans">
-                          {postingStatus === 'completed' ? (activeTab === 'story' ? 'Your story will be available for 24 hours.' : 'Your post has been shared.') : postingStatus === 'failed' ? (errorMessage || 'Something went wrong. Your content is safe to try again.') : publishStage}
-                        </p>
+                        <span className="block text-[10px] font-mono uppercase tracking-wider text-[#8E88A7]">{postingStatus==='publishing'?publishStage:postingStatus==='completed'?(activeTab==='story'?'Your story is live!':'Your post is live!'):'Publishing paused'}</span>
+                        <p className="text-xs text-[#D1CBE3]">{postingStatus==='completed'?(activeTab==='story'?'Your story will be available for 24 hours.':'Your post has been shared on NEXORA.'):postingStatus==='failed'?(errorMessage||'Something went wrong. Your content is safe to try again.'):publishStage}</p>
                       </div>
-
-                      {postingStatus === 'failed' && (
-                        <div className="w-full max-w-sm rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-left space-y-2">
-                          <p className="text-[11px] leading-relaxed text-rose-200">{errorMessage || 'Something interrupted publishing.'}</p>
-                          <button
-                            type="button"
-                            onClick={() => { setPostingStatus('idle'); setErrorMessage(''); }}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-rose-100 hover:bg-rose-500/25"
-                          >
-                            <RefreshCw className="h-3.5 w-3.5" /> Try again
-                          </button>
-                        </div>
-                      )}
-
-                      {postingStatus !== 'completed' && postingStatus !== 'failed' && (
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => uploadAbortControllerRef.current?.abort()} 
-                            className="px-3 py-1.5 bg-[#120E2B] hover:bg-[#19143A] text-[#A39BBF] rounded-lg text-xs"
-                          >
-                            Cancel
-                          </button>
-                          <button 
-                            onClick={() => setIsMinimized(true)}
-                            className="px-3 py-1.5 bg-violet-600/20 text-violet-300 rounded-lg text-xs"
-                          >
-                            Minimize
-                          </button>
-                        </div>
-                      )}
+                      {postingStatus==='failed'&&<div className="w-full max-w-sm space-y-2 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-left"><p className="text-[11px] leading-relaxed text-rose-200">{errorMessage||'Something interrupted publishing.'}</p><button type="button" onClick={()=>{setPostingStatus('idle');setErrorMessage('');}} className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-rose-100"><RefreshCw className="h-3.5 w-3.5"/> Review and try again</button></div>}
+                      {postingStatus==='publishing'&&<div className="flex gap-2"><button type="button" onClick={()=>uploadAbortControllerRef.current?.abort()} className="rounded-lg bg-[#120E2B] px-3 py-1.5 text-xs text-[#A39BBF]">Cancel upload</button><button type="button" onClick={()=>setIsMinimized(true)} className="rounded-lg bg-violet-600/20 px-3 py-1.5 text-xs text-violet-300">Minimize</button></div>}
                     </div>
                   )}
-
                 </div>
               )}
 
@@ -2721,7 +2796,7 @@ export default function MediaCreationEngine({
         </div>
 
         {/* Publishing controls */}
-        {activeTab !== 'drafts' && postingStatus === 'idle' && (
+        {activeTab !== 'drafts' && currentStep !== 3 && currentStep !== 4 && postingStatus === 'idle' && (
           <div className="border-t border-[#292244]/60 pt-4 flex justify-between items-center shrink-0">
             <div>
               <button 
@@ -2740,7 +2815,7 @@ export default function MediaCreationEngine({
                   ← Back
                 </button>
               )}
-              {currentStep < 6 ? (
+              {currentStep < 7 ? (
                 <button 
                   onClick={nextStep}
                   disabled={currentStep === 2 && !activeMode}
