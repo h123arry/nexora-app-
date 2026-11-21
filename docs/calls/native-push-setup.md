@@ -1,27 +1,27 @@
-# NEXORA incoming-call push setup
+# NEXORA native incoming-call notifications
 
-The direct-call backend sends an urgent, audible FCM alert for incoming calls. The recipient's device token is stored under their own account at `users/{uid}/pushTokens/{tokenHash}`. A notification tap opens NEXORA; the app's authenticated active-call listener then opens the real incoming-call screen, where the recipient can accept or decline.
+## Current implementation boundary
 
-## Android
+This release integrates real one-to-one voice and video calls in the web app, including the LiveKit media connection and browser push payload. The current Capacitor build does **not** register native FCM device tokens yet. Therefore native Android/iOS incoming-call alerts are not enabled by this change, and no lock-screen answering is claimed.
 
-1. In Firebase project `nexora-prod-voiceharrison`, register an Android app with package name `com.voiceofharrison.nexora`.
-2. Download its `google-services.json` and place it at `android/app/google-services.json`. Do not commit a file containing a service-account private key; the Firebase Android client configuration is expected here.
-3. Build and install the updated native app.
-4. In NEXORA Notifications, grant device notification permission. Android 13+ requires this permission for alerts.
-5. Confirm the `NEXORA calls` notification channel is enabled in Android system settings.
+Do not treat the steps below as a completed setup. They are prerequisites for a separate native push integration.
 
-## iOS
+## Android prerequisites
 
-1. In the same Firebase project, register an iOS app with bundle ID `com.voiceofharrison.nexora`.
-2. Add its `GoogleService-Info.plist` to the iOS app target at `ios/App/App/GoogleService-Info.plist`.
-3. In Apple Developer, enable Push Notifications for the matching App ID and create an APNs authentication key.
-4. Upload the APNs key, Key ID and Team ID in Firebase Console → Project Settings → Cloud Messaging.
-5. Build and install the signed iOS app, then grant notification permission in NEXORA Notifications.
+1. Register the Android app in Firebase project `nexora-prod-voiceharrison` with package name `com.voiceofharrison.nexora`.
+2. Add its Firebase client configuration at `android/app/google-services.json`.
+3. Implement and validate Capacitor Firebase Messaging token registration, token ownership and logout cleanup before enabling native call alerts.
+4. Request Android 13+ notification permission and create the `nexora_calls` notification channel.
 
-## Device acceptance test
+## iOS prerequisites
 
-Use two separate NEXORA accounts on two physical phones. Place a voice call while the recipient app is foregrounded, backgrounded, and the screen is locked. Verify the alert appears, tapping it opens the incoming call screen, Accept joins the same LiveKit room, Decline ends the ringing state, and unanswered calls expire as missed calls.
+1. Register the iOS app in the same Firebase project with bundle ID `com.voiceofharrison.nexora`.
+2. Add `ios/App/App/GoogleService-Info.plist`.
+3. Enable Push Notifications for the App ID and upload the matching APNs authentication key in Firebase Console.
+4. Implement and validate Capacitor Firebase Messaging token registration and logout cleanup.
 
-## Important platform boundary
+## Acceptance tests required
 
-This implementation sends standard high-priority FCM/APNs alert notifications. It does not yet claim a native Android Telecom full-screen call activity or iOS CallKit/PushKit VoIP wake-up while the app is force-quit. Those require additional native call-provider integration and, on iOS, VoIP push credentials and App Store/device testing. Standard alert delivery also depends on the Firebase platform app files and APNs key above being configured.
+Use two separate NEXORA accounts on two physical phones. Test incoming calls with the recipient app foregrounded, backgrounded and the screen locked. Confirm the alert opens the authenticated incoming-call screen, Accept joins the same LiveKit room, Decline ends ringing, unanswered calls expire, and logout revokes the device token.
+
+Standard FCM/APNs alerts do not provide native Android Telecom full-screen call UI or iOS CallKit/PushKit wake-up while the app is force-quit. Those require separate native call-provider work and device testing.
