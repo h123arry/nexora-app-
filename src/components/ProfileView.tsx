@@ -1225,9 +1225,6 @@ export default function ProfileView({
   const saveProfileField = async (updates: Partial<User>) => {
     if (!isLoggedIn || auth.currentUser?.uid !== currentUser.id) return;
     const patch: Partial<User> = { ...updates };
-    const fieldKeys = Object.keys(patch);
-    if (fieldKeys.some(key => profileFieldSavesRef.current.has(key))) return;
-    fieldKeys.forEach(key => profileFieldSavesRef.current.add(key));
 
     if (patch.name !== undefined && patch.name !== currentUser.name) {
       const lastChange = currentUser.lastDisplayNameChangeTime;
@@ -1257,10 +1254,10 @@ export default function ProfileView({
     const changed = Object.entries(patch).some(([key, value]) =>
       value !== undefined && value !== (currentUser as any)[key]
     );
-    if (!changed) {
-      fieldKeys.forEach(key => profileFieldSavesRef.current.delete(key));
-      return;
-    }
+    if (!changed) return;
+    const fieldKeys = Object.keys(patch);
+    if (fieldKeys.some(key => profileFieldSavesRef.current.has(key))) return;
+    fieldKeys.forEach(key => profileFieldSavesRef.current.add(key));
 
     try {
       await onUpdateProfile(patch);
@@ -1334,7 +1331,8 @@ export default function ProfileView({
     editSocialTwitter !== (currentUser.socialTwitter || '') ||
     editSocialInsta !== (currentUser.socialInstagram || '') ||
     editAvatar !== currentUser.avatar ||
-    editCover !== (currentUser.coverImage || '');
+    editCover !== (currentUser.coverImage || '') ||
+    !!pendingCoverFile;
   const handleCancelEditProfile = () => {
     if (hasUnsavedProfileChanges && !window.confirm('Discard your unsaved profile changes?')) return;
     stopWebcam();
