@@ -108,6 +108,8 @@ jobs:
           R2_WORKER_RECONCILE_VIDEOS_ONLY: 'true'
         run: |
           set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}"
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}"
           TOKEN="$(openssl rand -hex 32)"
           echo "::add-mask::$TOKEN"
           export MEDIA_WORKER_TOKEN="$TOKEN"
