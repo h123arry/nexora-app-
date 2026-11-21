@@ -1967,7 +1967,7 @@ export default function MediaCreationEngine({
 
                       {/* Snap device simulation */}
                       <div className="absolute inset-0 flex flex-col justify-between px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1.25rem,env(safe-area-inset-top))] text-center">
-
+                        <button type="button" aria-label="Back to Create" onClick={() => setCurrentStep(1)} className="absolute left-4 top-[max(1rem,env(safe-area-inset-top))] z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur"><X size={18}/></button>
                         <video ref={photoPreviewRef} autoPlay muted playsInline className="absolute inset-0 h-full w-full object-cover bg-black" aria-label="Live camera preview" />
                         {permissionState !== 'granted' && (
                           <button type="button" onClick={() => setPermissionTarget('camera')} className="w-full rounded-xl border border-[#44376F] bg-[#120E2B] py-2.5 text-xs font-semibold text-white hover:border-violet-400/60">Turn on camera</button>
