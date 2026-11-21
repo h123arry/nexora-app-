@@ -11,6 +11,7 @@ import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { setPostLike } from './functions/src/postEngagement';
+import { setCreatorFollowStateForUser, SocialFollowError } from './server/socialFollow';
 import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
@@ -135,6 +136,31 @@ const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
 const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(firebaseStorageBucket) : null;
 
+app.post('/api/social/follow-state', requireFirebaseUser, async (req, res) => {
+  const uid = String(res.locals.userId || '');
+  const { creatorId, following } = req.body || {};
+  if (typeof creatorId !== 'string' || typeof following !== 'boolean') {
+    return res.status(400).json({ code: 'invalid_follow_request', error: 'A valid creator and follow state are required.' });
+  }
+  try {
+    if (!await allowFollowMutation(uid)) {
+      res.setHeader('Retry-After', '60');
+      return res.status(429).json({ code: 'follow_rate_limited', error: 'Too many follow changes. Please wait before trying again.' });
+    }
+    const result = await setCreatorFollowStateForUser(serverDb, uid, creatorId, following);
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof SocialFollowError) {
+      const status = error.code === 'unauthenticated' ? 401
+        : error.code === 'invalid-argument' ? 400
+        : error.code === 'not-found' ? 404 : 409;
+      return res.status(status).json({ code: error.code, error: error.message });
+    }
+    console.error('[SocialFollow] Follow state could not be saved.', { uid, code: (error as { code?: string } | null)?.code || 'unknown' });
+    return res.status(503).json({ code: 'follow_service_unavailable', error: 'NEXORA could not save this follow change. Please retry.' });
+  }
+});
+
 app.post('/api/social/post-spark-state', requireFirebaseUser, async (req, res) => {
   const uid = String(res.locals.userId || '');
   const { postId, liked } = req.body || {};
@@ -199,6 +225,25 @@ async function requireFirebaseUser(req: express.Request, res: express.Response, 
   }
   res.locals.userId = decoded.uid;
   return next();
+}
+
+async function allowFollowMutation(uid: string): Promise<boolean> {
+  const windowMs = 60_000;
+  const limit = 60;
+  const ref = serverDb.collection('followMutationRateLimits').doc(createHash('sha256').update(uid).digest('hex'));
+  return serverDb.runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    const previous = snapshot.data();
+    const now = Date.now();
+    const cutoff = now - windowMs;
+    const timestamps = Array.isArray(previous?.requestTimestamps)
+      ? previous.requestTimestamps.filter((value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > cutoff)
+      : [];
+    if (timestamps.length >= limit) return false;
+    timestamps.push(now);
+    transaction.set(ref, { requestTimestamps: timestamps, count: timestamps.length, expiresAt: new Date(now + windowMs * 10), updatedAt: FieldValue.serverTimestamp() });
+    return true;
+  });
 }
 
 async function allowSparkMutation(uid: string): Promise<boolean> {
