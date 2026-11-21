@@ -10,16 +10,18 @@ import { inspectSourceCredential } from './originCredentials.js';
 import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { classifyStorageObject, imageRenditionWidths, videoRenditionsForSize, videoRenditionDimensions, canClaimMediaProcessing, MAX_DURATION_SECONDS } from './policies.js';
+import { classifyStorageObject, classifyR2StorageObject, imageRenditionWidths, videoRenditionsForSize, videoRenditionDimensions, canClaimMediaProcessing, MAX_DURATION_SECONDS } from './policies.js';
+import { resolveR2WorkerConfig, downloadR2Object, uploadR2Object } from './r2Storage.js';
 
 const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
-const bucketName = process.env.MEDIA_BUCKET;
+const bucketName = process.env.MEDIA_BUCKET || '';
 const databaseId = process.env.FIRESTORE_DATABASE_ID;
-if (!projectId || !bucketName || !databaseId) throw new Error('GOOGLE_CLOUD_PROJECT, MEDIA_BUCKET and FIRESTORE_DATABASE_ID are required');
+const r2Config = resolveR2WorkerConfig();
+if (!projectId || !databaseId || (!bucketName && !r2Config)) throw new Error('GOOGLE_CLOUD_PROJECT, FIRESTORE_DATABASE_ID and either MEDIA_BUCKET or complete R2 credentials are required');
 if (!getApps().length) initializeApp({ projectId });
 const db = getFirestore(getApps()[0], databaseId);
 const storage = new Storage({ projectId });
-const bucket = storage.bucket(bucketName);
+const bucket = bucketName ? storage.bucket(bucketName) : null;
 const RENDITIONS = [{height:360,bitrate:'800k',audio:'96k'},{height:720,bitrate:'2500k',audio:'128k'},{height:1080,bitrate:'5000k',audio:'128k'}];
 
 function run(binary,args) {
@@ -51,7 +53,9 @@ async function probe(file){
   if(duration<=0 || duration>MAX_DURATION_SECONDS || !video.width || !video.height) throw new Error('Video duration or dimensions are outside supported limits');
   return {durationSeconds:duration,width:video.width,height:video.height,format:data.format.format_name,videoCodec:video.codec_name,frameRate:video.avg_frame_rate};
 }
-async function upload(local,object,contentType,cacheControl='public,max-age=31536000,immutable'){
+async function upload(local,object,contentType,cacheControl='public,max-age=31536000,immutable',provider='gcs'){
+  if(provider==='r2') return uploadR2Object(r2Config,local,object,contentType,cacheControl);
+  if(!bucket) throw new Error('Google Cloud Storage is not configured for this worker.');
   await bucket.upload(local,{destination:object,metadata:{contentType,cacheControl,metadata:{nexoraGenerated:'true'}}});
 }
 async function persistCredentialInspection({ownerId,mediaId,generation,inspection}){
@@ -71,7 +75,11 @@ async function persistCredentialInspection({ownerId,mediaId,generation,inspectio
 }
 
 async function processObject(event){
-  const classification=classifyStorageObject(event,bucketName);
+  const provider=event?.provider==='r2'?'r2':'gcs';
+  if(provider==='r2' && !r2Config) throw new Error('R2 processing credentials are not configured.');
+  const classification=provider==='r2'
+    ? classifyR2StorageObject(event,r2Config.bucket)
+    : classifyStorageObject(event,bucketName);
   if(classification.ignored) return {ignored:true,reason:classification.reason};
   const {object,ownerId,mediaId,isVideo,isImage,generation}=classification;
   const ref=db.collection('mediaAssets').doc(mediaId);
@@ -92,7 +100,11 @@ async function processObject(event){
   const work=await mkdtemp(path.join(tmpdir(),'nexora-media-'));
   try {
     const input=path.join(work,'source');
-    await bucket.file(object.name, { generation }).download({ destination: input, preconditionOpts: { ifGenerationMatch: generation } });
+    if(provider==='r2') await downloadR2Object(r2Config,object.name,input);
+    else {
+      if(!bucket) throw new Error('Google Cloud Storage is not configured for this worker.');
+      await bucket.file(object.name, { generation }).download({ destination: input, preconditionOpts: { ifGenerationMatch: generation } });
+    }
     // Inspect the immutable original before Sharp/FFmpeg transforms can strip its manifest.
     const credentialInspection=await inspectSourceCredential(input,classification.contentType);
     await persistCredentialInspection({ownerId,mediaId,generation,inspection:credentialInspection});
@@ -105,7 +117,7 @@ async function processObject(event){
         const output=path.join(work,`image-${width}.webp`);
         const outputInfo=await sharp(input,{limitInputPixels:100_000_000}).rotate().resize({width,withoutEnlargement:true}).webp({quality:82,effort:4}).toFile(output);
         const objectPath=`${outputRoot}/image-${outputInfo.width}.webp`;
-        await upload(output,objectPath,'image/webp');
+        await upload(output,objectPath,'image/webp','public,max-age=31536000,immutable',provider);
         variants.push({width:outputInfo.width,height:outputInfo.height,path:objectPath});
       }
       const result=await db.runTransaction(async tx=>{
@@ -132,19 +144,19 @@ async function processObject(event){
         return line && !line.startsWith('#') ? signedCdnUrl(prefix+'/'+line,line) : line;
       }).join(String.fromCharCode(10));
       await (await import('node:fs/promises')).writeFile(hls,playlist);
-      await upload(mp4,`${prefix}/video.mp4`,'video/mp4');
-      await upload(hls,`${prefix}/index.m3u8`,'application/vnd.apple.mpegurl','public,max-age=60');
-      for(const entry of await (await import('node:fs/promises')).readdir(dir)) if(entry.endsWith('.ts')) await upload(path.join(dir,entry),`${prefix}/${entry}`,'video/mp2t');
+      await upload(mp4,`${prefix}/video.mp4`,'video/mp4','public,max-age=31536000,immutable',provider);
+      await upload(hls,`${prefix}/index.m3u8`,'application/vnd.apple.mpegurl','public,max-age=60',provider);
+      for(const entry of await (await import('node:fs/promises')).readdir(dir)) if(entry.endsWith('.ts')) await upload(path.join(dir,entry),`${prefix}/${entry}`,'video/mp2t','public,max-age=31536000,immutable',provider);
       master.push('#EXT-X-STREAM-INF:BANDWIDTH='+ (parseInt(rendition.bitrate,10)*1000) + ',RESOLUTION=' + videoRenditionDimensions(metadata.width,metadata.height,rendition.height).width + 'x' + videoRenditionDimensions(metadata.width,metadata.height,rendition.height).height + String.fromCharCode(10) + signedCdnUrl(prefix+'/index.m3u8',rendition.height+'p/index.m3u8'));
       actual.push({height:rendition.height,bitrate:rendition.bitrate,mp4Path:`${prefix}/video.mp4`,hlsPath:`${prefix}/index.m3u8`});
     }
     if(!actual.length) throw new Error('No supported rendition could be generated');
     const masterPath=path.join(work,'master.m3u8');
     await (await import('node:fs/promises')).writeFile(masterPath,`#EXTM3U\n#EXT-X-VERSION:3\n${master.join('\n')}\n`);
-    await upload(masterPath,`${outputRoot}/master.m3u8`,'application/vnd.apple.mpegurl','public,max-age=60');
+    await upload(masterPath,`${outputRoot}/master.m3u8`,'application/vnd.apple.mpegurl','public,max-age=60',provider);
     const poster=path.join(work,'poster.jpg');
     await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-ss',String(Math.min(1,metadata.durationSeconds/4)),'-i',input,'-frames:v','1','-vf','scale=640:-2','-q:v','3',poster]);
-    await upload(poster,`${outputRoot}/poster.jpg`,'image/jpeg');
+    await upload(poster,`${outputRoot}/poster.jpg`,'image/jpeg','public,max-age=31536000,immutable',provider);
     const result=await db.runTransaction(async tx=>{
       const snap=await tx.get(ref); const current=snap.data();
       if(current?.processingToken!==token || current.ownerId!==ownerId) return false;
@@ -163,6 +175,10 @@ async function processObject(event){
 http('processMedia',async(req,res)=>{
   try {
     if(req.method!=='POST') return res.status(405).send('Method not allowed');
+    if(req.body?.provider==='r2') {
+      const token=process.env.MEDIA_WORKER_TOKEN;
+      if(!token || req.header('authorization')!==`Bearer ${token}`) return res.status(401).json({error:'unauthorized'});
+    }
     const type=req.header('ce-type') || req.body?.type;
     if(type && type!=='google.cloud.storage.object.v1.finalized') return res.status(204).send();
     const result=await processObject(req.body);
