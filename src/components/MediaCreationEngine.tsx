@@ -2136,7 +2136,7 @@ export default function MediaCreationEngine({
                           </div>
                           <div className="z-10 flex flex-col items-center gap-3">
                             <div className="flex w-full max-w-full items-center justify-center gap-1.5 overflow-x-auto rounded-full border border-white/15 bg-black/55 p-2 backdrop-blur-xl">
-                              {RECORDING_DURATIONS.filter(duration => [15, 30, 60, 1200].includes(duration.seconds)).map(duration => (
+                              {RECORDING_DURATIONS.filter(duration => [15, 30, 60, 180, 600, 1200].includes(duration.seconds)).map(duration => (
                                 <button key={duration.seconds} type="button" aria-pressed={recordingLimitSecs === duration.seconds} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setRecordingLimitSecs(duration.seconds)} className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-bold transition-colors disabled:opacity-50 ${recordingLimitSecs === duration.seconds ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/40' : 'text-white/75 hover:bg-white/10'}`}>{duration.label}</button>
                               ))}
                             </div>
