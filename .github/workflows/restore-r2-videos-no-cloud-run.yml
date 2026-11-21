@@ -84,7 +84,6 @@ jobs:
         shell: bash
         env:
           PORT: '8080'
-          R2_WORKER_DISABLE_SCHEDULER: 'true'
         run: |
           set -euo pipefail
           TOKEN="$(openssl rand -hex 32)"
