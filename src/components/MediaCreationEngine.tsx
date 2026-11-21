@@ -2128,7 +2128,7 @@ export default function MediaCreationEngine({
                               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/40 px-8 text-center">
                                 <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/25 border-t-violet-300" />
                                 <p className="text-xs font-semibold text-white">{permissionState === 'denied' ? 'Camera access is off' : 'Starting your camera…'}</p>
-                                {permissionState !== 'granted' && <button type="button" onClick={() => setPermissionTarget('camera')} className="rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-semibold text-white">Enable camera</button>}
+                                <button type="button" onClick={() => { setPermissionState('prompt'); setPermissionTarget('camera'); }} className="rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-semibold text-white">{permissionState === 'denied' ? 'Enable camera' : 'Retry camera'}</button>
                               </div>
                             )}
                           </div>
