@@ -13,6 +13,7 @@ test('R2 worker configuration is optional until R2 processing is selected', () =
   assert.equal(resolveR2WorkerConfig({}), null);
   assert.equal(resolveR2WorkerConfig(env).bucket, 'nexora-media');
   assert.throws(() => resolveR2WorkerConfig({ ...env, R2_ACCOUNT_ID: 'bad' }), /configuration/);
+  assert.throws(() => resolveR2WorkerConfig({ R2_ACCOUNT_ID: env.R2_ACCOUNT_ID }), /Incomplete/);
 });
 
 test('R2 worker signs immutable object GET and PUT URLs for the account bucket', () => {
