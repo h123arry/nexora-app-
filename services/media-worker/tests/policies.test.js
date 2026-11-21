@@ -126,7 +126,8 @@ describe('NEXORA R2 media event validation', () => {
   });
 });
 
-\ndescribe('NEXORA R2 video reconciliation eligibility', () => {
+
+describe('NEXORA R2 video reconciliation eligibility', () => {
   const ownerId = 'creator-1';
   const mediaId = 'media-1';
   const original = {
