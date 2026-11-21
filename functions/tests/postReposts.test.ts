@@ -11,6 +11,7 @@ const authorId = 'repost-test-author';
 const sourcePostId = 'repost-test-public-source';
 const privatePostId = 'repost-test-private-source';
 const quoteSourcePostId = 'repost-test-quote-source';
+const richTextSourcePostId = 'repost-test-rich-text-source';
 const createdRepostIds = new Set<string>();
 const app = initializeApp({ projectId }, 'post-repost-tests');
 const db = getFirestore(app);
@@ -26,6 +27,7 @@ before(async () => {
   });
   await db.doc(`posts/${privatePostId}`).set({ id: privatePostId, userId: authorId, audience: 'followers', shares: 0 });
   await db.doc(`posts/${quoteSourcePostId}`).set({ id: quoteSourcePostId, userId: authorId, username: authorId, name: 'Repost Author', content: 'Original quote source', audience: 'public', tags: [], shares: 0 });
+  await db.doc(`posts/${richTextSourcePostId}`).set({ id: richTextSourcePostId, userId: authorId, username: authorId, name: 'Repost Author', content: [{ type: 'paragraph', children: [{ text: 'A proper text post' }] }], audience: 'public', tags: [], shares: 0 });
 });
 
 after(async () => {
@@ -33,6 +35,7 @@ after(async () => {
     db.doc(`posts/${sourcePostId}`).delete(),
     db.doc(`posts/${privatePostId}`).delete(),
     db.doc(`posts/${quoteSourcePostId}`).delete(),
+    db.doc(`posts/${richTextSourcePostId}`).delete(),
     db.doc(`users/${actorId}/postReposts/${quoteSourcePostId}`).delete(),
     db.doc(`publicProfiles/${actorId}`).delete(),
     db.doc(`publicProfiles/${authorId}`).delete(),
@@ -80,6 +83,14 @@ test('creates a quote repost while preserving the original creator and source te
   assert.equal(repost.get('content'), 'My perspective on this.');
   assert.equal(repost.get('sourcePostContent'), 'Original quote source');
   assert.equal(repost.get('sourceAuthorUsername'), authorId);
+});
+
+test('quote reposts normalize legacy rich-text arrays into readable text', async () => {
+  const result = await createPublicPostRepost(db, actorId, richTextSourcePostId, 'My thoughts');
+  createdRepostIds.add(result.repostPostId);
+  const repost = await db.doc(`posts/${result.repostPostId}`).get();
+  assert.equal(repost.get('content'), 'My thoughts');
+  assert.equal(repost.get('sourcePostContent'), 'A proper text post');
 });
 
 test('rejects private, missing and malformed source posts', async () => {
