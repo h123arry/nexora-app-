@@ -112,6 +112,7 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
     };
     const abort = () => xhr.abort();
     xhr.open('PUT', intent.uploadUrl, true);
+    xhr.timeout = 120000;
     xhr.setRequestHeader('Content-Type', contentType);
     xhr.setRequestHeader('If-None-Match', '*');
     xhr.upload.onprogress = event => {
@@ -132,7 +133,10 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
         : `R2 upload failed (HTTP ${xhr.status}).`;
       finish(new Error(reason));
     };
-    xhr.onerror = () => finish(new Error('NEXORA could not connect to media storage. This may be a bucket CORS or network configuration issue. Please retry.'));
+    xhr.onerror = () => finish(new Error(navigator.onLine === false
+      ? 'Your internet connection was interrupted during upload. Reconnect and try again.'
+      : 'The media upload connection was interrupted before NEXORA received a response. Check your connection and try again.'));
+    xhr.ontimeout = () => finish(new Error('The media upload took too long and was stopped. Check your connection and try again.'));
     xhr.onabort = () => finish(new DOMException('Upload cancelled.', 'AbortError'));
     signal?.addEventListener('abort', abort, { once: true });
     if (signal?.aborted) return abort();
