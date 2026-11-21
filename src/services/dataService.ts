@@ -782,9 +782,13 @@ export type { FeedPage };
  * available through getGlobalPostsPage; active account-specific features keep
  * their own scoped listeners.
  */
+let publicFeedBootstrapPromise: Promise<FeedPage> | null = null;
+
 export function subscribeToPosts(callback: (posts: Post[], page?: FeedPage) => void) {
   let active = true;
-  void getGlobalPostsPage(null, 30).then((page) => {
+  // React StrictMode mounts effects twice in development; share the same read.
+  publicFeedBootstrapPromise ??= getGlobalPostsPage(null, 30);
+  void publicFeedBootstrapPromise.then((page) => {
     if (active) callback(page.posts, page);
   }).catch((error) => {
     console.warn('[NEXORA] Public feed bootstrap unavailable; retaining locally cached feed.', {
