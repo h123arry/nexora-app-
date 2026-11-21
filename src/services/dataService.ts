@@ -255,7 +255,12 @@ async function setFollowStateDirect(followerId: string, followingId: string, fol
     throw new Error('Only the signed-in account can change its follow relationships.');
   }
   const idToken = await user.getIdToken();
-  const response = await fetch(apiRequestUrl('/api/social/follow-state'), {
+  const edgeUrl = (import.meta.env.VITE_NEXORA_FOLLOW_EDGE_URL || '').trim();
+  const endpoint = edgeUrl ? new URL(edgeUrl).toString() : apiRequestUrl('/api/social/follow-state');
+  if (edgeUrl && new URL(endpoint).protocol !== 'https:') {
+    throw new Error('NEXORA follow edge must use HTTPS.');
+  }
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${idToken}`,
