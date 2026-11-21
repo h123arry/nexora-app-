@@ -2788,7 +2788,7 @@ export default function MediaCreationEngine({
                     </div>
                   )}
                 </div>
-              )} )}
+              )}
 
             </div>
           )}
