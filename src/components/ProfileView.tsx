@@ -157,7 +157,7 @@ function createRemoteVideoPoster(videoUrl: string): Promise<Blob | null> {
 const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVideoPosters = false, ownerId }: MediaGridProps) => {
   const attemptedPosterRepairs = useRef(new Set<string>());
   const [repairedPosters, setRepairedPosters] = useState<Record<string, string>>({});
-  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.image || post.images?.find(Boolean) || ''}:${post.videoUrl || ''}`).join('|');
+  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.image || post.images?.find(Boolean) || ''}:${post.videoUrl || ''}:${post.media || ''}:${(post as any).thumbnailUrl || ''}:${(post as any).posterUrl || ''}`).join('|');
 
   useEffect(() => {
     if (!repairVideoPosters || !ownerId || auth.currentUser?.uid !== ownerId) return;
