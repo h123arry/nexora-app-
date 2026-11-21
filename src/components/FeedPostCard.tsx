@@ -22,6 +22,7 @@ interface FeedPostCardProps {
   followingIds: string[];
   pinnedPostIds: string[];
   shouldPreload: boolean;
+  shouldPreloadImage: boolean;
   isReleased: boolean;
   preloadMode: 'auto' | 'metadata' | 'none';
   currentUser: User | null;
@@ -73,6 +74,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   followingIds,
   pinnedPostIds,
   shouldPreload,
+  shouldPreloadImage,
   isReleased,
   preloadMode,
   currentUser,
@@ -589,6 +591,9 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             post={post}
             image={post.image}
             images={post.images}
+            isActive={isActive}
+            shouldPreload={shouldPreloadImage}
+            isReleased={!isActive && !shouldPreloadImage}
             onSpark={() => onSpark(post.id)}
             isFollowing={post.userId ? followingIds.includes(post.userId) : false}
             onToggleFollow={() => post.userId && onToggleFollow?.(post.userId)}
@@ -808,6 +813,7 @@ export const FeedPostCard = React.memo(FeedPostCardImpl, (prev, next) => {
   if (prev.onImpression !== next.onImpression) return false;
   if (prev.isActive !== next.isActive) return false;
   if (prev.shouldPreload !== next.shouldPreload) return false;
+  if (prev.shouldPreloadImage !== next.shouldPreloadImage) return false;
   if (prev.isReleased !== next.isReleased) return false;
   if (prev.preloadMode !== next.preloadMode) return false;
   if (prev.selectedTag !== next.selectedTag) return false;
