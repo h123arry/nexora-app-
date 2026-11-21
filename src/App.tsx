@@ -33,7 +33,6 @@ import {
   getGlobalPostsPage,
   addPublicPostCommentDb,
   subscribeToPosts, 
-  subscribeToUsers, 
   savePostToDb,
   publishPostNow,
   subscribeToNotifications, 
@@ -450,7 +449,6 @@ export default function App() {
 
   useEffect(() => {
     let unsubPosts: () => void;
-    let unsubUsers: () => void;
     let unsubFollows: () => void;
     let receivedInitialPosts = false;
 
@@ -460,7 +458,7 @@ export default function App() {
     console.log('[App] Subscribing to public posts and user directory...');
     unsubPosts = subscribeToPosts((dbPosts, page) => {
       console.log('[App] Received posts:', dbPosts?.length || 0);
-      if (dbPosts) {
+      if (dbPosts?.length) {
         setPosts(previousPosts => {
           const incomingPosts = normalizePosts(dbPosts);
           if (!receivedInitialPosts) return incomingPosts;
@@ -481,22 +479,6 @@ export default function App() {
       setIsPostsHydrated(true);
     });
 
-    unsubUsers = subscribeToUsers((dbUsers) => {
-      console.log('[App] Received users:', dbUsers?.length || 0);
-      if (dbUsers) {
-        setGlobalUsersMap(prev => {
-          const newMap = { ...prev };
-          dbUsers.forEach(u => {
-            newMap[u.id] = {
-              ...u,
-              avatar: getSafeAvatar(u.avatar, u.name || u.username),
-            };
-          });
-          return newMap;
-        });
-      }
-    });
-
     if (isLoggedIn && firebaseUser) {
       unsubFollows = subscribeToFollows(firebaseUser.uid, (dbFollows) => {
         if (dbFollows) {
@@ -512,7 +494,6 @@ export default function App() {
     return () => {
       console.log('[App] Cleaning up auth and data subscriptions...');
       if (unsubPosts) unsubPosts();
-      if (unsubUsers) unsubUsers();
       if (unsubFollows) unsubFollows();
     };
   }, [firebaseUser?.uid, isLoggedIn]);
