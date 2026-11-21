@@ -250,11 +250,27 @@ async function savePostToDbDirect(post: any) {
 }
 
 async function setFollowStateDirect(followerId: string, followingId: string, following: boolean) {
-  if (!auth.currentUser || auth.currentUser.uid !== followerId) {
+  const user = auth.currentUser;
+  if (!user || user.uid !== followerId) {
     throw new Error('Only the signed-in account can change its follow relationships.');
   }
-  const setState = httpsCallable(functions, 'setCreatorFollowState');
-  return setState({ creatorId: followingId, following });
+  const token = await user.getIdToken();
+  const response = await fetch(apiRequestUrl('/api/social/follow-state'), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creatorId: followingId, following }),
+  });
+  const payload = await response.json().catch(() => ({})) as {
+    following?: boolean;
+    changed?: boolean;
+    followerCount?: number | null;
+    error?: string;
+  };
+  if (!response.ok) throw new Error(payload.error || 'NEXORA could not save this follow change. Please retry.');
+  if (payload.following !== following || typeof payload.changed !== 'boolean') {
+    throw new Error('The follow service returned an invalid confirmation.');
+  }
+  return { data: payload };
 }
 
 async function addFollowDirect(followerId: string, followingId: string) {
