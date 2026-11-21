@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { setPostLike } from './server/postEngagement';
-import { setPublicPostCommentReplyLike } from './functions/src/postCommentReactions';
+import { setPublicPostCommentReplyLike } from './server/postCommentReactions';
 import { setCreatorFollowStateForUser, SocialFollowError } from './server/socialFollow';
 import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
