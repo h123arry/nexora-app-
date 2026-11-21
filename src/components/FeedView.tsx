@@ -456,6 +456,8 @@ export default function FeedView({
   const [submittingComments, setSubmittingComments] = useState<Record<string, boolean>>({});
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [activeReplyFieldId, setActiveReplyFieldId] = useState<string | null>(null);
+  const [expandedCommentReplyIds, setExpandedCommentReplyIds] = useState<Record<string, boolean>>({});
+  const [replySparkStates, setReplySparkStates] = useState<Record<string, { liked: boolean; likes: number; pending: boolean }>>({});
   const [quoteTargetPost, setQuoteTargetPost] = useState<Post | null>(null);
   const [quoteDraft, setQuoteDraft] = useState('');
   const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
@@ -1076,6 +1078,31 @@ export default function FeedView({
     window.dispatchEvent(new CustomEvent('nexora-spark-comment', {
       detail: { postId, commentId, desiredLiked: !comment.isLikedByUser }
     }));
+  };
+
+  const handleSparkReply = async (postId: string, commentId: string, reply: ThreadReply) => {
+    if (!currentUser?.id || currentUser.id === 'public_explore_session') {
+      onRequireAuth?.();
+      return;
+    }
+    const key = `${postId}:${commentId}:${reply.id}`;
+    const current = replySparkStates[key] || { liked: false, likes: Number((reply as any).likes) || 0, pending: false };
+    if (current.pending) return;
+    const desiredLiked = !current.liked;
+    setReplySparkStates(previous => ({ ...previous, [key]: { ...current, pending: true } }));
+    try {
+      const setReplySpark = httpsCallable<
+        { postId: string; commentId: string; replyId: string; liked: boolean },
+        { liked: boolean; likes: number; changed: boolean }
+      >(functions, 'setPublicPostCommentReplyLikeState');
+      const result = await setReplySpark({ postId, commentId, replyId: reply.id, liked: desiredLiked });
+      setReplySparkStates(previous => ({ ...previous, [key]: { liked: result.data.liked, likes: result.data.likes, pending: false } }));
+    } catch (error) {
+      setReplySparkStates(previous => ({ ...previous, [key]: { ...current, pending: false } }));
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: error instanceof Error ? error.message : 'Your Spark could not be saved. Please retry.',
+      }));
+    }
   };
 
   // Bookmark / Save handler
@@ -2310,7 +2337,7 @@ export default function FeedView({
                 setExpandedPostIds={setExpandedPostIds}
               />
 
-                {/* 5. THREADED COMMENTS DRAWER ACCORDION (Floating bottom sheet drawer style) */}
+                {/* 5. TIKTOK-STYLE HALF-SCREEN COMMENTS SHEET */}
                 <AnimatePresence>
                   {isCommentsOpen && (
                     <>
@@ -2331,7 +2358,7 @@ export default function FeedView({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: "100%", opacity: 0 }}
                       transition={{ type: "spring", damping: 28, stiffness: 260 }}
-                      className="comments-container fixed bottom-0 inset-x-0 h-[88dvh] max-h-[94dvh] rounded-t-[28px] bg-[#090714]/[0.98] backdrop-blur-2xl border-t border-violet-400/20 z-[90] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden touch-pan-y"
+                      className="comments-container fixed bottom-0 inset-x-0 h-[60dvh] min-h-[60dvh] max-h-[60dvh] bg-[#090714]/[0.98] z-[90] flex flex-col px-4 pt-3 pb-4 sm:px-5 overflow-hidden touch-pan-y"
                     >
                       {/* Header of Comments drawer */}
                       <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
@@ -2347,14 +2374,14 @@ export default function FeedView({
                       </div>
 
                       {/* Comments stream scroll */}
-                      <div className="space-y-3.5 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y pr-1 mb-3 custom-scrollbar">
+                      <div className="space-y-3.5 flex-1 min-h-0 overflow-y-auto overscroll-y-contain overscroll-contain touch-pan-y pr-1 mb-3 custom-scrollbar">
                         {post.comments.length === 0 && (
                           <p className="text-[11px] font-mono text-violet-300/40 italic py-2 text-center">
                             No comments yet. Start the conversation!
                           </p>
                         )}
                         {post.comments.map((c, commentIndex) => (
-                          <div key={c.id} className="p-3 rounded-2xl bg-slate-950/40 border border-white/5 space-y-2.5">
+                          <div key={c.id} className="py-3 border-b border-white/8 space-y-2.5">
                             <div className="flex items-start justify-between gap-2 text-xs">
                               <button type="button" onClick={() => onViewProfile?.(c.userId || c.username)} aria-label={`View @${c.username}'s profile`} className="flex min-h-11 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
                                 <img src={c.avatar} alt="" className="w-7 h-7 rounded-lg object-cover" />
@@ -2392,8 +2419,8 @@ export default function FeedView({
                             {/* Standard Threaded/Nested Replies */}
                             {c.replies && c.replies.length > 0 && (
                               <div className="pl-9 space-y-2.5 pt-1.5 border-l border-white/10 ml-3.5">
-                                {c.replies.map(rep => (
-                                  <div key={rep.id} className="text-xs bg-white/2 p-2 rounded-xl border border-white/3">
+                                {c.replies.slice(0, expandedCommentReplyIds[c.id] ? c.replies.length : 1).map(rep => (
+                                  <div key={rep.id} className="text-xs py-2 border-b border-white/5">
                                     <button type="button" onClick={() => onViewProfile?.(rep.userId || rep.username)} aria-label={`View @${rep.username}'s profile`} className="mb-1 flex min-h-10 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
                                       <img src={rep.avatar} alt="" className="h-5 w-5 rounded-md object-cover" />
                                       <span>
@@ -2402,8 +2429,34 @@ export default function FeedView({
                                       </span>
                                     </button>
                                     <p className="text-violet-200 pl-7 text-[11.5px] leading-relaxed">{rep.content}</p>
+                                    <div className="pl-7 pt-1 flex items-center gap-3">
+                                      <button
+                                        type="button"
+                                        aria-label={replySparkStates[`${post.id}:${c.id}:${rep.id}`]?.liked ? 'Remove Spark from reply' : 'Spark reply'}
+                                        aria-pressed={!!replySparkStates[`${post.id}:${c.id}:${rep.id}`]?.liked}
+                                        disabled={!!replySparkStates[`${post.id}:${c.id}:${rep.id}`]?.pending}
+                                        onClick={() => void handleSparkReply(post.id, c.id, rep)}
+                                        className={`inline-flex items-center gap-1 text-[10px] transition-colors ${replySparkStates[`${post.id}:${c.id}:${rep.id}`]?.liked ? 'text-violet-300' : 'text-violet-400/60 hover:text-violet-200'}`}
+                                      >
+                                        <Zap className="h-3 w-3" />
+                                        <span>{replySparkStates[`${post.id}:${c.id}:${rep.id}`]?.likes ?? (Number((rep as any).likes) || 0)}</span>
+                                      </button>
+                                      <button type="button" onClick={() => { setActiveReplyFieldId(c.id); setReplyInputs(previous => ({ ...previous, [c.id]: `@${rep.username} ` })); }} className="text-[10px] text-violet-400/70 hover:text-violet-200">Reply</button>
+                                    </div>
                                   </div>
                                 ))}
+                                {c.replies.length > 1 && (
+                                  <button
+                                    type="button"
+                                    aria-expanded={!!expandedCommentReplyIds[c.id]}
+                                    aria-label={expandedCommentReplyIds[c.id] ? `Collapse replies to ${c.username}'s comment` : `Show ${c.replies.length - 1} more replies to ${c.username}'s comment`}
+                                    onClick={() => setExpandedCommentReplyIds(previous => ({ ...previous, [c.id]: !previous[c.id] }))}
+                                    className="flex items-center gap-1.5 py-2 text-[11px] font-semibold text-violet-300 hover:text-white focus-visible:outline-2 focus-visible:outline-violet-300"
+                                  >
+                                    {expandedCommentReplyIds[c.id] ? 'Hide replies' : `View ${c.replies.length - 1} more ${c.replies.length - 1 === 1 ? 'reply' : 'replies'}`}
+                                    {expandedCommentReplyIds[c.id] ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                  </button>
+                                )}
                               </div>
                             )}
 
