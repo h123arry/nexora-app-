@@ -31,7 +31,7 @@ export default {
       return Response.json({ error: 'follow_origin_not_configured' }, { status: 503, headers: { ...cors, 'Cache-Control': 'no-store' } });
     }
     const authorization = request.headers.get('Authorization') || '';
-    if (!/^Bearer \\S+$/.test(authorization)) {
+    if (!/^Bearer \S+$/.test(authorization)) {
       return Response.json({ error: 'unauthenticated' }, { status: 401, headers: { ...cors, 'Cache-Control': 'no-store' } });
     }
     const contentLength = Number(request.headers.get('Content-Length') || 0);
