@@ -137,9 +137,12 @@ const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
 const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(firebaseStorageBucket) : null;
 
 app.post('/api/social/follow-state', requireFirebaseUser, async (req, res) => {
-  const uid = String(res.locals.userId || '');
+  const uid = res.locals.userId;
+  if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
+    return res.status(401).json({ code: 'unauthenticated', error: 'Sign in to follow creators.' });
+  }
   const { creatorId, following } = req.body || {};
-  if (typeof creatorId !== 'string' || typeof following !== 'boolean') {
+  if (typeof creatorId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(creatorId) || typeof following !== 'boolean') {
     return res.status(400).json({ code: 'invalid_follow_request', error: 'A valid creator and follow state are required.' });
   }
   try {
@@ -162,7 +165,10 @@ app.post('/api/social/follow-state', requireFirebaseUser, async (req, res) => {
 });
 
 app.post('/api/social/post-spark-state', requireFirebaseUser, async (req, res) => {
-  const uid = String(res.locals.userId || '');
+  const uid = res.locals.userId;
+  if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
+    return res.status(401).json({ code: 'unauthenticated', error: 'Sign in to Spark posts.' });
+  }
   const { postId, liked } = req.body || {};
   if (typeof postId !== 'string' || !/^[A-Za-z0-9_-]{1,150}$/.test(postId) || typeof liked !== 'boolean') {
     return res.status(400).json({ code: 'invalid_spark_request', error: 'A valid post and Spark state are required.' });
