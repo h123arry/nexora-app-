@@ -2799,6 +2799,7 @@ export default function App() {
                 const postId = handleAddPost(caption || 'Created with NEXORA Studio', undefined, undefined, undefined, uploaded.downloadUrl, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, { mediaAssetId: uploaded.mediaId });
                 if (!postId) throw new Error('The video uploaded, but the post could not be created. Your Studio draft is still saved.');
                 setIsNexoraStudioOpen(false);
+                setIsCreatePostModalOpen(false);
                 setStudioInitialMedia([]);
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Your Studio video is now on NEXORA.' }));
               }}
@@ -2825,7 +2826,6 @@ export default function App() {
             initialCaption={creationInitialCaption}
             onOpenStudio={files => {
               setStudioInitialMedia(files);
-              setIsCreatePostModalOpen(false);
               setIsNexoraStudioOpen(true);
             }}
             onToggleOffline={() => {
