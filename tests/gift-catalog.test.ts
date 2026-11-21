@@ -11,6 +11,14 @@ test('GIFTVERSE contains 1,100 unique gift identities, names and image reference
   assert.equal(new Set(GIFT_CATALOG.map(g => g.name)).size, 1100);
 });
 
+
+test('public offline GiftVerse catalogue stays identical to the authoritative server catalogue', () => {
+  const bundled = JSON.parse(readFileSync(new URL('../public/giftverse/catalog.json', import.meta.url), 'utf8'));
+  assert.equal(bundled.version, GIFT_CATALOG_VERSION);
+  assert.equal(bundled.currency, 'NEX');
+  assert.deepEqual(bundled.gifts, GIFT_CATALOG);
+});
+
 test('all catalogue artwork resolves to bundled SVG files and distinct sprite symbols', () => {
   const cache = new Map();
   for (const gift of GIFT_CATALOG) {
