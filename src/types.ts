@@ -266,6 +266,7 @@ export interface ExtendedMessage extends Message {
   replyToMessageId?: string;
   isPinned?: boolean;
   isStarred?: boolean;
+  starredBy?: string[];
   reactions?: { emoji: string, userIds: string[] }[];
   reactionUsers?: Record<string, string[]>;
   isEdited?: boolean;
