@@ -2607,7 +2607,7 @@ export default function App() {
                     </div>
                   ) : activeTab === 'profile' && (
                     <ProfileView
-                      currentUser={getRichUser((viewedUser && globalUsersMap[viewedUser.id]) || globalUsersMap[currentUser.id] || viewedUser || currentUser)}
+                      currentUser={getRichUser(viewedUser ? (globalUsersMap[viewedUser.id] || viewedUser) : currentUser)}
                       isLoggedIn={isLoggedIn}
                       posts={resolvedPosts}
                       userSparks={!viewedUser || viewedUser.id === currentUser.id ? userSparks : []}
