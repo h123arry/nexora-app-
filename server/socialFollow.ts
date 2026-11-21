@@ -11,7 +11,7 @@ export class SocialFollowError extends Error {
 }
 
 const validUid = (value: unknown): value is string =>
-  typeof value === 'string' && value.length > 0 && value.length <= 128 && !value.includes('/');
+  typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value);
 const hash = (value: string) => createHash('sha256').update(value).digest('hex').slice(0, 40);
 const dayKey = (date: Date) => date.toISOString().slice(0, 10);
 
