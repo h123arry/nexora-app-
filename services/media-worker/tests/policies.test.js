@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  classifyStorageObject, classifyR2StorageObject, imageRenditionWidths, videoRenditionsForHeight, videoRenditionsForSize, videoRenditionDimensions, canClaimMediaProcessing,
+  classifyStorageObject, classifyR2StorageObject, hasR2VideoRendition, shouldReconcileR2Asset, imageRenditionWidths, videoRenditionsForHeight, videoRenditionsForSize, videoRenditionDimensions, canClaimMediaProcessing,
   MAX_INPUT_BYTES, MAX_IMAGE_BYTES,
 } from '../src/policies.js';
 
@@ -123,5 +123,31 @@ describe('NEXORA R2 media event validation', () => {
     for (const generation of ['', 'latest', '../1']) {
       assert.throws(() => classifyR2StorageObject(event({ generation }), 'nexora-media'), /generation/);
     }
+  });
+});
+
+
+describe('NEXORA R2 video reconciliation eligibility', () => {
+  const ownerId = 'creator-1';
+  const mediaId = 'media-1';
+  const original = {
+    ownerId, storageProvider: 'r2', kind: 'video', status: 'ready', generation: '1795090000000',
+    renditions: [{ height: 720, mp4Path: 'processed/creator-1/media-1/1795090000000/720p/video.mp4' }],
+  };
+  it('recognizes only a rendition belonging to the exact owner, media and generation', () => {
+    assert.equal(hasR2VideoRendition(original, ownerId, mediaId), true);
+    assert.equal(hasR2VideoRendition({ ...original, renditions: [{ height: 720, mp4Path: 'processed/other/media-1/1795090000000/720p/video.mp4' }] }, ownerId, mediaId), false);
+    assert.equal(hasR2VideoRendition({ ...original, renditions: [{ height: 720, mp4Path: 'processed/creator-1/media-1/old/720p/video.mp4' }] }, ownerId, mediaId), false);
+  });
+  it('rebuilds ready videos missing R2 renditions and skips already-ready R2 videos', () => {
+    assert.equal(shouldReconcileR2Asset(original, mediaId), false);
+    assert.equal(shouldReconcileR2Asset({ ...original, renditions: [{ height: 720, mp4Path: 'gs://legacy-bucket/720p/video.mp4' }] }, mediaId), true);
+    assert.equal(shouldReconcileR2Asset({ ...original, renditions: [] }, mediaId), true);
+  });
+  it('retries uploaded and failed assets, but waits for an active processing lease', () => {
+    assert.equal(shouldReconcileR2Asset({ ...original, status: 'uploaded', renditions: [] }, mediaId), true);
+    assert.equal(shouldReconcileR2Asset({ ...original, status: 'failed', renditions: [] }, mediaId), true);
+    assert.equal(shouldReconcileR2Asset({ ...original, status: 'processing', processingStartedAt: { toMillis: () => 3_950_000 } }, mediaId, 4_000_000), false);
+    assert.equal(shouldReconcileR2Asset({ ...original, status: 'processing', processingStartedAt: { toMillis: () => 1_000_000 } }, mediaId, 4_000_000), true);
   });
 });

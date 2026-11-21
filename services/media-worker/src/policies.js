@@ -104,3 +104,26 @@ export function classifyR2StorageObject(event, expectedBucket) {
   if (!/^\d{1,32}$/.test(generation)) throw new Error('A valid immutable R2 media generation is required');
   return { ignored: false, provider: 'r2', object, ownerId, mediaId, size, contentType, isVideo, isImage, generation };
 }
+
+
+/** True only when a ready video already has an MP4 rendition in this exact R2 asset generation. */
+export function hasR2VideoRendition(asset, ownerId, mediaId) {
+  if (!asset || !Array.isArray(asset.renditions) || typeof asset.generation !== 'string') return false;
+  const prefix = `processed/${ownerId}/${mediaId}/${asset.generation}/`;
+  return asset.renditions.some(rendition =>
+    rendition && Number.isSafeInteger(rendition.height) && rendition.height >= 144 && rendition.height <= 4320
+    && typeof rendition.mp4Path === 'string' && rendition.mp4Path.startsWith(prefix)
+    && rendition.mp4Path.endsWith('/video.mp4')
+    && !rendition.mp4Path.split('/').some(part => !part || part === '.' || part === '..')
+  );
+}
+
+/** Reconcile uploaded/failed/stale assets and ready videos whose R2 renditions are missing. */
+export function shouldReconcileR2Asset(asset, mediaId, nowMs = Date.now(), staleAfterMs = 45 * 60 * 1000) {
+  if (!asset || asset.storageProvider !== 'r2' || !['video', 'image'].includes(String(asset.kind))) return false;
+  if (asset.status === 'ready') {
+    return asset.kind === 'video' && !hasR2VideoRendition(asset, String(asset.ownerId || ''), mediaId);
+  }
+  return ['uploaded', 'failed', 'processing'].includes(String(asset.status))
+    && canClaimMediaProcessing(asset, nowMs, staleAfterMs);
+}

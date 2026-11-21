@@ -1,0 +1,150 @@
+name: Restore NEXORA R2 videos without provisioning Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/restore-r2-videos-no-cloud-run.yml'
+      - 'services/media-worker/src/**'
+      - 'services/media-worker/package.json'
+      - 'services/media-worker/package-lock.json'
+  schedule:
+    - cron: '17 */4 * * *'
+  workflow_dispatch:
+    inputs:
+      confirm_r2_video_restore:
+        description: Run the no-new-infrastructure R2 video restoration job
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: nexora-r2-video-restoration
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    if: github.event_name != 'workflow_dispatch' || inputs.confirm_r2_video_restore == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: nexora-production
+    env:
+      GOOGLE_CLOUD_PROJECT: nexora-prod-voiceharrison
+      GCLOUD_PROJECT: nexora-prod-voiceharrison
+      FIRESTORE_DATABASE_ID: default
+
+    steps:
+      - name: Check out the reviewed NEXORA release
+        uses: actions/checkout@v4
+
+      - name: Require existing production identity and R2 credentials
+        shell: bash
+        env:
+          R2_ACCOUNT_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          GCP_WIF_PROVIDER: ${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+          test "$GOOGLE_CLOUD_PROJECT" = "nexora-prod-voiceharrison"
+          test "$FIRESTORE_DATABASE_ID" = "default"
+          test -n "$R2_ACCOUNT_ID"
+          test -n "$R2_ACCESS_KEY_ID"
+          test -n "$R2_SECRET_ACCESS_KEY"
+          test -n "$GCP_WIF_PROVIDER"
+          test -n "$GCP_SERVICE_ACCOUNT"
+          echo "Production Firestore target and existing R2 credentials are present."
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/media-worker/package-lock.json
+
+      - name: Install FFmpeg and the existing media-worker dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          npm ci --prefix services/media-worker --no-audit --no-fund
+          ffmpeg -version | head -n 1
+
+      - name: Authenticate to Google Cloud using existing Workload Identity Federation
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}
+          project_id: nexora-prod-voiceharrison
+
+      - name: Process pending R2 videos on this temporary runner
+        shell: bash
+        env:
+          PORT: '8080'
+          R2_ACCOUNT_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: nexora-media
+          R2_WORKER_RECONCILE_VIDEOS_ONLY: 'true'
+        run: |
+          set -euo pipefail
+          TOKEN="$(openssl rand -hex 32)"
+          echo "::add-mask::$TOKEN"
+          export MEDIA_WORKER_TOKEN="$TOKEN"
+
+          npm --prefix services/media-worker start > /tmp/nexora-r2-worker.log 2>&1 &
+          WORKER_PID=$!
+          trap 'kill "$WORKER_PID" 2>/dev/null || true' EXIT
+
+          READY=false
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:8080/ > /tmp/nexora-r2-worker-health.json; then
+              READY=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$READY" != "true" ]; then
+            cat /tmp/nexora-r2-worker.log
+            echo "Media worker did not become ready."
+            exit 1
+          fi
+          grep -q '"r2Configured":true' /tmp/nexora-r2-worker-health.json
+
+          curl --fail --silent --show-error --max-time 3300 \
+            --request POST http://127.0.0.1:8080/ \
+            --header "Authorization: Bearer $TOKEN" \
+            --header "Content-Type: application/json" \
+            --data '{"action":"reconcile"}' | tee /tmp/nexora-r2-video-restore.json
+
+          node -e "
+            const fs = require('node:fs');
+            const result = JSON.parse(fs.readFileSync('/tmp/nexora-r2-video-restore.json', 'utf8'));
+            if (result.failed > 0) {
+              console.error('One or more R2 video jobs failed:', result);
+              process.exit(1);
+            }
+            console.log('R2 video restoration result:', result);
+          "
+
+          {
+            echo "## NEXORA R2 video restoration"
+            echo "- Target: nexora-prod-voiceharrison / default"
+            echo "- Storage: Cloudflare R2 / nexora-media"
+            echo "- Infrastructure: temporary GitHub-hosted runner; no Cloud Run or Artifact Registry resources created"
+            echo "- Result:"
+            cat /tmp/nexora-r2-video-restore.json
+            echo
+            echo "- Original media objects were retained."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Show worker logs if restoration failed
+        if: failure()
+        run: |
+          if [ -f /tmp/nexora-r2-worker.log ]; then
+            tail -n 200 /tmp/nexora-r2-worker.log
+          fi
