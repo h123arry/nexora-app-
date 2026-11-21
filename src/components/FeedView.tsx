@@ -2310,7 +2310,7 @@ export default function FeedView({
                 setExpandedPostIds={setExpandedPostIds}
               />
 
-                {/* 5. THREADED COMMENTS DRAWER ACCORDION (Floating bottom sheet drawer style) */}
+                {/* 5. TIKTOK-STYLE HALF-SCREEN COMMENTS SHEET */}
                 <AnimatePresence>
                   {isCommentsOpen && (
                     <>
@@ -2331,7 +2331,7 @@ export default function FeedView({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: "100%", opacity: 0 }}
                       transition={{ type: "spring", damping: 28, stiffness: 260 }}
-                      className="comments-container fixed bottom-0 inset-x-0 h-[88dvh] max-h-[94dvh] rounded-t-[28px] bg-[#090714]/[0.98] backdrop-blur-2xl border-t border-violet-400/20 z-[90] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden touch-pan-y"
+                      className="comments-container fixed bottom-0 inset-x-0 h-[50dvh] min-h-[50dvh] max-h-[50dvh] rounded-t-[28px] bg-[#090714]/[0.98] backdrop-blur-2xl border-t border-violet-400/20 z-[90] flex flex-col p-4 sm:p-5 shadow-2xl overflow-hidden touch-pan-y"
                     >
                       {/* Header of Comments drawer */}
                       <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
