@@ -3,7 +3,6 @@ import {
   signInAnonymously,
   signInWithEmailAndPassword, 
   browserLocalPersistence,
-  browserSessionPersistence,
   sendEmailVerification, 
   sendPasswordResetEmail, 
   updatePassword,
@@ -49,8 +48,9 @@ export class AuthService {
     if (firebaseConfigError) throw new Error(firebaseConfigError);
   }
 
-  static getLoginPersistence(rememberDevice: boolean) {
-    return rememberDevice ? browserLocalPersistence : browserSessionPersistence;
+  static getLoginPersistence(_rememberDevice: boolean) {
+    // Keep authenticated accounts signed in across refreshes and browser restarts.
+    return browserLocalPersistence;
   }
 
   private static publicAuthError(error: unknown): Error & { code?: string } {
