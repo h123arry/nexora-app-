@@ -41,24 +41,18 @@ jobs:
       - name: Check out the reviewed NEXORA release
         uses: actions/checkout@v4
 
-      - name: Require existing production identity and R2 credentials
+      - name: Require existing production workload identity
         shell: bash
         env:
-          R2_ACCOUNT_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
           GCP_WIF_PROVIDER: ${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}
           GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}
         run: |
           set -euo pipefail
           test "$GOOGLE_CLOUD_PROJECT" = "nexora-prod-voiceharrison"
           test "$FIRESTORE_DATABASE_ID" = "default"
-          test -n "$R2_ACCOUNT_ID"
-          test -n "$R2_ACCESS_KEY_ID"
-          test -n "$R2_SECRET_ACCESS_KEY"
           test -n "$GCP_WIF_PROVIDER"
           test -n "$GCP_SERVICE_ACCOUNT"
-          echo "Production Firestore target and existing R2 credentials are present."
+          echo "Production Firestore identity is present; R2 access will be brokered by the live API."
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -81,17 +75,41 @@ jobs:
           service_account: ${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}
           project_id: nexora-prod-voiceharrison
 
+      - name: Wait for the live API signing broker
+        shell: bash
+        env:
+          R2_SIGNING_API_URL: https://nexora-o3od.onrender.com/api/internal/r2-worker/sign
+        run: |
+          set -euo pipefail
+          READY=false
+          for attempt in $(seq 1 60); do
+            STATUS="$(curl --silent --output /dev/null --write-out '%{http_code}' \
+              --request POST "$R2_SIGNING_API_URL" \
+              --header 'Content-Type: application/json' \
+              --data '{}')"
+            if [ "$STATUS" = "401" ]; then
+              READY=true
+              break
+            fi
+            sleep 10
+          done
+          if [ "$READY" != "true" ]; then
+            echo "The live NEXORA R2 signing broker did not become ready (expected 401 without an identity token)."
+            exit 1
+          fi
+
       - name: Process pending R2 videos on this temporary runner
         shell: bash
         env:
           PORT: '8080'
-          R2_ACCOUNT_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
-          R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: a169d97ea553f4ff19622a3e3932d0d7
           R2_BUCKET_NAME: nexora-media
+          R2_SIGNING_API_URL: https://nexora-o3od.onrender.com/api/internal/r2-worker/sign
           R2_WORKER_RECONCILE_VIDEOS_ONLY: 'true'
         run: |
           set -euo pipefail
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}"
+          test -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}"
           TOKEN="$(openssl rand -hex 32)"
           echo "::add-mask::$TOKEN"
           export MEDIA_WORKER_TOKEN="$TOKEN"
