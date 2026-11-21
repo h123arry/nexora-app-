@@ -511,7 +511,7 @@ r2MediaRouter.post('/:mediaId/complete', async (req, res) => {
     if (!assetSnapshot.exists || asset?.ownerId !== uid || asset?.storageProvider !== 'r2') {
       return res.status(404).json({ error: 'The media upload could not be found.' });
     }
-    if (asset.status === 'uploaded') {
+    if (['uploaded', 'processing', 'failed'].includes(String(asset.status))) {
       dispatchR2MediaProcessing(mediaId, asset);
       return res.status(200).json({ mediaId, storagePath: asset.storagePath, downloadUrl: r2MediaGatewayUrl(mediaId), contentType: asset.contentType, size: asset.size });
     }
