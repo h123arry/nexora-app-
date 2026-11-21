@@ -2406,12 +2406,17 @@ export default function MediaCreationEngine({
                               </div>
                             )}
                           </>
-                        ) : (
+                        ) : (videoFileUrl || recordedVideoUrl) ? (
                           <div className="space-y-3">
                             <h4 className="text-xs font-extrabold text-white">Video editing</h4>
                             <p className="text-[10px] leading-relaxed text-[#8E88A7]">Use NEXORA Studio for clip sequencing, audio, transitions, titles and a full export timeline.</p>
-                            {(videoFileUrl || recordedVideoUrl) && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-3 text-xs font-extrabold text-white"><Clapperboard size={14} className="mr-2 inline"/> Open NEXORA Studio</button>}
+                            {onOpenStudio && <button type="button" onClick={openVideoInStudio} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-3 text-xs font-extrabold text-white"><Clapperboard size={14} className="mr-2 inline"/> Open NEXORA Studio</button>}
                             <p className="text-[9px] text-[#756D8A]">Your original video remains unchanged until you export the edited result.</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-extrabold text-white">Ready to shape your post</h4>
+                            <p className="text-[10px] leading-relaxed text-[#8E88A7]">There are no media adjustments for this format. Continue to add your caption and publishing details.</p>
                           </div>
                         )}
                       </div>
