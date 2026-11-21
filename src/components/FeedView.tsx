@@ -2332,7 +2332,7 @@ export default function FeedView({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: "100%", opacity: 0 }}
                       transition={{ type: "spring", damping: 28, stiffness: 260 }}
-                      className="comments-container fixed bottom-0 inset-x-0 h-[50dvh] min-h-[50dvh] max-h-[50dvh] bg-[#090714]/[0.98] z-[90] flex flex-col px-4 pt-3 pb-4 sm:px-5 overflow-hidden touch-pan-y"
+                      className="comments-container fixed bottom-0 inset-x-0 h-[60dvh] min-h-[60dvh] max-h-[60dvh] bg-[#090714]/[0.98] z-[90] flex flex-col px-4 pt-3 pb-4 sm:px-5 overflow-hidden touch-pan-y"
                     >
                       {/* Header of Comments drawer */}
                       <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
@@ -2348,7 +2348,7 @@ export default function FeedView({
                       </div>
 
                       {/* Comments stream scroll */}
-                      <div className="space-y-3.5 flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y pr-1 mb-3 custom-scrollbar">
+                      <div className="space-y-3.5 flex-1 min-h-0 overflow-y-auto overscroll-y-contain overscroll-contain touch-pan-y pr-1 mb-3 custom-scrollbar">
                         {post.comments.length === 0 && (
                           <p className="text-[11px] font-mono text-violet-300/40 italic py-2 text-center">
                             No comments yet. Start the conversation!
