@@ -258,7 +258,7 @@ const r2WorkerSigningLimiter = rateLimit({ windowMs: 60_000, max: 300, standardH
 
 app.post('/api/internal/r2-worker/sign', r2WorkerSigningLimiter, async (req, res) => {
   if (!r2Config) return res.status(503).json({ error: 'R2 signing is not configured.' });
-  const authorization = req.headers.authorization?.match(/^Bearer ([^\\s]+)$/);
+  const authorization = req.headers.authorization?.match(/^Bearer ([^\s]+)$/);
   if (!authorization) return res.status(401).json({ error: 'A GitHub Actions identity token is required.' });
   try {
     await verifyGitHubActionsOidcToken(authorization[1]);
