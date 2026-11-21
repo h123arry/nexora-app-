@@ -12,6 +12,13 @@ test('comments sheet occupies exactly the bottom half, scrolls independently and
   assert.ok(!feed.includes('text-xs bg-white/2 p-2 rounded-xl border border-white/3'));
   assert.match(feed, /feed\.style\.overflowY = 'hidden'/);
   assert.match(feed, /document\.body\.style\.overflow = 'hidden'/);
+  assert.match(feed, /expandedCommentReplyIds/);
+  assert.match(feed, /c\.replies\.slice\(0, expandedCommentReplyIds\[c\.id\] \? c\.replies\.length : 1\)/);
+  assert.match(feed, /aria-expanded=\{!!expandedCommentReplyIds\[c\.id\]\}/);
+  assert.match(feed, /View \$\{c\.replies\.length - 1\} more/);
+  assert.match(feed, /Hide replies/);
+  assert.match(feed, /ChevronDown/);
+  assert.match(feed, /ChevronUp/);
 });
 
 test('comment actions use persisted comment, reply and reaction flows', async () => {
