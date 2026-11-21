@@ -72,8 +72,8 @@ export async function verifyGitHubActionsOidcToken(
     || claims.workflow_ref !== expectedWorkflow
     || claims.environment !== 'nexora-production'
     || !['push', 'schedule', 'workflow_dispatch'].includes(String(claims.event_name))
-    || !Number.isFinite(claims.exp) || Number(claims.exp) <= nowSeconds
-    || !Number.isFinite(claims.iat) || Number(claims.iat) < nowSeconds - 600
+    || typeof claims.exp !== 'number' || !Number.isFinite(claims.exp) || claims.exp <= nowSeconds
+    || typeof claims.iat !== 'number' || !Number.isFinite(claims.iat) || claims.iat < nowSeconds - 600
     || Number(claims.iat) > nowSeconds + 60
     || (claims.nbf !== undefined && Number(claims.nbf) > nowSeconds + 30)) {
     throw new Error('GitHub Actions identity is not authorized for NEXORA production R2 processing.');
