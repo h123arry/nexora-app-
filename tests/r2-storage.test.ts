@@ -97,7 +97,8 @@ test('public profile media is delivered only while the profile points to the exa
   assert.equal(isCurrentPublicProfileMedia('profile-avatar', 'avatar-123', null), false);
 });
 
-\ntest('R2 playback prefers a valid 720p rendition and falls back to the immutable original', () => {
+
+test('R2 playback prefers a valid 720p rendition and falls back to the immutable original', () => {
   const original = 'users/user_123/media/asset-456';
   assert.equal(selectR2VideoPlaybackPath({ storagePath: original, kind: 'video', status: 'uploaded' }, 'user_123', 'asset-456'), original);
   assert.equal(selectR2VideoPlaybackPath({ storagePath: original, kind: 'video', status: 'processing' }, 'user_123', 'asset-456'), original);
