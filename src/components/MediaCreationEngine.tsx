@@ -920,10 +920,27 @@ export default function MediaCreationEngine({
   };
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const files = Array.from(e.target.files || []).filter(file => file.type.startsWith('video/'));
+    e.target.value = '';
+    if (!files.length) return;
     requestPermission('gallery', () => {
       void (async () => {
+        if (files.length > 1 && onOpenStudio) {
+          const validFiles: File[] = [];
+          for (const file of files.slice(0, 12)) {
+            try {
+              await validateMediaFile(file, 'video');
+              validFiles.push(file);
+            } catch (error) {
+              window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${file.name}: ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
+            }
+          }
+          if (validFiles.length) {
+            onOpenStudio(validFiles);
+            return;
+          }
+          return;
+        }
         const file = files[0];
         try {
           const metadata = await validateMediaFile(file, 'video');
@@ -942,7 +959,6 @@ export default function MediaCreationEngine({
         }
       })();
     });
-    e.target.value = '';
   };
 
   const applyVideoTrim = async () => {
@@ -1948,7 +1964,7 @@ export default function MediaCreationEngine({
                         </div>
                         <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all">
                           Choose from gallery
-                          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                          <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
                         </label>
                       </div>
 
