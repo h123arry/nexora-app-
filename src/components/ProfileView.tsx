@@ -711,6 +711,7 @@ export default function ProfileView({
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [showSavedFeedback, setShowSavedFeedback] = useState(false);
   const profileFieldSavesRef = useRef(new Set<string>());
+  const [savingProfileFields, setSavingProfileFields] = useState<Set<string>>(new Set());
 
   // Relationship states (Muted / Blocked lists)
   const [relationsTab, setRelationsTab] = useState<'followers' | 'following' | 'close-friends' | 'blocked' | 'muted'>('followers');
@@ -1258,6 +1259,7 @@ export default function ProfileView({
     const fieldKeys = Object.keys(patch);
     if (fieldKeys.some(key => profileFieldSavesRef.current.has(key))) return;
     fieldKeys.forEach(key => profileFieldSavesRef.current.add(key));
+    setSavingProfileFields(previous => new Set([...previous, ...fieldKeys]));
 
     try {
       await onUpdateProfile(patch);
@@ -1271,6 +1273,11 @@ export default function ProfileView({
       window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     } finally {
       fieldKeys.forEach(key => profileFieldSavesRef.current.delete(key));
+      setSavingProfileFields(previous => {
+        const next = new Set(previous);
+        fieldKeys.forEach(key => next.delete(key));
+        return next;
+      });
     }
   };
 
@@ -3478,12 +3485,12 @@ export default function ProfileView({
           >
             <div className="mx-auto flex h-full w-full max-w-3xl flex-col px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))] text-left">
               <header className="flex shrink-0 items-center justify-between border-b border-white/10 pb-2.5">
-                <button type="button" onClick={handleCancelEditProfile} disabled={isSavingProfile || showSavedFeedback}
+                <button type="button" onClick={handleCancelEditProfile} disabled={isSavingProfile || savingProfileFields.size > 0 || showSavedFeedback}
                   className="inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/5 disabled:opacity-50">
                   <ArrowLeft className="h-4 w-4" /> Cancel
                 </button>
                 <h2 className="text-base font-bold text-white">Edit profile</h2>
-                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile ? 'Saving…' : 'Auto-save on edit'}</span>
+                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile || savingProfileFields.size > 0 ? 'Saving…' : 'Auto-save on edit'}</span>
               </header>
 
               <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 py-3">
@@ -3492,7 +3499,7 @@ export default function ProfileView({
                     <img src={editAvatar} alt="Profile photo" className="h-20 w-20 shrink-0 rounded-full border border-white/10 object-cover" />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-white">Profile photo</p>
-                      <button type="button" disabled={isSavingProfile || showSavedFeedback}
+                      <button type="button" disabled={isSavingProfile || savingProfileFields.has('name') || showSavedFeedback}
                         onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
                         className="mt-1 text-xs font-semibold text-violet-300 hover:text-violet-200">Change photo</button>
                     </div>
@@ -3503,14 +3510,14 @@ export default function ProfileView({
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-white">Cover photo</p>
-                      <button type="button" disabled={isSavingProfile || showSavedFeedback}
+                      <button type="button" disabled={isSavingProfile || savingProfileFields.has('username') || showSavedFeedback}
                         onClick={() => coverInputRef.current?.click()}
                         className="mt-1 text-xs font-semibold text-violet-300">{pendingCoverFile ? 'Choose another' : editCover ? 'Change photo' : 'Add photo'}</button>
                       {pendingCoverFile && <div className="mt-1 flex items-center gap-2">
                         <button type="button" aria-label="Confirm cover photo" disabled={isSavingProfile} onClick={() => void handleSaveCoverPhoto()} className="rounded-full bg-violet-600 p-1.5 text-white disabled:opacity-50"><Check className="h-3.5 w-3.5" /></button>
                         <button type="button" aria-label="Cancel cover photo" disabled={isSavingProfile} onClick={() => { setPendingCoverFile(null); setPendingCoverPreview(null); }} className="rounded-full border border-white/15 p-1.5 text-zinc-300"><X className="h-3.5 w-3.5" /></button>
                       </div>}
-                      {!pendingCoverFile && editCover && <button type="button" disabled={isSavingProfile || showSavedFeedback} onClick={() => void saveProfileField({ coverImage: '' })}
+                      {!pendingCoverFile && editCover && <button type="button" disabled={isSavingProfile || savingProfileFields.has('website') || showSavedFeedback} onClick={() => void saveProfileField({ coverImage: '' })}
                         className="ml-2 text-xs text-zinc-400">Remove</button>}
                     </div>
                     <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={isSavingProfile} onChange={handleCoverPhotoSelection} />
@@ -3519,13 +3526,13 @@ export default function ProfileView({
 
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
                   <label className="min-w-0 text-xs text-zinc-300">Name
-                    <input value={editName} onChange={e => setEditName(e.target.value)} onBlur={() => void saveProfileField({ name: editName })} maxLength={80} disabled={isSavingProfile || showSavedFeedback}
+                    <input value={editName} onChange={e => setEditName(e.target.value)} onBlur={() => void saveProfileField({ name: editName })} maxLength={80} disabled={isSavingProfile || savingProfileFields.has('location') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-50" placeholder="Your name" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Username
                     <div className="mt-1 flex h-10 items-center rounded-xl border border-white/10 bg-[#120E2B] px-3 focus-within:border-violet-500">
                       <span className="text-violet-300">@</span>
-                      <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} onBlur={() => void saveProfileField({ username: editUsername })} maxLength={30} disabled={isSavingProfile || showSavedFeedback}
+                      <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} onBlur={() => void saveProfileField({ username: editUsername })} maxLength={30} disabled={isSavingProfile || savingProfileFields.has('bio') || showSavedFeedback}
                         className="min-w-0 w-full bg-transparent pl-1 text-sm text-white outline-none disabled:opacity-50" placeholder="username" />
                     </div>
                   </label>
@@ -3538,11 +3545,11 @@ export default function ProfileView({
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="City, country" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Pronouns
-                    <input value={editPronouns} onChange={e => setEditPronouns(e.target.value)} onBlur={() => void saveProfileField({ pronouns: editPronouns.trim() })} disabled={isSavingProfile || showSavedFeedback}
+                    <input value={editPronouns} onChange={e => setEditPronouns(e.target.value)} onBlur={() => void saveProfileField({ pronouns: editPronouns.trim() })} disabled={isSavingProfile || savingProfileFields.has('pronouns') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="Optional" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Profile type
-                    <select value={editCategory} onChange={e => setEditCategory(e.target.value)} onBlur={() => void saveProfileField({ profileCategory: editCategory })} disabled={isSavingProfile || showSavedFeedback}
+                    <select value={editCategory} onChange={e => setEditCategory(e.target.value)} onBlur={() => void saveProfileField({ profileCategory: editCategory })} disabled={isSavingProfile || savingProfileFields.has('profileCategory') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
                       <option value="Digital Creator">Digital creator</option><option value="Founder Mindset">Founder</option><option value="Community Leader">Community leader</option><option value="Technical Support">Technical support</option>
                     </select>
@@ -3558,17 +3565,17 @@ export default function ProfileView({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <label className="min-w-0 text-xs text-zinc-300">Creator type
-                    <select value={editCreatorType} onChange={e => setEditCreatorType(e.target.value)} onBlur={() => void saveProfileField({ creatorType: editCreatorType })} disabled={isSavingProfile || showSavedFeedback}
+                    <select value={editCreatorType} onChange={e => setEditCreatorType(e.target.value)} onBlur={() => void saveProfileField({ creatorType: editCreatorType })} disabled={isSavingProfile || savingProfileFields.has('creatorType') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
                       <option value="Premium creator">Premium</option><option value="Creator">Creator</option><option value="Collaborator">Collaborator</option>
                     </select>
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">X profile
-                    <input value={editSocialTwitter} onChange={e => setEditSocialTwitter(e.target.value)} onBlur={() => void saveProfileField({ socialTwitter: editSocialTwitter.trim() })} disabled={isSavingProfile || showSavedFeedback}
+                    <input value={editSocialTwitter} onChange={e => setEditSocialTwitter(e.target.value)} onBlur={() => void saveProfileField({ socialTwitter: editSocialTwitter.trim() })} disabled={isSavingProfile || savingProfileFields.has('socialTwitter') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
                   </label>
                   <label className="col-span-2 min-w-0 text-xs text-zinc-300">Instagram
-                    <input value={editSocialInsta} onChange={e => setEditSocialInsta(e.target.value)} onBlur={() => void saveProfileField({ socialInstagram: editSocialInsta.trim() })} disabled={isSavingProfile || showSavedFeedback}
+                    <input value={editSocialInsta} onChange={e => setEditSocialInsta(e.target.value)} onBlur={() => void saveProfileField({ socialInstagram: editSocialInsta.trim() })} disabled={isSavingProfile || savingProfileFields.has('socialInstagram') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
                   </label>
                 </div>
