@@ -50,7 +50,7 @@ export async function verifyGitHubActionsOidcToken(
 
   const nowMs = options.nowMs ?? Date.now();
   const keys = await loadGitHubSigningKeys(options.fetchImpl ?? fetch, nowMs);
-  const jwk = keys.find(key => key.kid === header.kid && key.kty === 'RSA' && key.use === 'sig');
+  const jwk = keys.find(key => key.kid === header.kid && key.kty === 'RSA' && (!key.use || key.use === 'sig'));
   if (!jwk) throw new Error('GitHub Actions token signing key is unknown.');
   const publicKey = createPublicKey({ key: jwk, format: 'jwk' });
   const validSignature = verifySignature(
