@@ -7,17 +7,17 @@ export function omitUndefinedFields<T extends object>(value: T): T {
 export function serializeOutgoingMessage<T extends { status: string }>(value: T): T {
   const allowedFields = [
     'id', 'chatId', 'senderId', 'content', 'timestamp', 'status', 'voiceDuration',
-    'voiceAudioUrl', 'fileName', 'replyToQuote', 'customMediaType', 'mediaStoragePath',
-    'mediaType', 'mediaContentType', 'fileSize',
+    'voiceAudioUrl', 'fileName', 'replyToQuote', 'replyToMessageId', 'customMediaType', 'mediaStoragePath',
+    'mediaType', 'mediaContentType', 'fileSize', 'customMediaData',
   ];
   const persisted = Object.fromEntries(Object.entries(value).filter(([key, fieldValue]) => allowedFields.includes(key) && fieldValue !== undefined));
   return { ...persisted, status: 'sent' } as T;
 }
 
-export type OutgoingMediaType = 'voice' | 'image' | 'video' | 'audio' | 'document';
+export type OutgoingMediaType = 'voice' | 'image' | 'video' | 'audio' | 'document' | 'sticker';
 
 export function isSupportedOutgoingMediaType(type: string): type is OutgoingMediaType {
-  return ['voice', 'image', 'video', 'audio', 'document'].includes(type);
+  return ['voice', 'image', 'video', 'audio', 'document', 'sticker'].includes(type);
 }
 
 

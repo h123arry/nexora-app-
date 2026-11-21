@@ -78,7 +78,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.keys().hasOnly([
           'id', 'chatId', 'senderId', 'content', 'timestamp', 'status',
-          'voiceDuration', 'voiceAudioUrl', 'fileName', 'replyToQuote', 'customMediaType',
+          'voiceDuration', 'voiceAudioUrl', 'fileName', 'replyToQuote', 'replyToMessageId', 'customMediaType', 'customMediaData',
           'mediaStoragePath', 'mediaType', 'mediaContentType', 'fileSize'
         ])
         && data.id == messageId
@@ -89,7 +89,7 @@ service cloud.firestore {
         && data.timestamp is string
         && data.timestamp.size() <= 40
         && data.status == 'sent'
-        && (!data.keys().hasAny(['customMediaType']) || data.customMediaType in ['voice', 'image', 'video', 'audio', 'document'])
+        && (!data.keys().hasAny(['customMediaType']) || data.customMediaType in ['voice', 'image', 'video', 'audio', 'document', 'sticker'])
         && (!data.keys().hasAny(['mediaType']) || data.mediaType in ['image', 'video', 'audio', 'document'])
         && (!data.keys().hasAny(['mediaContentType']) || (data.mediaContentType is string && data.mediaContentType.size() <= 128))
         && (!data.keys().hasAny(['fileSize']) || (data.fileSize is string && data.fileSize.size() <= 24))
@@ -103,6 +103,16 @@ service cloud.firestore {
           || (data.fileName is string && data.fileName.size() <= 255))
         && (!data.keys().hasAny(['replyToQuote'])
           || (data.replyToQuote is string && data.replyToQuote.size() <= 1000))
+        && (!data.keys().hasAny(['replyToMessageId'])
+          || (data.replyToMessageId is string && data.replyToMessageId.size() <= 160))
+        && (!data.keys().hasAny(['customMediaData'])
+          || (data.customMediaType == 'sticker'
+            && data.customMediaData is map
+            && data.customMediaData.keys().hasOnly(['emoji', 'label'])
+            && data.customMediaData.emoji is string
+            && data.customMediaData.emoji.size() <= 16
+            && data.customMediaData.label is string
+            && data.customMediaData.label.size() <= 40))
         && (!data.keys().hasAny(['voiceAudioUrl'])
           || (data.voiceAudioUrl is string
             && data.voiceAudioUrl.size() <= 300
@@ -1537,6 +1547,33 @@ service cloud.firestore {
             && nextReceipt.get('updatedAt', null) == request.time
             && (previousReceipt.get('status', '') != 'read' || nextReceipt.status == 'read');
         }
+        function validSenderMessageEdit() {
+          return resource.data.senderId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'isEdited', 'editedAt'])
+            && request.resource.data.content is string
+            && request.resource.data.content.size() > 0
+            && request.resource.data.content.size() <= 4000
+            && request.resource.data.isEdited == true
+            && request.resource.data.editedAt == request.time;
+        }
+        function validMessagePinUpdate() {
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['isPinned'])
+            && request.resource.data.isPinned is bool;
+        }
+        function validMessageStarUpdate() {
+          let previousStars = resource.data.get('starredBy', []);
+          let nextStars = request.resource.data.get('starredBy', []);
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['starredBy'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['starredBy'])
+            && previousStars is list
+            && nextStars is list
+            && nextStars.size() <= previousStars.size() + 1
+            && previousStars.size() <= nextStars.size() + 1
+            && nextStars.hasOnly(previousStars.concat([request.auth.uid]))
+            && previousStars.hasOnly(nextStars.concat([request.auth.uid]))
+            && nextStars.size() <= 100;
+        }
         function validMessageReactionUpdate() {
           let previousUsers = resource.data.get('reactionUsers', {});
           let nextUsers = request.resource.data.get('reactionUsers', {});
@@ -1555,6 +1592,9 @@ service cloud.firestore {
         }
         allow update: if chatMember(chatId) && (
           validMessageReactionUpdate()
+          || validSenderMessageEdit()
+          || validMessagePinUpdate()
+          || validMessageStarUpdate()
           || (
             get(/databases/$(database)/documents/chats/$(chatId)).data.get('isGroup', false) != true
             && resource.data.senderId != request.auth.uid

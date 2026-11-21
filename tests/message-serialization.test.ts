@@ -34,8 +34,23 @@ describe('Firestore message serialization', () => {
   });
 
   it('accepts all supported direct-message media types and rejects unknown types', () => {
-    for (const type of ['voice', 'image', 'video', 'audio', 'document']) assert.equal(isSupportedOutgoingMediaType(type), true);
+    for (const type of ['voice', 'image', 'video', 'audio', 'document', 'sticker']) assert.equal(isSupportedOutgoingMediaType(type), true);
     assert.equal(isSupportedOutgoingMediaType('executable'), false);
+  });
+
+  it('persists exact reply targets and safe sticker payloads', () => {
+    assert.deepEqual(serializeOutgoingMessage({
+      id: 'message-sticker', chatId: 'chat-1', senderId: 'alice', content: '[STICKER]',
+      timestamp: '2026-11-21T00:00:00.000Z', status: 'sending',
+      replyToQuote: 'That is brilliant', replyToMessageId: 'message-original',
+      customMediaType: 'sticker', customMediaData: { emoji: '💜', label: 'Nexora love' },
+      isOfflineUnsent: false,
+    } as any), {
+      id: 'message-sticker', chatId: 'chat-1', senderId: 'alice', content: '[STICKER]',
+      timestamp: '2026-11-21T00:00:00.000Z', status: 'sent',
+      replyToQuote: 'That is brilliant', replyToMessageId: 'message-original',
+      customMediaType: 'sticker', customMediaData: { emoji: '💜', label: 'Nexora love' },
+    });
   });
 
   it('whitelists persisted message fields so local retry flags never reach Firestore', () => {

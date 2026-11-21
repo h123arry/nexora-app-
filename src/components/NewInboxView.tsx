@@ -20,7 +20,10 @@ import {
   collection, 
   doc, 
   setDoc, 
-  updateDoc, 
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  serverTimestamp, 
   onSnapshot, 
   query, 
   orderBy,
@@ -101,6 +104,8 @@ export default function NewInboxView({
   }, []);
   const [inboxTab, setInboxTab] = useState<'chats' | 'groups' | 'circles' | 'requests' | 'archived'>('chats');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showMessageSearch, setShowMessageSearch] = useState(false);
+  const [messageSearchQuery, setMessageSearchQuery] = useState('');
   const [newMessageText, setNewMessageText] = useState('');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
@@ -126,6 +131,8 @@ export default function NewInboxView({
   
   // Message context / reply / edit
   const [activeContextMessageId, setActiveContextMessageId] = useState<string | null>(null);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
+  useEffect(() => { setSelectedMessageIds([]); setActiveContextMessageId(null); setMessageSearchQuery(''); setShowMessageSearch(false); }, [activeChatId]);
   const [replyQuoteText, setReplyQuoteText] = useState<string | null>(null);
   const [replyMessageId, setReplyMessageId] = useState<string | null>(null);
 
@@ -218,6 +225,7 @@ export default function NewInboxView({
           id: doc.id,
           ...data,
           reactions: aggregateMessageReactions(data.reactionUsers, data.reactions),
+          isStarred: Array.isArray(data.starredBy) && data.starredBy.includes(currentUser.id),
         } as any);
       });
 
@@ -334,6 +342,7 @@ export default function NewInboxView({
           id: messageDoc.id,
           ...data,
           reactions: aggregateMessageReactions(data.reactionUsers, data.reactions),
+          isStarred: Array.isArray(data.starredBy) && data.starredBy.includes(currentUser.id),
         } as ExtendedMessage;
       });
       messageCursorsRef.current[activeChatId] = snapshot.docs.length > 0
@@ -405,10 +414,12 @@ export default function NewInboxView({
       content: contentToSend || (mediaData ? `[${mediaData.type.toUpperCase()}]` : ''),
       timestamp: nowIso,
       status: 'sending',
-      replyToQuote: replyQuoteText || undefined,
+      replyToQuote: replyQuoteText ? replyQuoteText.slice(0, 1000) : undefined,
+      replyToMessageId: replyMessageId || undefined,
       customMediaType: mediaData?.type,
-      mediaStoragePath: mediaData?.url || undefined,
-      mediaType: mediaData?.type === 'voice' ? 'audio' : (mediaData?.type as 'image' | 'video' | 'audio' | 'document' | undefined),
+      mediaStoragePath: mediaData?.type === 'sticker' ? undefined : (mediaData?.url || undefined),
+      mediaType: mediaData?.type === 'sticker' ? undefined : mediaData?.type === 'voice' ? 'audio' : (mediaData?.type as 'image' | 'video' | 'audio' | 'document' | undefined),
+      customMediaData: mediaData?.type === 'sticker' ? { emoji: mediaData.url, label: mediaData.name || 'NEXORA sticker' } : undefined,
       mediaContentType: mediaData?.contentType,
       fileSize: typeof mediaData?.size === 'number' ? String(mediaData.size) : undefined,
       voiceAudioUrl: undefined,
@@ -425,7 +436,7 @@ export default function NewInboxView({
       [activeChatId]: [...(prev[activeChatId] || []), newMsg]
     }));
 
-    const previewText = mediaData ? (mediaData.type === 'voice' ? 'Voice message' : `Sent ${mediaData.type === 'image' ? 'a photo' : mediaData.type === 'video' ? 'a video' : mediaData.type === 'audio' ? 'an audio file' : 'a document'}`) : contentToSend;
+    const previewText = mediaData ? (mediaData.type === 'voice' ? 'Voice message' : mediaData.type === 'sticker' ? 'Sent a sticker' : `Sent ${mediaData.type === 'image' ? 'a photo' : mediaData.type === 'video' ? 'a video' : mediaData.type === 'audio' ? 'an audio file' : 'a document'}`) : contentToSend;
     const previousChat = chats.find(chat => chat.id === activeChatId);
     const previousLastMessage = previousChat?.lastMessage || '';
     const previousLastTimestamp = previousChat?.lastTimestamp || '';
@@ -654,9 +665,15 @@ export default function NewInboxView({
     }
   };
 
-  const handleDeleteMessage = async (msgId: string) => {
+  const handleDeleteMessage = async (msgId: string, forEveryone = true) => {
     if (!activeChatId) return;
     const chatId = activeChatId;
+    const target = (localMessages[chatId] || []).find(message => message.id === msgId);
+    if (!target) return;
+    if (forEveryone && target.senderId !== currentUser.id) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'You can only delete your own messages for everyone.' }));
+      return;
+    }
     try {
       if (db) await deleteDoc(doc(db, `chats/${chatId}/messages`, msgId));
       setLocalMessages(prev => ({
@@ -666,6 +683,59 @@ export default function NewInboxView({
     } catch {
       console.warn('[Inbox] Could not delete message from Firestore; details redacted.');
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Message was not deleted. Please retry.' }));
+    }
+  };
+
+  const handleEditMessage = async (message: ExtendedMessage) => {
+    if (!activeChatId || message.senderId !== currentUser.id || !db || message.mediaStoragePath) return;
+    const nextContent = window.prompt('Edit your message', message.content);
+    if (nextContent === null) return;
+    const content = nextContent.trim();
+    if (!content || content.length > 4000 || content === message.content) return;
+    try {
+      await updateDoc(doc(db, `chats/${activeChatId}/messages`, message.id), {
+        content, isEdited: true, editedAt: serverTimestamp(),
+      });
+      setLocalMessages(previous => ({
+        ...previous,
+        [activeChatId]: (previous[activeChatId] || []).map(item => item.id === message.id
+          ? { ...item, content, isEdited: true } : item),
+      }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be edited. Please try again.' }));
+    }
+  };
+
+  const handlePinMessage = async (message: ExtendedMessage) => {
+    if (!activeChatId || !db) return;
+    const isPinned = !Boolean((message as ExtendedMessage & { isPinned?: boolean }).isPinned);
+    try {
+      await updateDoc(doc(db, `chats/${activeChatId}/messages`, message.id), { isPinned });
+      setLocalMessages(previous => ({
+        ...previous,
+        [activeChatId]: (previous[activeChatId] || []).map(item => item.id === message.id
+          ? { ...item, isPinned } as ExtendedMessage : item),
+      }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be pinned. Please try again.' }));
+    }
+  };
+
+  const handleStarMessage = async (message: ExtendedMessage) => {
+    if (!activeChatId || !db) return;
+    const currentStars = Array.isArray((message as ExtendedMessage & { starredBy?: string[] }).starredBy) ? (message as ExtendedMessage & { starredBy?: string[] }).starredBy! : [];
+    const isStarred = !currentStars.includes(currentUser.id);
+    const starredBy = isStarred ? [...new Set([...currentStars, currentUser.id])] : currentStars.filter(id => id !== currentUser.id);
+    try {
+      await updateDoc(doc(db, `chats/${activeChatId}/messages`, message.id), { starredBy: isStarred ? arrayUnion(currentUser.id) : arrayRemove(currentUser.id) });
+      setLocalMessages(previous => ({
+        ...previous,
+        [activeChatId]: (previous[activeChatId] || []).map(item => item.id === message.id
+          ? { ...item, isStarred, starredBy } as ExtendedMessage : item),
+      }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: isStarred ? 'Message starred.' : 'Message unstarred.' }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be starred. Please try again.' }));
     }
   };
 
@@ -872,6 +942,17 @@ export default function NewInboxView({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  aria-label="Search messages in this conversation"
+                  aria-pressed={showMessageSearch}
+                  onClick={() => { setShowMessageSearch(value => !value); setMessageSearchQuery(''); }}
+                  className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
+                  title="Search messages"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
                   aria-label={`Start a voice call with ${activeChat.partnerName}`}
                   onClick={() => setActiveCall({ type: 'voice', partnerName: activeChat.partnerName, partnerAvatar: activeChat.partnerAvatar })}
                   className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
@@ -890,6 +971,24 @@ export default function NewInboxView({
                 </button>
               </div>
             </div>
+
+            {showMessageSearch && (
+              <div className="flex items-center gap-2 border-b border-white/10 bg-[#0c0920] px-4 py-2.5">
+                <Search className="h-4 w-4 shrink-0 text-violet-300" />
+                <input
+                  type="search"
+                  autoFocus
+                  value={messageSearchQuery}
+                  onChange={event => setMessageSearchQuery(event.target.value)}
+                  onKeyDown={event => { if (event.key === 'Escape') { setShowMessageSearch(false); setMessageSearchQuery(''); } }}
+                  placeholder="Search messages in this chat..."
+                  aria-label="Search messages in this chat"
+                  className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-zinc-500"
+                />
+                {messageSearchQuery && <span className="text-[10px] text-violet-300">Highlighting matches</span>}
+                <button type="button" onClick={() => { setShowMessageSearch(false); setMessageSearchQuery(''); }} aria-label="Close message search" className="rounded-lg p-1 text-zinc-400 hover:bg-white/10"><X className="h-4 w-4" /></button>
+              </div>
+            )}
 
             {/* Messages Body */}
             <div
@@ -928,17 +1027,22 @@ export default function NewInboxView({
                       partnerName={activeChat.partnerName}
                       partnerAvatar={activeChat.partnerAvatar}
                       onRetry={handleRetryMessage}
+                      onJumpToReply={(messageId) => {
+                        const container = messagesScrollRef.current;
+                        const target = container ? Array.from(container.querySelectorAll<HTMLElement>('[data-message-id]')).find(element => element.dataset.messageId === messageId) : undefined;
+                        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }}
                       onReply={(m) => {
                         setReplyQuoteText(m.content);
                         setReplyMessageId(m.id);
                       }}
                       onReact={handleReactMessage}
                       onDelete={handleDeleteMessage}
-                      onEdit={() => {}}
-                      onPin={() => {}}
+                      onEdit={handleEditMessage}
+                      onPin={handlePinMessage}
                       onTranslate={() => {}}
-                      searchQuery=""
-                      onToggleContextMenu={() => {}}
+                      searchQuery={messageSearchQuery}
+                      onToggleContextMenu={(messageId) => setActiveContextMessageId(previous => previous === messageId ? null : messageId)}
                       activeContextMessageId={activeContextMessageId}
                       onTogglePlayVoice={() => {}}
                       onResolveVoiceMedia={resolvePrivateChatMedia}
@@ -947,7 +1051,9 @@ export default function NewInboxView({
                       voiceProgress={0}
                       voicePlaybackSpeed={1}
                       currentUserId={currentUser.id}
-                      isPinned={false}
+                      isPinned={Boolean((msg as ExtendedMessage & { isPinned?: boolean }).isPinned)}
+                      onStar={handleStarMessage}
+                      onSelectMessage={(message) => setSelectedMessageIds(previous => previous.includes(message.id) ? previous.filter(id => id !== message.id) : [...previous, message.id].slice(-100))}
                       groupReadCount={activeChat?.isGroup ? Object.values(msg.recipientReceipts || {}).filter(receipt => receipt.status === 'read').length : 0}
                       groupRecipientCount={activeChat?.isGroup ? Math.max(0, (activeChat.membersCount || 0) - 1) : 0}
                     />
@@ -956,6 +1062,26 @@ export default function NewInboxView({
               )}
               <div ref={messagesEndRef} />
             </div>
+
+            {selectedMessageIds.length > 0 && (
+              <div className="flex items-center justify-between gap-3 border-t border-violet-300/15 bg-[#100c28] px-4 py-2.5">
+                <span className="text-xs font-semibold text-violet-100">{selectedMessageIds.length} selected</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => {
+                    const selected = activeMessages.filter(message => selectedMessageIds.includes(message.id));
+                    void navigator.clipboard.writeText(selected.map(message => message.content).filter(Boolean).join('\n')).then(() => {
+                      window.dispatchEvent(new CustomEvent('toast', { detail: 'Selected messages copied.' }));
+                    }).catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not copy selected messages.' })));
+                  }} className="rounded-lg px-3 py-2 text-xs text-violet-200 hover:bg-white/5">Copy</button>
+                  <button type="button" onClick={() => {
+                    const selected = activeMessages.filter(message => selectedMessageIds.includes(message.id) && message.senderId === currentUser.id);
+                    void Promise.all(selected.map(message => handleDeleteMessage(message.id, true)));
+                    setSelectedMessageIds([]);
+                  }} className="rounded-lg px-3 py-2 text-xs text-rose-300 hover:bg-rose-500/10">Delete mine</button>
+                  <button type="button" onClick={() => setSelectedMessageIds([])} className="rounded-lg px-3 py-2 text-xs text-zinc-400 hover:bg-white/5">Cancel</button>
+                </div>
+              </div>
+            )}
 
             {/* Reply Preview Bar */}
             {replyQuoteText && (
@@ -1187,6 +1313,9 @@ export default function NewInboxView({
           onSelect={(emoji) => {
             setNewMessageText(prev => prev + emoji);
             setShowEmojiPicker(false);
+          }}
+          onSelectSticker={(sticker) => {
+            void handleSendMessage('', { type: 'sticker', url: sticker.emoji, name: sticker.label });
           }}
         />
       )}

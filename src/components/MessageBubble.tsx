@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Play, Pause, Check, CheckCheck, Pin, Trash2, Edit, Globe, Quote, MapPin, FileText, Download, Loader2 } from 'lucide-react';
+import { Play, Pause, Check, CheckCheck, Pin, Trash2, Edit, Globe, Quote, MapPin, FileText, Download, Loader2, Copy, Info, Star, CheckSquare, X } from 'lucide-react';
 import { ExtendedMessage } from '../types';
 import RelativeTime from './RelativeTime';
 
@@ -37,6 +37,9 @@ interface MessageBubbleProps {
   isPinned: boolean;
   groupReadCount?: number;
   groupRecipientCount?: number;
+  onStar?: (msg: ExtendedMessage) => void;
+  onSelectMessage?: (msg: ExtendedMessage) => void;
+  onJumpToReply?: (messageId: string) => void;
 }
 
 export default function MessageBubble({
@@ -69,6 +72,9 @@ export default function MessageBubble({
   isPinned,
   groupReadCount = 0,
   groupRecipientCount = 0,
+  onStar,
+  onSelectMessage,
+  onJumpToReply,
 }: MessageBubbleProps) {
   const [privateVoiceUrl, setPrivateVoiceUrl] = useState('');
   const [loadingPrivateVoice, setLoadingPrivateVoice] = useState(false);
@@ -76,6 +82,15 @@ export default function MessageBubble({
   const [privateMediaUrl, setPrivateMediaUrl] = useState('');
   const [loadingPrivateMedia, setLoadingPrivateMedia] = useState(false);
   const [privateMediaError, setPrivateMediaError] = useState('');
+  const [showMessageInfo, setShowMessageInfo] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearLongPress = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); longPressTimer.current = null; };
+  useEffect(() => () => clearLongPress(), []);
+  const copyMessage = async () => {
+    try { await navigator.clipboard.writeText(message.customMediaData?.emoji || message.content || message.fileName || ''); window.dispatchEvent(new CustomEvent('toast', { detail: 'Message copied.' })); }
+    catch { window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not copy this message on this device.' })); }
+    onToggleContextMenu(null);
+  };
   const attemptedMediaPathRef = useRef('');
   useEffect(() => () => {
     if (privateVoiceUrl) URL.revokeObjectURL(privateVoiceUrl);
@@ -85,7 +100,7 @@ export default function MessageBubble({
   useEffect(() => {
     const path = message.mediaStoragePath || '';
     const target = mediaPreviewRef.current;
-    if (message.mediaType !== 'image' || !path || !target || attemptedMediaPathRef.current === path) return;
+    if (!(message.mediaType === 'image' || message.mediaType === 'video') || !path || !target || attemptedMediaPathRef.current === path) return;
     let active = true;
     const loadVisibleImage = () => {
       if (!active || attemptedMediaPathRef.current === path) return;
@@ -119,14 +134,16 @@ export default function MessageBubble({
   
   const highlightMatch = (text: string, query: string) => {
     if (!query) return <span>{text}</span>;
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    const lowerText = text.toLocaleLowerCase();
+    const lowerQuery = query.toLocaleLowerCase();
+    const matchIndex = lowerText.indexOf(lowerQuery);
+    if (matchIndex < 0) return <span>{text}</span>;
+    const matchEnd = matchIndex + query.length;
     return (
       <span>
-        {parts.map((part, i) =>
-          part.toLowerCase() === query.toLowerCase()
-            ? <mark key={i} className="bg-amber-400 text-slate-950 font-semibold px-0.5 rounded">{part}</mark>
-            : part
-        )}
+        {text.slice(0, matchIndex)}
+        <mark className="rounded bg-amber-400 px-0.5 font-semibold text-slate-950">{text.slice(matchIndex, matchEnd)}</mark>
+        {text.slice(matchEnd)}
       </span>
     );
   };
@@ -139,10 +156,29 @@ export default function MessageBubble({
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
+      data-message-id={message.id}
       className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isGrouped ? 'mt-0.25' : 'mt-2'} relative group/bubble`}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.12}
+      onDragEnd={(_event, info) => {
+        const threshold = 72;
+        if ((!isMe && info.offset.x > threshold) || (isMe && info.offset.x < -threshold)) onReply(message);
+      }}
+      onTouchStart={() => {
+        clearLongPress();
+        longPressTimer.current = setTimeout(() => {
+          onToggleContextMenu(message.id);
+          onLongPress(message.id, {} as React.MouseEvent);
+        }, 520);
+      }}
+      onTouchEnd={clearLongPress}
+      onTouchMove={clearLongPress}
+      onTouchCancel={clearLongPress}
       onDoubleClick={() => onReact(message.id, '❤️')}
       onContextMenu={(e) => {
         e.preventDefault();
+        onToggleContextMenu(message.id);
         onLongPress(message.id, e);
       }}
     >
@@ -177,10 +213,10 @@ export default function MessageBubble({
             } ${isLastInGroup ? (isMe ? 'rounded-br-sm' : 'rounded-bl-sm') : ''} shadow-lg relative group/item`}
           >
             {/* Top row with Pin Indicator */}
-            {isPinned && (
-              <div className="mb-1.5 flex items-center gap-1 text-[8px] font-mono text-yellow-400 font-bold uppercase tracking-wider select-none">
-                <Pin className="w-2.5 h-2.5 rotate-45 text-yellow-400 fill-current" />
-                <span>Pinned Message</span>
+            {(isPinned || message.isStarred) && (
+              <div className="mb-1.5 flex items-center gap-1 text-[8px] font-mono font-bold uppercase tracking-wider text-yellow-300 select-none">
+                {isPinned && <><Pin className="h-2.5 w-2.5 rotate-45 fill-current" /><span>Pinned</span></>}
+                {message.isStarred && <><Star className="ml-1 h-2.5 w-2.5 fill-current"/><span>Starred</span></>}
               </div>
             )}
             {/* Context menu trigger on hover */}
@@ -203,10 +239,10 @@ export default function MessageBubble({
 
             {/* Reply Quote Block */}
             {message.replyToQuote && (
-              <div className="mb-2 px-2.5 py-1.5 bg-black/25 border-l-2 border-white/10 rounded text-[10px] text-zinc-300 italic truncate max-w-full flex items-center gap-1">
-                <span className="text-violet-400 font-bold not-italic">↳</span>
-                <span>{message.replyToQuote}</span>
-              </div>
+              <button type="button" onClick={() => message.replyToMessageId && onJumpToReply?.(message.replyToMessageId)} className="mb-2 flex max-w-full items-center gap-1 truncate rounded border-l-2 border-violet-400/60 bg-black/25 px-2.5 py-1.5 text-left text-[10px] italic text-zinc-300 hover:bg-black/40">
+                <span className="font-bold not-italic text-violet-400">↳</span>
+                <span className="truncate">{message.replyToQuote}</span>
+              </button>
             )}
 
             {/* Story Reply Render Block */}
@@ -272,15 +308,19 @@ export default function MessageBubble({
               ) : (
                 <p className="rounded-lg border border-[var(--nx-edge)] bg-black/20 px-3 py-2 text-xs text-[var(--nx-muted)]">This older voice message has no stored audio file.</p>
               )
+            ) : message.customMediaType === 'sticker' && message.customMediaData?.emoji ? (
+              <div className="my-1 flex min-h-28 min-w-28 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/15 via-indigo-950/35 to-fuchsia-500/10 p-4" role="img" aria-label={message.customMediaData.label || 'Sticker'}>
+                <span className="select-none text-7xl drop-shadow-[0_5px_12px_rgba(0,0,0,0.35)]">{message.customMediaData.emoji}</span>
+              </div>
             ) : message.mediaStoragePath && message.mediaType ? (
               <div ref={mediaPreviewRef} className="mb-1 w-full min-w-[220px] max-w-[320px] overflow-hidden rounded-xl border border-white/10 bg-black/25">
                 {message.mediaType === 'image' ? (
                   privateMediaUrl
                     ? <a href={privateMediaUrl} target="_blank" rel="noreferrer"><img src={privateMediaUrl} alt={message.fileName || 'Shared image'} className="max-h-[420px] w-full object-contain" loading="lazy" /></a>
-                    : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-28 w-full flex-col items-center justify-center gap-2 p-4 text-xs text-violet-200"><span>{loadingPrivateMedia ? 'Loading private photo…' : 'Tap to load photo'}</span>{privateMediaError && <span role="status" className="text-rose-300">{privateMediaError}</span>}</button>
+                    : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-28 w-full flex-col items-center justify-center gap-2 p-4 text-xs text-violet-200"><span>{loadingPrivateMedia ? 'Loading private media…' : 'Tap to load photo'}</span>{privateMediaError && <span role="status" className="text-rose-300">{privateMediaError}</span>}</button>
                 ) : message.mediaType === 'video' ? (
                   privateMediaUrl
-                    ? <video controls playsInline preload="metadata" src={privateMediaUrl} className="max-h-[420px] w-full bg-black" aria-label={message.fileName || 'Shared video'} />
+                    ? <video controls playsInline preload="auto" src={privateMediaUrl} className="max-h-[420px] w-full bg-black" aria-label={message.fileName || 'Shared video'} />
                     : <button type="button" onClick={() => void loadPrivateMedia()} className="flex min-h-28 w-full flex-col items-center justify-center gap-2 p-4 text-xs text-violet-200"><Play className="h-7 w-7"/>{loadingPrivateMedia ? 'Loading private video…' : 'Tap to load video'}{privateMediaError && <span role="status" className="text-rose-300">{privateMediaError}</span>}</button>
                 ) : message.mediaType === 'audio' ? (
                   privateMediaUrl
@@ -487,6 +527,29 @@ export default function MessageBubble({
           </div>
         </div>
       </div>
+      {activeContextMessageId === message.id && (
+        <div className={`absolute z-30 ${isMe ? 'right-3' : 'left-12'} top-full mt-2 w-[min(310px,calc(100vw-5rem))] rounded-2xl border border-violet-300/15 bg-[#0b0920] p-2 shadow-2xl`} role="menu" aria-label="Message actions">
+          <div className="grid grid-cols-4 gap-1">
+            <button type="button" role="menuitem" onClick={() => onReply(message)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Quote className="h-4 w-4"/><span className="text-[10px]">Reply</span></button>
+            <button type="button" role="menuitem" onClick={() => void copyMessage()} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Copy className="h-4 w-4"/><span className="text-[10px]">Copy</span></button>
+            <button type="button" role="menuitem" onClick={() => { onReact(message.id, '❤️'); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><span className="text-lg">❤️</span><span className="text-[10px]">React</span></button>
+            <button type="button" role="menuitem" onClick={() => { onStar?.(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Star className="h-4 w-4"/><span className="text-[10px]">{message.isStarred ? 'Unstar' : 'Star'}</span></button>
+            {isMe && !message.mediaStoragePath && message.customMediaType !== 'sticker' && <button type="button" role="menuitem" onClick={() => { onEdit(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Edit className="h-4 w-4"/><span className="text-[10px]">Edit</span></button>}
+            <button type="button" role="menuitem" onClick={() => { onPin(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Pin className="h-4 w-4"/><span className="text-[10px]">{isPinned ? 'Unpin' : 'Pin'}</span></button>
+            <button type="button" role="menuitem" onClick={() => setShowMessageInfo(value => !value)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Info className="h-4 w-4"/><span className="text-[10px]">Info</span></button>
+            <button type="button" role="menuitem" onClick={() => { onSelectMessage?.(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><CheckSquare className="h-4 w-4"/><span className="text-[10px]">Select</span></button>
+            {isMe && <button type="button" role="menuitem" onClick={() => { onDelete(message.id, true); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-rose-300 hover:bg-rose-500/10"><Trash2 className="h-4 w-4"/><span className="text-[10px]">Delete</span></button>}
+          </div>
+          {showMessageInfo && (
+            <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-[11px] text-zinc-300">
+              <div className="flex items-center justify-between"><span>Delivery status</span><strong className="capitalize text-violet-200">{message.status}</strong></div>
+              {isMe && <div className="mt-1 flex items-center justify-between"><span>Read receipts</span><strong className="text-violet-200">{groupReadCount > 0 ? `${groupReadCount}/${groupRecipientCount} read` : message.status === 'read' ? 'Read' : 'Not read yet'}</strong></div>}
+              <div className="mt-1 text-zinc-500">Sent {new Date(message.timestamp).toLocaleString()}</div>
+            </div>
+          )}
+          <button type="button" onClick={() => { setShowMessageInfo(false); onToggleContextMenu(null); }} className="mt-1 flex min-h-9 w-full items-center justify-center gap-1 rounded-lg text-[11px] text-zinc-400 hover:bg-white/5"><X className="h-3 w-3"/>Close</button>
+        </div>
+      )}
     </motion.div>
   );
 }
