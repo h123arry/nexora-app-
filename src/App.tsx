@@ -1711,8 +1711,11 @@ export default function App() {
           return next;
         });
         setPosts(previous => previous.map(post => post.id === postId ? { ...post, likes: data.likes } : post));
-      }).catch(() => {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your Spark could not be saved. Please try again.' }));
+      }).catch(error => {
+        const message = error instanceof Error && error.message.trim()
+          ? error.message
+          : 'NEXORA could not save this Spark right now. Please try again.';
+        window.dispatchEvent(new CustomEvent('toast', { detail: message }));
       }).finally(() => {
         pendingLikeRequestsRef.current.delete(postId);
       });
