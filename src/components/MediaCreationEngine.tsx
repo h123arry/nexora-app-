@@ -380,6 +380,7 @@ export default function MediaCreationEngine({
   const [galleryReturnToCamera, setGalleryReturnToCamera] = useState(false);
   const [galleryPreviewIndex, setGalleryPreviewIndex] = useState<number | null>(null);
   const [editorToolTab, setEditorToolTab] = useState<'looks' | 'adjust' | 'crop' | 'text'>('looks');
+  const [creativeToolTab, setCreativeToolTab] = useState<'looks' | 'effects' | 'text' | 'stickers' | 'audio' | 'presets'>('looks');
   const [videoFileUrl, setVideoFileUrl] = useState<string | null>(() => initialAutosave?.videoUrl || null);
   const [videoRawBlob, setVideoRawBlob] = useState<Blob | null>(null);
   const [videoMuted, setVideoMuted] = useState(false);
@@ -1675,7 +1676,7 @@ export default function MediaCreationEngine({
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Complete this step before continuing.' }));
       return;
     }
-    if (currentStep < 6) setCurrentStep(prev => prev + 1);
+    if (currentStep < 7) setCurrentStep(prev => prev + 1);
   };
 
   const prevStep = () => {
@@ -1866,9 +1867,9 @@ export default function MediaCreationEngine({
 
         {/* A quiet progress line keeps the focus on creating, not on navigating a dashboard. */}
         {activeTab !== 'drafts' && currentStep !== 3 && !(currentStep === 2 && activeMode === 'carousel') && (
-          <div className="mb-4 shrink-0 px-1" aria-label={`Creation step ${currentStep} of 6`}>
+          <div className="mb-4 shrink-0 px-1" aria-label={`Creation step ${currentStep} of 7`}>
             <div className="h-1 overflow-hidden rounded-full bg-[#292244]">
-              <div className="h-full rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] transition-all duration-300" style={{ width: `${(currentStep / 6) * 100}%` }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] transition-all duration-300" style={{ width: `${(currentStep / 7) * 100}%` }} />
             </div>
           </div>
         )}
@@ -2440,8 +2441,33 @@ export default function MediaCreationEngine({
                 </section>
               )}
 
+              
               {currentStep === 4 && (
-                /* STEP 4: SMART CAPTION & METADATA DETAILS */
+                <section className="flex min-h-[520px] flex-col gap-4 animate-fadeIn">
+                  <header><span className="text-[10px] font-mono uppercase tracking-[0.18em] text-violet-300">NEXORA CREATIVE TOOLS</span><h3 className="mt-1 text-lg font-black text-white">Give your creation its signature.</h3><p className="mt-1 text-[10px] text-[#8E88A7]">A focused home for visual treatments, overlays and sound.</p></header>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                    {([{id:'looks',label:'Looks',mark:'◈'},{id:'effects',label:'Effects',mark:'✧'},{id:'text',label:'Text',mark:'T'},{id:'stickers',label:'Stickers',mark:'☺'},{id:'audio',label:'Audio',mark:'♫'},{id:'presets',label:'Presets',mark:'✦'}] as const).map(tool => <button key={tool.id} type="button" onClick={() => setCreativeToolTab(tool.id)} aria-pressed={creativeToolTab === tool.id} className={creativeToolTab === tool.id ? 'flex min-h-[66px] flex-col items-center justify-center gap-1.5 rounded-xl border border-violet-400/60 bg-violet-500/15 px-2 py-2 text-white' : 'flex min-h-[66px] flex-col items-center justify-center gap-1.5 rounded-xl border border-[#292244] bg-[#0C0A19] px-2 py-2 text-[#A39BBF]'}><span className="text-lg font-black text-violet-200">{tool.mark}</span><span className="text-[10px] font-bold">{tool.label}</span></button>)}
+                  </div>
+                  <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.85fr)]">
+                    <div className="flex min-h-[220px] items-center justify-center overflow-hidden rounded-2xl border border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.15),transparent_60%),#03040A] p-3">
+                      {selectedImages.length ? <img src={selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.url} alt="Creative tools preview" className="max-h-[340px] max-w-full rounded-lg object-contain" style={{filter:(selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.filterStyle || 'none') + ' brightness(' + brightness + '%) contrast(' + contrast + '%) saturate(' + saturation + '%) blur(' + blur + 'px)',transform:'rotate(' + (selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.rotation || 0) + 'deg) scale(' + (selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.zoom || 1) + ')'}} /> : (videoFileUrl || recordedVideoUrl) ? <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="max-h-[340px] max-w-full rounded-lg object-contain"/> : <div className="text-center text-xs text-[#8E88A7]">Your creative preview will appear here.</div>}
+                    </div>
+                    <div className="min-h-[220px] overflow-y-auto rounded-2xl border border-[#292244] bg-[#0B0918] p-3">
+                      {creativeToolTab === 'looks' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">NEXORA looks</h4><p className="text-[10px] text-[#8E88A7]">Apply a look to the selected photo. Video looks are available in Studio.</p>{selectedImages.length ? <div className="grid grid-cols-2 gap-2">{FILTER_PRESETS.map(preset => <button key={preset.name} type="button" onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,filterName:preset.name,filterStyle:preset.style} : image))} aria-pressed={(selectedImages[activeEditIndex ?? 0]?.filterName || 'Original') === preset.name} className="overflow-hidden rounded-xl border border-white/10 text-left text-[10px] font-bold text-[#B8B0C9]"><img src={selectedImages[activeEditIndex ?? 0]?.url} alt="" className="h-14 w-full object-cover" style={{filter:preset.style || 'none'}}/><span className="block px-2 py-2">{preset.name}</span></button>)}</div> : <p className="rounded-xl border border-white/10 p-3 text-[10px] text-[#A39BBF]">Choose a photo to apply NEXORA looks, or open Studio for video-grade looks.</p>}</div>}
+                      {creativeToolTab === 'effects' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">Fine visual effects</h4><p className="text-[10px] text-[#8E88A7]">Tune light, depth and colour in real time.</p>{([{label:'Brightness',value:brightness,set:setBrightness,min:50,max:150},{label:'Contrast',value:contrast,set:setContrast,min:50,max:150},{label:'Saturation',value:saturation,set:setSaturation,min:50,max:150},{label:'Soft focus',value:blur,set:setBlur,min:0,max:12}] as const).map(control => <label key={control.label} className="block space-y-2"><span className="flex justify-between text-[10px] text-[#BDB5CE]"><span>{control.label}</span><span className="tabular-nums text-violet-200">{control.value}{control.label === 'Soft focus' ? 'px' : '%'}</span></span><input type="range" min={control.min} max={control.max} value={control.value} onChange={event => control.set(Number(event.target.value))} disabled={!selectedImages.length} className="w-full accent-violet-500 disabled:opacity-40"/></label>)}<button type="button" onClick={() => {setBrightness(100);setContrast(100);setSaturation(100);setBlur(0);}} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-[#B8B0C9]">Reset effects</button></div>}
+                      {creativeToolTab === 'text' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">Text overlays</h4><p className="text-[10px] text-[#8E88A7]">Add a message to the media preview.</p><input type="text" maxLength={80} value={textOverlay} onChange={event => setTextOverlay(event.target.value)} placeholder="Write your overlay…" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-3 text-xs text-white"/><div className="flex items-center justify-between text-[10px] text-[#A39BBF]">Text colour<input aria-label="Creative overlay text colour" type="color" value={textOverlayColor} onChange={event => setTextOverlayColor(event.target.value)} className="h-8 w-12 bg-transparent"/></div><p className="text-[9px] text-[#827B9C]">For animated text, timing and motion, use the full NEXORA Studio timeline.</p></div>}
+                      {creativeToolTab === 'stickers' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">Stickers and reactions</h4><p className="text-[10px] text-[#8E88A7]">Choose one overlay or tap it again to remove.</p><div className="grid grid-cols-4 gap-2">{['🔥','⚡','✨','🏆','👾','🚀','💯','💜','🎧','🌹','🦋','⭐'].map(emoji => <button key={emoji} type="button" onClick={() => setStickerOverlay(stickerOverlay === emoji ? null : emoji)} aria-pressed={stickerOverlay === emoji} className={stickerOverlay === emoji ? 'rounded-xl border border-violet-400/60 bg-violet-500/15 py-3 text-xl' : 'rounded-xl border border-white/10 bg-white/[0.03] py-3 text-xl'}>{emoji}</button>)}</div><button type="button" onClick={() => setStickerOverlay(null)} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-[#B8B0C9]">Remove sticker</button></div>}
+                      {creativeToolTab === 'audio' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">Music and sound</h4><p className="text-[10px] leading-relaxed text-[#A39BBF]">Add Brazilian funk, other music styles, sound effects or voiceover using audio you own or are licensed to use.</p>{(videoFileUrl || recordedVideoUrl) && onOpenStudio ? <button type="button" onClick={openVideoInStudio} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-3 text-xs font-extrabold text-white">Open Studio audio timeline</button> : <p className="rounded-xl border border-white/10 p-3 text-[10px] text-[#8E88A7]">Audio mixing is available for video projects in NEXORA Studio.</p>}</div>}
+                      {creativeToolTab === 'presets' && <div className="space-y-3"><h4 className="text-xs font-extrabold text-white">Quick creative recipes</h4><p className="text-[10px] text-[#8E88A7]">One-tap colour and mood combinations.</p>{[{name:'Violet glow',style:'saturate(1.18) contrast(1.08) hue-rotate(8deg)'},{name:'Golden hour',style:'sepia(.18) saturate(1.22) brightness(1.04)'},{name:'Night cinema',style:'contrast(1.22) saturate(.82) brightness(.9)'},{name:'Clean detail',style:'contrast(1.12) saturate(1.08)'}].map(preset => <button key={preset.name} type="button" disabled={!selectedImages.length} onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,filterName:preset.name,filterStyle:preset.style} : image))} className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.025] px-3 py-3 text-left text-[11px] font-bold text-white disabled:opacity-40"><span>{preset.name}</span><span className="text-[9px] text-violet-300">Apply →</span></button>)}</div>}
+                    </div>
+                  </div>
+                  <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-white/[0.08] pt-3"><button type="button" onClick={prevStep} className="rounded-xl border border-white/10 px-4 py-3 text-xs font-bold text-[#B8B0C9]">← Back to editor</button><button type="button" onClick={nextStep} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-5 py-3 text-xs font-extrabold text-white">Continue to details <ChevronRight size={14} className="ml-1 inline"/></button></footer>
+                </section>
+              )}
+
+
+              {currentStep === 5 && (
+                /* STEP 5: SMART CAPTION & METADATA DETAILS */
                 <div className="space-y-4 animate-fadeIn">
                   <div className="space-y-1 text-left">
                     <label className="text-[10px] font-mono text-[#A39BBF] uppercase">Write a caption</label>
@@ -2553,8 +2579,8 @@ export default function MediaCreationEngine({
                 </div>
               )}
 
-              {currentStep === 5 && (
-                /* STEP 5: VISUAL PREVIEW & ACCESSIBILITY COMPLIANCE */
+              {currentStep === 6 && (
+                /* STEP 6: VISUAL PREVIEW & ACCESSIBILITY COMPLIANCE */
                 <div className="space-y-4 animate-fadeIn">
                   <div>
                     <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block mb-1">{activeTab === 'story' ? 'STORY PREVIEW' : 'POST PREVIEW'}</span>
@@ -2640,8 +2666,8 @@ export default function MediaCreationEngine({
                 </div>
               )}
 
-              {currentStep === 6 && (
-                /* STEP 6: PUBLISHING OPTIONS & PROGRESS SCREEN */
+              {currentStep === 7 && (
+                /* STEP 7: PUBLISHING OPTIONS & PROGRESS SCREEN */
                 <div className="space-y-4 animate-fadeIn">
                   
                   {postingStatus === 'idle' ? (
@@ -2779,7 +2805,7 @@ export default function MediaCreationEngine({
         </div>
 
         {/* Publishing controls */}
-        {activeTab !== 'drafts' && currentStep !== 3 && postingStatus === 'idle' && (
+        {activeTab !== 'drafts' && currentStep !== 3 && currentStep !== 4 && postingStatus === 'idle' && (
           <div className="border-t border-[#292244]/60 pt-4 flex justify-between items-center shrink-0">
             <div>
               <button 
@@ -2798,7 +2824,7 @@ export default function MediaCreationEngine({
                   ← Back
                 </button>
               )}
-              {currentStep < 6 ? (
+              {currentStep < 7 ? (
                 <button 
                   onClick={nextStep}
                   disabled={currentStep === 2 && !activeMode}
