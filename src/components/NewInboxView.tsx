@@ -20,7 +20,10 @@ import {
   collection, 
   doc, 
   setDoc, 
-  updateDoc, 
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  serverTimestamp, 
   onSnapshot, 
   query, 
   orderBy,
@@ -219,6 +222,7 @@ export default function NewInboxView({
           id: doc.id,
           ...data,
           reactions: aggregateMessageReactions(data.reactionUsers, data.reactions),
+          isStarred: Array.isArray(data.starredBy) && data.starredBy.includes(currentUser.id),
         } as any);
       });
 
@@ -335,6 +339,7 @@ export default function NewInboxView({
           id: messageDoc.id,
           ...data,
           reactions: aggregateMessageReactions(data.reactionUsers, data.reactions),
+          isStarred: Array.isArray(data.starredBy) && data.starredBy.includes(currentUser.id),
         } as ExtendedMessage;
       });
       messageCursorsRef.current[activeChatId] = snapshot.docs.length > 0
@@ -686,7 +691,7 @@ export default function NewInboxView({
     if (!content || content.length > 4000 || content === message.content) return;
     try {
       await updateDoc(doc(db, `chats/${activeChatId}/messages`, message.id), {
-        content, isEdited: true, editedAt: new Date().toISOString(),
+        content, isEdited: true, editedAt: serverTimestamp(),
       });
       setLocalMessages(previous => ({
         ...previous,
@@ -715,13 +720,15 @@ export default function NewInboxView({
 
   const handleStarMessage = async (message: ExtendedMessage) => {
     if (!activeChatId || !db) return;
-    const isStarred = !Boolean((message as ExtendedMessage & { isStarred?: boolean }).isStarred);
+    const currentStars = Array.isArray((message as ExtendedMessage & { starredBy?: string[] }).starredBy) ? (message as ExtendedMessage & { starredBy?: string[] }).starredBy! : [];
+    const isStarred = !currentStars.includes(currentUser.id);
+    const starredBy = isStarred ? [...new Set([...currentStars, currentUser.id])] : currentStars.filter(id => id !== currentUser.id);
     try {
-      await updateDoc(doc(db, `chats/${activeChatId}/messages`, message.id), { isStarred });
+      await updateDoc(doc(db, `chats/${activeChatId}/messages`, message.id), { starredBy: isStarred ? arrayUnion(currentUser.id) : arrayRemove(currentUser.id) });
       setLocalMessages(previous => ({
         ...previous,
         [activeChatId]: (previous[activeChatId] || []).map(item => item.id === message.id
-          ? { ...item, isStarred } as ExtendedMessage : item),
+          ? { ...item, isStarred, starredBy } as ExtendedMessage : item),
       }));
       window.dispatchEvent(new CustomEvent('toast', { detail: isStarred ? 'Message starred.' : 'Message unstarred.' }));
     } catch {
