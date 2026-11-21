@@ -13,6 +13,10 @@ const pageId = 'creator-audience-test-page';
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Creator audience tests require the Firestore Emulator.');
   await db.doc('follows/' + followerId + '_' + creatorId).delete();
+  await db.doc('publicProfiles/creator-no-projection').delete();
+  await db.doc('publicProfiles/follower-no-projection').delete();
+  await db.doc('users/creator-no-projection').delete();
+  await db.doc('users/follower-no-projection').delete();
   await db.doc('publicProfiles/' + creatorId).set({ id: creatorId, followers: 4 });
   await db.doc('publicProfiles/' + followerId).set({ id: followerId, following: 2 });
   await db.doc('users/' + creatorId).set({ id: creatorId, followers: 4 });
