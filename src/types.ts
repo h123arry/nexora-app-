@@ -263,6 +263,9 @@ export interface ExtendedMessage extends Message {
   fileName?: string;
   fileSize?: string;
   replyToQuote?: string;
+  replyToMessageId?: string;
+  isPinned?: boolean;
+  isStarred?: boolean;
   reactions?: { emoji: string, userIds: string[] }[];
   reactionUsers?: Record<string, string[]>;
   isEdited?: boolean;
