@@ -15,7 +15,7 @@ import GiftVerseView from './GiftVerseView';
 import { validateUsername } from '../utils/username';
 import ReportModal from './ReportModal';
 import { auth, db } from '../services/firebase/config';
-import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc } from 'firebase/firestore';
+import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
 import { uploadMediaFile } from '../services/firebase/storageService';
 import { SettingsService } from '../services/firebase/settingsService';
 import { subscribeToFollows } from '../services/dataService';
@@ -443,6 +443,27 @@ export default function ProfileView({
   });
   const [receivedSparks, setReceivedSparks] = useState<Array<{ id: string; fromUserId: string; username: string; name: string; avatar: string; postId: string }>>([]);
   const [profileFollows, setProfileFollows] = useState<Array<{ followerId: string; followingId: string }>>([]);
+  const [authorProfilePosts, setAuthorProfilePosts] = useState<Post[]>([]);
+  useEffect(() => {
+    if (!currentUser.id) {
+      setAuthorProfilePosts([]);
+      return;
+    }
+    const authorPostsQuery = query(
+      collection(db, 'posts'),
+      where('userId', '==', currentUser.id),
+      where('audience', '==', 'public'),
+      orderBy('timestamp', 'desc'),
+      limit(100),
+    );
+    return onSnapshot(authorPostsQuery, snapshot => {
+      const nextPosts = snapshot.docs.map(postDoc => ({ ...postDoc.data(), id: postDoc.id })) as Post[];
+      setAuthorProfilePosts(nextPosts);
+    }, error => {
+      const code = (error as { code?: string } | null)?.code || 'unknown';
+      console.warn('[NEXORA] Profile post feed sync paused; retaining available posts', { code, userId: currentUser.id });
+    });
+  }, [currentUser.id]);
   const [relationshipUsers, setRelationshipUsers] = useState<User[]>([]);
   useEffect(() => {
     if (!isLoggedIn || !currentUser.id || auth.currentUser?.uid !== currentUser.id) {
@@ -1421,7 +1442,13 @@ export default function ProfileView({
 
   // Pinned items filtering
   const pinnedPostIdsList = currentUser.pinnedPosts || [];
-  const myPosts = posts.filter(p => p.username === currentUser.username || p.userId === currentUser.id);
+  // The global feed is intentionally paginated; load this author's public posts
+  // independently so older profile posts do not disappear just because they are
+  // outside the currently loaded home-feed window.
+  const myPosts = [...new Map([...posts, ...authorProfilePosts]
+    .filter(post => post && (post.userId === currentUser.id || post.username === currentUser.username))
+    .map(post => [post.id, post] as const)).values()]
+    .sort((left, right) => Date.parse(String(right.timestamp)) - Date.parse(String(left.timestamp)));
   const [, setMetricsUpdateTick] = useState(0);
   
   useEffect(() => {
