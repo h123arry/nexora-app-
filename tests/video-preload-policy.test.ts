@@ -20,7 +20,7 @@ test('keeps the active video playing and does not mark it released', () => {
 });
 
 test('prepares two videos behind the active video before they enter view', () => {
-  const plan = getVideoPreloadPlan({ ...base, isActive: false, postVideoIndex: 0 });
+  const plan = getVideoPreloadPlan({ ...base, isActive: false, activeVideoIndex: 3, postVideoIndex: 1 });
   assert.deepEqual(plan, { shouldPreload: true, isReleased: false, preloadMode: 'auto' });
 });
 
