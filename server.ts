@@ -12,6 +12,7 @@ import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { setPostLike } from './server/postEngagement';
+import { setPublicPostCommentReplyLike } from './server/postCommentReactions';
 import { setCreatorFollowStateForUser, SocialFollowError } from './server/socialFollow';
 import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
@@ -218,6 +219,38 @@ app.post('/api/social/post-spark-state', async (req, res) => {
     return res.status(503).json({ code: 'spark_service_unavailable', error: 'NEXORA could not save this Spark right now. Please try again.' });
   }
 });
+
+app.use('/api/social/comment-reply-spark-state', requireFirebaseUser, socialSparkHttpLimiter);
+app.post('/api/social/comment-reply-spark-state', async (req, res) => {
+  const uid = res.locals.userId;
+  if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
+    return res.status(401).json({ code: 'unauthenticated', error: 'Sign in to Spark replies.' });
+  }
+  const { postId, commentId, replyId, liked } = req.body || {};
+  const validId = (value: unknown) => typeof value === 'string' && /^[A-Za-z0-9_-]{1,150}$/.test(value);
+  if (!validId(postId) || !validId(commentId) || !validId(replyId) || typeof liked !== 'boolean') {
+    return res.status(400).json({ code: 'invalid_reply_spark_request', error: 'A valid post, comment, reply and Spark state are required.' });
+  }
+  try {
+    if (!await allowSparkMutation(uid)) {
+      res.setHeader('Retry-After', '30');
+      return res.status(429).json({ code: 'spark_rate_limited', error: 'You are sparking too quickly. Please wait a moment.' });
+    }
+    const result = await setPublicPostCommentReplyLike(serverDb, uid, postId, commentId, replyId, liked);
+    return res.status(200).json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('unavailable') || message.includes('no longer available')) {
+      return res.status(404).json({ code: 'reply_unavailable', error: 'This reply is no longer available.' });
+    }
+    if (message.includes('valid') || message.includes('required')) {
+      return res.status(400).json({ code: 'invalid_reply_spark_request', error: 'This Spark request is invalid.' });
+    }
+    console.error('[SocialReplySpark] Reply Spark state could not be saved.', { uid, code: (error as { code?: string } | null)?.code || 'unknown' });
+    return res.status(503).json({ code: 'reply_spark_service_unavailable', error: 'NEXORA could not save this reply Spark right now. Please try again.' });
+  }
+});
+
 const r2Config = resolveR2Config();
 
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
