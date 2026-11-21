@@ -13,8 +13,8 @@ export async function setPostLike(
   postId: string,
   desiredLiked: boolean,
 ): Promise<PostLikeResult> {
-  if (!uid || typeof uid !== 'string') throw new Error('Authentication is required.');
-  if (!postId || typeof postId !== 'string' || postId.length > 150 || postId.includes('/')) throw new Error('Invalid post ID.');
+  if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) throw new Error('Authentication is required.');
+  if (typeof postId !== 'string' || !/^[A-Za-z0-9_-]{1,150}$/.test(postId)) throw new Error('Invalid post ID.');
   if (typeof desiredLiked !== 'boolean') throw new Error('A desired like state is required.');
 
   const postRef = db.collection('posts').doc(postId);
@@ -28,7 +28,8 @@ export async function setPostLike(
       throw new Error('This public post is unavailable.');
     }
     const currentlyLiked = likeSnapshot.exists;
-    const authorId = String(postSnapshot.get('userId') || postSnapshot.get('authorId') || '');
+    const rawAuthorId = postSnapshot.get('userId') || postSnapshot.get('authorId');
+    const authorId = typeof rawAuthorId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(rawAuthorId) ? rawAuthorId : '';
     const notificationId = `like_${randomUUID()}`;
     const notificationRef = authorId && desiredLiked && authorId !== uid
       ? db.collection('users').doc(authorId).collection('notifications').doc(notificationId)
