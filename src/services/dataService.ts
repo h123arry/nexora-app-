@@ -16,7 +16,9 @@ import {
   onSnapshot,
   writeBatch
 } from 'firebase/firestore';
+import { functions } from '../lib/firebase';
 import { PrivacySettings, User, Post, Comment, Circle as Community, Page, Notification, Message, Chat } from '../types';
+import { httpsCallable } from 'firebase/functions';
 import { cacheManager } from './cache/cacheService';
 import { mergePendingActions, PendingAction } from './syncQueue';
 
