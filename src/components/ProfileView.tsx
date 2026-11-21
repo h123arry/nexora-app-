@@ -165,7 +165,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
     const repairMissingPosters = async () => {
       for (const post of gridPosts) {
         const existingPoster = post.image || post.images?.find(Boolean) || (post as any).thumbnailUrl || (post as any).thumbnail || (post as any).posterUrl;
-        const videoSource = post.videoUrl || (typeof post.media === 'string' && /\\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media) ? post.media : '');
+        const videoSource = post.videoUrl || (typeof post.media === 'string' && /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media) ? post.media : '');
         if (!videoSource || existingPoster || post.userId !== ownerId || attemptedPosterRepairs.current.has(post.id)) continue;
         attemptedPosterRepairs.current.add(post.id);
         try {
@@ -210,7 +210,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
         const isVoice = post.isVoice || !!post.voiceAudioUrl || !!(post as any).audioUrl || post.content.includes('🎙') || post.voiceDuration;
         const mediaUrl = typeof post.media === 'string' ? post.media : '';
         const mediaType = String((post as any).mediaType || (post as any).type || '').toLowerCase();
-        const isVideo = !!post.videoUrl || (mediaType === 'video' && !!mediaUrl) || /\\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(mediaUrl);
+        const isVideo = !!post.videoUrl || (mediaType === 'video' && !!mediaUrl) || /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(mediaUrl);
         const videoSource = post.videoUrl || (isVideo ? mediaUrl : '');
         // Older and newer publishers have used different media field names.
         // Resolve the actual media asset first; never substitute caption text for an image thumbnail.
