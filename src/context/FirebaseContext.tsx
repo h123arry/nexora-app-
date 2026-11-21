@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { doc, getDocFromServer, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { onIdTokenChanged, signInAnonymously, User as FirebaseUser, ConfirmationResult, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { onIdTokenChanged, User as FirebaseUser, ConfirmationResult, setPersistence, indexedDBLocalPersistence, browserLocalPersistence } from 'firebase/auth';
 import { User } from '../types';
 import { ProfileService } from '../services/firebase/profileService';
 import { AuthService } from '../services/firebase/authService';
@@ -56,92 +56,60 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     let sequence = 0;
-    let observedUid = null as string | null;
-    let hydratedIdentity = null as string | null;
+    let observedUid: string | null = null;
+    let hydratedIdentity: string | null = null;
     let inFlightHydration: { key: string; promise: Promise<User | null> } | null = null;
-    let anonymousBootstrapStarted = false;
-    const persistenceReady = setPersistence(auth, browserLocalPersistence);
+    let disposed = false;
+    let unsubscribe: (() => void) | null = null;
 
-    const unsubscribe = onIdTokenChanged(auth, async (fbUser) => {
+    const handleAuthState = async (fbUser: FirebaseUser | null) => {
       const currentSequence = ++sequence;
       const nextUid = fbUser?.uid ?? null;
-
       setFirebaseUser(fbUser);
-      if (observedUid !== nextUid) {
-        observedUid = nextUid;
-        setUser(null);
-        setError(null);
-        setInitializing(true);
-      }
-
+      if (observedUid !== nextUid) { observedUid = nextUid; setUser(null); setError(null); setInitializing(true); }
       if (!fbUser) {
-        hydratedIdentity = null;
-        inFlightHydration = null;
-        setUser(null);
-        setError(null);
-        if (!anonymousBootstrapStarted) {
-          anonymousBootstrapStarted = true;
-          setInitializing(true);
-          void persistenceReady.then(() => signInAnonymously(auth)).catch((bootstrapError) => {
-            const code = (bootstrapError as { code?: string } | null)?.code || 'anonymous-auth-unavailable';
-            if (auth.currentUser) return;
-            setError(`Unable to start your NEXORA session (${code}). Tap to retry.`);
-            anonymousBootstrapStarted = false;
-            setInitializing(false);
-          });
-          return;
-        }
-        setInitializing(false);
-        return;
+        hydratedIdentity = null; inFlightHydration = null; setUser(null); setError(null);
+        // A signed-out visitor stays signed out; never create a hidden visitor account.
+        setInitializing(false); return;
       }
-
       try {
         await fbUser.getIdTokenResult();
-        const isApprovedBetaMember = true;
-        const identityKey = getAuthSessionIdentityKey(fbUser, isApprovedBetaMember);
+        const identityKey = getAuthSessionIdentityKey(fbUser, true);
         if (!identityKey) throw new Error('Authenticated session is missing its identity key.');
-
         if (!shouldHydrateAuthSession(hydratedIdentity, identityKey)) {
           if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setInitializing(false);
           return;
         }
-
         setInitializing(true);
-        // Reuse the same profile request if Firebase emits overlapping token changes.
         let profilePromise: Promise<User | null>;
-        if (inFlightHydration?.key === identityKey) {
-          profilePromise = inFlightHydration.promise;
-        } else {
-          // Public anonymous accounts are first-class NEXORA members:
-          // self-heal a missing private profile instead of leaving them blocked.
-          profilePromise = ProfileService.getOrCreateProfile(fbUser);
-          inFlightHydration = { key: identityKey, promise: profilePromise };
-        }
-
+        if (inFlightHydration?.key === identityKey) profilePromise = inFlightHydration.promise;
+        else { profilePromise = ProfileService.getOrCreateProfile(fbUser); inFlightHydration = { key: identityKey, promise: profilePromise }; }
         const profile = await profilePromise;
-        if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) {
-          hydratedIdentity = identityKey;
-          setUser(profile);
-          setError(null);
-        }
-      } catch (error) {
-        const code = (error as { code?: string } | null)?.code || 'unknown';
+        if (!profile) throw new Error('NEXORA could not load the account profile.');
+        if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) { hydratedIdentity = identityKey; setUser(profile); setError(null); }
+      } catch (authError) {
+        const code = (authError as { code?: string } | null)?.code || 'unknown';
         console.error('[NEXORA] Auth-state profile hydration failed', { code, uid: fbUser.uid });
-        if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) {
-          setError(`Unable to load your account profile (${code}). Please retry or contact NEXORA support with this code.`);
-        }
+        if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setError(`Unable to load your account profile (${code}). Your sign-in is preserved; retry profile loading when the connection is available.`);
       } finally {
-        if (currentSequence === sequence) {
-          setInitializing(false);
-          inFlightHydration = null;
+        if (currentSequence === sequence) { setInitializing(false); inFlightHydration = null; }
+      }
+    };
+
+    // Restore durable identity before observing Firebase's initial auth state.
+    void (async () => {
+      try { await setPersistence(auth, indexedDBLocalPersistence); }
+      catch (primaryError) {
+        try { await setPersistence(auth, browserLocalPersistence); }
+        catch (fallbackError) {
+          const code = (fallbackError as { code?: string } | null)?.code || (primaryError as { code?: string } | null)?.code || 'auth-persistence-unavailable';
+          if (!disposed) { setError(`NEXORA could not restore sign-in persistence (${code}). Please sign in again.`); setInitializing(false); }
+          return;
         }
       }
-    });
-
-    return () => {
-      sequence++;
-      unsubscribe();
-    };
+      if (!disposed) unsubscribe = onIdTokenChanged(auth, handleAuthState);
+    })();
+    return () => { disposed = true; sequence++; unsubscribe?.(); };
   }, []);
 
   // Keep the authenticated account model subscribed to its canonical private
@@ -307,12 +275,8 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setError(null);
     let currentUser = auth.currentUser;
     try {
-      // A failed first anonymous bootstrap must be recoverable without forcing
-      // visitors through email/password authentication or a page refresh.
-      if (!currentUser) {
-        const credential = await signInAnonymously(auth);
-        currentUser = credential.user;
-      }
+      // Signed-out visitors must explicitly sign in or register.
+      if (!currentUser) throw new Error('Sign in or create a NEXORA account to continue.');
       await currentUser.getIdTokenResult(true);
       const profile = await ProfileService.getOrCreateProfile(currentUser);
       if (!profile) throw new Error('NEXORA could not find or create your private account profile.');
