@@ -368,7 +368,7 @@ function dispatchR2MediaProcessing(mediaId: string, asset: Record<string, any>):
   if (!r2Config || asset.storageProvider !== 'r2' || !['video', 'image'].includes(String(asset.kind))) return;
   const workerUrl = process.env.MEDIA_WORKER_URL?.trim();
   const token = process.env.MEDIA_WORKER_TOKEN?.trim();
-  if (!workerUrl || !token || typeof asset.storagePath !== 'string' || !/^\\d{1,32}$/.test(String(asset.generation || ''))) {
+  if (!workerUrl || !token || typeof asset.storagePath !== 'string' || !/^[0-9]{1,32}$/.test(String(asset.generation || ''))) {
     console.warn('[R2Media] Processing dispatch is not configured; original remains available.', { mediaId });
     return;
   }
