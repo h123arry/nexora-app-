@@ -8,6 +8,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { createHash } from 'node:crypto';
+import { setCreatorFollowStateForUser, SocialFollowError } from './server/socialFollow';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { resolveServerFirebaseConfig } from './server/runtimeConfig';
@@ -133,6 +134,29 @@ const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-
     : initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api'));
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
 const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(firebaseStorageBucket) : null;
+
+app.post('/api/social/follow-state', requireFirebaseUser, async (req, res) => {
+  const { creatorId, following } = req.body || {};
+  try {
+    const result = await setCreatorFollowStateForUser(
+      serverDb,
+      String(res.locals.userId || ''),
+      creatorId,
+      following,
+    );
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof SocialFollowError) {
+      const status = error.code === 'unauthenticated' ? 401
+        : error.code === 'invalid-argument' ? 400
+        : error.code === 'not-found' ? 404
+        : 409;
+      return res.status(status).json({ code: error.code, error: error.message });
+    }
+    console.error('[SocialFollow] Follow state could not be saved.', error);
+    return res.status(503).json({ code: 'follow_service_unavailable', error: 'NEXORA could not save this follow change. Please retry.' });
+  }
+});
 const r2Config = resolveR2Config();
 
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -178,139 +202,6 @@ async function requireFirebaseUser(req: express.Request, res: express.Response, 
   return next();
 }
 
-
-app.post('/api/social/follow-state', requireFirebaseUser, async (req, res) => {
-  const followerId = String(res.locals.userId || '');
-  const creatorId = req.body?.creatorId;
-  const shouldFollow = req.body?.following;
-  if (!followerId || typeof creatorId !== 'string' || !/^[^/]{1,128}$/.test(creatorId)
-    || creatorId === followerId || typeof shouldFollow !== 'boolean') {
-    return res.status(400).json({ error: 'A valid creator and follow state are required.' });
-  }
-
-  const followRef = serverDb.collection('follows').doc(followerId + '_' + creatorId);
-  const creatorPublicRef = serverDb.collection('publicProfiles').doc(creatorId);
-  const creatorPageRef = serverDb.collection('pages').doc(creatorId);
-  const followerPublicRef = serverDb.collection('publicProfiles').doc(followerId);
-  const creatorPrivateRef = serverDb.collection('users').doc(creatorId);
-  const followerPrivateRef = serverDb.collection('users').doc(followerId);
-  const day = new Date().toISOString().slice(0, 10);
-  const dailyId = createHash('sha256').update(creatorId + ':' + day).digest('hex').slice(0, 40);
-  const dailyRef = serverDb.collection('creatorAudienceDaily').doc(dailyId);
-  const safeCount = (value: unknown) => {
-    const count = Number(value || 0);
-    return Number.isSafeInteger(count) && count >= 0 ? count : 0;
-  };
-  const publicProfileSeed = (uid: string, source: Record<string, unknown>) => {
-    const allowed = [
-      'username', 'name', 'avatar', 'bio', 'website', 'followers', 'following', 'sparks',
-      'hasStory', 'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate',
-      'reputationPoints', 'reputationBreakdown', 'skills', 'statusText', 'statusEmoji',
-      'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram',
-      'pinnedMusicSong', 'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts',
-    ];
-    const projection: Record<string, unknown> = { id: uid };
-    for (const key of allowed) if (source[key] !== undefined) projection[key] = source[key];
-    return projection;
-  };
-
-  try {
-    const result = await serverDb.runTransaction(async tx => {
-      const [follow, creatorPublic, creatorPage, followerPublic, creatorPrivate, followerPrivate] = await Promise.all([
-        tx.get(followRef), tx.get(creatorPublicRef), tx.get(creatorPageRef),
-        tx.get(followerPublicRef), tx.get(creatorPrivateRef), tx.get(followerPrivateRef),
-      ]);
-      if (!creatorPublic.exists && !creatorPage.exists && !creatorPrivate.exists) {
-        const error = new Error('This creator or Page is unavailable.') as Error & { status?: number };
-        error.status = 404;
-        throw error;
-      }
-      if (!followerPublic.exists && !followerPrivate.exists) {
-        const error = new Error('Your account profile is still being prepared. Please retry.') as Error & { status?: number };
-        error.status = 409;
-        throw error;
-      }
-      if (follow.exists === shouldFollow) {
-        if (!creatorPublic.exists && creatorPrivate.exists) {
-          tx.set(creatorPublicRef, publicProfileSeed(creatorId, creatorPrivate.data() || {}), { merge: true });
-        }
-        if (!followerPublic.exists && followerPrivate.exists) {
-          tx.set(followerPublicRef, publicProfileSeed(followerId, followerPrivate.data() || {}), { merge: true });
-        }
-        return {
-          following: follow.exists,
-          changed: false,
-          followerCount: creatorPublic.exists
-            ? safeCount(creatorPublic.get('followers'))
-            : creatorPrivate.exists ? safeCount(creatorPrivate.get('followers'))
-            : creatorPage.exists ? safeCount(creatorPage.get('followersCount')) : null,
-        };
-      }
-
-      const delta = shouldFollow ? 1 : -1;
-      const nextCreatorCount = creatorPublic.exists
-        ? Math.max(0, safeCount(creatorPublic.get('followers')) + delta)
-        : creatorPrivate.exists ? Math.max(0, safeCount(creatorPrivate.get('followers')) + delta) : null;
-      const nextPageCount = creatorPage.exists ? Math.max(0, safeCount(creatorPage.get('followersCount')) + delta) : null;
-      const followerFollowingCount = followerPublic.exists
-        ? safeCount(followerPublic.get('following'))
-        : safeCount(followerPrivate.get('following'));
-      const nextFollowerCount = Math.max(0, followerFollowingCount + delta);
-
-      if (shouldFollow) {
-        tx.create(followRef, {
-          followerId, followingId: creatorId, createdAt: FieldValue.serverTimestamp(),
-        });
-      } else {
-        tx.delete(followRef);
-      }
-      if (creatorPublic.exists && nextCreatorCount !== null) {
-        tx.update(creatorPublicRef, { followers: nextCreatorCount });
-      } else if (creatorPrivate.exists && nextCreatorCount !== null) {
-        tx.set(creatorPublicRef, {
-          ...publicProfileSeed(creatorId, creatorPrivate.data() || {}),
-          followers: nextCreatorCount,
-        }, { merge: true });
-      }
-      if (creatorPrivate.exists && nextCreatorCount !== null) {
-        tx.update(creatorPrivateRef, { followers: nextCreatorCount, updatedAt: FieldValue.serverTimestamp() });
-      }
-      if (creatorPage.exists && nextPageCount !== null) {
-        tx.update(creatorPageRef, { followersCount: nextPageCount });
-      }
-      if (followerPublic.exists) {
-        tx.update(followerPublicRef, { following: nextFollowerCount });
-      } else if (followerPrivate.exists) {
-        tx.set(followerPublicRef, {
-          ...publicProfileSeed(followerId, followerPrivate.data() || {}),
-          following: nextFollowerCount,
-        }, { merge: true });
-      }
-      if (followerPrivate.exists) {
-        tx.update(followerPrivateRef, { following: nextFollowerCount, updatedAt: FieldValue.serverTimestamp() });
-      }
-      if ((creatorPublic.exists || creatorPrivate.exists) && nextCreatorCount !== null) {
-        tx.set(dailyRef, {
-          creatorId, day,
-          follows: FieldValue.increment(shouldFollow ? 1 : 0),
-          unfollows: FieldValue.increment(shouldFollow ? 0 : 1),
-          netFollowerChange: FieldValue.increment(delta),
-          followerCount: nextCreatorCount,
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      }
-      return { following: shouldFollow, changed: true, followerCount: nextCreatorCount ?? nextPageCount };
-    });
-    return res.status(200).json(result);
-  } catch (error) {
-    const status = Number((error as { status?: unknown })?.status);
-    if (status === 404 || status === 409) {
-      return res.status(status).json({ error: error instanceof Error ? error.message : 'The follow request could not be completed.' });
-    }
-    console.error('[SocialFollow] Transaction failed.', error);
-    return res.status(503).json({ error: 'Your follow could not be saved right now. Please retry.' });
-  }
-});
 
 async function allowChatMediaUpload(uid: string): Promise<boolean> {
   const windowMs = 60_000;
