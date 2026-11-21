@@ -305,6 +305,10 @@ export default function MessageBubble({
               ) : (
                 <p className="rounded-lg border border-[var(--nx-edge)] bg-black/20 px-3 py-2 text-xs text-[var(--nx-muted)]">This older voice message has no stored audio file.</p>
               )
+            ) : message.customMediaType === 'sticker' && message.customMediaData?.emoji ? (
+              <div className="my-1 flex min-h-28 min-w-28 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500/15 via-indigo-950/35 to-fuchsia-500/10 p-4" role="img" aria-label={message.customMediaData.label || 'Sticker'}>
+                <span className="select-none text-7xl drop-shadow-[0_5px_12px_rgba(0,0,0,0.35)]">{message.customMediaData.emoji}</span>
+              </div>
             ) : message.mediaStoragePath && message.mediaType ? (
               <div ref={mediaPreviewRef} className="mb-1 w-full min-w-[220px] max-w-[320px] overflow-hidden rounded-xl border border-white/10 bg-black/25">
                 {message.mediaType === 'image' ? (
