@@ -376,6 +376,8 @@ export default function MediaCreationEngine({
     return [];
   });
   const [activeEditIndex, setActiveEditIndex] = useState<number | null>(null);
+  const [galleryTab, setGalleryTab] = useState<'photos' | 'videos'>('photos');
+  const [galleryPreviewIndex, setGalleryPreviewIndex] = useState<number | null>(null);
   const [videoFileUrl, setVideoFileUrl] = useState<string | null>(() => initialAutosave?.videoUrl || null);
   const [videoRawBlob, setVideoRawBlob] = useState<Blob | null>(null);
   const [videoMuted, setVideoMuted] = useState(false);
@@ -2023,50 +2025,78 @@ export default function MediaCreationEngine({
                   )}
 
                   {activeMode === 'carousel' && (
-                    <div className="space-y-3">
-                      <div className="border border-[#292244] border-dashed rounded-2xl p-6 text-center space-y-3 bg-[#080712]/30">
-                        <FileImage className="w-8 h-8 text-[#8E88A7] mx-auto" />
-                        <p className="text-xs text-[#D1CBE3] font-bold">Add photos to your collection</p>
-                        <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
-                          Choose photos
-                          <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
-                        </label>
+                    <section className="flex h-[min(76dvh,760px)] min-h-[460px] flex-col overflow-hidden rounded-[24px] border border-[#292244] bg-[#090714] shadow-[0_20px_70px_rgba(0,0,0,0.35)]" aria-label="Media gallery">
+                      <header className="shrink-0 border-b border-[#292244] px-4 pb-3 pt-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300">NEXORA Gallery</p>
+                            <h3 className="mt-1 text-lg font-black text-white">Choose your moments</h3>
+                            <p className="mt-0.5 text-[11px] text-[#9189AA]">Select up to 20 photos in the order you want to share them.</p>
+                          </div>
+                          <button type="button" aria-label="Close gallery" onClick={() => { setGalleryPreviewIndex(null); setCurrentStep(1); }} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.06] text-white"><X size={17}/></button>
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 rounded-xl border border-white/10 bg-black/25 p-1">
+                          <button type="button" onClick={() => setGalleryTab('photos')} aria-pressed={galleryTab === 'photos'} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${galleryTab === 'photos' ? 'bg-[#7138FF] text-white shadow-lg' : 'text-[#A59DBB] hover:text-white'}`}>Photos</button>
+                          <button type="button" onClick={() => { setGalleryTab('videos'); setActiveMode('video'); }} aria-pressed={galleryTab === 'videos'} className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors ${galleryTab === 'videos' ? 'bg-[#7138FF] text-white shadow-lg' : 'text-[#A59DBB] hover:text-white'}`}>Videos</button>
+                        </div>
+                      </header>
+
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
+                        {selectedImages.length === 0 ? (
+                          <div className="flex min-h-[280px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#44376F] bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.14),transparent_65%)] px-6 text-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-500/10 text-violet-200"><FolderHeart size={28}/></div>
+                            <h4 className="mt-4 text-sm font-extrabold text-white">Your selection starts here</h4>
+                            <p className="mt-1 max-w-[260px] text-[11px] leading-relaxed text-[#938BAA]">Open your device’s photo picker, select one or more images, and they’ll appear here ready to arrange.</p>
+                            <label className="mt-5 inline-flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-5 py-3 text-xs font-extrabold text-white shadow-[0_8px_24px_rgba(75,16,242,0.25)] active:scale-[0.98]"><Plus size={16}/> Browse photos<input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload}/></label>
+                            <p className="mt-3 text-[9px] text-[#6F6884]">Your device controls which local files NEXORA can access.</p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                              <div><p className="text-xs font-extrabold text-white">Selected photos</p><p className="mt-0.5 text-[10px] text-[#8E88A7]">Tap a photo to preview. Use arrows to change its order.</p></div>
+                              <span className="shrink-0 rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold tabular-nums text-violet-200">{selectedImages.length} / 20</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                              {selectedImages.map((img, index) => (
+                                <article key={`${img.fileName || 'photo'}-${index}`} className={`group relative aspect-[3/4] overflow-hidden rounded-xl border bg-[#120E2B] ${galleryPreviewIndex === index ? 'border-violet-300 ring-2 ring-violet-500/60' : 'border-white/10'}`}>
+                                  <button type="button" onClick={() => setGalleryPreviewIndex(index)} aria-label={`Preview photo ${index + 1}`} aria-pressed={galleryPreviewIndex === index} className="absolute inset-0 h-full w-full">
+                                    <img src={img.url} alt={img.fileName || `Selected photo ${index + 1}`} loading="lazy" className="h-full w-full object-cover"/>
+                                  </button>
+                                  <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-md bg-black/75 px-1.5 py-1 text-[9px] font-black text-white">{index + 1}</span>
+                                  <button type="button" aria-label={`Remove photo ${index + 1}`} onClick={() => { setSelectedImages(previous => previous.filter((_, itemIndex) => itemIndex !== index)); setGalleryPreviewIndex(previous => previous === null ? null : previous === index ? null : previous > index ? previous - 1 : previous); }} className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/75 text-white"><X size={13}/></button>
+                                  <div className="absolute inset-x-1 bottom-1 flex items-center justify-between gap-1">
+                                    <button type="button" aria-label={`Move photo ${index + 1} earlier`} disabled={index === 0} onClick={() => { const next = [...selectedImages]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; setSelectedImages(next); setGalleryPreviewIndex(index - 1); }} className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/75 text-white disabled:opacity-25"><ArrowUp size={13}/></button>
+                                    <button type="button" aria-label={`Move photo ${index + 1} later`} disabled={index === selectedImages.length - 1} onClick={() => { const next = [...selectedImages]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; setSelectedImages(next); setGalleryPreviewIndex(index + 1); }} className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/75 text-white disabled:opacity-25"><ArrowDown size={13}/></button>
+                                  </div>
+                                </article>
+                              ))}
+                              {selectedImages.length < 20 && (
+                                <label className="flex aspect-[3/4] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#514078] bg-violet-500/[0.06] text-violet-200 transition-colors hover:bg-violet-500/[0.12]">
+                                  <Plus size={22}/><span className="text-[10px] font-bold">Add more</span><input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload}/>
+                                </label>
+                              )}
+                            </div>
+                            {galleryPreviewIndex !== null && selectedImages[galleryPreviewIndex] && (
+                              <div className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                                <div className="flex items-center justify-between px-3 py-2"><span className="text-[10px] font-bold text-white">Preview · {galleryPreviewIndex + 1} of {selectedImages.length}</span><button type="button" onClick={() => { setActiveEditIndex(galleryPreviewIndex); nextStep(); }} className="text-[10px] font-bold text-violet-300">Edit photo</button></div>
+                                <img src={selectedImages[galleryPreviewIndex].url} alt="Selected photo preview" className="max-h-56 w-full bg-black object-contain"/>
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
 
-                      {selectedImages.length > 0 && (
-                        <div className="space-y-2 bg-[#120E2B]/70 p-3 rounded-xl border border-[#292244]">
-                          <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#B9AED8]">Selected media · {selectedImages.length}/20</span><span className="text-[10px] text-[#817895]">Hold your order · move items below</span></div>
-                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-px overflow-hidden rounded-xl border border-[#292244] bg-[#292244]">
-                            {selectedImages.map((img, index) => (
-                              <div key={index} className={`group relative aspect-[4/5] overflow-hidden bg-[#090714] ${activeEditIndex === index ? 'ring-2 ring-inset ring-violet-400' : ''}`}>
-                                <button type="button" onClick={() => setActiveEditIndex(index)} aria-label={`Preview photo ${index + 1}`} aria-pressed={activeEditIndex === index} className="absolute inset-0 z-0 h-full w-full cursor-pointer">
-                                  <img src={img.url} alt={img.fileName || `Selected photo ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
-                                </button>
-                                <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-bold text-white">{index + 1}</span>
-                                {activeEditIndex === index && <span className="pointer-events-none absolute bottom-1.5 left-1.5 rounded-md bg-violet-600 px-1.5 py-0.5 text-[8px] font-bold text-white">EDITING</span>}
-                                <div className="absolute inset-0 z-10 flex items-center justify-center gap-1 bg-black/55 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                                  {index > 0 && (
-                                    <button type="button" aria-label={`Move photo ${index + 1} left`} onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index - 1]; next[index - 1] = tmp; setSelectedImages(next); setActiveEditIndex(index - 1); }} className="p-1.5 bg-[#120E2B] rounded text-white">
-                                      <ChevronLeft className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                  {index < selectedImages.length - 1 && (
-                                    <button type="button" aria-label={`Move photo ${index + 1} right`} onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index + 1]; next[index + 1] = tmp; setSelectedImages(next); setActiveEditIndex(index + 1); }} className="p-1.5 bg-[#120E2B] rounded text-white">
-                                      <ChevronRight className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                  <button type="button" aria-label={`Remove photo ${index + 1}`} onClick={() => { setSelectedImages(prev => prev.filter((_, idx) => idx !== index)); setActiveEditIndex(previous => previous === null ? null : previous > index ? previous - 1 : previous === index ? Math.max(0, selectedImages.length - 2) : previous); }} className="p-1.5 bg-rose-950/80 rounded text-rose-300">
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
+                      <footer className="shrink-0 border-t border-[#292244] bg-[#0D0A1A] px-3 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3">
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-extrabold text-white">{selectedImages.length ? `${selectedImages.length} photo${selectedImages.length === 1 ? '' : 's'} selected` : 'Nothing selected yet'}</p>
+                            <p className="mt-0.5 text-[10px] text-[#817895]">{selectedImages.length ? 'Your order is ready for editing.' : 'Choose photos to continue.'}</p>
                           </div>
+                          <button type="button" disabled={selectedImages.length === 0} onClick={nextStep} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-5 py-3 text-xs font-extrabold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-35">Add {selectedImages.length || ''} {selectedImages.length === 1 ? 'photo' : 'photos'} <ChevronRight size={15}/></button>
                         </div>
-                      )}
-                    </div>
+                      </footer>
+                    </section>
                   )}
-
                   {activeMode === 'video' && (
                     <div className="border border-[#292244] border-dashed rounded-2xl p-6 text-center space-y-4 bg-[#120E2B]/45">
                       <Video className="w-8 h-8 text-[#8E88A7] mx-auto animate-pulse" />
