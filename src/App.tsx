@@ -33,7 +33,6 @@ import {
   getGlobalPostsPage,
   addPublicPostCommentDb,
   subscribeToPosts, 
-  subscribeToUsers, 
   savePostToDb,
   publishPostNow,
   subscribeToNotifications, 
@@ -450,7 +449,6 @@ export default function App() {
 
   useEffect(() => {
     let unsubPosts: () => void;
-    let unsubUsers: () => void;
     let unsubFollows: () => void;
     let receivedInitialPosts = false;
 
@@ -460,7 +458,7 @@ export default function App() {
     console.log('[App] Subscribing to public posts and user directory...');
     unsubPosts = subscribeToPosts((dbPosts, page) => {
       console.log('[App] Received posts:', dbPosts?.length || 0);
-      if (dbPosts) {
+      if (dbPosts?.length) {
         setPosts(previousPosts => {
           const incomingPosts = normalizePosts(dbPosts);
           if (!receivedInitialPosts) return incomingPosts;
@@ -481,22 +479,6 @@ export default function App() {
       setIsPostsHydrated(true);
     });
 
-    unsubUsers = subscribeToUsers((dbUsers) => {
-      console.log('[App] Received users:', dbUsers?.length || 0);
-      if (dbUsers) {
-        setGlobalUsersMap(prev => {
-          const newMap = { ...prev };
-          dbUsers.forEach(u => {
-            newMap[u.id] = {
-              ...u,
-              avatar: getSafeAvatar(u.avatar, u.name || u.username),
-            };
-          });
-          return newMap;
-        });
-      }
-    });
-
     if (isLoggedIn && firebaseUser) {
       unsubFollows = subscribeToFollows(firebaseUser.uid, (dbFollows) => {
         if (dbFollows) {
@@ -512,7 +494,6 @@ export default function App() {
     return () => {
       console.log('[App] Cleaning up auth and data subscriptions...');
       if (unsubPosts) unsubPosts();
-      if (unsubUsers) unsubUsers();
       if (unsubFollows) unsubFollows();
     };
   }, [firebaseUser?.uid, isLoggedIn]);
@@ -543,7 +524,7 @@ export default function App() {
   const normalizePosts = (rawPosts: any[]): Post[] => {
     if (!Array.isArray(rawPosts)) return [];
     const normalizedPosts = rawPosts.filter((post: any) => {
-      return !!post.userId;
+      return !!post && typeof post === 'object' && typeof post.userId === 'string' && !!post.userId;
     }).map((post: any) => {
       let permanentTime = post.createdAt || post.timestamp;
       
@@ -579,7 +560,9 @@ export default function App() {
         permanentTime = new Date(parsedMillis).toISOString();
       }
 
-      const comments = (post.comments || []).map((c: any) => {
+      const comments = (Array.isArray(post.comments) ? post.comments : [])
+        .filter((comment: any) => !!comment && typeof comment === 'object')
+        .map((c: any) => {
         let cTime = c.timestamp;
         const cParsed = Date.parse(cTime);
         if (isNaN(cParsed) || !isNaN(Number(cTime))) {
@@ -625,11 +608,22 @@ export default function App() {
   };
 
   const [posts, setPosts] = useState<Post[]>(() => {
-    const saved = localStorage.getItem('nexora_posts');
-    const loadedPosts = saved ? JSON.parse(saved) : [];
+    let cacheReadable = true;
+    let loadedPosts: unknown[] = [];
+    try {
+      const saved = localStorage.getItem('nexora_posts');
+      const parsed = saved ? JSON.parse(saved) : [];
+      if (Array.isArray(parsed)) loadedPosts = parsed;
+      else cacheReadable = false;
+    } catch (error) {
+      cacheReadable = false;
+      console.warn('[NEXORA] Ignoring an unreadable local feed cache; preserving its stored value.', error);
+    }
     const normalized = normalizePosts(loadedPosts);
     const realPosts = normalized.filter((p: Post) => p && !['post-1', 'post-2', 'post-3'].includes(p.id));
-    localStorage.setItem('nexora_posts', JSON.stringify(realPosts));
+    if (cacheReadable) {
+      try { localStorage.setItem('nexora_posts', JSON.stringify(realPosts)); } catch { /* Storage may be unavailable or full. */ }
+    }
     return realPosts;
   });
 
@@ -724,10 +718,15 @@ export default function App() {
   };
 
   const [resolvedPosts, setResolvedPosts] = useState<Post[]>(() => {
-    const saved = localStorage.getItem('nexora_posts');
-    const loadedPosts = saved ? JSON.parse(saved) : [];
-    const normalized = normalizePosts(loadedPosts);
-    return normalized.filter((p: Post) => p && !['post-1', 'post-2', 'post-3'].includes(p.id));
+    try {
+      const saved = localStorage.getItem('nexora_posts');
+      const parsed = saved ? JSON.parse(saved) : [];
+      const normalized = normalizePosts(Array.isArray(parsed) ? parsed : []);
+      return normalized.filter((p: Post) => p && !['post-1', 'post-2', 'post-3'].includes(p.id));
+    } catch (error) {
+      console.warn('[NEXORA] Unable to restore the cached feed; continuing with an empty local feed.', error);
+      return [];
+    }
   });
 
   // User-scoped sparks and bookmarks states

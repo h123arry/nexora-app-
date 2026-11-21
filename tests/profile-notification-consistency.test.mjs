@@ -15,7 +15,9 @@ test('guest exploration never impersonates a person or uses stock-person avatars
   assert.match(app, /!isLoggedIn \|\| requiresPublicAccountSetup/);
   assert.match(app, /getSafeAvatar\(post\.avatar, post\.name \|\| post\.username\)/);
   assert.match(app, /getSafeAvatar\(c\.avatar, c\.name \|\| c\.username\)/);
-  assert.match(app, /getSafeAvatar\(u\.avatar, u\.name \|\| u\.username\)/);
+  assert.doesNotMatch(app, /subscribeToUsers/);
+  assert.match(app, /ProfileService\.getPublicProfile\(uid\)/);
+  assert.match(app, /missingIds\.slice\(0, 40\)/);
   assert.match(app, /!isLoggedIn \|\| !firebaseUser \|\| currentUser\.id !== firebaseUser\.uid/);
   assert.match(app, /!pendingAuthAction \|\| !firebaseUser \|\| currentUser\.id !== firebaseUser\.uid/);
   const feed = await read('../src/components/FeedView.tsx');
