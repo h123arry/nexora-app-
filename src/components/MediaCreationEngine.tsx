@@ -616,6 +616,7 @@ export default function MediaCreationEngine({
             if (videoPreviewRef.current) {
               videoPreviewRef.current.srcObject = stream;
               void videoPreviewRef.current.play().catch(() => {
+                setVideoCameraReady(false);
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview could not start. Allow camera access in your phone settings and try again.' }));
               });
             }
