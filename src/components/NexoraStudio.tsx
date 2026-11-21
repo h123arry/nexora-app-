@@ -9,9 +9,10 @@ import { getStudioVisualFilterCss, normalizeStudioVisualFilter, type StudioVisua
 import { createStudioTitleTemplate, STUDIO_TITLE_TEMPLATES, type StudioTitleTemplateId } from '../utils/studioTitleTemplatePolicy';
 import { createStudioEditTemplate, searchStudioEditTemplates, STUDIO_EDIT_TEMPLATE_CATEGORIES, type StudioEditTemplateId } from '../utils/studioEditTemplatePolicy';
 import { analyzeStudioAudioBeats, buildStudioAutoCutSegments, createStudioFallbackBeatGrid } from '../utils/studioAutoCutPolicy';
+import { getStudioAudioDurationError, getStudioAudioImportError } from '../utils/studioAudioImportPolicy';
 import { getNextStudioClipTimelinePosition, getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
 import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
-import { getStudioExportDimensions, getStudioExpectedExportDuration, type StudioExportResolution } from '../utils/studioExportPolicy';
+import { estimateStudioExportSizeBytes, getStudioExportDimensions, getStudioExpectedExportDuration, getStudioExportBitrates, type StudioExportResolution } from '../utils/studioExportPolicy';
 import { getStudioExportValidationError } from '../utils/studioExportValidationPolicy';
 import { isStudioCloudDraftNewer } from '../utils/studioCloudDraftPolicy';
 import { getStudioCloudDraftRevision, loadStudioCloudDraft, saveStudioCloudDraft } from '../services/studioCloudDraftService';
@@ -198,6 +199,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
   }, [clips]);
   const snapshot = useMemo<StudioSnapshot>(() => ({ clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, subtitleSegments, selectedSubtitleSegmentId, aspectRatio, visualFilter, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition }), [clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, subtitleSegments, selectedSubtitleSegmentId, aspectRatio, visualFilter, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition]);
   const visibleEditTemplates = useMemo(() => searchStudioEditTemplates(templateSearch, templateCategory), [templateSearch, templateCategory]);
+  const estimatedExportSizeMb = useMemo(() => estimateStudioExportSizeBytes(totalDuration, exportResolution, exportQuality) / (1024 * 1024), [totalDuration, exportResolution, exportQuality]);
 
   const requestCloudSync = useCallback(async () => {
     if (!latestCloudProjectRef.current?.clips.length) return;
@@ -573,6 +575,34 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
     setMessage(`${additions.length} clip${additions.length === 1 ? '' : 's'} added to your timeline.`);
   };
 
+  const addSoundtrackFile = async (file: File) => {
+    const importError = getStudioAudioImportError(file);
+    if (importError) { setMessage(importError); return; }
+    const url = URL.createObjectURL(file);
+    const probe = document.createElement('audio');
+    probe.preload = 'metadata';
+    try {
+      const duration = await new Promise<number>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error('Audio metadata took too long to load. Try another file.')), 10_000);
+        probe.onloadedmetadata = () => { window.clearTimeout(timeout); resolve(probe.duration); };
+        probe.onerror = () => { window.clearTimeout(timeout); reject(new Error('This audio file could not be decoded. Try MP3, WAV, M4A or WebM audio.')); };
+        probe.src = url;
+        probe.load();
+      });
+      const durationError = getStudioAudioDurationError(duration);
+      if (durationError) { setMessage(durationError); return; }
+      setSoundtrack(file);
+      setExportBlob(null);
+      setMessage(`Soundtrack added · ${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, '0')} · music fades and voiceover ducking are ready to edit.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'This soundtrack could not be imported.');
+    } finally {
+      probe.removeAttribute('src');
+      probe.load();
+      URL.revokeObjectURL(url);
+    }
+  };
+
   useEffect(() => {
     if (!ready || initialMedia.length === 0) return;
     void addVideoFiles(initialMedia);
@@ -795,6 +825,17 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
     setMessage('Clip split at the playhead.');
   };
 
+  const duplicateSelectedClip = () => {
+    if (!selectedClip) return;
+    if (clips.length >= 40) { setMessage('A Studio project can contain up to 40 video clips.'); return; }
+    const duplicate = normalizeStudioVideoLayer({ ...selectedClip, id: makeId(), name: `${selectedClip.name} · Copy`, keyframes: selectedClip.keyframes.map(frame => ({ ...frame })) });
+    const index = clips.findIndex(clip => clip.id === selectedClip.id);
+    setClips(previous => [...previous.slice(0, index + 1), duplicate, ...previous.slice(index + 1)]);
+    setSelectedId(duplicate.id);
+    setExportBlob(null);
+    setMessage('Clip duplicated with its trim, volume and motion settings. Adjust the copy independently.');
+  };
+
   const removeClip = (id: string) => {
     setClips(previous => {
       const next = previous.filter(clip => clip.id !== id);
@@ -912,7 +953,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
       }
       mixedAudio.stream.getAudioTracks().forEach(track => stream.addTrack(track));
     }
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: exportQuality === 'high' ? 8_000_000 : 4_000_000, audioBitsPerSecond: 128_000 });
+    const bitrates = getStudioExportBitrates(exportResolution, exportQuality);
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrates.video, audioBitsPerSecond: bitrates.audio });
     const chunks: Blob[] = [];
     const imageAssets = new Map<string, CanvasImageSource>();
     const stopped = new Promise<Blob>((resolve, reject) => {
@@ -1269,7 +1311,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
             <button type="button" onClick={onClose} aria-label="Close Studio" className="rounded-xl border border-white/10 p-2 text-[#C7B5FF]"><ArrowLeft size={18}/></button>
             <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.24em] text-violet-300">NEXORA</p><h1 className="truncate text-lg font-black tracking-tight sm:text-xl">Studio</h1></div>
           </div>
-          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto"><span className="hidden text-[10px] text-[#8E88A7] sm:inline">{currentUser.name || currentUser.username || 'Creator'} · {Math.round(totalDuration)}s</span><button type="button" onClick={undo} disabled={!canUndo} aria-label="Undo edit" title="Undo · Ctrl/⌘ Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Undo2 size={16}/></button><button type="button" onClick={redo} disabled={!canRedo} aria-label="Redo edit" title="Redo · Ctrl/⌘ Shift Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Redo2 size={16}/></button><button type="button" onClick={() => setTemplateLibraryOpen(true)} className="rounded-xl border border-violet-400/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-100">Templates</button><button type="button" onClick={() => void runAutoCut()} disabled={!clips.length || autoCutting || rendering || publishing} className="rounded-xl border border-[#8A3FFC]/50 bg-[#4B10F2]/20 px-3 py-2 text-xs font-bold text-violet-100 disabled:opacity-40">{autoCutting ? 'Auto Cutting…' : 'Auto Cut'}</button><select aria-label="Export resolution" value={exportResolution} onChange={event => setExportResolution(event.target.value as StudioExportResolution)} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="720p">720p</option><option value="1080p">1080p</option></select><select aria-label="Export quality" value={exportQuality} onChange={event => setExportQuality(event.target.value as 'balanced' | 'high')} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="balanced">Balanced bitrate</option><option value="high">High bitrate</option></select><button type="button" onClick={handleExport} disabled={rendering || mp4Exporting || publishing || !clips.length} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-2 text-xs font-bold disabled:opacity-50">{rendering ? 'Rendering…' : 'Export video'}</button></div>
+          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto"><span className="hidden text-[10px] text-[#8E88A7] sm:inline">{currentUser.name || currentUser.username || 'Creator'} · {Math.round(totalDuration)}s</span><button type="button" onClick={undo} disabled={!canUndo} aria-label="Undo edit" title="Undo · Ctrl/⌘ Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Undo2 size={16}/></button><button type="button" onClick={redo} disabled={!canRedo} aria-label="Redo edit" title="Redo · Ctrl/⌘ Shift Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Redo2 size={16}/></button><button type="button" onClick={() => setTemplateLibraryOpen(true)} className="rounded-xl border border-violet-400/40 bg-violet-500/10 px-3 py-2 text-xs font-bold text-violet-100">Templates</button><button type="button" onClick={() => void runAutoCut()} disabled={!clips.length || autoCutting || rendering || publishing} className="rounded-xl border border-[#8A3FFC]/50 bg-[#4B10F2]/20 px-3 py-2 text-xs font-bold text-violet-100 disabled:opacity-40">{autoCutting ? 'Auto Cutting…' : 'Auto Cut'}</button><select aria-label="Export resolution" value={exportResolution} onChange={event => setExportResolution(event.target.value as StudioExportResolution)} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="720p">720p</option><option value="1080p">1080p</option></select><select aria-label="Export quality" value={exportQuality} onChange={event => setExportQuality(event.target.value as 'balanced' | 'high')} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="balanced">Balanced bitrate</option><option value="high">High bitrate</option></select><span className="hidden text-[9px] tabular-nums text-[#A39BBF] lg:inline" title="Estimated from duration and selected bitrate; actual size varies by footage">~{estimatedExportSizeMb.toFixed(1)} MB</span><button type="button" onClick={handleExport} disabled={rendering || mp4Exporting || publishing || !clips.length} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-2 text-xs font-bold disabled:opacity-50">{rendering ? 'Rendering…' : 'Export video'}</button></div>
         </header>
         {templateLibraryOpen && <div className="fixed inset-0 z-[160] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-label="Studio template library"><section className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-3xl border border-[#34265E] bg-[#090714] shadow-2xl sm:rounded-3xl"><header className="flex items-center justify-between gap-3 border-b border-[#292244] px-4 py-4 sm:px-6"><div><p className="text-[10px] font-bold uppercase tracking-[.2em] text-violet-300">NEXORA STUDIO</p><h2 className="text-lg font-black">Edit templates</h2><p className="mt-1 text-[11px] text-[#A39BBF]">{visibleEditTemplates.length} ready-to-edit starting styles</p></div><button type="button" onClick={() => setTemplateLibraryOpen(false)} aria-label="Close template library" className="rounded-full border border-[#34265E] p-2 text-[#D7CCF7]"><X size={17}/></button></header><div className="space-y-3 overflow-y-auto p-4 sm:p-6"><input type="search" value={templateSearch} onChange={event => setTemplateSearch(event.target.value)} placeholder="Search templates, styles or tags…" aria-label="Search Studio templates" className="w-full rounded-xl border border-[#34265E] bg-[#100C20] px-4 py-3 text-sm text-white outline-none focus:border-violet-400"/><div className="flex gap-2 overflow-x-auto pb-1">{STUDIO_EDIT_TEMPLATE_CATEGORIES.map(category => <button key={category} type="button" onClick={() => setTemplateCategory(category)} className={`shrink-0 rounded-full border px-3 py-2 text-[10px] font-bold ${templateCategory===category?'border-violet-400 bg-violet-500/20 text-white':'border-[#34265E] text-[#A39BBF]'}`}>{category}</button>)}</div>{visibleEditTemplates.length ? <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{visibleEditTemplates.map((template,index) => <article key={template.id} className="overflow-hidden rounded-2xl border border-[#292244] bg-[#100C20]"><div className={`relative flex h-28 items-end overflow-hidden bg-gradient-to-br ${index%4===0?'from-[#6D36E8] via-[#27105C] to-[#090714]':index%4===1?'from-[#C18B54] via-[#40264A] to-[#090714]':index%4===2?'from-[#426A8B] via-[#252052] to-[#090714]':'from-[#8A3FFC] via-[#24134E] to-[#090714]'}`}><div className="absolute inset-0 opacity-30" style={{backgroundImage:'radial-gradient(circle at 20% 20%, white 0, transparent 35%), linear-gradient(135deg, transparent 45%, rgba(255,255,255,.18) 46%, transparent 70%)'}}/><span className="relative p-4 text-xl font-black tracking-tight text-white drop-shadow-lg">{template.sample}</span><span className="absolute right-3 top-3 rounded-full border border-white/20 bg-black/25 px-2 py-1 text-[9px] font-bold text-white">{template.category}</span></div><div className="space-y-2 p-3"><div className="flex items-start justify-between gap-2"><h3 className="text-xs font-bold text-white">{template.name}</h3><span className="shrink-0 text-[9px] text-[#A39BBF]">{template.aspectRatio==='portrait'?'9:16':template.aspectRatio==='square'?'1:1':'16:9'}</span></div><p className="min-h-8 text-[10px] leading-relaxed text-[#A39BBF]">{template.description}</p><div className="flex flex-wrap gap-1">{template.tags.slice(0,3).map(tag=><span key={tag} className="rounded-full bg-[#211A36] px-2 py-1 text-[9px] text-[#C7B5FF]">#{tag}</span>)}</div><button type="button" onClick={() => applyEditTemplate(template.id)} className="mt-1 w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-3 py-2.5 text-[11px] font-black text-white">Use template</button></div></article>)}</div> : <div className="rounded-2xl border border-dashed border-[#44376F] px-4 py-10 text-center"><p className="text-sm font-bold">No templates found</p><p className="mt-1 text-xs text-[#A39BBF]">Try another search or category.</p><button type="button" onClick={() => {setTemplateSearch('');setTemplateCategory('All');}} className="mt-3 text-xs font-bold text-violet-300">Clear filters</button></div>}</div><footer className="border-t border-[#292244] px-4 py-3 text-[10px] text-[#8E88A7] sm:px-6">Templates apply editable settings to your existing timeline. Your original clips stay in place.</footer></section></div>}
         <main className="grid min-h-0 flex-1 grid-rows-[minmax(220px,1fr)_auto] overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1">
@@ -1290,6 +1332,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
             <div className="flex items-center gap-2">
               <button type="button" onClick={togglePreview} disabled={!selectedClip} className="rounded-full border border-violet-400/40 bg-violet-500/15 p-3 text-violet-100"><span className="sr-only">{playing ? 'Pause' : 'Play'}</span>{playing ? <Pause size={18}/> : <Play size={18}/>}</button>
               <button type="button" onClick={splitAtPlayhead} disabled={!selectedClip} className="inline-flex items-center gap-2 rounded-xl border border-[#34265E] px-3 py-2 text-xs text-[#D7CCF7]"><Scissors size={14}/> Split at playhead</button>
+              <button type="button" onClick={duplicateSelectedClip} disabled={!selectedClip || clips.length >= 40} className="inline-flex items-center gap-2 rounded-xl border border-[#34265E] px-3 py-2 text-xs text-[#D7CCF7] disabled:opacity-40"><Plus size={14}/> Duplicate clip</button>
               <button type="button" onClick={() => setMuted(value => !value)} className="rounded-xl border border-[#34265E] p-2 text-[#D7CCF7]"><Volume2 size={15}/><span className="sr-only">{muted ? 'Unmute preview' : 'Mute preview'}</span></button>
             </div>
             <canvas ref={canvasRef} className="hidden"/>
@@ -1320,7 +1363,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
             </div>}
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
               <div className="flex items-center gap-2"><Music2 size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Soundtrack</h2></div>
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#44376F] px-3 py-2 text-xs text-[#D7CCF7]"><Plus size={13}/>{soundtrack?'Replace audio track':'Add music or voiceover'}<input className="hidden" type="file" accept="audio/*" onChange={event => {const file=event.target.files?.[0]; if(file) setSoundtrack(file); event.target.value='';}}/></label>
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#44376F] px-3 py-2 text-xs text-[#D7CCF7]"><Plus size={13}/>{soundtrack?'Replace audio track':'Add music or voiceover'}<input className="hidden" type="file" accept="audio/*" onChange={event => {const file=event.target.files?.[0]; if(file) void addSoundtrackFile(file); event.target.value='';}}/></label>
               {soundtrack && <div className="flex items-center justify-between text-[10px] text-emerald-300"><span className="truncate">{(soundtrack as File).name || 'Audio track selected'}</span><button onClick={() => setSoundtrack(null)} className="text-rose-300">Remove</button></div>}
               {soundtrack && <><label className="block text-[10px] text-[#A39BBF]">Music volume · {Math.round(soundtrackVolume * 100)}%<input type="range" min="0" max="1" step=".05" value={soundtrackVolume} onChange={event => setSoundtrackVolume(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Fade in · {soundtrackFadeIn}s<input type="range" min="0" max="8" step=".5" value={soundtrackFadeIn} onChange={event=>setSoundtrackFadeIn(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Fade out · {soundtrackFadeOut}s<input type="range" min="0" max="8" step=".5" value={soundtrackFadeOut} onChange={event=>setSoundtrackFadeOut(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label></div>{voiceover && <><label className="flex items-center gap-2 text-[10px] text-[#C9BFF0]"><input type="checkbox" checked={duckMusicUnderVoiceover} onChange={event=>setDuckMusicUnderVoiceover(event.target.checked)} className="accent-violet-500"/>Lower music while narration is playing</label>{duckMusicUnderVoiceover && <label className="block text-[10px] text-[#A39BBF]">Music under voiceover · {Math.round(musicDuckingLevel*100)}%<input type="range" min="0.1" max="0.8" step=".05" value={musicDuckingLevel} onChange={event=>setMusicDuckingLevel(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label>}</>}</>}
               <p className="text-[10px] leading-relaxed text-[#827B9C]">Your music and video's original sound will both be included.</p>
