@@ -3637,6 +3637,20 @@ export default function App() {
                       // Do not render a guest/visitor shell while Firebase is restoring the real account.
   if (authInitializing) return <NexoraLoader />;
 
+  // A Firebase identity without its profile is still a signed-in account,
+  // never a guest. Keep the account state explicit and offer safe recovery.
+  if (firebaseUser && !firebaseProfile) {
+    return (
+      <div className="min-h-screen bg-[#050914] text-white flex items-center justify-center p-6">
+        <div className="w-full max-w-md space-y-4 text-center">
+          <h1 className="text-xl font-bold">Restoring your NEXORA account</h1>
+          <p className="text-sm text-slate-300">{authError || "Your sign-in is active. NEXORA is reconnecting your account profile."}</p>
+          <button type="button" onClick={() => void retryProfileLoad().catch(() => undefined)} className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white hover:bg-violet-500">Retry account sync</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
                         <div
                           key={i}
