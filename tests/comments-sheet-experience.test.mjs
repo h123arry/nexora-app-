@@ -20,7 +20,10 @@ test('comments sheet occupies at 60 percent of the viewport, scrolls independent
   assert.match(feed, /ChevronDown/);
   assert.match(feed, /ChevronUp/);
   assert.match(feed, /handleSparkReply/);
-  assert.match(feed, /setPublicPostCommentReplyLikeState/);
+  assert.match(feed, /api\/social\/comment-reply-spark-state/);
+  const server = await readFile(new URL('../server.ts', import.meta.url), 'utf8');
+  assert.match(server, /app\.use\('\/api\/social\/comment-reply-spark-state', requireFirebaseUser, socialSparkHttpLimiter\)/);
+  assert.match(server, /setPublicPostCommentReplyLike\(serverDb, uid, postId, commentId, replyId, liked\)/);
   assert.match(feed, /aria-label=\{replySparkStates/);
 });
 
