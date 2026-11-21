@@ -92,7 +92,8 @@ it('processing leases are protected while active and recover after expiry', () =
   assert.equal(canClaimMediaProcessing({ status: 'failed' }, now), true);
 });
 
-\ndescribe('NEXORA R2 media event validation', () => {
+
+describe('NEXORA R2 media event validation', () => {
   const event = (overrides = {}) => ({
     provider: 'r2',
     object: {
