@@ -492,8 +492,16 @@ export default function NexoraVideoPlayer({
     };
   }, [isBuffering, isReady]);
 
-  // Recover gracefully after temporary network loss
+  // Recover gracefully after temporary network loss without manual retry.
   useEffect(() => {
+    const handleOffline = () => {
+      if (playbackRetryTimerRef.current) clearTimeout(playbackRetryTimerRef.current);
+      playbackRetryTimerRef.current = null;
+      if (isActive) {
+        setIsReady(false);
+        setIsBuffering(true);
+      }
+    };
     const handleOnline = () => {
       if (isActive && videoRef.current) {
         window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ Connection restored! Restabilizing playback stream...' }));
@@ -503,8 +511,12 @@ export default function NexoraVideoPlayer({
         globalVideoPlaybackManager.play(playerId, videoRef.current, finalVideoUrl).catch(() => {});
       }
     };
+    window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
-    return () => window.removeEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', handleOnline);
+    };
   }, [isActive]);
 
   // Try recovering playback history on load
@@ -922,6 +934,12 @@ export default function NexoraVideoPlayer({
     playbackRetryTimerRef.current = setTimeout(() => {
       playbackRetryTimerRef.current = null;
       if (isReleased || isActive === false || (!isVisible && isActive === undefined)) return;
+      // Do not keep firing failed requests while the device is offline. The
+      // online listener below resumes this stream immediately on reconnection.
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setIsBuffering(true);
+        return;
+      }
       setIsReady(false);
       setIsBuffering(true);
       if (post.mediaAssetId) setPlaybackRefreshKey(key => key + 1);

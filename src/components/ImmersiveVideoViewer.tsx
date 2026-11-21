@@ -33,7 +33,7 @@ export default function ImmersiveVideoViewer({
   if (!initialPost) {
     return (
       <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center text-white">
-        <p className="text-sm font-mono mb-4">Post unavailable.</p>
+        <div className="w-8 h-8 rounded-full border-2 border-violet-400 border-t-transparent animate-spin mb-4" aria-label="Loading" /><p className="text-sm font-medium text-zinc-300 mb-4">Preparing your video…</p>
         <button onClick={onClose} className="px-4 py-2 bg-violet-600 rounded-xl text-xs font-bold cursor-pointer">Close</button>
       </div>
     );
@@ -89,7 +89,7 @@ export default function ImmersiveVideoViewer({
   if (!currentPost || !currentPost.id) {
     return (
       <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center text-white">
-        <p className="text-sm font-mono mb-4">Video stream unavailable.</p>
+        <div className="w-8 h-8 rounded-full border-2 border-violet-400 border-t-transparent animate-spin mb-4" aria-label="Loading" /><p className="text-sm font-medium text-zinc-300 mb-4">Preparing your video…</p>
         <button onClick={onClose} className="px-4 py-2 bg-violet-600 rounded-xl text-xs font-bold cursor-pointer">Close</button>
       </div>
     );
