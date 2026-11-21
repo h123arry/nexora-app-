@@ -577,6 +577,33 @@ const publicProfile = (uid) => ({
     await assertSucceeds(updateDoc(bobMessage, { reactionUsers: { bob: ['❤️'] } }));
   });
 
+  it('allows safe message edits, shared pins and only self-owned stars', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'chats', 'message-actions'), {
+        id: 'message-actions', participants: ['alice', 'bob'], isGroup: false
+      });
+      await setDoc(doc(adminDb, 'chats', 'message-actions', 'messages', 'message-1'), {
+        id: 'message-1', chatId: 'message-actions', senderId: 'alice',
+        content: 'Original message', status: 'sent', timestamp: new Date().toISOString()
+      });
+    });
+
+    const aliceMessage = doc(dbFor('alice'), 'chats', 'message-actions', 'messages', 'message-1');
+    const bobMessage = doc(dbFor('bob'), 'chats', 'message-actions', 'messages', 'message-1');
+    await assertSucceeds(updateDoc(aliceMessage, {
+      content: 'Edited message', isEdited: true, editedAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(bobMessage, {
+      content: 'Forged edit', isEdited: true, editedAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(aliceMessage, { content: 'Edit without audit metadata' }));
+    await assertSucceeds(updateDoc(bobMessage, { isPinned: true }));
+    await assertFails(updateDoc(bobMessage, { isPinned: 'yes' }));
+    await assertSucceeds(updateDoc(bobMessage, { starredBy: ['bob'] }));
+    await assertFails(updateDoc(bobMessage, { starredBy: ['bob', 'alice', 'charlie'] }));
+    await assertSucceeds(updateDoc(aliceMessage, { starredBy: ['bob', 'alice'] }));
+  });
+
   it('enforces blocks in both directions for direct chat creation and message sends', async () => {
     await seed(async adminDb => {
       await setDoc(doc(adminDb, 'users', 'blocker', 'settings', 'preferences'), {
