@@ -1,4 +1,5 @@
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import { hasActiveAccountRestriction } from './accountStatusPolicy.js';
 
 const QUERY_LIMIT = 8;
 const QUERY_KEYS = [
@@ -104,7 +105,7 @@ export async function searchPublicDirectory(
     ...strings(viewerData?.privacy?.blockedUserIds),
   ]);
   const candidates = [...new Map([...peopleByUsername, ...peopleByName, ...peopleByTitle].map(doc => [doc.id, doc])).values()]
-    .filter(doc => doc.id !== viewerUid && doc.get('isBanned') !== true && doc.get('isSuspended') !== true && doc.get('isSeedProfile') !== true)
+    .filter(doc => doc.id !== viewerUid)
     .sort((a, b) => {
       const relevance = (doc: QueryDocumentSnapshot) => {
         const username = String(doc.get('username') || '').toLocaleLowerCase();
@@ -120,25 +121,28 @@ export async function searchPublicDirectory(
 
   const people = (await Promise.all(candidates.map(async candidate => {
     if (viewerBlocks.has(candidate.id)) return null;
-    const [settings, follow] = await Promise.all([
+    const [settings, follow, status, verifiedIdentity] = await Promise.all([
       db.collection('users').doc(candidate.id).collection('settings').doc('preferences').get(),
       db.collection('follows').doc(viewerUid + '_' + candidate.id).get(),
+      db.collection('accountStatus').doc(candidate.id).get(),
+      db.collection('verifiedIdentities').doc(candidate.id).get(),
     ]);
     const privacy = settings.data() || {};
+    const data = candidate.data() as Record<string, unknown>;
+    if (hasActiveAccountRestriction(data, status.data() || {})) return null;
     const candidateBlocks = [
       ...strings(privacy?.messaging?.blockedUserIds),
       ...strings(privacy?.privacy?.blockedUserIds),
     ];
     if (candidateBlocks.includes(viewerUid)) return null;
     if (privacy?.privacy?.isPrivate === true && !follow.exists) return null;
-    const data = candidate.data();
     return {
       id: candidate.id,
       username: String(data.username || ''),
       name: String(data.name || data.username || 'NEXORA member'),
       avatar: String(data.avatar || ''),
       bio: String(data.bio || ''),
-      isVerified: data.isVerified === true,
+      isVerified: verifiedIdentity.exists && verifiedIdentity.get('status') === 'verified',
     };
   }))).filter((item): item is NonNullable<typeof item> => item !== null);
 
