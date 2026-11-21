@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Play, Pause, Check, CheckCheck, Pin, Trash2, Edit, Globe, Quote, MapPin, FileText, Download, Loader2 } from 'lucide-react';
+import { Play, Pause, Check, CheckCheck, Pin, Trash2, Edit, Globe, Quote, MapPin, FileText, Download, Loader2, Copy, Info, Star, CheckSquare, X } from 'lucide-react';
 import { ExtendedMessage } from '../types';
 import RelativeTime from './RelativeTime';
 
@@ -37,6 +37,8 @@ interface MessageBubbleProps {
   isPinned: boolean;
   groupReadCount?: number;
   groupRecipientCount?: number;
+  onStar?: (msg: ExtendedMessage) => void;
+  onSelectMessage?: (msg: ExtendedMessage) => void;
 }
 
 export default function MessageBubble({
@@ -69,6 +71,8 @@ export default function MessageBubble({
   isPinned,
   groupReadCount = 0,
   groupRecipientCount = 0,
+  onStar,
+  onSelectMessage,
 }: MessageBubbleProps) {
   const [privateVoiceUrl, setPrivateVoiceUrl] = useState('');
   const [loadingPrivateVoice, setLoadingPrivateVoice] = useState(false);
@@ -76,6 +80,14 @@ export default function MessageBubble({
   const [privateMediaUrl, setPrivateMediaUrl] = useState('');
   const [loadingPrivateMedia, setLoadingPrivateMedia] = useState(false);
   const [privateMediaError, setPrivateMediaError] = useState('');
+  const [showMessageInfo, setShowMessageInfo] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearLongPress = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); longPressTimer.current = null; };
+  const copyMessage = async () => {
+    try { await navigator.clipboard.writeText(message.content || message.fileName || ''); window.dispatchEvent(new CustomEvent('toast', { detail: 'Message copied.' })); }
+    catch { window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not copy this message on this device.' })); }
+    onToggleContextMenu(null);
+  };
   const attemptedMediaPathRef = useRef('');
   useEffect(() => () => {
     if (privateVoiceUrl) URL.revokeObjectURL(privateVoiceUrl);
@@ -140,9 +152,27 @@ export default function MessageBubble({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
       className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isGrouped ? 'mt-0.25' : 'mt-2'} relative group/bubble`}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.12}
+      onDragEnd={(_event, info) => {
+        const threshold = 72;
+        if ((!isMe && info.offset.x > threshold) || (isMe && info.offset.x < -threshold)) onReply(message);
+      }}
+      onTouchStart={(event) => {
+        clearLongPress();
+        longPressTimer.current = setTimeout(() => {
+          onToggleContextMenu(message.id);
+          onLongPress(message.id, {} as React.MouseEvent);
+        }, 520);
+      }}
+      onTouchEnd={clearLongPress}
+      onTouchMove={clearLongPress}
+      onTouchCancel={clearLongPress}
       onDoubleClick={() => onReact(message.id, '❤️')}
       onContextMenu={(e) => {
         e.preventDefault();
+        onToggleContextMenu(message.id);
         onLongPress(message.id, e);
       }}
     >
@@ -487,6 +517,29 @@ export default function MessageBubble({
           </div>
         </div>
       </div>
+      {activeContextMessageId === message.id && (
+        <div className={`absolute z-30 ${isMe ? 'right-3' : 'left-12'} top-full mt-2 w-[min(310px,calc(100vw-5rem))] rounded-2xl border border-violet-300/15 bg-[#0b0920] p-2 shadow-2xl`} role="menu" aria-label="Message actions">
+          <div className="grid grid-cols-4 gap-1">
+            <button type="button" role="menuitem" onClick={() => onReply(message)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Quote className="h-4 w-4"/><span className="text-[10px]">Reply</span></button>
+            <button type="button" role="menuitem" onClick={() => void copyMessage()} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Copy className="h-4 w-4"/><span className="text-[10px]">Copy</span></button>
+            <button type="button" role="menuitem" onClick={() => { onReact(message.id, '❤️'); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><span className="text-lg">❤️</span><span className="text-[10px]">React</span></button>
+            <button type="button" role="menuitem" onClick={() => { onStar?.(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Star className="h-4 w-4"/><span className="text-[10px]">Star</span></button>
+            {isMe && <button type="button" role="menuitem" onClick={() => { onEdit(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Edit className="h-4 w-4"/><span className="text-[10px]">Edit</span></button>}
+            <button type="button" role="menuitem" onClick={() => { onPin(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Pin className="h-4 w-4"/><span className="text-[10px]">{isPinned ? 'Unpin' : 'Pin'}</span></button>
+            <button type="button" role="menuitem" onClick={() => setShowMessageInfo(value => !value)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Info className="h-4 w-4"/><span className="text-[10px]">Info</span></button>
+            <button type="button" role="menuitem" onClick={() => { onSelectMessage?.(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><CheckSquare className="h-4 w-4"/><span className="text-[10px]">Select</span></button>
+            <button type="button" role="menuitem" onClick={() => { onDelete(message.id, true); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-rose-300 hover:bg-rose-500/10"><Trash2 className="h-4 w-4"/><span className="text-[10px]">Delete</span></button>
+          </div>
+          {showMessageInfo && (
+            <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-[11px] text-zinc-300">
+              <div className="flex items-center justify-between"><span>Delivery status</span><strong className="capitalize text-violet-200">{message.status}</strong></div>
+              {isMe && <div className="mt-1 flex items-center justify-between"><span>Read receipts</span><strong className="text-violet-200">{groupReadCount > 0 ? `${groupReadCount}/${groupRecipientCount} read` : message.status === 'read' ? 'Read' : 'Not read yet'}</strong></div>}
+              <div className="mt-1 text-zinc-500">Sent {new Date(message.timestamp).toLocaleString()}</div>
+            </div>
+          )}
+          <button type="button" onClick={() => { setShowMessageInfo(false); onToggleContextMenu(null); }} className="mt-1 flex min-h-9 w-full items-center justify-center gap-1 rounded-lg text-[11px] text-zinc-400 hover:bg-white/5"><X className="h-3 w-3"/>Close</button>
+        </div>
+      )}
     </motion.div>
   );
 }
