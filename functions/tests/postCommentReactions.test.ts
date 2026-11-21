@@ -4,6 +4,7 @@ import { after, before } from 'node:test';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { setPublicPostCommentLike } from '../src/postCommentReactions.js';
+import { setPublicPostCommentReplyLike } from '../src/postCommentReactions.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-comment-reactions';
 const actorId = 'comment-reaction-actor';
@@ -19,7 +20,7 @@ before(async () => {
   await db.doc(`publicProfiles/${authorId}`).set({ username: authorId, name: 'Reaction Author', avatar: '' });
   await db.doc(`posts/${postId}`).set({
     id: postId, userId: authorId, audience: 'public', comments: [
-      { id: commentId, userId: authorId, content: 'Original comment', likes: 0 },
+      { id: commentId, userId: authorId, content: 'Original comment', likes: 0, replies: [{ id: 'comment-reaction-reply', userId: authorId, content: 'A reply', likes: 0 }] },
     ],
   });
 });
@@ -49,4 +50,38 @@ test('rejects missing, private and malformed comment targets', async () => {
   await assert.rejects(setPublicPostCommentLike(db, actorId, '../bad', commentId, true), /valid post/);
   await db.doc(`posts/${postId}`).update({ audience: 'followers' });
   await assert.rejects(setPublicPostCommentLike(db, actorId, postId, commentId, true), /unavailable/);
+});
+
+
+test('reply Sparks are idempotent and update only the selected reply count', async () => {
+  assert.deepEqual(
+    await setPublicPostCommentReplyLike(db, actorId, postId, commentId, 'comment-reaction-reply', true),
+    { liked: true, likes: 1, changed: true },
+  );
+  assert.deepEqual(
+    await setPublicPostCommentReplyLike(db, actorId, postId, commentId, 'comment-reaction-reply', true),
+    { liked: true, likes: 1, changed: false },
+  );
+  const post = await db.doc(`posts/${postId}`).get();
+  assert.equal(post.get('comments')[0].replies[0].likes, 1);
+  assert.deepEqual(
+    await setPublicPostCommentReplyLike(db, actorId, postId, commentId, 'comment-reaction-reply', false),
+    { liked: false, likes: 0, changed: true },
+  );
+  assert.deepEqual(
+    await setPublicPostCommentReplyLike(db, actorId, postId, commentId, 'comment-reaction-reply', false),
+    { liked: false, likes: 0, changed: false },
+  );
+  assert.equal((await db.doc(`posts/${postId}`).get()).get('comments')[0].replies[0].likes, 0);
+});
+
+test('reply Spark rejects malformed or unavailable targets', async () => {
+  await assert.rejects(
+    setPublicPostCommentReplyLike(db, actorId, postId, commentId, 'missing-reply', true),
+    /no longer available/,
+  );
+  await assert.rejects(
+    setPublicPostCommentReplyLike(db, actorId, '../bad', commentId, 'comment-reaction-reply', true),
+    /valid post/,
+  );
 });
