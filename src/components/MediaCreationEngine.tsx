@@ -1976,7 +1976,7 @@ export default function MediaCreationEngine({
                           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/35 px-8">
                             <span className="h-8 w-8 animate-spin rounded-full border-2 border-white/25 border-t-violet-300" />
                             <p className="text-xs font-semibold text-white">{permissionState === 'denied' ? 'Camera access is off' : 'Starting your camera…'}</p>
-                            {permissionState !== 'granted' && <button type="button" onClick={() => setPermissionTarget('camera')} className="rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-semibold text-white">Enable camera</button>}
+                            <button type="button" onClick={() => { setPermissionState('prompt'); setPermissionTarget('camera'); }} className="rounded-full border border-white/20 bg-black/60 px-4 py-2 text-xs font-semibold text-white">{permissionState === 'denied' ? 'Enable camera' : 'Retry camera'}</button>
                           </div>
                         )}
                         <div className="relative z-20 mt-auto flex w-full flex-col items-center gap-3">
@@ -2132,7 +2132,7 @@ export default function MediaCreationEngine({
                               </div>
                             )}
                           </div>
-                          <div className="z-20 flex flex-col items-center gap-3">                          <div className="z-10 flex flex-col items-center gap-3">
+                          <div className="z-20 flex flex-col items-center gap-3">
                             <div className="flex w-full max-w-full items-center justify-center gap-1.5 overflow-x-auto rounded-full border border-white/15 bg-black/55 p-2 backdrop-blur-xl">
                               {RECORDING_DURATIONS.filter(duration => [15, 30, 60, 180, 600, 1200].includes(duration.seconds)).map(duration => (
                                 <button key={duration.seconds} type="button" aria-pressed={recordingLimitSecs === duration.seconds} disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setRecordingLimitSecs(duration.seconds)} className={`shrink-0 rounded-full px-3 py-2 text-[10px] font-bold transition-colors disabled:opacity-50 ${recordingLimitSecs === duration.seconds ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/40' : 'text-white/75 hover:bg-white/10'}`}>{duration.label}</button>
