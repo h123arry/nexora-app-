@@ -677,7 +677,7 @@ app.get('/api/media/:mediaId', async (req, res) => {
       || status.banned === true || status.suspended === true) return res.status(404).end();
     const playbackPath = selectR2VideoPlaybackPath(asset, ownerId, mediaId);
     if (!playbackPath) return res.status(404).end();
-    const url = createR2PresignedUrl(r2Config, 'GET', playbackPath, 60);
+    const url = createR2PresignedUrl(r2Config, 'GET', playbackPath, 300);
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     return res.redirect(302, url);
   } catch (error) {
