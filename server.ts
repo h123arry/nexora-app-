@@ -10,6 +10,7 @@ import { getStorage } from 'firebase-admin/storage';
 import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
+import { setPostLike } from './functions/src/postEngagement';
 import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
@@ -133,6 +134,28 @@ const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-
     : initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api'));
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
 const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(firebaseStorageBucket) : null;
+
+app.post('/api/social/post-spark-state', requireFirebaseUser, async (req, res) => {
+  const uid = String(res.locals.userId || '');
+  const { postId, liked } = req.body || {};
+  if (typeof postId !== 'string' || postId.length < 1 || postId.length > 150 || postId.includes('/') || typeof liked !== 'boolean') {
+    return res.status(400).json({ code: 'invalid_spark_request', error: 'A valid post and Spark state are required.' });
+  }
+  try {
+    if (!await allowSparkMutation(uid)) {
+      res.setHeader('Retry-After', '30');
+      return res.status(429).json({ code: 'spark_rate_limited', error: 'You are sparking too quickly. Please wait a moment.' });
+    }
+    const result = await setPostLike(serverDb, uid, postId, liked);
+    return res.status(200).json(result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('unavailable')) return res.status(404).json({ code: 'post_unavailable', error: 'This post is no longer available.' });
+    if (message.includes('Invalid') || message.includes('desired like')) return res.status(400).json({ code: 'invalid_spark_request', error: 'This Spark request is invalid.' });
+    console.error('[SocialSpark] Spark state could not be saved.', { uid, code: (error as { code?: string } | null)?.code || 'unknown' });
+    return res.status(503).json({ code: 'spark_service_unavailable', error: 'NEXORA could not save this Spark right now. Please try again.' });
+  }
+});
 const r2Config = resolveR2Config();
 
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -176,6 +199,25 @@ async function requireFirebaseUser(req: express.Request, res: express.Response, 
   }
   res.locals.userId = decoded.uid;
   return next();
+}
+
+async function allowSparkMutation(uid: string): Promise<boolean> {
+  const windowMs = 60_000;
+  const limit = 90;
+  const ref = serverDb.collection('sparkMutationRateLimits').doc(createHash('sha256').update(uid).digest('hex'));
+  return serverDb.runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    const previous = snapshot.data();
+    const now = Date.now();
+    const cutoff = now - windowMs;
+    const timestamps = Array.isArray(previous?.requestTimestamps)
+      ? previous.requestTimestamps.filter((value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > cutoff)
+      : [];
+    if (timestamps.length >= limit) return false;
+    timestamps.push(now);
+    transaction.set(ref, { requestTimestamps: timestamps, count: timestamps.length, expiresAt: new Date(now + windowMs * 10), updatedAt: FieldValue.serverTimestamp() });
+    return true;
+  });
 }
 
 async function allowChatMediaUpload(uid: string): Promise<boolean> {
