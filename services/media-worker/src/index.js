@@ -178,11 +178,11 @@ async function reconcileR2Uploads(){
   if(!r2Config || r2ReconciliationRunning) return;
   r2ReconciliationRunning=true;
   try {
-    const [queued,stale] = await Promise.all([
-      db.collection('mediaAssets').where('storageProvider','==','r2').where('status','in',['uploaded','failed']).limit(10).get(),
-      db.collection('mediaAssets').where('storageProvider','==','r2').where('status','==','processing').limit(10).get(),
-    ]);
-    for(const snapshot of [...queued.docs,...stale.docs]){
+    // Use the single-field provider index so this reconciler does not depend
+    // on a new composite Firestore index being deployed first.
+    const inventory = await db.collection('mediaAssets').where('storageProvider','==','r2').limit(200).get();
+    const candidates = inventory.docs.filter(snapshot => ['uploaded','failed','processing'].includes(String(snapshot.get('status')))).slice(0,10);
+    for(const snapshot of candidates){
       const asset=snapshot.data();
       if(!asset || !['video','image'].includes(String(asset.kind)) || typeof asset.ownerId!=='string'
         || typeof asset.storagePath!=='string' || !/^users\/[A-Za-z0-9_-]{1,128}\/media\/[A-Za-z0-9_-]{1,128}$/.test(asset.storagePath)
