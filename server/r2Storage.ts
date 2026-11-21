@@ -213,7 +213,7 @@ export function selectR2VideoPlaybackPath(asset: Record<string, unknown>, ownerI
     if (!item || !Number.isSafeInteger(item.height) || item.height < 144 || item.height > 4320
       || typeof item.mp4Path !== 'string' || !item.mp4Path.startsWith(prefix)
       || item.mp4Path.split('/').some((part: string) => !part || part === '.' || part === '..')
-      || item.mp4Path.includes('\\\\')) return [];
+      || item.mp4Path.includes(String.fromCharCode(92))) return [];
     return [{ height: item.height as number, path: item.mp4Path as string }];
   }).sort((a, b) => a.height - b.height);
   return (renditions.find(item => item.height === 720)
