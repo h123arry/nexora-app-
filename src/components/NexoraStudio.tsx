@@ -711,20 +711,6 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
     });
   };
 
-  const runAutoCut = () => {
-    if (clips.length < 2) { setMessage('Add at least two video clips to use AutoCut.'); return; }
-    const maxShotLength = 3.2;
-    setClips(previous => previous.map(clip => {
-      const targetLength = Math.min(Math.max(0.5, clip.end - clip.start), maxShotLength);
-      return { ...clip, end: clip.start + targetLength };
-    }));
-    setTransition('cut');
-    setSelectedId(clips[0]?.id || null);
-    setPreviewGlobalTime(0);
-    setPlaying(false);
-    setMessage('AutoCut created a quick-cut montage. Original media is preserved; use Undo to restore the previous edit.');
-  };
-
   const splitAtPlayhead = () => {
     const video = videoRef.current;
     if (!selectedClip || !video) return;
