@@ -88,7 +88,8 @@ async function processObject(event){
   const studioExportExpiresAt=sourcePurpose?new Date(Date.now()+24*60*60*1000):null;
   const accepted=await db.runTransaction(async tx=>{
     const snap=await tx.get(ref); const current=snap.data();
-    if(current && (current.ownerId!==ownerId || !['pending_upload','uploaded','failed'].includes(current.status))) return false;
+    if(provider==='r2' && (!snap.exists || current?.storageProvider!=='r2' || current?.storagePath!==object.name)) return false;
+    if(current && (current.ownerId!==ownerId || !canClaimMediaProcessing(current))) return false;
     tx.set(ref,{
       ownerId,status:'processing',processor:'nexora-ffmpeg-v1',processingToken:token,
       processingStartedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp(),
@@ -172,6 +173,38 @@ async function processObject(event){
     throw error;
   } finally { await rm(work,{recursive:true,force:true}); }
 }
+let r2ReconciliationRunning=false;
+async function reconcileR2Uploads(){
+  if(!r2Config || r2ReconciliationRunning) return;
+  r2ReconciliationRunning=true;
+  try {
+    const [queued,stale] = await Promise.all([
+      db.collection('mediaAssets').where('storageProvider','==','r2').where('status','in',['uploaded','failed']).limit(10).get(),
+      db.collection('mediaAssets').where('storageProvider','==','r2').where('status','==','processing').limit(10).get(),
+    ]);
+    for(const snapshot of [...queued.docs,...stale.docs]){
+      const asset=snapshot.data();
+      if(!asset || !['video','image'].includes(String(asset.kind)) || typeof asset.ownerId!=='string'
+        || typeof asset.storagePath!=='string' || !/^users\/[A-Za-z0-9_-]{1,128}\/media\/[A-Za-z0-9_-]{1,128}$/.test(asset.storagePath)
+        || !/^\d{1,32}$/.test(String(asset.generation||''))) continue;
+      const event={provider:'r2',object:{
+        bucket:r2Config.bucket,name:asset.storagePath,size:String(asset.size),
+        contentType:String(asset.contentType||''),generation:String(asset.generation),
+        metadata:{ownerId:asset.ownerId,mediaId:snapshot.id,purpose:String(asset.purpose||'post')},
+      }};
+      await processObject(event).catch(error=>{
+        console.error('[MediaWorker] R2 reconciliation failed.',{mediaId:snapshot.id,message:String(error.message||error)});
+      });
+    }
+  } catch(error) {
+    console.error('[MediaWorker] R2 reconciliation scan failed.',{message:String(error.message||error)});
+  } finally { r2ReconciliationRunning=false; }
+}
+if(r2Config){
+  setTimeout(()=>void reconcileR2Uploads(),5000).unref?.();
+  setInterval(()=>void reconcileR2Uploads(),60_000).unref?.();
+}
+
 http('processMedia',async(req,res)=>{
   try {
     if(req.method!=='POST') return res.status(405).send('Method not allowed');
