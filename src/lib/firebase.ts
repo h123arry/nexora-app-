@@ -16,6 +16,7 @@ export const db = getFirestore(app, firebaseEnvironment.config.firestoreDatabase
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app, 'us-central1');
+export const regionalFunctions = getFunctions(app, 'europe-west1');
 
 const appCheckSiteKey = viteEnv.VITE_FIREBASE_APPCHECK_SITE_KEY?.trim()
   || (globalThis as typeof globalThis & { __NEXORA_APPCHECK_SITE_KEY__?: string }).__NEXORA_APPCHECK_SITE_KEY__?.trim()
@@ -37,4 +38,5 @@ if (firebaseEnvironment.useEmulators) {
   connectFirestoreEmulator(db, firebaseEnvironment.emulator.firestore.host, firebaseEnvironment.emulator.firestore.port);
   connectStorageEmulator(storage, firebaseEnvironment.emulator.storage.host, firebaseEnvironment.emulator.storage.port);
   connectFunctionsEmulator(functions, firebaseEnvironment.emulator.functions.host, firebaseEnvironment.emulator.functions.port);
+  connectFunctionsEmulator(regionalFunctions, firebaseEnvironment.emulator.functions.host, firebaseEnvironment.emulator.functions.port);
 }
