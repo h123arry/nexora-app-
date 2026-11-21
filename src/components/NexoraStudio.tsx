@@ -9,6 +9,7 @@ import { getStudioVisualFilterCss, normalizeStudioVisualFilter, type StudioVisua
 import { createStudioTitleTemplate, STUDIO_TITLE_TEMPLATES, type StudioTitleTemplateId } from '../utils/studioTitleTemplatePolicy';
 import { createStudioEditTemplate, searchStudioEditTemplates, STUDIO_EDIT_TEMPLATE_CATEGORIES, type StudioEditTemplateId } from '../utils/studioEditTemplatePolicy';
 import { analyzeStudioAudioBeats, buildStudioAutoCutSegments, createStudioFallbackBeatGrid } from '../utils/studioAutoCutPolicy';
+import { getStudioAudioDurationError, getStudioAudioImportError } from '../utils/studioAudioImportPolicy';
 import { getNextStudioClipTimelinePosition, getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
 import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
 import { estimateStudioExportSizeBytes, getStudioExportDimensions, getStudioExpectedExportDuration, getStudioExportBitrates, type StudioExportResolution } from '../utils/studioExportPolicy';
@@ -572,6 +573,34 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
     setClips(previous => [...previous, ...additions]);
     setSelectedId(previous => previous || additions[0].id);
     setMessage(`${additions.length} clip${additions.length === 1 ? '' : 's'} added to your timeline.`);
+  };
+
+  const addSoundtrackFile = async (file: File) => {
+    const importError = getStudioAudioImportError(file);
+    if (importError) { setMessage(importError); return; }
+    const url = URL.createObjectURL(file);
+    const probe = document.createElement('audio');
+    probe.preload = 'metadata';
+    try {
+      const duration = await new Promise<number>((resolve, reject) => {
+        const timeout = window.setTimeout(() => reject(new Error('Audio metadata took too long to load. Try another file.')), 10_000);
+        probe.onloadedmetadata = () => { window.clearTimeout(timeout); resolve(probe.duration); };
+        probe.onerror = () => { window.clearTimeout(timeout); reject(new Error('This audio file could not be decoded. Try MP3, WAV, M4A or WebM audio.')); };
+        probe.src = url;
+        probe.load();
+      });
+      const durationError = getStudioAudioDurationError(duration);
+      if (durationError) { setMessage(durationError); return; }
+      setSoundtrack(file);
+      setExportBlob(null);
+      setMessage(`Soundtrack added · ${Math.floor(duration / 60)}:${String(Math.floor(duration % 60)).padStart(2, '0')} · music fades and voiceover ducking are ready to edit.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'This soundtrack could not be imported.');
+    } finally {
+      probe.removeAttribute('src');
+      probe.load();
+      URL.revokeObjectURL(url);
+    }
   };
 
   useEffect(() => {
@@ -1334,7 +1363,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
             </div>}
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
               <div className="flex items-center gap-2"><Music2 size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Soundtrack</h2></div>
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#44376F] px-3 py-2 text-xs text-[#D7CCF7]"><Plus size={13}/>{soundtrack?'Replace audio track':'Add music or voiceover'}<input className="hidden" type="file" accept="audio/*" onChange={event => {const file=event.target.files?.[0]; if(file) setSoundtrack(file); event.target.value='';}}/></label>
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#44376F] px-3 py-2 text-xs text-[#D7CCF7]"><Plus size={13}/>{soundtrack?'Replace audio track':'Add music or voiceover'}<input className="hidden" type="file" accept="audio/*" onChange={event => {const file=event.target.files?.[0]; if(file) void addSoundtrackFile(file); event.target.value='';}}/></label>
               {soundtrack && <div className="flex items-center justify-between text-[10px] text-emerald-300"><span className="truncate">{(soundtrack as File).name || 'Audio track selected'}</span><button onClick={() => setSoundtrack(null)} className="text-rose-300">Remove</button></div>}
               {soundtrack && <><label className="block text-[10px] text-[#A39BBF]">Music volume · {Math.round(soundtrackVolume * 100)}%<input type="range" min="0" max="1" step=".05" value={soundtrackVolume} onChange={event => setSoundtrackVolume(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Fade in · {soundtrackFadeIn}s<input type="range" min="0" max="8" step=".5" value={soundtrackFadeIn} onChange={event=>setSoundtrackFadeIn(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Fade out · {soundtrackFadeOut}s<input type="range" min="0" max="8" step=".5" value={soundtrackFadeOut} onChange={event=>setSoundtrackFadeOut(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label></div>{voiceover && <><label className="flex items-center gap-2 text-[10px] text-[#C9BFF0]"><input type="checkbox" checked={duckMusicUnderVoiceover} onChange={event=>setDuckMusicUnderVoiceover(event.target.checked)} className="accent-violet-500"/>Lower music while narration is playing</label>{duckMusicUnderVoiceover && <label className="block text-[10px] text-[#A39BBF]">Music under voiceover · {Math.round(musicDuckingLevel*100)}%<input type="range" min="0.1" max="0.8" step=".05" value={musicDuckingLevel} onChange={event=>setMusicDuckingLevel(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label>}</>}</>}
               <p className="text-[10px] leading-relaxed text-[#827B9C]">Your music and video's original sound will both be included.</p>
