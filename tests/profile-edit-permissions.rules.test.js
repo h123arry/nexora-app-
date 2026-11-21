@@ -109,6 +109,11 @@ describe('profile editing Firestore permissions', () => {
         followers: 0,
         following: 0,
         sparks: 0,
+        hasStory: privateSnapshot.get('hasStory'),
+        joinedDate: privateSnapshot.get('joinedDate'),
+        reputationPoints: privateSnapshot.get('reputationPoints'),
+        reputationBreakdown: privateSnapshot.get('reputationBreakdown'),
+        skills: privateSnapshot.get('skills'),
         coverImage: updates.coverImage,
         location: settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone' ? '' : deleteField(),
         interestDNA: deleteField()
