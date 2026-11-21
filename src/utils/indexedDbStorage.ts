@@ -139,99 +139,122 @@ export async function resolveMediaUrl(url: string): Promise<string> {
 }
 
 /**
- * Generates and stores a video thumbnail at 0.1-0.5s from a video File or Blob
+ * Extract a real frame from an uploaded video before it is sent to R2.
+ *
+ * Waits for decoded frame data before drawing. The old timeout path attempted
+ * to draw even when the browser had not decoded a frame yet, which produced
+ * blank thumbnails on slower phones and larger videos.
  */
 export function generateVideoThumbnail(videoBlob: Blob): Promise<string> {
   return new Promise((resolve) => {
+    if (!videoBlob || videoBlob.size <= 0 || typeof document === 'undefined') {
+      resolve('');
+      return;
+    }
+
     const video = document.createElement('video');
     video.preload = 'auto';
     video.muted = true;
     video.playsInline = true;
 
-    const url = URL.createObjectURL(videoBlob);
-    video.src = url;
-
-    let hasExtracted = false;
-
-    // Timeout fallback if generating takes too long
-    const timeoutId = setTimeout(() => {
-      if (!hasExtracted) {
-        hasExtracted = true;
-        extractFrame();
-      }
-    }, 3000);
+    let settled = false;
+    let frameRequested = false;
+    const objectUrl = URL.createObjectURL(videoBlob);
 
     const cleanup = () => {
       clearTimeout(timeoutId);
-      URL.revokeObjectURL(url);
+      video.removeEventListener('loadedmetadata', handleMetadata);
+      video.removeEventListener('loadeddata', handleLoadedData);
+      video.removeEventListener('seeked', handleSeeked);
+      video.removeEventListener('error', handleError);
+      video.pause();
       video.removeAttribute('src');
       video.load();
-      video.onloadeddata = null;
-      video.onloadedmetadata = null;
-      video.oncanplay = null;
-      video.onseeked = null;
-      video.onerror = null;
+      URL.revokeObjectURL(objectUrl);
+    };
+
+    const finish = (thumbnail: string) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(thumbnail);
     };
 
     const extractFrame = () => {
+      if (settled || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
+        || video.videoWidth <= 0 || video.videoHeight <= 0) {
+        return false;
+      }
       try {
-        const width = video.videoWidth || 480;
-        const height = video.videoHeight || 640;
+        const maxEdge = 1280;
+        const scale = Math.min(1, maxEdge / Math.max(video.videoWidth, video.videoHeight));
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(video, 0, 0, width, height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          cleanup();
-          resolve(dataUrl);
-          return;
-        }
-      } catch (err) {
-        console.error('[Storage] Error drawing video thumbnail frame', err);
+        canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+        canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+        const context = canvas.getContext('2d');
+        if (!context) return false;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const thumbnail = canvas.toDataURL('image/jpeg', 0.88);
+        if (!thumbnail.startsWith('data:image/jpeg;base64,') || thumbnail.length < 500) return false;
+        finish(thumbnail);
+        return true;
+      } catch (error) {
+        console.warn('[Storage] Could not extract a video thumbnail frame.', error);
+        return false;
       }
-      cleanup();
-      resolve('');
     };
 
-    const prepareAndSeek = () => {
-      if (hasExtracted) return;
-      let seekTime = 0.2;
-      if (video.duration && video.duration > 0 && isFinite(video.duration)) {
-        seekTime = Math.max(0.1, Math.min(0.5, video.duration / 2));
+    const requestFrame = () => {
+      if (settled || frameRequested) return;
+      if (extractFrame()) return;
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+      frameRequested = true;
+      // A frame can be decoded just after loadeddata/seeked on mobile browsers.
+      if (typeof video.requestVideoFrameCallback === 'function') {
+        video.requestVideoFrameCallback(() => {
+          frameRequested = false;
+          if (!extractFrame()) finish('');
+        });
+      } else {
+        requestAnimationFrame(() => {
+          frameRequested = false;
+          if (!extractFrame()) finish('');
+        });
       }
+    };
+
+    const handleMetadata = () => {
+      const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 0;
+      const seekTime = duration > 0 ? Math.min(0.5, Math.max(0.05, duration * 0.12)) : 0;
       try {
-        video.currentTime = seekTime;
+        if (seekTime > 0 && Math.abs(video.currentTime - seekTime) > 0.01) {
+          video.currentTime = seekTime;
+        } else {
+          requestFrame();
+        }
       } catch {
-        // Seek failed or unsupported, extract immediately
-        hasExtracted = true;
-        extractFrame();
+        requestFrame();
       }
     };
 
-    video.onloadedmetadata = prepareAndSeek;
-    video.onloadeddata = prepareAndSeek;
-    video.oncanplay = () => {
-      if (!hasExtracted && video.currentTime > 0) {
-        hasExtracted = true;
-        extractFrame();
-      }
+    const handleLoadedData = () => {
+      if (video.currentTime > 0.01) requestFrame();
+      else handleMetadata();
     };
+    const handleSeeked = () => requestFrame();
+    const handleError = () => finish('');
 
-    video.onseeked = () => {
-      if (!hasExtracted) {
-        hasExtracted = true;
-        extractFrame();
-      }
-    };
-    
-    video.onerror = () => {
-      console.warn('[Storage] Video thumbnail load error, resolving fallback');
-      cleanup();
-      resolve('');
-    };
+    const timeoutId = setTimeout(() => {
+      // Never turn an undecoded video frame into a permanent black thumbnail.
+      if (!extractFrame()) finish('');
+    }, 12000);
+
+    video.addEventListener('loadedmetadata', handleMetadata);
+    video.addEventListener('loadeddata', handleLoadedData);
+    video.addEventListener('seeked', handleSeeked);
+    video.addEventListener('error', handleError);
+    video.src = objectUrl;
+    video.load();
   });
 }
 
