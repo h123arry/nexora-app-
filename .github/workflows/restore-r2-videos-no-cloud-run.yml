@@ -47,6 +47,8 @@ jobs:
           R2_ACCOUNT_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          GCP_WIF_PROVIDER: ${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}
         run: |
           set -euo pipefail
           test "$GOOGLE_CLOUD_PROJECT" = "nexora-prod-voiceharrison"
@@ -54,8 +56,8 @@ jobs:
           test -n "$R2_ACCOUNT_ID"
           test -n "$R2_ACCESS_KEY_ID"
           test -n "$R2_SECRET_ACCESS_KEY"
-          test -n "${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}"
-          test -n "${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}"
+          test -n "$GCP_WIF_PROVIDER"
+          test -n "$GCP_SERVICE_ACCOUNT"
           echo "Production Firestore target and existing R2 credentials are present."
 
       - name: Set up Node.js
