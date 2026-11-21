@@ -134,15 +134,16 @@ export default function MessageBubble({
   
   const highlightMatch = (text: string, query: string) => {
     if (!query) return <span>{text}</span>;
-    const escapedQuery = query.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\    const parts = text.split(new RegExp(`(${query})`, 'gi'));');
-    const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'));
+    const lowerText = text.toLocaleLowerCase();
+    const lowerQuery = query.toLocaleLowerCase();
+    const matchIndex = lowerText.indexOf(lowerQuery);
+    if (matchIndex < 0) return <span>{text}</span>;
+    const matchEnd = matchIndex + query.length;
     return (
       <span>
-        {parts.map((part, i) =>
-          part.toLowerCase() === query.toLowerCase()
-            ? <mark key={i} className="bg-amber-400 text-slate-950 font-semibold px-0.5 rounded">{part}</mark>
-            : part
-        )}
+        {text.slice(0, matchIndex)}
+        <mark className="rounded bg-amber-400 px-0.5 font-semibold text-slate-950">{text.slice(matchIndex, matchEnd)}</mark>
+        {text.slice(matchEnd)}
       </span>
     );
   };
