@@ -1448,6 +1448,16 @@ export default function ProfileView({
   const myPosts = [...new Map([...posts, ...authorProfilePosts]
     .filter(post => post && (post.userId === currentUser.id || post.username === currentUser.username))
     .map(post => [post.id, post] as const)).values()]
+    .map(post => ({
+      ...post,
+      username: currentUser.username,
+      name: currentUser.name,
+      avatar: currentUser.avatar,
+      isVerified: currentUser.isVerified,
+      comments: (post.comments || []).map(comment => comment.userId === currentUser.id
+        ? { ...comment, username: currentUser.username, name: currentUser.name, avatar: currentUser.avatar }
+        : comment),
+    }))
     .sort((left, right) => Date.parse(String(right.timestamp)) - Date.parse(String(left.timestamp)));
   const [, setMetricsUpdateTick] = useState(0);
   
