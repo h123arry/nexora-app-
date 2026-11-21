@@ -1589,7 +1589,7 @@ export default function ProfileView({
                 ) : (
                   <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                     <button 
-                      onClick={() => { setIsFollowing(!isFollowing); onToggleFollow?.(currentUser.id); }} 
+                      onClick={() => onToggleFollow?.(currentUser.id)} 
                       className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer h-9 flex items-center justify-center ${
                         isFollowing ? 'bg-zinc-900 text-zinc-300 border border-white/10' : 'bg-violet-600 text-white hover:bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.3)]'
                       }`}
@@ -3825,10 +3825,7 @@ export default function ProfileView({
             creatorPosts={filteredTabPosts}
             currentUser={currentUser}
             onClose={() => setSelectedGridPost(null)}
-            onLikePost={(postId) => {
-              onLikePost(postId);
-              window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Spark synchronised!' }));
-            }}
+            onLikePost={onLikePost}
             onToggleFollow={onToggleFollow}
             isFollowing={isFollowing}
             onAddComment={onAddComment}

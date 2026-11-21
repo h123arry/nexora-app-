@@ -9,6 +9,21 @@ const validUid = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0 && value.length <= 128 && !value.includes('/');
 const hash = (value: string) => createHash('sha256').update(value).digest('hex').slice(0, 40);
 const dayKey = (date: Date) => date.toISOString().slice(0, 10);
+const publicProfileSeed = (uid: string, source: Record<string, unknown>) => {
+  const allowed = [
+    'username', 'name', 'avatar', 'bio', 'website', 'followers', 'following', 'sparks',
+    'hasStory', 'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate',
+    'reputationPoints', 'reputationBreakdown', 'skills', 'statusText', 'statusEmoji',
+    'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram',
+    'pinnedMusicSong', 'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts',
+  ];
+  const projection: Record<string, unknown> = { id: uid };
+  for (const key of allowed) {
+    if (source[key] !== undefined) projection[key] = source[key];
+  }
+  return projection;
+};
+
 const safeCount = (value: unknown) => {
   const count = Number(value || 0);
   return Number.isSafeInteger(count) && count >= 0 ? count : 0;
@@ -44,22 +59,38 @@ export async function setCreatorFollowStateForUser(
       tx.get(followRef), tx.get(creatorPublicRef), tx.get(creatorPageRef),
       tx.get(followerPublicRef), tx.get(creatorPrivateRef), tx.get(followerPrivateRef),
     ]);
-    if (!creatorPublic.exists && !creatorPage.exists) {
+    if (!creatorPublic.exists && !creatorPage.exists && !creatorPrivate.exists) {
       throw new HttpsError('not-found', 'This creator or Page is unavailable.');
     }
-    if (!followerPublic.exists) throw new HttpsError('failed-precondition', 'Complete your public profile before following.');
+    if (!followerPublic.exists && !followerPrivate.exists) {
+      throw new HttpsError('failed-precondition', 'Your account profile is still being prepared. Please retry.');
+    }
     if (follow.exists === shouldFollow) {
+      if (!creatorPublic.exists && creatorPrivate.exists) {
+        tx.set(creatorPublicRef, publicProfileSeed(creatorId, creatorPrivate.data() || {}), { merge: true });
+      }
+      if (!followerPublic.exists && followerPrivate.exists) {
+        tx.set(followerPublicRef, publicProfileSeed(followerId, followerPrivate.data() || {}), { merge: true });
+      }
       return {
         following: follow.exists,
         changed: false,
-        followerCount: creatorPublic.exists ? safeCount(creatorPublic.get('followers')) : creatorPage.exists ? safeCount(creatorPage.get('followersCount')) : null,
+        followerCount: creatorPublic.exists
+          ? safeCount(creatorPublic.get('followers'))
+          : creatorPrivate.exists ? safeCount(creatorPrivate.get('followers'))
+          : creatorPage.exists ? safeCount(creatorPage.get('followersCount')) : null,
       };
     }
 
     const delta = shouldFollow ? 1 : -1;
-    const nextCreatorCount = creatorPublic.exists ? Math.max(0, safeCount(creatorPublic.get('followers')) + delta) : null;
+    const nextCreatorCount = creatorPublic.exists
+      ? Math.max(0, safeCount(creatorPublic.get('followers')) + delta)
+      : creatorPrivate.exists ? Math.max(0, safeCount(creatorPrivate.get('followers')) + delta) : null;
     const nextPageCount = creatorPage.exists ? Math.max(0, safeCount(creatorPage.get('followersCount')) + delta) : null;
-    const nextFollowerCount = Math.max(0, safeCount(followerPublic.get('following')) + delta);
+    const followerFollowingCount = followerPublic.exists
+      ? safeCount(followerPublic.get('following'))
+      : safeCount(followerPrivate.get('following'));
+    const nextFollowerCount = Math.max(0, followerFollowingCount + delta);
     if (shouldFollow) {
       tx.create(followRef, {
         followerId, followingId: creatorId, createdAt: FieldValue.serverTimestamp(),
@@ -69,12 +100,20 @@ export async function setCreatorFollowStateForUser(
     }
     if (creatorPublic.exists && nextCreatorCount !== null) {
       tx.update(creatorPublicRef, { followers: nextCreatorCount });
-      if (creatorPrivate.exists) tx.update(creatorPrivateRef, { followers: nextCreatorCount, updatedAt: FieldValue.serverTimestamp() });
+    } else if (creatorPrivate.exists && nextCreatorCount !== null) {
+      tx.set(creatorPublicRef, { ...publicProfileSeed(creatorId, creatorPrivate.data() || {}), followers: nextCreatorCount }, { merge: true });
+    }
+    if (creatorPrivate.exists && nextCreatorCount !== null) {
+      tx.update(creatorPrivateRef, { followers: nextCreatorCount, updatedAt: FieldValue.serverTimestamp() });
     }
     if (creatorPage.exists && nextPageCount !== null) tx.update(creatorPageRef, { followersCount: nextPageCount });
-    tx.update(followerPublicRef, { following: nextFollowerCount });
+    if (followerPublic.exists) {
+      tx.update(followerPublicRef, { following: nextFollowerCount });
+    } else if (followerPrivate.exists) {
+      tx.set(followerPublicRef, { ...publicProfileSeed(followerId, followerPrivate.data() || {}), following: nextFollowerCount }, { merge: true });
+    }
     if (followerPrivate.exists) tx.update(followerPrivateRef, { following: nextFollowerCount, updatedAt: FieldValue.serverTimestamp() });
-    if (creatorPublic.exists && nextCreatorCount !== null) {
+    if ((creatorPublic.exists || creatorPrivate.exists) && nextCreatorCount !== null) {
       tx.set(dailyRef, {
         creatorId, day,
         follows: FieldValue.increment(shouldFollow ? 1 : 0),

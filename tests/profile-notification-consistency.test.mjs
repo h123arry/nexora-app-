@@ -150,3 +150,18 @@ test('loaded post authors and commenters receive live public profile subscriptio
   assert.match(app, /onSnapshot\(\s*doc\(db, 'publicProfiles', uid\)/);
   assert.match(app, /setGlobalUsersMap\(previous => \(/);
 });
+test('Spark and Follow actions use the trusted canonical state and deploy the required callable', async () => {
+  const [app, profile, workflow] = await Promise.all([
+    read('../src/App.tsx'),
+    read('../src/components/ProfileView.tsx'),
+    read('../.github/workflows/deploy-production-founding-members.yml'),
+  ]);
+  assert.match(app, /pendingFollowRequestsRef/);
+  assert.match(app, /await addFollow\(followerId, creatorId\)/);
+  assert.match(app, /await removeFollow\(followerId, creatorId\)/);
+  assert.match(app, /Your Spark could not be saved/);
+  assert.doesNotMatch(profile, /Spark synchronised!/);
+  assert.match(profile, /onClick=\{\(\) => onToggleFollow\?\.\(currentUser\.id\)\}/);
+  assert.match(workflow, /functions:setCreatorFollowState/);
+  assert.match(workflow, /functions\/src\/creatorAudienceAnalytics\.ts/);
+});
