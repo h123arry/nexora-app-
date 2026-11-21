@@ -36,11 +36,6 @@ jobs:
       GOOGLE_CLOUD_PROJECT: nexora-prod-voiceharrison
       GCLOUD_PROJECT: nexora-prod-voiceharrison
       FIRESTORE_DATABASE_ID: default
-      R2_ACCOUNT_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
-      R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
-      R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
-      R2_BUCKET_NAME: nexora-media
-      R2_WORKER_RECONCILE_VIDEOS_ONLY: 'true'
 
     steps:
       - name: Check out the reviewed NEXORA release
@@ -48,6 +43,10 @@ jobs:
 
       - name: Require existing production identity and R2 credentials
         shell: bash
+        env:
+          R2_ACCOUNT_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
         run: |
           set -euo pipefail
           test "$GOOGLE_CLOUD_PROJECT" = "nexora-prod-voiceharrison"
@@ -58,13 +57,6 @@ jobs:
           test -n "${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}"
           test -n "${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}"
           echo "Production Firestore target and existing R2 credentials are present."
-
-      - name: Authenticate to Google Cloud using existing Workload Identity Federation
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}
-          project_id: nexora-prod-voiceharrison
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -80,10 +72,22 @@ jobs:
           npm ci --prefix services/media-worker --no-audit --no-fund
           ffmpeg -version | head -n 1
 
+      - name: Authenticate to Google Cloud using existing Workload Identity Federation
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_PRODUCTION_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_PRODUCTION_SERVICE_ACCOUNT }}
+          project_id: nexora-prod-voiceharrison
+
       - name: Process pending R2 videos on this temporary runner
         shell: bash
         env:
           PORT: '8080'
+          R2_ACCOUNT_ID: ${{ vars.CLOUDFLARE_R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: nexora-media
+          R2_WORKER_RECONCILE_VIDEOS_ONLY: 'true'
         run: |
           set -euo pipefail
           TOKEN="$(openssl rand -hex 32)"
