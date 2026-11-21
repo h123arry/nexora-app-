@@ -96,3 +96,22 @@ test('public profile media is delivered only while the profile points to the exa
   assert.equal(isCurrentPublicProfileMedia('post', 'avatar-123', { avatar: avatarUrl }), false);
   assert.equal(isCurrentPublicProfileMedia('profile-avatar', 'avatar-123', null), false);
 });
+
+\ntest('R2 playback prefers a valid 720p rendition and falls back to the immutable original', () => {
+  const original = 'users/user_123/media/asset-456';
+  assert.equal(selectR2VideoPlaybackPath({ storagePath: original, kind: 'video', status: 'uploaded' }, 'user_123', 'asset-456'), original);
+  assert.equal(selectR2VideoPlaybackPath({ storagePath: original, kind: 'video', status: 'processing' }, 'user_123', 'asset-456'), original);
+  assert.equal(selectR2VideoPlaybackPath({
+    storagePath: original, kind: 'video', status: 'ready',
+    renditions: [
+      { height: 360, mp4Path: 'processed/user_123/asset-456/360p/video.mp4' },
+      { height: 720, mp4Path: 'processed/user_123/asset-456/720p/video.mp4' },
+      { height: 1080, mp4Path: 'processed/other/asset-456/1080p/video.mp4' },
+    ],
+  }, 'user_123', 'asset-456'), 'processed/user_123/asset-456/720p/video.mp4');
+  assert.equal(selectR2VideoPlaybackPath({
+    storagePath: original, kind: 'video', status: 'ready',
+    renditions: [{ height: 720, mp4Path: 'processed/user_123/asset-456/../../private.mp4' }],
+  }, 'user_123', 'asset-456'), original);
+  assert.equal(selectR2VideoPlaybackPath({ storagePath: 'users/other/media/asset-456', kind: 'video', status: 'ready' }, 'user_123', 'asset-456'), null);
+});
