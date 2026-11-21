@@ -24,3 +24,22 @@ test('transition duration calculation safely clamps short and invalid clips', ()
   assert.equal(getStudioExpectedExportDuration([0.2, 0.3], 'cross-dissolve'), 0.3);
   assert.equal(getStudioExpectedExportDuration([2, Number.NaN, 3], 'cut'), 5);
 });
+
+
+import { estimateStudioExportSizeBytes, getStudioExportBitrates } from '../src/utils/studioExportPolicy';
+
+test('export bitrate scales with resolution and quality without changing audio mix semantics', () => {
+  assert.deepEqual(getStudioExportBitrates('720p', 'balanced'), { video: 4_500_000, audio: 128_000 });
+  assert.deepEqual(getStudioExportBitrates('1080p', 'balanced'), { video: 7_000_000, audio: 128_000 });
+  assert.deepEqual(getStudioExportBitrates('1080p', 'high'), { video: 12_000_000, audio: 192_000 });
+});
+
+test('export size estimate is duration-aware, monotonic and safe for invalid input', () => {
+  const short = estimateStudioExportSizeBytes(30, '720p', 'balanced');
+  const long = estimateStudioExportSizeBytes(60, '720p', 'balanced');
+  const high = estimateStudioExportSizeBytes(30, '1080p', 'high');
+  assert.ok(short > 0);
+  assert.equal(long, short * 2);
+  assert.ok(high > short);
+  assert.equal(estimateStudioExportSizeBytes(Number.NaN, '720p', 'balanced'), 0);
+});
