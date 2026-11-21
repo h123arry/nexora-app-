@@ -24,3 +24,27 @@ export function getStudioExpectedExportDuration(
   if (transition === 'fade') return total + Math.max(0, fadeOutSeconds) * Math.max(0, durations.length - 1);
   return total;
 }
+
+
+export type StudioExportQuality = 'balanced' | 'high';
+
+export function getStudioExportBitrates(
+  resolution: StudioExportResolution,
+  quality: StudioExportQuality,
+): { video: number; audio: number } {
+  const video = resolution === '1080p'
+    ? (quality === 'high' ? 12_000_000 : 7_000_000)
+    : (quality === 'high' ? 8_000_000 : 4_500_000);
+  return { video, audio: quality === 'high' ? 192_000 : 128_000 };
+}
+
+export function estimateStudioExportSizeBytes(
+  durationSeconds: number,
+  resolution: StudioExportResolution,
+  quality: StudioExportQuality,
+): number {
+  if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) return 0;
+  const bitrates = getStudioExportBitrates(resolution, quality);
+  // Add 8% for container/encoding overhead; this is an estimate, not a guarantee.
+  return Math.ceil((durationSeconds * (bitrates.video + bitrates.audio) / 8) * 1.08);
+}
