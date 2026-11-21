@@ -773,6 +773,7 @@ export default function App() {
   });
   const likeStateReadyRef = useRef(false);
   const pendingLikeRequestsRef = useRef(new Set<string>());
+  const pendingFollowRequestsRef = useRef(new Set<string>());
   useEffect(() => {
     let cancelled = false;
     likeStateReadyRef.current = false;
@@ -1711,7 +1712,7 @@ export default function App() {
         });
         setPosts(previous => previous.map(post => post.id === postId ? { ...post, likes: data.likes } : post));
       }).catch(() => {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Nexora could not save that like. Please check your connection and retry.' }));
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your Spark could not be saved. Please try again.' }));
       }).finally(() => {
         pendingLikeRequestsRef.current.delete(postId);
       });
@@ -2025,16 +2026,25 @@ export default function App() {
   // 7. Discovery Align Switch
   const handleToggleFollow = (creatorId: string) => {
     requireAuth(() => {
+      const followerId = firebaseUser?.uid;
+      if (!followerId || currentUser.id !== followerId) {
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: 'Your account is still syncing. Please try following again.',
+        }));
+        return;
+      }
+      if (!creatorId || creatorId === followerId || pendingFollowRequestsRef.current.has(creatorId)) return;
       const isCurrentlyFollowing = followingIds.includes(creatorId);
+      pendingFollowRequestsRef.current.add(creatorId);
       void (async () => {
         try {
           if (isCurrentlyFollowing) {
-            await removeFollow(currentUser.id, creatorId);
-            unfollowUserDb(currentUser.id, creatorId);
+            await removeFollow(followerId, creatorId);
+            unfollowUserDb(followerId, creatorId);
             setFollowingIds(previous => previous.filter(id => id !== creatorId));
           } else {
-            await addFollow(currentUser.id, creatorId);
-            followUserDb(currentUser.id, creatorId);
+            await addFollow(followerId, creatorId);
+            followUserDb(followerId, creatorId);
             setFollowingIds(previous => [...new Set([...previous, creatorId])]);
 
             const targetCreator = (Object.values(globalUsersMap) as User[]).find(creator => creator.id === creatorId);
@@ -2046,6 +2056,8 @@ export default function App() {
           window.dispatchEvent(new CustomEvent('toast', {
             detail: error instanceof Error ? error.message : 'Your follow could not be saved. Please try again.',
           }));
+        } finally {
+          pendingFollowRequestsRef.current.delete(creatorId);
         }
       })();
     }, 'Join Nexora to follow creators, build your network, and personalize your feed.');
