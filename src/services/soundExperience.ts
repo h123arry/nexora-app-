@@ -52,6 +52,72 @@ export function playNexoraSound(soundId: keyof typeof TONES): boolean {
   if (audio.state === 'suspended') { void audio.resume().then(play).catch(() => {}); return false; }
   play(); return true;
 }
+
+type GiftSoundFamily = 'floral' | 'dragon' | 'wildlife' | 'royal' | 'gemstone' | 'celestial' | 'elemental' | 'music' | 'soft';
+const GIFT_SOUND_FAMILY: Record<string, GiftSoundFamily> = {
+  floral: 'floral', flower: 'floral', flowers: 'floral', rose: 'floral',
+  dragon: 'dragon', dragons: 'dragon', wildlife: 'wildlife', lion: 'wildlife', animal: 'wildlife',
+  royal: 'royal', crown: 'royal', emperor: 'royal', luxury: 'royal',
+  gemstone: 'gemstone', gem: 'gemstone', diamond: 'gemstone', celestial: 'celestial', space: 'celestial',
+  elemental: 'elemental', fire: 'elemental', oceanic: 'elemental', music: 'music', love: 'soft',
+};
+const GIFT_SOUND_NOTES: Record<GiftSoundFamily, number[]> = {
+  floral: [880, 1174.66, 1396.91, 1760],
+  dragon: [110, 82.41, 73.42, 146.83],
+  wildlife: [196, 146.83, 220],
+  royal: [392, 523.25, 659.25, 783.99],
+  gemstone: [1318.51, 1567.98, 2093],
+  celestial: [659.25, 987.77, 1318.51, 1760],
+  elemental: [164.81, 220, 329.63, 440],
+  music: [523.25, 659.25, 783.99],
+  soft: [659.25, 783.99, 987.77],
+};
+/** A distinct, original Web Audio signature for each live-gift family. Respects the user's Gifts sound preference. */
+export function playGiftArrivalSound(giftId: string, rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' = 'common'): boolean {
+  if (!readSoundPreferences().gifts) return false;
+  const prefix = giftId.toLowerCase().split('-')[0];
+  const family = GIFT_SOUND_FAMILY[prefix] || 'soft';
+  const audio = getContext();
+  if (!audio) return false;
+  const play = () => {
+    if (audio.state !== 'running') return;
+    const start = audio.currentTime + 0.025;
+    const master = audio.createGain();
+    const peak = rarity === 'legendary' ? 0.105 : rarity === 'epic' ? 0.082 : 0.062;
+    master.gain.setValueAtTime(0.0001, start);
+    master.gain.linearRampToValueAtTime(peak, start + 0.045);
+    master.gain.exponentialRampToValueAtTime(0.0001, start + (family === 'dragon' || family === 'elemental' ? 1.05 : 0.82));
+    master.connect(audio.destination);
+    const notes = GIFT_SOUND_NOTES[family];
+    notes.forEach((frequency, index) => {
+      const oscillator = audio.createOscillator();
+      const envelope = audio.createGain();
+      const at = start + index * (family === 'dragon' ? 0.105 : 0.085);
+      const duration = family === 'dragon' ? 0.42 : family === 'floral' || family === 'gemstone' || family === 'celestial' ? 0.34 : 0.28;
+      oscillator.type = family === 'dragon' ? 'sawtooth' : family === 'wildlife' || family === 'elemental' ? 'triangle' : 'sine';
+      oscillator.frequency.setValueAtTime(frequency, at);
+      if (family === 'dragon') oscillator.frequency.exponentialRampToValueAtTime(Math.max(38, frequency * 0.58), at + duration);
+      if (family === 'floral' || family === 'gemstone' || family === 'celestial') oscillator.frequency.exponentialRampToValueAtTime(frequency * 1.012, at + duration);
+      envelope.gain.setValueAtTime(0.0001, at);
+      envelope.gain.linearRampToValueAtTime(family === 'dragon' ? 0.34 : 0.52, at + 0.018);
+      envelope.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+      oscillator.connect(envelope); envelope.connect(master);
+      oscillator.start(at); oscillator.stop(at + duration + 0.025);
+    });
+    if (family === 'dragon' || family === 'elemental' || family === 'wildlife') {
+      const low = audio.createOscillator(); const lowGain = audio.createGain();
+      low.type = family === 'dragon' ? 'sawtooth' : 'triangle';
+      low.frequency.setValueAtTime(family === 'dragon' ? 58 : family === 'wildlife' ? 92 : 74, start);
+      low.frequency.exponentialRampToValueAtTime(family === 'dragon' ? 34 : 48, start + 0.62);
+      lowGain.gain.setValueAtTime(0.0001, start); lowGain.gain.linearRampToValueAtTime(0.24, start + 0.08); lowGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.68);
+      low.connect(lowGain); lowGain.connect(master); low.start(start); low.stop(start + 0.7);
+    }
+    window.setTimeout(() => { try { master.disconnect(); } catch { /* Audio node may already be released. */ } }, 1400);
+  };
+  if (audio.state === 'suspended') { void audio.resume().then(play).catch(() => {}); return false; }
+  play(); return true;
+}
+
 export function dispatchNexoraSound(soundId: keyof typeof TONES): void {
   if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('nexora-sound', { detail: { soundId } }));
 }
