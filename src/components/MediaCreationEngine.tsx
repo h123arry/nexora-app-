@@ -1505,6 +1505,8 @@ export default function MediaCreationEngine({
           const renderedBlob = hasEdits ? await renderEditedPhotoBlob(imageBlob, {
             rotation: selectedImage.rotation,
             zoom: selectedImage.zoom,
+            cropOffset: selectedImage.cropOffset,
+            aspectRatio: selectedImage.aspectRatio ?? null,
             filterStyle: selectedImage.filterStyle,
             brightness,
             contrast,
@@ -2320,12 +2322,21 @@ export default function MediaCreationEngine({
                     <div className="flex min-h-[30vh] flex-1 flex-col items-center justify-center overflow-hidden rounded-[22px] border border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(113,56,255,0.13),transparent_58%),#03040A] p-3">
                       <div className="relative flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden">
                         {selectedImages.length > 0 ? (
-                          <div className="relative flex h-full max-h-full w-full items-center justify-center overflow-hidden">
+                          <div
+                            className="relative flex max-h-full max-w-full items-center justify-center overflow-hidden"
+                            style={{
+                              aspectRatio: selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.aspectRatio ? String(selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.aspectRatio) : undefined,
+                              width: selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.aspectRatio ? 'min(100%, 52vh)' : '100%',
+                              height: selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.aspectRatio ? 'auto' : '100%',
+                            }}
+                          >
                             <img
                               src={selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.url}
                               alt={selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.fileName || 'Photo being edited'}
-                              className="max-h-full max-w-full object-contain transition-[filter,transform] duration-200"
+                              className="h-full w-full transition-[filter,transform] duration-200"
                               style={{
+                                objectFit: selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.aspectRatio ? 'cover' : 'contain',
+                                objectPosition: `${50 + (selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.cropOffset?.x || 0) / 2}% ${50 + (selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.cropOffset?.y || 0) / 2}%`,
                                 filter: `${selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.filterStyle || 'none'} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`,
                                 transform: `rotate(${selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.rotation || 0}deg) scale(${selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.zoom || 1})`
                               }}
@@ -2773,7 +2784,7 @@ export default function MediaCreationEngine({
 
                       <div className="rounded-xl border border-white/10 bg-white/[0.025] p-3 text-[10px] leading-relaxed text-[#A39BBF]">
                         <p className="font-bold text-[#E8E2F4]">Before you publish</p>
-                        <p className="mt-1">Check your caption, selected audience and media preview. Photo edits and overlays are rendered into uploaded images. Video edits must be exported from Studio before returning here.</p>
+                        <p className="mt-1">Check your caption, selected audience and media preview. Photo edits and overlays are rendered into uploaded images. Video trim and cover selection are available here. Export multi-track edits, music and effects from NEXORA Studio before returning.</p>
                         {activeTab === 'story' && <p className="mt-1">Stories are shared through the existing 24-hour story flow.</p>}
                       </div>
                     </div>
