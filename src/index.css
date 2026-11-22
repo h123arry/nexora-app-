@@ -2587,3 +2587,68 @@ body {
     transition: none !important;
   }
 }
+
+/* NEXORA Create camera — minimal controls, native capture hierarchy. */
+.nx-create-experience .nx-camera-glass-control,
+.nx-create-experience .nx-camera-side-control {
+  background: rgba(8,10,16,.56);
+  border: 1px solid rgba(255,255,255,.24);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 6px 22px rgba(0,0,0,.18);
+}
+.nx-create-experience .nx-camera-mode-label {
+  background: rgba(8,10,16,.48);
+  border: 1px solid rgba(255,255,255,.18);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.nx-create-experience .nx-camera-control-dock {
+  background: rgba(8,10,16,.58);
+  border: 1px solid rgba(255,255,255,.15);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 34px rgba(0,0,0,.24);
+}
+.nx-create-experience .nx-camera-photo-shutter {
+  background: rgba(255,255,255,.12);
+  box-shadow: 0 5px 24px rgba(0,0,0,.25);
+  transition: transform .14s ease, opacity .14s ease;
+}
+.nx-create-experience .nx-camera-photo-shutter:active,
+.nx-create-experience .nx-camera-record-shutter:active { transform: scale(.94); }
+.nx-create-experience .nx-camera-record-shutter {
+  background: rgba(220,38,38,.9);
+  box-shadow: 0 5px 24px rgba(0,0,0,.3);
+  transition: transform .14s ease, opacity .14s ease;
+}
+.nx-create-experience .nx-camera-duration-dock {
+  background: rgba(8,10,16,.58);
+  border: 1px solid rgba(255,255,255,.15);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.nx-create-experience .nx-camera-recording-indicator {
+  background: rgba(8,10,16,.7);
+  border: 1px solid rgba(255,255,255,.16);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.nx-create-experience .nx-camera-use-button {
+  background: #6845C5;
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: none;
+}
+.nx-create-experience .nx-camera-use-button:hover { background: #7554CE; }
+.nx-create-experience .nx-camera-glass-control:focus-visible,
+.nx-create-experience .nx-camera-side-control:focus-visible,
+.nx-create-experience .nx-camera-photo-shutter:focus-visible,
+.nx-create-experience .nx-camera-record-shutter:focus-visible,
+.nx-create-experience .nx-camera-use-button:focus-visible {
+  outline: 2px solid #B8ADD8;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-create-experience .nx-camera-photo-shutter,
+  .nx-create-experience .nx-camera-record-shutter { transition: none; }
+}
