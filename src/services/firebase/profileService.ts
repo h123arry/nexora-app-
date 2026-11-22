@@ -6,32 +6,18 @@ import { checkUsernameStatus, normalizeUsername } from '../../utils/username';
 import { createPublicProfileProjection } from './publicProfileProjection';
 import { persistProfileWithBestEffortProjection } from './profileProvisioningPolicy';
 import { getAnonymousMemberUsername } from './anonymousOnboardingPolicy';
+import { apiRequestUrl } from '../../lib/apiBaseUrl';
 
-// One-time profile identity grace: through midnight in Nigeria (WAT) on 22 Nov 2026.
-// Every successful identity edit during this window writes a fresh cooldown timestamp.
 const PROFILE_IDENTITY_CHANGE_GRACE_END = Date.parse('2026-11-22T23:00:00.000Z');
-const DISPLAY_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
-const USERNAME_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
-
-function assertIdentityChangeAllowed(current: User, updates: Partial<User>, now = Date.now()): void {
-  if (now < PROFILE_IDENTITY_CHANGE_GRACE_END) return;
-  const checks = [
-    { field: 'name' as const, timestamp: current.lastDisplayNameChangeTime, cooldown: DISPLAY_NAME_CHANGE_COOLDOWN_MS, label: 'Display name' },
-    { field: 'username' as const, timestamp: current.lastUsernameChangeTime, cooldown: USERNAME_CHANGE_COOLDOWN_MS, label: 'Username' },
-  ];
-  for (const check of checks) {
-    if (updates[check.field] === undefined || updates[check.field] === current[check.field] || !check.timestamp) continue;
-    const lastChange = Date.parse(check.timestamp);
-    if (Number.isFinite(lastChange) && now - lastChange < check.cooldown) {
-      const days = check.cooldown / (24 * 60 * 60 * 1000);
-      throw new Error(`${check.label} changes are locked for ${days} days after your last change.`);
-    }
-  }
-}
 
 export class ProfileService {
   static isIdentityChangeGraceActive(): boolean {
     return Date.now() < PROFILE_IDENTITY_CHANGE_GRACE_END;
+  }
+
+  static isIdentityChangeGraceAvailable(field: 'displayName' | 'username', user: User): boolean {
+    if (!this.isIdentityChangeGraceActive()) return false;
+    return field === 'displayName' ? !user.displayNameGraceUsedAt : !user.usernameGraceUsedAt;
   }
 
   private static profileLoads = new Map<string, Promise<User>>();
@@ -139,32 +125,43 @@ export class ProfileService {
     return newUser;
   }
 
-  static async updateProfile(uid: string, updates: Partial<User>): Promise<void> {
+  static async updateProfile(uid: string, updates: Partial<User>): Promise<Partial<User>> {
     if (!db) throw new Error('Profile storage is unavailable. Please try again.');
-    if (!auth.currentUser || auth.currentUser.uid !== uid) {
-      throw new Error('Only the signed-in account owner can update this profile.');
-    }
+    if (!auth.currentUser || auth.currentUser.uid !== uid) throw new Error('Only the signed-in account owner can update this profile.');
     if (Object.prototype.hasOwnProperty.call(updates, 'isVerified')) {
       throw new Error('Contact verification status is managed by Firebase Authentication and cannot be changed from profile settings.');
     }
-    // Firestore rejects undefined values. Optional profile fields are omitted
-    // rather than allowing one missing timestamp to block the entire save.
     updates = Object.fromEntries(Object.entries(updates).filter(([, value]) => value !== undefined)) as Partial<User>;
-    // Check before reserving a new handle so a rejected cooldown cannot leave an
-    // unnecessary username claim behind. The transaction below repeats this check.
     const existingProfile = await getDoc(doc(db, 'users', uid));
-    if (existingProfile.exists()) {
-      const existingUser = existingProfile.data() as User;
-      assertIdentityChangeAllowed(existingUser, updates);
-      const existingUsername = String(existingUser.username || '');
-      if (updates.username && updates.username !== existingUsername) {
-        await this.reserveUsername(uid, updates.username);
-      }
+    if (!existingProfile.exists()) throw new Error('Your profile could not be found. Please sign in again.');
+    const existingUser = existingProfile.data() as User;
+    const identityUpdates: { name?: string; username?: string } = {};
+    if (updates.name !== undefined && updates.name !== existingUser.name) identityUpdates.name = updates.name;
+    if (updates.username !== undefined && updates.username !== existingUser.username) identityUpdates.username = updates.username;
+    let persistedIdentity: Partial<User> = {};
+    if (Object.keys(identityUpdates).length) {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch(apiRequestUrl('/api/profile/identity'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(identityUpdates),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result?.error === 'string' ? result.error : 'NEXORA could not update your name or username. Please try again.');
+      persistedIdentity = (result?.identity && typeof result.identity === 'object' ? result.identity : {}) as Partial<User>;
     }
 
-    // Commit the private profile and its public projection together. A split
-    // write could leave other users seeing an old name or avatar after the
-    // private profile had already accepted the edit.
+    // Identity fields and cooldown timestamps are server-owned. Never send them
+    // through client Firestore writes, which are denied by the security rules.
+    const remainingUpdates = { ...updates };
+    delete remainingUpdates.name;
+    delete remainingUpdates.username;
+    delete remainingUpdates.lastDisplayNameChangeTime;
+    delete remainingUpdates.lastUsernameChangeTime;
+    delete remainingUpdates.displayNameGraceUsedAt;
+    delete remainingUpdates.usernameGraceUsedAt;
+    if (!Object.keys(remainingUpdates).length) return persistedIdentity;
+
     const privateProfileRef = doc(db, 'users', uid);
     const publicProfileRef = doc(db, 'publicProfiles', uid);
     const settingsRef = doc(db, 'users', uid, 'settings', 'preferences');
@@ -173,24 +170,12 @@ export class ProfileService {
         transaction.get(privateProfileRef),
         transaction.get(settingsRef),
       ]);
-      if (!privateSnapshot.exists()) {
-        throw new Error('Your profile could not be found. Please sign in again.');
-      }
-
-      const existingUser = privateSnapshot.data() as User;
-      assertIdentityChangeAllowed(existingUser, updates);
-      const committedUpdates: Partial<User> = { ...updates };
-      const identityChangedAt = new Date().toISOString();
-      if (committedUpdates.name !== undefined && committedUpdates.name !== existingUser.name) {
-        committedUpdates.lastDisplayNameChangeTime = identityChangedAt;
-      }
-      if (committedUpdates.username !== undefined && committedUpdates.username !== existingUser.username) {
-        committedUpdates.lastUsernameChangeTime = identityChangedAt;
-      }
-      const updatedProfile = { ...existingUser, ...committedUpdates, id: uid };
+      if (!privateSnapshot.exists()) throw new Error('Your profile could not be found. Please sign in again.');
+      const current = privateSnapshot.data() as User;
+      const updatedProfile = { ...current, ...remainingUpdates, id: uid };
       const locationAudience = settingsSnapshot.get('privacy.profileVisibility.location');
       const publicProjection = this.toPublicProfile(updatedProfile);
-      transaction.update(privateProfileRef, { ...committedUpdates, updatedAt: serverTimestamp() });
+      transaction.update(privateProfileRef, { ...remainingUpdates, updatedAt: serverTimestamp() });
       transaction.set(publicProfileRef, {
         ...publicProjection,
         location: locationAudience === 'everyone' && typeof updatedProfile.location === 'string' && updatedProfile.location.trim()
@@ -199,6 +184,7 @@ export class ProfileService {
         interestDNA: deleteField(),
       }, { merge: true });
     });
+    return persistedIdentity;
   }
 
   static async getOrCreateProfile(firebaseUser: FirebaseUser, additionalData?: Partial<User>): Promise<User> {
