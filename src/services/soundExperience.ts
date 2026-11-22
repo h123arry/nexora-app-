@@ -39,7 +39,7 @@ export function playNexoraSound(soundId: keyof typeof TONES): boolean {
   if (category === 'notifications') {
     try { if (typeof localStorage !== 'undefined' && localStorage.getItem('nexora_notif_sound') === 'false') return false; } catch { /* Continue with the current device preference. */ }
   }
-  const audio = suppliedContext || getContext();
+  const audio = getContext();
   if (!audio) return false;
   const play = () => {
     if (audio.state !== 'running') return;
@@ -79,7 +79,7 @@ export function playGiftArrivalSound(giftId: string, rarity: 'common' | 'uncommo
   if (!readSoundPreferences().gifts) return false;
   const prefix = giftId.toLowerCase().split('-')[0];
   const family = GIFT_SOUND_FAMILY[prefix] || 'soft';
-  const audio = getContext();
+  const audio = suppliedContext || getContext();
   if (!audio) return false;
   const play = () => {
     if (audio.state !== 'running') return;
