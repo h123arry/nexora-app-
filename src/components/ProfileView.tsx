@@ -7,7 +7,6 @@ import { User, Post } from '../types';
 import { recordCreatorProfileVisit } from '../services/analytics/creatorAudience';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import { ProfileService } from '../services/firebase/profileService';
-import IdentityVerificationPanel from './IdentityVerificationPanel';
 import { getCreatorCommunityAsset } from '../content/creatorCommunityAssets';
 import NexoraBranding from './NexoraBranding';
 import CreatorGiftGallery from './CreatorGiftGallery';
@@ -1792,7 +1791,7 @@ export default function ProfileView({
                     <h1 className={`text-xl sm:text-2xl font-black leading-tight tracking-tight ${!currentUser.name ? 'text-violet-400/70 italic text-base' : 'text-white'}`}>
                       {currentUser.name || (isOwnProfile ? 'Set your display name' : 'Member')}
                     </h1>
-                    {identityVerification && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" type={identityBadgeType} />}
+                    {(identityVerification || currentUser.earlyCommunityMember) && <PurpleVerifiedBadge className="h-4 w-4 shrink-0" type={currentUser.earlyCommunityMember ? 'leader' : identityBadgeType} />}
                     {profileBadgeAsset && <img src={profileBadgeAsset.path} alt="Creator badge" title={profileBadgeAsset.title} className="h-5 w-5 shrink-0 object-contain" />}
                   </div>
                   <p className={`text-xs sm:text-sm font-bold font-mono tracking-wider mt-0.5 ${!currentUser.username ? 'text-violet-400/60 italic' : 'text-violet-400/90'}`}>
@@ -2210,15 +2209,13 @@ export default function ProfileView({
                         <img src={currentUser.avatar} className="w-10 h-10 rounded-xl object-cover border border-white/10" alt="" />
                         <div className="leading-tight">
                           <p className="text-xs font-bold text-white flex items-center gap-1">
-                            {currentUser.name} {identityVerification && <PurpleVerifiedBadge className="w-3.5 h-3.5" type={identityBadgeType} />}
+                            {currentUser.name} {(identityVerification || currentUser.earlyCommunityMember) && <PurpleVerifiedBadge className="h-3.5 w-3.5" type={currentUser.earlyCommunityMember ? 'leader' : identityBadgeType} />}
                           </p>
                           <p className="text-[10px] font-mono text-violet-400">@{currentUser.username}</p>
                         </div>
                       </div>
                       <span className="text-[8px] font-mono bg-violet-500/25 text-violet-300 px-2 py-1 rounded-full font-extrabold uppercase">ACTIVE</span>
                     </div>
-
-                    {isOwnProfile && isLoggedIn && <IdentityVerificationPanel userId={currentUser.id} initialDisplayName={currentUser.name || ''} />}
 
                     {/* Section 2: Grouped Directories */}
                     <div className="space-y-4">
