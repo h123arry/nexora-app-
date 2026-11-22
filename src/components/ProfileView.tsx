@@ -3613,7 +3613,7 @@ export default function ProfileView({
                   <ArrowLeft className="h-4 w-4" /> Cancel
                 </button>
                 <h2 className="text-base font-bold text-white">Edit profile</h2>
-                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile || isSavingCoverPhoto || savingProfileFields.size > 0 ? 'Saving…' : savedProfileFields.size > 0 ? 'Saved' : 'Unsaved changes'}</span>
+                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile || isSavingCoverPhoto || savingProfileFields.size > 0 ? 'Saving…' : hasUnsavedProfileChanges ? 'Unsaved changes' : savedProfileFields.size > 0 ? 'Saved' : 'Up to date'}</span>
               </header>
 
               <div className="flex min-h-0 flex-1 flex-col justify-start gap-3 overflow-y-auto overscroll-contain py-3">
