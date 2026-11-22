@@ -1453,7 +1453,7 @@ export default function ProfileView({
   // The global feed is intentionally paginated; load this author's public posts
   // independently so older profile posts do not disappear just because they are
   // outside the currently loaded home-feed window.
-  const myPosts = [...new Map([...posts, ...authorProfilePosts]
+  const myPosts = useMemo(() => [...new Map([...posts, ...authorProfilePosts]
     .filter(post => post && (post.userId === currentUser.id || post.username === currentUser.username))
     .map(post => [post.id, post] as const)).values()]
     .map(post => ({
@@ -1466,7 +1466,8 @@ export default function ProfileView({
         ? { ...comment, username: currentUser.username, name: currentUser.name, avatar: currentUser.avatar }
         : comment),
     }))
-    .sort((left, right) => Date.parse(String(right.timestamp)) - Date.parse(String(left.timestamp)));
+    .sort((left, right) => Date.parse(String(right.timestamp)) - Date.parse(String(left.timestamp))),
+  [posts, authorProfilePosts, currentUser.id, currentUser.username, currentUser.name, currentUser.avatar, currentUser.isVerified]);
   const [, setMetricsUpdateTick] = useState(0);
   
   useEffect(() => {
@@ -1517,7 +1518,14 @@ export default function ProfileView({
     }
   };
 
-  const filteredTabPosts = getTabContent();
+  const filteredTabPosts = useMemo(
+    () => getTabContent(),
+    [myPosts, profileTab, currentUser.id, currentUser.username, isOwnProfile, userSparks, userBookmarks],
+  );
+  const orderedGridPosts = useMemo(
+    () => [...filteredTabPosts].sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id))),
+    [filteredTabPosts, pinnedPostIdsList],
+  );
 
   // Keep the open viewer bound to the latest profile post snapshot so creator view totals stay current.
   useEffect(() => {
@@ -1990,7 +1998,7 @@ export default function ProfileView({
             ) : (
               <div className="nx-profile-media-grid-bleed w-full max-w-[1040px] mx-auto px-0">
                 <MediaGrid 
-                  gridPosts={[...filteredTabPosts].sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
+                  gridPosts={orderedGridPosts} 
                   pinnedPostIds={pinnedPostIdsList} 
                   onSelectPost={(post) => setSelectedGridPost(post)}
                   repairVideoPosters={isOwnProfile && isLoggedIn}
