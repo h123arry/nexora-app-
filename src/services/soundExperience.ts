@@ -42,10 +42,10 @@ export function playNexoraSound(soundId: keyof typeof TONES): boolean {
   const audio = suppliedContext || getContext();
   if (!audio) return false;
   const play = () => {
-    if (!context || context.state !== 'running') return;
-    const now = context.currentTime; const master = context.createGain(); master.gain.setValueAtTime(0.075, now); master.connect(context.destination);
+    if (audio.state !== 'running') return;
+    const now = audio.currentTime; const master = audio.createGain(); master.gain.setValueAtTime(0.075, now); master.connect(audio.destination);
     TONES[soundId].forEach((frequency, index) => {
-      const oscillator = context!.createOscillator(); const envelope = context!.createGain(); const start = now + index * 0.075;
+      const oscillator = audio.createOscillator(); const envelope = audio.createGain(); const start = now + index * 0.075;
       oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(frequency, start); envelope.gain.setValueAtTime(0.0001, start); envelope.gain.linearRampToValueAtTime(0.8, start + 0.012); envelope.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
       oscillator.connect(envelope); envelope.connect(master); oscillator.start(start); oscillator.stop(start + 0.24);
     });
