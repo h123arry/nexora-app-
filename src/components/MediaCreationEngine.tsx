@@ -69,7 +69,7 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
     const rotated = Math.abs(options.rotation % 180) === 90;
     const naturalWidth = rotated ? sourceHeight : sourceWidth;
     const naturalHeight = rotated ? sourceWidth : sourceHeight;
-    const ratio = options.aspectRatio && Number.isFinite(options.aspectRatio) ? options.aspectRatio : naturalWidth / naturalHeight;
+    const ratio = typeof options.aspectRatio === 'number' && Number.isFinite(options.aspectRatio) && options.aspectRatio > 0 ? options.aspectRatio : naturalWidth / naturalHeight;
     const maxEdge = 2560;
     let outputWidth = maxEdge;
     let outputHeight = Math.round(outputWidth / ratio);
