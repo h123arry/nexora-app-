@@ -6,6 +6,7 @@ import LiveKitStage from './LiveKitStage';
 import { scoreLiveRoom } from '../services/liveDiscoveryPolicy';
 import { User } from '../types';
 import { db } from '../lib/firebase';
+import { readGiftSoundVolume, saveGiftSoundVolume } from '../services/soundExperience';
 import { endLiveSession, heartbeatLiveSession, joinLiveSession, leaveLiveSession, requestLiveGuestAccess, reviewLiveGuestAccess, sendLiveChatMessage, startLiveSession, updateLiveSessionSettings, moderateLiveParticipant, startLiveRecording, stopLiveRecording, getLiveReplayPlayback, type LiveChatMessage, type LiveSessionSummary } from '../services/liveSessionsService';
 
 interface LiveViewProps { currentUser: User; onClose: () => void; streamId?: string; }
@@ -56,6 +57,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   const [guestActionBusy,setGuestActionBusy] = useState(false);
   const [error,setError] = useState('');
   const [giftSoundsEnabled,setGiftSoundsEnabled] = useState(false);
+  const [giftSoundVolume,setGiftSoundVolume] = useState(() => readGiftSoundVolume());
   const [videoMembershipReady,setVideoMembershipReady] = useState(false);
   const giftAudioContext = useRef<AudioContext|null>(null);
   const bottomRef = useRef<HTMLDivElement|null>(null);
@@ -259,7 +261,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
             {selectedId&&<GiftLiveOverlay streamId={selectedId} soundEnabled={giftSoundsEnabled} audioContext={giftAudioContext.current}/>}
             <div className="absolute bottom-5 left-5 flex items-center gap-2">
               <button type="button" onClick={()=>{if(!giftAudioContext.current&&typeof window!=='undefined'&&window.AudioContext)giftAudioContext.current=new window.AudioContext();if(!giftSoundsEnabled)void giftAudioContext.current?.resume();setGiftSoundsEnabled(v=>!v);}} className="rounded-full border border-white/10 bg-black/50 p-3" aria-label={giftSoundsEnabled?'Mute gift sounds':'Enable gift sounds'}>{giftSoundsEnabled?<Volume2 size={18}/>:<VolumeX size={18}/>}</button>
-              <span className="rounded-full bg-black/40 px-3 py-2 text-[10px] text-slate-300"><Gift size={12} className="mr-1 inline"/> {session?.giftsEnabled===true?'GIFTVERSE enabled':'Gifts paused by host'}</span>
+              <span className="rounded-full bg-black/40 px-3 py-2 text-[10px] text-slate-300"><Gift size={12} className="mr-1 inline"/> {session?.giftsEnabled===true?'GIFTVERSE enabled':'Gifts paused by host'}</span>{giftSoundsEnabled&&<label className="flex items-center gap-2 rounded-full border border-white/10 bg-black/50 px-3 py-2 text-[10px] text-slate-300"><span>Gift volume</span><input aria-label="Live gift sound volume" type="range" min="0" max="1" step="0.05" value={giftSoundVolume} onChange={event=>{const value=Number(event.target.value);setGiftSoundVolume(value);saveGiftSoundVolume(value);}} className="w-20 accent-violet-400"/></label>}
             </div>
             <button type="button" onClick={()=>void exitRoom()} disabled={loading} className="absolute bottom-5 right-5 rounded-full bg-rose-600 px-5 py-3 text-xs font-black disabled:opacity-50">{loading?(isHost?'Ending…':'Leaving…'):(isHost?'End live room':'Leave room')}</button>
           </div>

@@ -4,11 +4,11 @@ import { readFileSync } from 'node:fs';
 import { GIFT_CATALOG, GIFT_CATALOG_VERSION, findNexoraGift } from '../functions/src/giftCatalogPolicy.js';
 import { getNexCurrencyInfo } from '../functions/src/nexCurrencyPolicy.js';
 
-test('GIFTVERSE contains 1,100 unique gift identities, names and image references', () => {
-  assert.equal(GIFT_CATALOG.length, 1100);
-  assert.equal(new Set(GIFT_CATALOG.map(g => g.id)).size, 1100);
-  assert.equal(new Set(GIFT_CATALOG.map(g => g.image)).size, 1100);
-  assert.equal(new Set(GIFT_CATALOG.map(g => g.name)).size, 1100);
+test('GIFTVERSE contains 1,102 unique gift identities, names and image references', () => {
+  assert.equal(GIFT_CATALOG.length, 1102);
+  assert.equal(new Set(GIFT_CATALOG.map(g => g.id)).size, 1102);
+  assert.equal(new Set(GIFT_CATALOG.map(g => g.image)).size, 1102);
+  assert.equal(new Set(GIFT_CATALOG.map(g => g.name)).size, 1102);
 });
 
 test('all catalogue artwork resolves to bundled SVG files and distinct sprite symbols', () => {
@@ -25,7 +25,7 @@ test('all catalogue artwork resolves to bundled SVG files and distinct sprite sy
 });
 
 test('all gifts have unique descriptions, safe prices and valid rarity/animation', () => {
-  assert.equal(new Set(GIFT_CATALOG.map(g => g.description)).size, 1100);
+  assert.equal(new Set(GIFT_CATALOG.map(g => g.description)).size, 1102);
   for (const gift of GIFT_CATALOG) {
     assert.ok(Number.isSafeInteger(gift.priceNex) && gift.priceNex > 0);
     assert.ok(gift.description.length > 35);
@@ -36,7 +36,7 @@ test('all gifts have unique descriptions, safe prices and valid rarity/animation
 
 test('catalogue spans fifteen collections and a varied NEX price ladder', () => {
   assert.ok(new Set(GIFT_CATALOG.map(g => g.category)).size >= 15);
-  assert.deepEqual([...new Set(GIFT_CATALOG.map(g => g.priceNex))].sort((a,b) => a-b), [5,10,20,25,35,50,80,100,120,180,250,300,500,900,1500,1800,5000,10000]);
+  assert.deepEqual([...new Set(GIFT_CATALOG.map(g => g.priceNex))].sort((a,b) => a-b), [1,2,5,10,20,25,35,50,80,100,120,180,250,300,500,900,1500,1800,5000,10000]);
 });
 
 test('880 imported artworks have unique source provenance and share-alike records', () => {
@@ -47,8 +47,10 @@ test('880 imported artworks have unique source provenance and share-alike record
 });
 
 test('server gift lookup retains existing prices and rejects unknown ids', () => {
-  assert.equal(GIFT_CATALOG_VERSION, 3);
+  assert.equal(GIFT_CATALOG_VERSION, 4);
   assert.equal(findNexoraGift('royal-01')?.priceNex, 5);
+  assert.equal(findNexoraGift('love-micro-01')?.priceNex, 1);
+  assert.equal(findNexoraGift('love-micro-02')?.priceNex, 2);
   assert.equal(findNexoraGift('missing'), undefined);
 });
 
@@ -61,10 +63,10 @@ test('NEX is priced at two US cents with bundles starting at 15 units', () => {
 });
 
 
-test('bundled browser fallback exactly mirrors the authoritative 1,100-gift catalogue', () => {
+test('bundled browser fallback exactly mirrors the authoritative 1,102-gift catalogue', () => {
   const bundled = JSON.parse(readFileSync(new URL('../public/giftverse/catalog.json', import.meta.url), 'utf8'));
   assert.equal(bundled.version, GIFT_CATALOG_VERSION);
   assert.equal(bundled.currency, 'NEX');
-  assert.equal(bundled.gifts.length, 1100);
+  assert.equal(bundled.gifts.length, 1102);
   assert.deepEqual(bundled.gifts, GIFT_CATALOG);
 });

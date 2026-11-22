@@ -1,7 +1,35 @@
 import { GIFTVERSE_EXPANSION } from './giftCatalogExpansion.js';
 import { GIFTVERSE_COLLECTION_TWO } from './giftCatalogExpansion100.js';
 export type GiftRarity='common'|'uncommon'|'rare'|'epic'|'legendary';export interface NexoraGift{id:string;name:string;category:string;categoryName:string;priceNex:number;rarity:GiftRarity;image:string;animation:'sparkle'|'reveal'|'cinematic'|'legendary';subscriptionExclusive:boolean;limitedEdition:boolean;icon:string;description:string;}
-export const GIFT_CATALOG_VERSION=3;export const GIFT_CATALOG:NexoraGift[]=[
+export const GIFT_CATALOG_VERSION=4;export const GIFT_CATALOG:NexoraGift[]=[
+{
+  "id": "love-micro-01",
+  "name": "Violet Spark",
+  "category": "love",
+  "categoryName": "Love & Appreciation",
+  "priceNex": 1,
+  "rarity": "common",
+  "image": "/giftverse/gifts/love-micro-01.svg",
+  "animation": "sparkle",
+  "subscriptionExclusive": false,
+  "limitedEdition": false,
+  "icon": "✨",
+  "description": "A tiny violet spark to let a creator know you are here and cheering them on."
+},
+{
+  "id": "love-micro-02",
+  "name": "Little Heart",
+  "category": "love",
+  "categoryName": "Love & Appreciation",
+  "priceNex": 2,
+  "rarity": "common",
+  "image": "/giftverse/gifts/love-micro-02.svg",
+  "animation": "sparkle",
+  "subscriptionExclusive": false,
+  "limitedEdition": false,
+  "icon": "💜",
+  "description": "A little heart with a big message, made for everyday appreciation and support."
+},
   {
     "id": "floral-01",
     "name": "Violet Rose",
