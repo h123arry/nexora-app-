@@ -1777,11 +1777,22 @@ export default function ProfileView({
             {isOwnProfile && <button type="button" onClick={() => setActivePanel('edit-profile')} className="absolute right-3 bottom-3 z-10 rounded-xl border border-white/15 bg-black/55 px-3 py-2 text-[10px] font-bold text-white backdrop-blur-md hover:bg-black/75"><Camera className="mr-1.5 inline h-3.5 w-3.5" /> Edit cover</button>}
             <div className="absolute left-4 -bottom-6">
               <div className="relative">
-                {currentUser.hasStory && <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 blur-[2px] opacity-80" />}
+                {currentUser.hasStory && <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-violet-500 via-violet-400 to-indigo-500 blur-[2px] opacity-75" />}
                 <button type="button" onClick={() => setProfilePicExpanded(true)} aria-label="View profile photo" className="relative z-10 h-20 w-20 sm:h-24 sm:w-24 rounded-full border-[3px] border-[#080617] bg-black overflow-visible shadow-lg cursor-zoom-in focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4">
                   <img src={currentUser.avatar} className="h-full w-full rounded-full object-cover" alt="" referrerPolicy="no-referrer" />
                   {profileFrameAsset && <img src={profileFrameAsset.path} alt="" aria-hidden="true" className="pointer-events-none absolute -inset-[6px] z-20 h-[calc(100%+12px)] w-[calc(100%+12px)] object-contain" />}
                 </button>
+                {isOwnProfile && (
+                  <button
+                    type="button"
+                    onClick={() => setActivePanel('edit-profile')}
+                    aria-label="Change profile photo"
+                    title="Change profile photo"
+                    className="absolute bottom-0 right-0 z-30 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#080617] bg-violet-600 text-white shadow-lg transition-colors hover:bg-violet-500 focus-visible:outline-2 focus-visible:outline-violet-200 focus-visible:outline-offset-2"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1811,11 +1822,12 @@ export default function ProfileView({
                   <button
                     type="button"
                     onClick={() => setActivePanel('edit-profile')}
-                    className="min-h-10 min-w-10 rounded-xl border border-white/10 bg-white/[0.05] p-2.5 text-zinc-300 shadow-sm transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-violet-300"
-                    title="Edit Profile"
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-violet-300/25 bg-violet-500/10 px-3.5 py-2 text-xs font-bold text-violet-100 shadow-sm transition-all hover:border-violet-300/40 hover:bg-violet-500/20 focus-visible:outline-2 focus-visible:outline-violet-200 focus-visible:outline-offset-2"
+                    title="Edit profile details and photos"
                     aria-label="Edit profile"
                   >
-                    <Edit3 className="h-4 w-4" />
+                    <Edit3 className="h-3.5 w-3.5" />
+                    <span>Edit profile</span>
                   </button>
                 </div>
               )}
