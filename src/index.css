@@ -2652,3 +2652,25 @@ body {
   .nx-create-experience .nx-camera-photo-shutter,
   .nx-create-experience .nx-camera-record-shutter { transition: none; }
 }
+
+
+/* Home feed: preserve native vertical scrolling without a visible side scrollbar or reserved gutter. */
+.nx-feed-stage > .w-full.h-full.overflow-y-auto {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-gutter: auto;
+  padding-right: 0 !important;
+}
+.nx-feed-stage > .w-full.h-full.overflow-y-auto::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.nx-feed-stage .nx-feed-post,
+.nx-feed-stage .nx-feed-media {
+  max-width: 100vw;
+}
+.nx-feed-stage .nx-feed-media {
+  border-radius: 0 !important;
+  outline: 0;
+}
