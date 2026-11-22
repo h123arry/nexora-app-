@@ -1587,7 +1587,7 @@ export default function ProfileView({
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                 aria-expanded={isProfileMenuOpen}
                 aria-haspopup="menu"
-                className="min-h-10 flex items-center gap-1.5 px-2.5 py-1 rounded-xl hover:bg-white/5 text-xs font-mono font-bold tracking-wider text-zinc-200 uppercase transition-all cursor-pointer select-none border border-white/10 bg-white/3"
+                className="min-h-9 flex items-center gap-1.5 px-2 py-1 rounded-xl hover:bg-white/5 text-[11px] font-mono font-bold tracking-wider text-zinc-200 uppercase transition-all cursor-pointer select-none border border-white/10 bg-white/3"
               >
                 <span>My Profile</span>
                 <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
@@ -1648,7 +1648,10 @@ export default function ProfileView({
                 title="Share Profile"
                 aria-label="Share profile"
               >
-                <QrCode className="w-4.5 h-4.5" />
+                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[21px] w-[21px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 15V3m0 0 4.5 4.5M12 3 7.5 7.5" />
+                  <path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7" />
+                </svg>
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.9 }}
@@ -1656,9 +1659,9 @@ export default function ProfileView({
                 className="min-h-10 min-w-10 p-2 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-violet-300"
                 title="Menu"
                 aria-label="Open profile menu"
-                id="nexora-advanced-hamburger-trigger"
+                id="nexora-profile-more-trigger"
               >
-                <Menu className="w-5 h-5" />
+                <MoreVertical className="w-5 h-5" />
               </motion.button>
             </>
           ) : (
@@ -1775,10 +1778,10 @@ export default function ProfileView({
             )}
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
             {isOwnProfile && <button type="button" onClick={() => setActivePanel('edit-profile')} className="absolute right-3 bottom-3 z-10 rounded-xl border border-white/15 bg-black/55 px-3 py-2 text-[10px] font-bold text-white backdrop-blur-md hover:bg-black/75"><Camera className="mr-1.5 inline h-3.5 w-3.5" /> Edit cover</button>}
-            <div className="absolute left-4 -bottom-6">
+            <div className="absolute left-4 -bottom-7">
               <div className="relative">
                 {currentUser.hasStory && <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-violet-500 via-violet-400 to-indigo-500 blur-[2px] opacity-75" />}
-                <button type="button" onClick={() => setProfilePicExpanded(true)} aria-label="View profile photo" className="relative z-10 h-20 w-20 sm:h-24 sm:w-24 rounded-full border-[3px] border-[#080617] bg-black overflow-visible shadow-lg cursor-zoom-in focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4">
+                <button type="button" onClick={() => setProfilePicExpanded(true)} aria-label="View profile photo" className="relative z-10 h-[5.5rem] w-[5.5rem] sm:h-28 sm:w-28 rounded-full border-[3px] border-[#080617] bg-black overflow-visible shadow-lg cursor-zoom-in focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4">
                   <img src={currentUser.avatar} className="h-full w-full rounded-full object-cover" alt="" referrerPolicy="no-referrer" />
                   {profileFrameAsset && <img src={profileFrameAsset.path} alt="" aria-hidden="true" className="pointer-events-none absolute -inset-[6px] z-20 h-[calc(100%+12px)] w-[calc(100%+12px)] object-contain" />}
                 </button>
@@ -1798,7 +1801,7 @@ export default function ProfileView({
           </div>
 
           {/* Profile Identity Header (Stage 2 Redesign) */}
-          <div className="nx-profile-identity flex flex-col space-y-1.5 sm:space-y-2 text-left mb-1 pt-7">
+          <div className="nx-profile-identity flex flex-col space-y-1.5 sm:space-y-2 text-left mb-1 pt-9">
             {/* Identity & Action Bar */}
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
