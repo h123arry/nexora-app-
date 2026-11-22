@@ -1785,7 +1785,7 @@ export default function MediaCreationEngine({
       </AnimatePresence>
 
       <AnimatePresence>
-        {isMediaPreviewExpanded && currentStep === 3 && (
+        {isMediaPreviewExpanded && (currentStep === 3 || (currentStep === 2 && activeMode === 'carousel')) && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex flex-col bg-[#03040A]" role="dialog" aria-modal="true" aria-label="Full-screen media preview">
             <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
               <div><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#A99BCE]">NEXORA · PREVIEW</p><p className="mt-1 text-xs font-semibold text-white">{selectedImages.length ? `Photo ${Math.min((activeEditIndex ?? 0) + 1, selectedImages.length)} of ${selectedImages.length}` : 'Video preview'}</p></div>
@@ -2368,6 +2368,7 @@ export default function MediaCreationEngine({
                       </div>
                       <div className="mt-2 flex shrink-0 items-center justify-between gap-3 self-stretch">
                         <span className="truncate text-[9px] text-[#827B9C]">{selectedImages.length ? 'Changes apply to the selected photo.' : 'Preview your media before moving on.'}</span>
+                        {selectedImages.length > 0 && <button type="button" onClick={() => setIsMediaPreviewExpanded(true)} className="shrink-0 rounded-lg border border-white/10 px-2.5 py-1.5 text-[9px] font-bold text-[#D5D0E0]">Full screen</button>}
                         {selectedImages.length > 1 && <span className="shrink-0 text-[9px] font-semibold text-violet-200">{selectedImages.length} images</span>}
                         {(videoFileUrl || recordedVideoUrl) && <button type="button" onClick={() => setIsMediaPreviewExpanded(true)} className="shrink-0 rounded-lg border border-white/10 px-2.5 py-1.5 text-[9px] font-bold text-[#D5D0E0]">Full screen</button>}
                         {(videoFileUrl || recordedVideoUrl) && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="shrink-0 rounded-lg border border-violet-400/30 bg-violet-500/10 px-2.5 py-1.5 text-[9px] font-bold text-violet-200">Open full Studio</button>}
