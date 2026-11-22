@@ -128,7 +128,7 @@ test('profile identity grace lets everyone make one change today, then applies 7
     read('../src/services/firebase/profileService.ts'),
     read('../src/components/ProfileView.tsx'),
   ]);
-  assert.match(profile, /2026-11-22T23:00:00\\.000Z/);
+  assert.match(profile, /2026-11-22T23:00:00\.000Z/);
   assert.match(profile, /DISPLAY_NAME_CHANGE_COOLDOWN_MS = 7 \* 24 \* 60 \* 60 \* 1000/);
   assert.match(profile, /USERNAME_CHANGE_COOLDOWN_MS = 30 \* 24 \* 60 \* 60 \* 1000/);
   assert.match(profile, /if \(now < PROFILE_IDENTITY_CHANGE_GRACE_END\) return/);
