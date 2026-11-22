@@ -209,7 +209,6 @@ app.post('/api/profile/identity', async (req, res) => {
   try {
     const userRef = serverDb.collection('users').doc(uid);
     const publicRef = serverDb.collection('publicProfiles').doc(uid);
-    const settingsRef = userRef.collection('settings').doc('preferences');
     const result = await serverDb.runTransaction(async transaction => {
       const userSnapshot = await transaction.get(userRef);
       if (!userSnapshot.exists) throw Object.assign(new Error('Your profile could not be found. Please sign in again.'), { status: 404, code: 'profile_not_found' });
@@ -223,10 +222,12 @@ app.post('/api/profile/identity', async (req, res) => {
       const now = Date.now();
       const configuredGraceEnd = Date.parse(process.env.PROFILE_IDENTITY_GRACE_UNTIL || '2026-11-22T23:00:00.000Z');
       const graceEnd = Number.isFinite(configuredGraceEnd) ? configuredGraceEnd : Date.parse('2026-11-22T23:00:00.000Z');
+      const graceStart = Date.parse('2026-11-21T23:00:00.000Z');
       const updates: Record<string, string> = {};
       const checkCooldown = (field: 'displayName' | 'username', lastChangedAt: unknown, graceUsedAt: unknown, cooldownMs: number, label: string) => {
-        const graceAvailable = now < graceEnd && !graceUsedAt;
         const lastChanged = typeof lastChangedAt === 'string' ? Date.parse(lastChangedAt) : NaN;
+        const changedDuringGraceWindow = Number.isFinite(lastChanged) && lastChanged >= graceStart;
+        const graceAvailable = now < graceEnd && !graceUsedAt && !changedDuringGraceWindow;
         if (!graceAvailable && Number.isFinite(lastChanged) && now - lastChanged < cooldownMs) {
           const remainingDays = Math.ceil((cooldownMs - (now - lastChanged)) / 86_400_000);
           throw Object.assign(new Error(`${label} changes are locked. You can change it again in about ${remainingDays} day(s).`), { status: 429, code: 'identity_cooldown' });
@@ -246,12 +247,12 @@ app.post('/api/profile/identity', async (req, res) => {
         newClaimRef = serverDb.collection('usernames').doc(nextUsername!);
         oldClaimRef = currentUsername ? serverDb.collection('usernames').doc(currentUsername) : null;
       }
-      const [newClaimSnapshot, oldClaimSnapshot, settingsSnapshot] = await Promise.all([
+      const [newClaimSnapshot, oldClaimSnapshot, matchingProfiles] = await Promise.all([
         newClaimRef ? transaction.get(newClaimRef) : Promise.resolve(null),
         oldClaimRef ? transaction.get(oldClaimRef) : Promise.resolve(null),
-        transaction.get(settingsRef),
+        changedUsername ? transaction.get(serverDb.collection('publicProfiles').where('username', '==', nextUsername!).limit(1)) : Promise.resolve(null),
       ]);
-      if (changedUsername && newClaimSnapshot?.exists && newClaimSnapshot.data()?.userId !== uid) {
+      if (changedUsername && ((newClaimSnapshot?.exists && newClaimSnapshot.data()?.userId !== uid) || matchingProfiles?.docs.some(profile => profile.id !== uid))) {
         throw Object.assign(new Error('This username is already taken. Please choose another handle.'), { status: 409, code: 'username_taken' });
       }
       if (changedUsername) {
