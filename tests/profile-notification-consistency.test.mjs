@@ -190,3 +190,29 @@ test('Spark and Follow actions use authenticated transactional NEXORA APIs', asy
   assert.match(server, /setCreatorFollowStateForUser/);
   assert.match(server, /setPostLike/);
 });
+
+
+test('profile identity changes are server-authorized, one-time during grace, and cooldown protected', async () => {
+  const [server, profile, rules, editor] = await Promise.all([
+    read('../server.ts'),
+    read('../src/services/firebase/profileService.ts'),
+    read('../firestore.rules'),
+    read('../src/components/ProfileView.tsx'),
+  ]);
+  assert.match(server, /app\.post\('\/api\/profile\/identity'/);
+  assert.match(server, /requireFirebaseUser, identityChangeHttpLimiter/);
+  assert.match(server, /transaction\.update\(userRef, \{ \.\.\.updates/);
+  assert.match(server, /displayNameGraceUsedAt/);
+  assert.match(server, /usernameGraceUsedAt/);
+  assert.match(server, /7 \* 86_400_000/);
+  assert.match(server, /30 \* 86_400_000/);
+  assert.match(server, /transaction\.delete\(oldClaimRef\)/);
+  assert.match(profile, /fetch\(apiRequestUrl\('\/api\/profile\/identity'\)/);
+  assert.match(profile, /delete remainingUpdates\.name/);
+  assert.match(profile, /delete remainingUpdates\.username/);
+  assert.match(rules, /function editableProfileKeys\(\)[\s\S]*?'avatar', 'bio'/);
+  assert.doesNotMatch(rules.match(/function editableProfileKeys\(\) \{[\s\S]*?\n    \}/)?.[0] || '', /'username'|'name'/);
+  assert.doesNotMatch(rules.match(/match \/users\/\{userId\} \{[\s\S]*?allow update: if owner\(userId\)[\s\S]*?allow delete:/)?.[0] || '', /'username', 'name'/);
+  assert.match(editor, /isIdentityChangeGraceAvailable\('displayName', currentUser\)/);
+  assert.match(editor, /isIdentityChangeGraceAvailable\('username', currentUser\)/);
+});
