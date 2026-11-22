@@ -1697,7 +1697,7 @@ export default function MediaCreationEngine({
   const isAltTextMissing = selectedImages.length > 0 && !imageAltText.trim();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch justify-stretch backdrop-blur-md bg-[#050914] overflow-hidden">
+    <div className="nx-create-experience fixed inset-0 z-50 flex items-stretch justify-stretch backdrop-blur-md bg-[#050914] overflow-hidden">
       
       {/* ⚠️ Exit Confirmation Overlay */}
       <AnimatePresence>
@@ -1921,19 +1921,19 @@ export default function MediaCreationEngine({
               {currentStep === 1 && (
                 /* STEP 1: CREATION HOME */
                 <div className="space-y-5 animate-fadeIn">
-                  <div className="relative overflow-hidden rounded-[26px] border border-violet-400/20 bg-[radial-gradient(ellipse_at_top_right,rgba(113,56,255,0.28),transparent_58%),linear-gradient(145deg,#17102F_0%,#0B1020_58%,#080B16_100%)] p-5">
-                    <div className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-violet-500/15 blur-3xl" />
+                  <div className="nx-create-hero relative overflow-hidden rounded-[22px] border border-white/10 bg-[#0B0D16] p-5">
+                    
                     <div className="relative flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-violet-200"><Sparkles size={12}/> Your creative space</span>
+                        <span className="mb-2 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#A99BDB]"><Sparkles size={12}/> Your creative space</span>
                         <h3 className="max-w-[250px] text-[22px] font-black leading-tight tracking-tight text-white">Make something worth sharing.</h3>
                         <p className="mt-2 max-w-[260px] text-xs leading-relaxed text-[#B9B2D0]">Capture a moment, tell a story or bring an idea to life.</p>
                       </div>
-                      <div className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-300/20 bg-violet-400/10 text-violet-200 shadow-[0_0_35px_rgba(113,56,255,0.16)]"><Camera size={23}/></div>
+                      <div className="nx-create-hero-icon mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[#B7ADD2]"><Camera size={23}/></div>
                     </div>
                     <div className="relative mt-5 grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => { setActiveMode('photo'); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-3 py-3 text-xs font-extrabold text-white shadow-[0_8px_24px_rgba(75,16,242,0.25)] transition-transform active:scale-[0.98]"><Camera size={16}/> Open camera</button>
-                      <button type="button" onClick={() => { setActiveMode('carousel'); setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(false); setCurrentStep(2); }} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-3 py-3 text-xs font-bold text-white transition-colors hover:bg-white/10 active:scale-[0.98]"><FileImage size={16}/> Choose from gallery</button>
+                      <button type="button" onClick={() => { setActiveMode('photo'); setCurrentStep(2); }} className="nx-create-primary-action flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#6845C5] px-3 py-3 text-xs font-bold text-white transition-colors active:scale-[0.98]"><Camera size={16}/> Open camera</button>
+                      <button type="button" onClick={() => { setActiveMode('carousel'); setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(false); setCurrentStep(2); }} className="nx-create-secondary-action flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-3 py-3 text-xs font-semibold text-[#E8E6EF] transition-colors hover:bg-white/[0.07] active:scale-[0.98]"><FileImage size={16}/> Choose from gallery</button>
                     </div>
                   </div>
 
@@ -1952,19 +1952,19 @@ export default function MediaCreationEngine({
                       { id: 'pulse', icon: MapPin, label: 'Local update', desc: 'What is happening nearby', tint: 'text-[#C4B2FF]', glow: 'bg-purple-500/10' },
                       { id: 'community', icon: Users, label: 'Circle post', desc: 'Share with your Circle', tint: 'text-[#B8ACFF]', glow: 'bg-indigo-500/10' },
                     ].map((item) => (
-                      <button key={item.id} type="button" onClick={() => { setActiveMode(item.id as any); if (item.id === 'carousel') { setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(false); } else { setGalleryTab('photos'); setGalleryReturnToCamera(false); } setCurrentStep(2); }} className="group flex min-h-[82px] items-center gap-3 rounded-2xl border border-[#292244] bg-[#0C0A19] p-3 text-left transition-all hover:border-violet-400/40 hover:bg-[#14102A] active:scale-[0.985]">
-                        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] ${item.glow} ${item.tint}`}><item.icon size={19}/></span>
-                        <span className="min-w-0"><span className="block text-xs font-extrabold text-white group-hover:text-violet-200">{item.label}</span><span className="mt-1 block text-[10px] leading-snug text-[#89839F]">{item.desc}</span></span>
-                        <ChevronRight size={14} className="ml-auto shrink-0 text-[#625A78] transition-transform group-hover:translate-x-0.5 group-hover:text-violet-300"/>
+                      <button key={item.id} type="button" onClick={() => { setActiveMode(item.id as any); if (item.id === 'carousel') { setGalleryTab('photos'); setGalleryPreviewIndex(null); setGalleryReturnToCamera(false); } else { setGalleryTab('photos'); setGalleryReturnToCamera(false); } setCurrentStep(2); }} className="nx-create-mode-card group flex min-h-[82px] items-center gap-3 rounded-xl border border-white/[0.09] bg-[#0C0E17] p-3 text-left transition-colors hover:border-white/20 hover:bg-[#11141E] active:scale-[0.985]">
+                        <span className={`nx-create-mode-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.035] text-[#B8B2C7]`}><item.icon size={19}/></span>
+                        <span className="min-w-0"><span className="block text-xs font-bold text-[#F3F1F7] group-hover:text-white">{item.label}</span><span className="mt-1 block text-[10px] leading-snug text-[#89839F]">{item.desc}</span></span>
+                        <ChevronRight size={14} className="ml-auto shrink-0 text-[#777383] transition-transform group-hover:translate-x-0.5 group-hover:text-[#B8ADD8]"/>
                       </button>
                     ))}
                   </div>
 
                   {onOpenStudio && (
-                    <button type="button" onClick={() => onOpenStudio([])} className="group flex w-full items-center gap-3 rounded-2xl border border-violet-400/25 bg-[linear-gradient(100deg,rgba(113,56,255,0.14),rgba(15,12,32,0.88))] p-3.5 text-left transition-all hover:border-violet-300/50 hover:bg-violet-500/10">
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Clapperboard size={21}/></span>
+                    <button type="button" onClick={() => onOpenStudio([])} className="nx-create-studio-action group flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#0C0E17] p-3.5 text-left transition-colors hover:border-white/20 hover:bg-[#11141E]">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#B8ADD8]"><Clapperboard size={21}/></span>
                       <span className="min-w-0 flex-1"><span className="block text-xs font-extrabold text-white">Open NEXORA Studio</span><span className="mt-1 block text-[10px] text-[#A39BBF]">Edit clips, add music, captions, transitions and more.</span></span>
-                      <ChevronRight size={17} className="text-violet-300 transition-transform group-hover:translate-x-1"/>
+                      <ChevronRight size={17} className="text-[#777383] transition-transform group-hover:translate-x-1"/>
                     </button>
                   )}
                 </div>
