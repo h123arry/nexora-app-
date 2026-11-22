@@ -17,7 +17,12 @@ export class ProfileService {
 
   static isIdentityChangeGraceAvailable(field: 'displayName' | 'username', user: User): boolean {
     if (!this.isIdentityChangeGraceActive()) return false;
-    return field === 'displayName' ? !user.displayNameGraceUsedAt : !user.usernameGraceUsedAt;
+    const graceStart = Date.parse('2026-11-21T23:00:00.000Z');
+    const lastChange = Date.parse(field === 'displayName' ? user.lastDisplayNameChangeTime || '' : user.lastUsernameChangeTime || '');
+    const changedDuringGraceWindow = Number.isFinite(lastChange) && lastChange >= graceStart;
+    return field === 'displayName'
+      ? !user.displayNameGraceUsedAt && !changedDuringGraceWindow
+      : !user.usernameGraceUsedAt && !changedDuringGraceWindow;
   }
 
   private static profileLoads = new Map<string, Promise<User>>();
