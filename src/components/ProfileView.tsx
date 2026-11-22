@@ -3630,7 +3630,7 @@ export default function ProfileView({
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
                   <label className="min-w-0 text-xs text-zinc-300">Name
                     <span className="mt-0.5 block text-[10px] text-zinc-500">{ProfileService.isIdentityChangeGraceAvailable('displayName', currentUser) ? 'One-time update available today. After saving, locked for 7 days.' : 'After changing, display name is locked for 7 days.'}</span>
-                    <input value={editName} onChange={e => setEditName(e.target.value)} maxLength={80} disabled={isSavingProfile || savingProfileFields.has('name') || showSavedFeedback}
+                    <input value={editName} onChange={e => setEditName(e.target.value)} maxLength={50} disabled={isSavingProfile || savingProfileFields.has('name') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-50" placeholder="Your name" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Username
