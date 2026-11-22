@@ -15,6 +15,8 @@ export interface User {
   following: number;
   sparks?: number;
   isVerified: boolean;
+  /** Server-awarded early community recognition; never editable by profile owners. */
+  earlyCommunityMember?: boolean;
   hasStory?: boolean;
   coverImage: string;
   profileFrameId?: string;
