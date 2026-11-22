@@ -14,6 +14,7 @@ import { Readable } from 'node:stream';
 import { setPostLike } from './server/postEngagement';
 import { setPublicPostCommentReplyLike } from './server/postCommentReactions';
 import { setCreatorFollowStateForUser, SocialFollowError } from './server/socialFollow';
+import { evaluateProfileIdentityCooldown } from './server/profileIdentityPolicy';
 import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
@@ -189,7 +190,7 @@ app.post('/api/profile/identity', async (req, res) => {
   if (Object.prototype.hasOwnProperty.call(body, 'name')) {
     if (typeof body.name !== 'string') return res.status(400).json({ code: 'invalid_display_name', error: 'Enter a valid display name.' });
     nextName = body.name.trim();
-    if (!nextName || nextName.length > 50 || /[\\r\\n\\u0000-\\u001f]/.test(nextName)) {
+    if (!nextName || nextName.length > 50 || /[\r\n\u0000-\u001f]/.test(nextName)) {
       return res.status(400).json({ code: 'invalid_display_name', error: 'Display name must be between 1 and 50 characters.' });
     }
   }
@@ -220,19 +221,19 @@ app.post('/api/profile/identity', async (req, res) => {
       if (!changedName && !changedUsername) return { identity: {} };
 
       const now = Date.now();
-      const configuredGraceEnd = Date.parse(process.env.PROFILE_IDENTITY_GRACE_UNTIL || '2026-11-22T23:00:00.000Z');
-      const graceEnd = Number.isFinite(configuredGraceEnd) ? configuredGraceEnd : Date.parse('2026-11-22T23:00:00.000Z');
-      const graceStart = Date.parse('2026-11-21T23:00:00.000Z');
       const updates: Record<string, string> = {};
       const checkCooldown = (field: 'displayName' | 'username', lastChangedAt: unknown, graceUsedAt: unknown, cooldownMs: number, label: string) => {
-        const lastChanged = typeof lastChangedAt === 'string' ? Date.parse(lastChangedAt) : NaN;
-        const changedDuringGraceWindow = Number.isFinite(lastChanged) && lastChanged >= graceStart;
-        const graceAvailable = now < graceEnd && !graceUsedAt && !changedDuringGraceWindow;
-        if (!graceAvailable && Number.isFinite(lastChanged) && now - lastChanged < cooldownMs) {
-          const remainingDays = Math.ceil((cooldownMs - (now - lastChanged)) / 86_400_000);
+        const decision = evaluateProfileIdentityCooldown({
+          lastChangedAt,
+          graceUsedAt,
+          now,
+          cooldownMs,
+        });
+        if (!decision.allowed) {
+          const remainingDays = Math.ceil(decision.remainingMs / 86_400_000);
           throw Object.assign(new Error(`${label} changes are locked. You can change it again in about ${remainingDays} day(s).`), { status: 429, code: 'identity_cooldown' });
         }
-        if (graceAvailable) updates[field === 'displayName' ? 'displayNameGraceUsedAt' : 'usernameGraceUsedAt'] = new Date(now).toISOString();
+        if (decision.graceUsed) updates[field === 'displayName' ? 'displayNameGraceUsedAt' : 'usernameGraceUsedAt'] = new Date(now).toISOString();
       };
       if (changedName) {
         checkCooldown('displayName', current.lastDisplayNameChangeTime, current.displayNameGraceUsedAt, 7 * 86_400_000, 'Display name');
