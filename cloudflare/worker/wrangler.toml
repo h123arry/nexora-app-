@@ -1,0 +1,16 @@
+name = "nexora-api-staging"
+main = "src/index.js"
+compatibility_date = "2026-11-22"
+workers_dev = true
+
+[vars]
+FIREBASE_PROJECT_ID = "nexora-prod-voiceharrison"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nexora-migration-staging"
+database_id = "3ff38618-cdb5-4404-a58d-f61ba71bc4c6"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "nexora-media"
