@@ -1185,7 +1185,7 @@ export default function ProfileView({
     image.src = objectUrl;
   };
 
-  // Validate and submit profile updates (Locks rules)
+  // Validate and submit profile updates. The one-time grace is enforced again by ProfileService.
   const handleSaveProfile = async () => {
     if (isSavingProfile || showSavedFeedback) return;
     if (!isLoggedIn || auth.currentUser?.uid !== currentUser.id) {
@@ -1196,7 +1196,7 @@ export default function ProfileView({
     // 7-day display name lock
     if (editName !== currentUser.name) {
       const lastChange = currentUser.lastDisplayNameChangeTime;
-      if (lastChange) {
+      if (!ProfileService.isIdentityChangeGraceActive() && lastChange) {
         const diff = Date.now() - new Date(lastChange).getTime();
         const days = diff / (1000 * 60 * 60 * 24); // days limit
         if (days < 7) {
@@ -1215,7 +1215,7 @@ export default function ProfileView({
       }
 
       const lastChange = currentUser.lastUsernameChangeTime;
-      if (lastChange) {
+      if (!ProfileService.isIdentityChangeGraceActive() && lastChange) {
         const diff = Date.now() - new Date(lastChange).getTime();
         const days = diff / (1000 * 60 * 60 * 24);
         if (days < 30) {
@@ -1307,7 +1307,7 @@ export default function ProfileView({
 
     if (patch.name !== undefined && patch.name !== currentUser.name) {
       const lastChange = currentUser.lastDisplayNameChangeTime;
-      if (lastChange && Date.now() - new Date(lastChange).getTime() < 7 * 24 * 60 * 60 * 1000) {
+      if (!ProfileService.isIdentityChangeGraceActive() && lastChange && Date.now() - new Date(lastChange).getTime() < 7 * 24 * 60 * 60 * 1000) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Display name changes are locked for 7 days.' }));
         setEditName(currentUser.name);
         return false;
@@ -1322,7 +1322,7 @@ export default function ProfileView({
         return false;
       }
       const lastChange = currentUser.lastUsernameChangeTime;
-      if (lastChange && Date.now() - new Date(lastChange).getTime() < 30 * 24 * 60 * 60 * 1000) {
+      if (!ProfileService.isIdentityChangeGraceActive() && lastChange && Date.now() - new Date(lastChange).getTime() < 30 * 24 * 60 * 60 * 1000) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Username changes are locked for 30 days.' }));
         setEditUsername(currentUser.username);
         return false;
@@ -3651,12 +3651,12 @@ export default function ProfileView({
 
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
                   <label className="min-w-0 text-xs text-zinc-300">Name
-                    <span className="mt-0.5 block text-[10px] text-zinc-500">Display name can be changed once every 7 days.</span>
+                    <span className="mt-0.5 block text-[10px] text-zinc-500">{ProfileService.isIdentityChangeGraceActive() ? 'One-time update available today. After saving, locked for 7 days.' : 'After changing, display name is locked for 7 days.'}</span>
                     <input value={editName} onChange={e => setEditName(e.target.value)} maxLength={80} disabled={isSavingProfile || savingProfileFields.has('name') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-50" placeholder="Your name" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Username
-                    <span className="mt-0.5 block text-[10px] text-zinc-500">Username can be changed once every 30 days.</span>
+                    <span className="mt-0.5 block text-[10px] text-zinc-500">{ProfileService.isIdentityChangeGraceActive() ? 'One-time update available today. After saving, locked for 30 days.' : 'After changing, username is locked for 30 days.'}</span>
                     <div className="mt-1 flex h-10 items-center rounded-xl border border-white/10 bg-[#120E2B] px-3 focus-within:border-violet-500">
                       <span className="text-violet-300">@</span>
                       <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} maxLength={30} disabled={isSavingProfile || savingProfileFields.has('username') || showSavedFeedback}
