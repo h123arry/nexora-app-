@@ -379,6 +379,7 @@ export default function MediaCreationEngine({
   const [galleryTab, setGalleryTab] = useState<'photos' | 'videos'>('photos');
   const [galleryReturnToCamera, setGalleryReturnToCamera] = useState(false);
   const [galleryPreviewIndex, setGalleryPreviewIndex] = useState<number | null>(null);
+  const [isMediaPreviewExpanded, setIsMediaPreviewExpanded] = useState(false);
   const [editorToolTab, setEditorToolTab] = useState<'looks' | 'adjust' | 'crop' | 'text'>('looks');
   const [creativeToolTab, setCreativeToolTab] = useState<'looks' | 'effects' | 'text' | 'stickers' | 'audio' | 'presets'>('looks');
   const [isComparingOriginal, setIsComparingOriginal] = useState(false);
@@ -1681,6 +1682,7 @@ export default function MediaCreationEngine({
   };
 
   const prevStep = () => {
+    setIsMediaPreviewExpanded(false);
     if (currentStep > 1) setCurrentStep(prev => prev - 1);
   };
 
@@ -1778,6 +1780,28 @@ export default function MediaCreationEngine({
                 </button>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isMediaPreviewExpanded && currentStep === 3 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[70] flex flex-col bg-[#03040A]" role="dialog" aria-modal="true" aria-label="Full-screen media preview">
+            <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
+              <div><p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#A99BCE]">NEXORA · PREVIEW</p><p className="mt-1 text-xs font-semibold text-white">{selectedImages.length ? `Photo ${Math.min((activeEditIndex ?? 0) + 1, selectedImages.length)} of ${selectedImages.length}` : 'Video preview'}</p></div>
+              <button type="button" autoFocus onClick={() => setIsMediaPreviewExpanded(false)} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-white" aria-label="Close full-screen preview"><X size={18}/></button>
+            </header>
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              {selectedImages.length > 0 ? (
+                <img src={selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.url} alt={selectedImages[Math.min(activeEditIndex ?? 0, selectedImages.length - 1)]?.fileName || 'Full-screen photo preview'} className="max-h-full max-w-full object-contain" />
+              ) : (videoFileUrl || recordedVideoUrl) ? (
+                <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline autoPlay={false} preload="metadata" className="max-h-full max-w-full object-contain" />
+              ) : null}
+            </div>
+            <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-white/10 px-4 py-3 pb-[max(0.9rem,env(safe-area-inset-bottom))]">
+              <span className="text-[10px] text-[#9A94A8]">Review your media before continuing.</span>
+              <button type="button" onClick={() => setIsMediaPreviewExpanded(false)} className="rounded-xl bg-[#6845C5] px-4 py-2.5 text-xs font-semibold text-white">Done</button>
+            </footer>
           </motion.div>
         )}
       </AnimatePresence>
@@ -2097,7 +2121,10 @@ export default function MediaCreationEngine({
                               <div className="nx-gallery-preview mt-3 overflow-hidden rounded-xl border border-white/[0.09] bg-[#0D0F16]">
                                 <div className="flex items-center justify-between gap-3 px-3 py-2.5">
                                   <div className="min-w-0"><p className="text-[10px] font-semibold text-white">Preview {galleryPreviewIndex + 1} of {selectedImages.length}</p><p className="mt-0.5 truncate text-[9px] text-[#898692]">{selectedImages[galleryPreviewIndex].fileName || 'Selected photo'}</p></div>
-                                  <button type="button" onClick={() => { setActiveEditIndex(galleryPreviewIndex); nextStep(); }} className="shrink-0 rounded-lg border border-white/10 px-3 py-2 text-[10px] font-semibold text-[#D7D2E1] transition-colors hover:bg-white/[0.06]">Edit photo</button>
+                                  <div className="flex shrink-0 items-center gap-1.5">
+                                    <button type="button" onClick={() => setIsMediaPreviewExpanded(true)} className="rounded-lg border border-white/10 px-2.5 py-2 text-[10px] font-semibold text-[#C9C4D2] transition-colors hover:bg-white/[0.06]">Expand</button>
+                                    <button type="button" onClick={() => { setActiveEditIndex(galleryPreviewIndex); setIsMediaPreviewExpanded(false); nextStep(); }} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-semibold text-[#D7D2E1] transition-colors hover:bg-white/[0.06]">Edit photo</button>
+                                  </div>
                                 </div>
                                 <div className="flex max-h-[260px] items-center justify-center bg-black/50 p-2"><img src={selectedImages[galleryPreviewIndex].url} alt={selectedImages[galleryPreviewIndex].fileName || 'Selected photo preview'} className="max-h-[244px] max-w-full rounded-md object-contain"/></div>
                               </div>
@@ -2342,6 +2369,7 @@ export default function MediaCreationEngine({
                       <div className="mt-2 flex shrink-0 items-center justify-between gap-3 self-stretch">
                         <span className="truncate text-[9px] text-[#827B9C]">{selectedImages.length ? 'Changes apply to the selected photo.' : 'Preview your media before moving on.'}</span>
                         {selectedImages.length > 1 && <span className="shrink-0 text-[9px] font-semibold text-violet-200">{selectedImages.length} images</span>}
+                        {(videoFileUrl || recordedVideoUrl) && <button type="button" onClick={() => setIsMediaPreviewExpanded(true)} className="shrink-0 rounded-lg border border-white/10 px-2.5 py-1.5 text-[9px] font-bold text-[#D5D0E0]">Full screen</button>}
                         {(videoFileUrl || recordedVideoUrl) && onOpenStudio && <button type="button" onClick={openVideoInStudio} className="shrink-0 rounded-lg border border-violet-400/30 bg-violet-500/10 px-2.5 py-1.5 text-[9px] font-bold text-violet-200">Open full Studio</button>}
                       </div>
                     </div>
