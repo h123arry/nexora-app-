@@ -3622,15 +3622,15 @@ export default function ProfileView({
                   <ArrowLeft className="h-4 w-4" /> Cancel
                 </button>
                 <h2 className="text-base font-bold text-white">Edit profile</h2>
-                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile || isSavingCoverPhoto || savingProfileFields.size > 0 ? 'Saving…' : savedProfileFields.size > 0 ? 'Saved' : 'Unsaved changes'}</span>
+                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile || isSavingCoverPhoto || savingProfileFields.size > 0 ? 'Saving…' : savedProfileFields.size > 0 ? 'Saved' : hasUnsavedProfileChanges ? 'Unsaved changes' : 'Up to date'}</span>
               </header>
 
-              <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 py-3">
+              <div className="flex min-h-0 flex-1 flex-col justify-start gap-3 overflow-y-auto overscroll-contain py-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#120E2B] p-2.5">
                     <img src={editAvatar} alt="Profile photo" className="h-20 w-20 shrink-0 rounded-full border border-white/10 object-cover" />
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-white">Profile photo</p>
+                      <p className="text-xs font-semibold text-white">Profile photo</p><p className="mt-1 text-[10px] text-zinc-500">Choose or take a photo, crop it, then tap Upload &amp; Save Photo.</p>
                       <button type="button" disabled={isSavingProfile || showSavedFeedback}
                         onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
                         className="mt-1 text-xs font-semibold text-violet-300 hover:text-violet-200">Change photo</button>
