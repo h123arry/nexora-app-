@@ -286,9 +286,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setError(null);
       }
     } catch (err) {
-      const source = err as { code?: string; message?: string } | null;
-      const code = source?.code || 'profile-setup-failed';
-      const message = source?.message || 'NEXORA could not synchronize your account profile.';
       setError(getProfileSyncMessage(err));
       throw err;
     } finally {
