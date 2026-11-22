@@ -20,6 +20,8 @@ import { collection, endAt, getDocs, limit, orderBy, query, startAt, where } fro
 type PhotoExportOptions = {
   rotation: number;
   zoom: number;
+  cropOffset: { x: number; y: number };
+  aspectRatio: number | null;
   filterStyle?: string;
   brightness: number;
   contrast: number;
@@ -61,22 +63,34 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
   const objectUrl = URL.createObjectURL(source);
   try {
     const image = await loadComposerImage(objectUrl);
-
-    const rotated = Math.abs(options.rotation % 180) === 90;
-    // Keep the export lightweight enough for mid-range phones while retaining 4K detail.
     const resizeRatio = Math.min(1, 4096 / Math.max(image.naturalWidth, image.naturalHeight));
     const sourceWidth = Math.max(1, Math.round(image.naturalWidth * resizeRatio));
     const sourceHeight = Math.max(1, Math.round(image.naturalHeight * resizeRatio));
+    const rotated = Math.abs(options.rotation % 180) === 90;
+    const naturalWidth = rotated ? sourceHeight : sourceWidth;
+    const naturalHeight = rotated ? sourceWidth : sourceHeight;
+    const ratio = options.aspectRatio && Number.isFinite(options.aspectRatio) ? options.aspectRatio : naturalWidth / naturalHeight;
+    const maxEdge = 2560;
+    let outputWidth = maxEdge;
+    let outputHeight = Math.round(outputWidth / ratio);
+    if (outputHeight > maxEdge) { outputHeight = maxEdge; outputWidth = Math.round(outputHeight * ratio); }
     const canvas = document.createElement('canvas');
-    canvas.width = rotated ? sourceHeight : sourceWidth;
-    canvas.height = rotated ? sourceWidth : sourceHeight;
+    canvas.width = Math.max(1, outputWidth);
+    canvas.height = Math.max(1, outputHeight);
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Photo editing is not available in this browser.');
-
+    const coverScale = Math.max(outputWidth / naturalWidth, outputHeight / naturalHeight);
+    const drawWidth = sourceWidth * coverScale;
+    const drawHeight = sourceHeight * coverScale;
+    const zoom = Math.max(1, options.zoom);
+    const overflowX = Math.max(0, (naturalWidth * coverScale * zoom - outputWidth) / 2);
+    const overflowY = Math.max(0, (naturalHeight * coverScale * zoom - outputHeight) / 2);
+    const offsetX = Math.max(-100, Math.min(100, options.cropOffset?.x || 0)) / 100 * overflowX;
+    const offsetY = Math.max(-100, Math.min(100, options.cropOffset?.y || 0)) / 100 * overflowY;
     context.save();
-    context.translate(canvas.width / 2, canvas.height / 2);
+    context.translate(outputWidth / 2 + offsetX, outputHeight / 2 + offsetY);
     context.rotate((options.rotation * Math.PI) / 180);
-    context.scale(Math.max(1, options.zoom), Math.max(1, options.zoom));
+    context.scale(zoom, zoom);
     const filters = [
       options.filterStyle && options.filterStyle !== 'none' ? options.filterStyle : '',
       `brightness(${options.brightness}%)`,
@@ -85,32 +99,23 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
       options.blur > 0 ? `blur(${options.blur}px)` : '',
     ].filter(Boolean);
     context.filter = filters.join(' ');
-    context.drawImage(image, -sourceWidth / 2, -sourceHeight / 2, sourceWidth, sourceHeight);
+    context.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
     context.restore();
     context.filter = 'none';
-
     if (options.sticker) {
       context.font = `bold ${Math.max(48, Math.round(canvas.width * 0.12))}px sans-serif`;
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
+      context.textAlign = 'center'; context.textBaseline = 'middle';
       context.fillText(options.sticker, canvas.width / 2, canvas.height / 2);
     }
     if (options.text?.trim()) {
       const fontSize = Math.max(24, Math.round(canvas.width * 0.045));
       const padding = Math.round(fontSize * 0.65);
-      context.font = `700 ${fontSize}px sans-serif`;
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
+      context.font = `700 ${fontSize}px sans-serif`; context.textAlign = 'center'; context.textBaseline = 'middle';
       const maxWidth = canvas.width - padding * 2;
-      const words = options.text.trim().split(/\s+/);
-      const lines: string[] = [];
-      let line = '';
+      const words = options.text.trim().split(/\\s+/); const lines: string[] = []; let line = '';
       for (const word of words) {
         const candidate = line ? `${line} ${word}` : word;
-        if (line && context.measureText(candidate).width > maxWidth) {
-          lines.push(line);
-          line = word;
-        } else line = candidate;
+        if (line && context.measureText(candidate).width > maxWidth) { lines.push(line); line = word; } else line = candidate;
       }
       if (line) lines.push(line);
       const lineHeight = Math.round(fontSize * 1.25);
@@ -119,20 +124,13 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
       context.fillStyle = 'rgba(5, 9, 20, 0.72)';
       context.fillRect(padding / 2, top, canvas.width - padding, blockHeight);
       context.fillStyle = options.textColor || '#ffffff';
-      lines.forEach((item, index) => context.fillText(item, canvas.width / 2, top + padding / 2 + index * lineHeight + lineHeight / 2, maxWidth));
+      lines.forEach((item,index) => context.fillText(item, canvas.width / 2, top + padding / 2 + index * lineHeight + lineHeight / 2, maxWidth));
     }
-
-    return await new Promise<Blob>((resolve, reject) => {
-      const timeout = window.setTimeout(() => reject(new Error('Photo preparation took too long. Please try again with a smaller photo.')), 12000);
-      canvas.toBlob(blob => {
-        clearTimeout(timeout);
-        if (blob) resolve(blob);
-        else reject(new Error('Your edited photo could not be exported. Please try again.'));
-      }, 'image/jpeg', 0.92);
+    return await new Promise<Blob>((resolve,reject) => {
+      const timeout = window.setTimeout(() => reject(new Error('Photo preparation took too long. Please try again with a smaller photo.')),12000);
+      canvas.toBlob(blob => { clearTimeout(timeout); if(blob) resolve(blob); else reject(new Error('Your edited photo could not be exported. Please try again.')); },'image/jpeg',0.92);
     });
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
+  } finally { URL.revokeObjectURL(objectUrl); }
 }
 
 
@@ -223,6 +221,7 @@ interface SelectedImage {
   rotation: number;
   zoom: number;
   cropOffset: { x: number; y: number };
+  aspectRatio?: number | null;
   filterName?: string;
   filterStyle?: string;
 }
@@ -231,7 +230,7 @@ interface DraftItem {
   id: string;
   caption: string;
   images: string[];
-  imageEdits?: Pick<SelectedImage, 'rotation' | 'zoom' | 'cropOffset' | 'filterName' | 'filterStyle'>[];
+  imageEdits?: Pick<SelectedImage, 'rotation' | 'zoom' | 'cropOffset' | 'aspectRatio' | 'filterName' | 'filterStyle'>[];
   videoUrl?: string;
   voiceUrl?: string;
   transcript?: string;
@@ -369,6 +368,7 @@ export default function MediaCreationEngine({
         rotation: initialAutosave.imageEdits?.[index]?.rotation ?? 0,
         zoom: initialAutosave.imageEdits?.[index]?.zoom ?? 1,
         cropOffset: initialAutosave.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+        aspectRatio: initialAutosave.imageEdits?.[index]?.aspectRatio ?? null,
         filterName: initialAutosave.imageEdits?.[index]?.filterName,
         filterStyle: initialAutosave.imageEdits?.[index]?.filterStyle,
       }));
@@ -519,6 +519,7 @@ export default function MediaCreationEngine({
           rotation: nextAutosave?.imageEdits?.[index]?.rotation ?? 0,
           zoom: nextAutosave?.imageEdits?.[index]?.zoom ?? 1,
           cropOffset: nextAutosave?.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+          aspectRatio: nextAutosave?.imageEdits?.[index]?.aspectRatio ?? null,
           filterName: nextAutosave?.imageEdits?.[index]?.filterName,
           filterStyle: nextAutosave?.imageEdits?.[index]?.filterStyle,
         }))
@@ -547,7 +548,7 @@ export default function MediaCreationEngine({
           activeMode,
           currentStep,
           images: selectedImages.map(img => img.url),
-          imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, filterName, filterStyle })),
+          imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, aspectRatio, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, aspectRatio, filterName, filterStyle })),
           videoUrl: videoFileUrl,
           recordedVideoUrl,
           voiceUrl: voiceFileUrl,
@@ -1323,6 +1324,7 @@ export default function MediaCreationEngine({
         rotation: draft.imageEdits?.[index]?.rotation ?? 0,
         zoom: draft.imageEdits?.[index]?.zoom ?? 1,
         cropOffset: draft.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+        aspectRatio: draft.imageEdits?.[index]?.aspectRatio ?? null,
         filterName: draft.imageEdits?.[index]?.filterName,
         filterStyle: draft.imageEdits?.[index]?.filterStyle,
       })));
@@ -1418,6 +1420,8 @@ export default function MediaCreationEngine({
           if (!sourceBlob) throw new Error('We could not reopen that photo. Please choose it again.');
           const hasEdits = selectedImage.rotation !== 0
             || selectedImage.zoom !== 1
+            || Boolean(selectedImage.aspectRatio)
+            || Boolean(selectedImage.cropOffset?.x || selectedImage.cropOffset?.y)
             || Boolean(selectedImage.filterStyle && selectedImage.filterStyle !== 'none')
             || brightness !== 100
             || contrast !== 100
@@ -1428,6 +1432,8 @@ export default function MediaCreationEngine({
           const finalBlob = hasEdits ? await renderEditedPhotoBlob(sourceBlob, {
             rotation: selectedImage.rotation,
             zoom: selectedImage.zoom,
+            cropOffset: selectedImage.cropOffset,
+            aspectRatio: selectedImage.aspectRatio ?? null,
             filterStyle: selectedImage.filterStyle,
             brightness,
             contrast,
@@ -1479,6 +1485,8 @@ export default function MediaCreationEngine({
         const imageUrl = selectedImage.url;
         const hasEdits = selectedImage.rotation !== 0
           || selectedImage.zoom !== 1
+          || Boolean(selectedImage.aspectRatio)
+          || Boolean(selectedImage.cropOffset?.x || selectedImage.cropOffset?.y)
           || Boolean(selectedImage.filterStyle && selectedImage.filterStyle !== 'none')
           || brightness !== 100
           || contrast !== 100
@@ -2396,10 +2404,14 @@ export default function MediaCreationEngine({
                             )}
                             {editorToolTab === 'crop' && (
                               <div className="space-y-4">
-                                <div><h4 className="text-xs font-extrabold text-white">Frame and crop</h4><p className="mt-1 text-[10px] text-[#8E88A7]">Rotate and scale the selected image.</p></div>
+                                <div><h4 className="text-xs font-extrabold text-white">Frame and crop</h4><p className="mt-1 text-[10px] text-[#8E88A7]">Choose a frame, reposition the image, and rotate. Your original stays untouched.</p></div>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                  {([{label:'Original',value:null},{label:'1:1',value:1},{label:'4:5',value:0.8},{label:'3:4',value:0.75},{label:'16:9',value:16/9},{label:'9:16',value:9/16}] as const).map(option => <button key={option.label} type="button" onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,aspectRatio:option.value,cropOffset:{x:0,y:0}} : image))} aria-pressed={(selectedImages[activeEditIndex ?? 0]?.aspectRatio ?? null) === option.value} className={(selectedImages[activeEditIndex ?? 0]?.aspectRatio ?? null) === option.value ? 'rounded-lg border border-violet-400/60 bg-violet-500/15 px-2 py-2 text-[10px] font-bold text-white' : 'rounded-lg border border-white/10 bg-white/[0.025] px-2 py-2 text-[10px] font-semibold text-[#B8B0C9]'}>{option.label}</button>)}
+                                </div>
                                 <button type="button" onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,rotation:(image.rotation + 90) % 360} : image))} className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-xs font-bold text-white"><RotateCw size={15}/> Rotate 90°</button>
                                 <label className="block space-y-2"><span className="flex items-center justify-between text-[10px] font-semibold text-[#BDB5CE]"><span>Scale</span><span className="tabular-nums text-violet-200">{(selectedImages[activeEditIndex ?? 0]?.zoom || 1).toFixed(2)}×</span></span><input type="range" min="1" max="2.5" step="0.05" value={selectedImages[activeEditIndex ?? 0]?.zoom || 1} onChange={event => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,zoom:Number(event.target.value)} : image))} className="w-full accent-violet-500"/></label>
-                                <button type="button" onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,rotation:0,zoom:1,cropOffset:{x:0,y:0}} : image))} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-[#B8B0C9] hover:text-white">Reset frame</button>
+                                {(['x','y'] as const).map(axis => <label key={axis} className="block space-y-2"><span className="flex items-center justify-between text-[10px] font-semibold text-[#BDB5CE]"><span>{axis === 'x' ? 'Horizontal position' : 'Vertical position'}</span><span className="tabular-nums text-violet-200">{selectedImages[activeEditIndex ?? 0]?.cropOffset?.[axis] || 0}</span></span><input aria-label={axis === 'x' ? 'Horizontal crop position' : 'Vertical crop position'} type="range" min="-100" max="100" value={selectedImages[activeEditIndex ?? 0]?.cropOffset?.[axis] || 0} onChange={event => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,cropOffset:{...image.cropOffset,[axis]:Number(event.target.value)}} : image))} className="w-full accent-violet-500"/></label>)}
+                                <button type="button" onClick={() => setSelectedImages(previous => previous.map((image,index) => index === (activeEditIndex ?? 0) ? {...image,rotation:0,zoom:1,cropOffset:{x:0,y:0},aspectRatio:null} : image))} className="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-[#B8B0C9] hover:text-white">Reset frame</button>
                               </div>
                             )}
                             {editorToolTab === 'text' && (
