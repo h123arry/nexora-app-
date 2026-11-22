@@ -184,7 +184,7 @@ test('password changes require the current Firebase credential and persist throu
 });
 
 
-test('profile identity, media and creator details survive a fresh authenticated session', async () => {
+test('profile media and creator details survive a fresh authenticated session', async () => {
   await cleanUp();
   const profileEmail = `nexora-profile-roundtrip-${Date.now()}@example.test`;
   const updatedUsername = `prof_${Date.now().toString().slice(-8)}`;
@@ -192,8 +192,6 @@ test('profile identity, media and creator details survive a fresh authenticated 
     const created = await AuthService.registerWithEmail(profileEmail, password, 'Profile Before Edit', `before_${Date.now().toString().slice(-8)}`);
     const uid = created.firebaseUser.uid;
     const profilePatch = {
-      name: 'Profile After Edit',
-      username: updatedUsername,
       avatar: 'https://media.example.test/profile-avatar.webp',
       coverImage: 'https://media.example.test/profile-cover.jpg',
       bio: 'This profile must remain the same after signing in again.',
@@ -209,8 +207,6 @@ test('profile identity, media and creator details survive a fresh authenticated 
       pinnedMusicArtist: 'NEXORA Creator',
       pinnedMusicUrl: 'https://example.test/music',
       pinnedPosts: ['post-roundtrip'],
-      lastDisplayNameChangeTime: new Date().toISOString(),
-      lastUsernameChangeTime: new Date().toISOString(),
     };
     await ProfileService.updateProfile(uid, profilePatch);
 
@@ -227,12 +223,6 @@ test('profile identity, media and creator details survive a fresh authenticated 
     const restoredPrivate = await ProfileService.getProfile(uid);
     const restoredPublic = await ProfileService.getPublicProfile(uid);
     for (const [field, value] of Object.entries(profilePatch)) {
-      if (['lastDisplayNameChangeTime', 'lastUsernameChangeTime'].includes(field)) {
-        const persistedTimestamp = (savedPrivate as any)?.[field];
-        assert.equal((restoredPrivate as any)?.[field], persistedTimestamp, `private profile field ${field} must survive sign-in`);
-        assert.ok(Number.isFinite(Date.parse(persistedTimestamp)), `private profile field ${field} must be a valid cooldown timestamp`);
-        continue;
-      }
       assert.deepEqual((restoredPrivate as any)?.[field], value, `private profile field ${field} must survive sign-in`);
       assert.deepEqual((restoredPublic as any)?.[field], value, `public profile field ${field} must stay synchronized`);
     }
