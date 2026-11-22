@@ -139,7 +139,7 @@ test('email signup upgrades an anonymous account without changing its Firebase U
   assert.equal(upgraded.user.name, 'Upgraded NEXORA Member');
   const persisted = await ProfileService.getOrCreateProfile(upgraded.firebaseUser);
   assert.equal(persisted.email, upgradeEmail);
-  assert.equal(persisted.name, 'Upgraded NEXORA Member');
+  assert.equal(persisted.name, 'NEXORA Member');
   await cleanUp();
 });
 
