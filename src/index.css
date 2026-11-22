@@ -2666,11 +2666,3 @@ body {
   width: 0;
   height: 0;
 }
-.nx-feed-stage .nx-feed-post,
-.nx-feed-stage .nx-feed-media {
-  max-width: 100vw;
-}
-.nx-feed-stage .nx-feed-media {
-  border-radius: 0 !important;
-  outline: 0;
-}
