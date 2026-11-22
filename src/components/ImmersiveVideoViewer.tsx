@@ -8,6 +8,25 @@ import NexoraImagePlayer from './NexoraImagePlayer';
 import RelativeTime from './RelativeTime';
 import { getVideoPreloadPlan } from '../utils/videoPreloadPolicy';
 
+const VIDEO_MEDIA_URL_PATTERN = /\\.(?:mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i;
+
+function getImmersiveVideoUrl(post: Post): string {
+  const mediaUrl = typeof post.media === 'string' ? post.media : '';
+  const mediaType = String((post as any).mediaType || (post as any).type || '').toLowerCase();
+  return post.videoUrl || ((mediaType === 'video' || VIDEO_MEDIA_URL_PATTERN.test(mediaUrl)) ? mediaUrl : '');
+}
+
+function getImmersiveImageUrl(post: Post): string {
+  const mediaUrl = typeof post.media === 'string' ? post.media : '';
+  return post.image
+    || post.images?.find(Boolean)
+    || (post as any).thumbnailUrl
+    || (post as any).thumbnail
+    || (post as any).posterUrl
+    || (!getImmersiveVideoUrl(post) ? mediaUrl : '')
+    || '';
+}
+
 interface ImmersiveVideoViewerProps {
   initialPost: Post;
   creatorPosts: Post[];
@@ -42,7 +61,7 @@ export default function ImmersiveVideoViewer({
 
   // Filter posts with videoUrl or media, and guarantee the clicked initialPost is included
   const postsToShow = useMemo(() => {
-    const list = (creatorPosts || []).filter(p => p && (p.videoUrl || p.image || (p.images?.length || 0) > 0 || p.id === initialPost.id));
+    const list = (creatorPosts || []).filter(p => p && (getImmersiveVideoUrl(p) || getImmersiveImageUrl(p) || p.id === initialPost.id));
     if (initialPost && !list.some(p => p.id === initialPost.id)) {
       return [initialPost, ...list];
     }
@@ -311,13 +330,15 @@ export default function ImmersiveVideoViewer({
           {postsToShow.map((post, idx) => {
             const isCurrent = idx === currentIndex;
             const isNearby = idx >= currentIndex - 1 && idx <= currentIndex + 3;
-            const isVideo = Boolean(post.videoUrl);
-            const hasImages = Boolean(post.image || post.images?.some(Boolean));
+            const videoUrl = getImmersiveVideoUrl(post);
+            const imageUrl = getImmersiveImageUrl(post);
+            const isVideo = Boolean(videoUrl);
+            const hasImages = Boolean(imageUrl);
             const connection = typeof navigator !== 'undefined'
               ? (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
               : undefined;
             const isSlowConnection = Boolean(connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType || ''));
-            const postVideoIndex = postsToShow.slice(0, idx + 1).filter(item => Boolean(item.videoUrl)).length - 1;
+            const postVideoIndex = postsToShow.slice(0, idx + 1).filter(item => Boolean(getImmersiveVideoUrl(item))).length - 1;
             const activeVideoIndex = postsToShow.slice(0, currentIndex + 1).filter(item => Boolean(item.videoUrl)).length - 1;
             const preloadPlan = getVideoPreloadPlan({
               isVideo,
@@ -339,7 +360,7 @@ export default function ImmersiveVideoViewer({
                 {isNearby && isVideo ? (
                   <NexoraVideoPlayer
                     post={post}
-                    videoUrl={post.videoUrl}
+                    videoUrl={videoUrl}
                     onOpenFullscreen={() => {}}
                     onSpark={() => handleLike(post.id)}
                     isProcessing={isProcessing && isCurrent}
@@ -362,7 +383,7 @@ export default function ImmersiveVideoViewer({
                   <div className="h-full w-full">
                     <NexoraImagePlayer
                       post={post}
-                      image={post.image}
+                      image={imageUrl}
                       images={post.images}
                       onSpark={() => handleLike(post.id)}
                       isProcessing={isProcessing && isCurrent}
