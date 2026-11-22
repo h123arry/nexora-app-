@@ -112,7 +112,7 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
       const padding = Math.round(fontSize * 0.65);
       context.font = `700 ${fontSize}px sans-serif`; context.textAlign = 'center'; context.textBaseline = 'middle';
       const maxWidth = canvas.width - padding * 2;
-      const words = options.text.trim().split(/\\s+/); const lines: string[] = []; let line = '';
+      const words = options.text.trim().split(/\s+/); const lines: string[] = []; let line = '';
       for (const word of words) {
         const candidate = line ? `${line} ${word}` : word;
         if (line && context.measureText(candidate).width > maxWidth) { lines.push(line); line = word; } else line = candidate;
