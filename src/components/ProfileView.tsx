@@ -3622,7 +3622,7 @@ export default function ProfileView({
                   <ArrowLeft className="h-4 w-4" /> Cancel
                 </button>
                 <h2 className="text-base font-bold text-white">Edit profile</h2>
-                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile || isSavingCoverPhoto || savingProfileFields.size > 0 ? 'Saving…' : savedProfileFields.size > 0 ? 'Saved' : 'Auto-save on edit'}</span>
+                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile || isSavingCoverPhoto || savingProfileFields.size > 0 ? 'Saving…' : savedProfileFields.size > 0 ? 'Saved' : 'Unsaved changes'}</span>
               </header>
 
               <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 py-3">
@@ -3661,31 +3661,31 @@ export default function ProfileView({
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
                   <label className="min-w-0 text-xs text-zinc-300">Name
                     <span className="mt-0.5 block text-[10px] text-zinc-500">Display name can be changed once every 7 days.</span>
-                    <input value={editName} onChange={e => setEditName(e.target.value)} onBlur={() => void saveProfileField({ name: editName })} maxLength={80} disabled={isSavingProfile || savingProfileFields.has('name') || showSavedFeedback}
+                    <input value={editName} onChange={e => setEditName(e.target.value)} maxLength={80} disabled={isSavingProfile || savingProfileFields.has('name') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-50" placeholder="Your name" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Username
                     <span className="mt-0.5 block text-[10px] text-zinc-500">Username can be changed once every 30 days.</span>
                     <div className="mt-1 flex h-10 items-center rounded-xl border border-white/10 bg-[#120E2B] px-3 focus-within:border-violet-500">
                       <span className="text-violet-300">@</span>
-                      <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} onBlur={() => void saveProfileField({ username: editUsername })} maxLength={30} disabled={isSavingProfile || savingProfileFields.has('username') || showSavedFeedback}
+                      <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} maxLength={30} disabled={isSavingProfile || savingProfileFields.has('username') || showSavedFeedback}
                         className="min-w-0 w-full bg-transparent pl-1 text-sm text-white outline-none disabled:opacity-50" placeholder="username" />
                     </div>
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Website
-                    <input value={editWebsite} onChange={e => setEditWebsite(e.target.value)} onBlur={() => void saveProfileField({ website: editWebsite })} disabled={isSavingProfile || savingProfileFields.has('website') || showSavedFeedback}
+                    <input value={editWebsite} onChange={e => setEditWebsite(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('website') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="yourwebsite.com" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Location
-                    <input value={editLocation} onChange={e => setEditLocation(e.target.value)} onBlur={() => void saveProfileField({ location: editLocation })} disabled={isSavingProfile || savingProfileFields.has('location') || showSavedFeedback}
+                    <input value={editLocation} onChange={e => setEditLocation(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('location') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="City, country" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Pronouns
-                    <input value={editPronouns} onChange={e => setEditPronouns(e.target.value)} onBlur={() => void saveProfileField({ pronouns: editPronouns.trim() })} disabled={isSavingProfile || savingProfileFields.has('pronouns') || showSavedFeedback}
+                    <input value={editPronouns} onChange={e => setEditPronouns(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('pronouns') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="Optional" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Profile type
-                    <select value={editCategory} onChange={e => setEditCategory(e.target.value)} onBlur={() => void saveProfileField({ profileCategory: editCategory })} disabled={isSavingProfile || savingProfileFields.has('profileCategory') || showSavedFeedback}
+                    <select value={editCategory} onChange={e => setEditCategory(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('profileCategory') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
                       <option value="Digital Creator">Digital creator</option><option value="Founder Mindset">Founder</option><option value="Community Leader">Community leader</option><option value="Technical Support">Technical support</option>
                     </select>
@@ -3706,22 +3706,29 @@ export default function ProfileView({
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <label className="min-w-0 text-xs text-zinc-300">Creator type
-                    <select value={editCreatorType} onChange={e => setEditCreatorType(e.target.value)} onBlur={() => void saveProfileField({ creatorType: editCreatorType })} disabled={isSavingProfile || savingProfileFields.has('creatorType') || showSavedFeedback}
+                    <select value={editCreatorType} onChange={e => setEditCreatorType(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('creatorType') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
                       <option value="Premium creator">Premium</option><option value="Creator">Creator</option><option value="Collaborator">Collaborator</option>
                     </select>
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">X profile
-                    <input value={editSocialTwitter} onChange={e => setEditSocialTwitter(e.target.value)} onBlur={() => void saveProfileField({ socialTwitter: editSocialTwitter.trim() })} disabled={isSavingProfile || savingProfileFields.has('socialTwitter') || showSavedFeedback}
+                    <input value={editSocialTwitter} onChange={e => setEditSocialTwitter(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('socialTwitter') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
                   </label>
                   <label className="col-span-2 min-w-0 text-xs text-zinc-300">Instagram
-                    <input value={editSocialInsta} onChange={e => setEditSocialInsta(e.target.value)} onBlur={() => void saveProfileField({ socialInstagram: editSocialInsta.trim() })} disabled={isSavingProfile || savingProfileFields.has('socialInstagram') || showSavedFeedback}
+                    <input value={editSocialInsta} onChange={e => setEditSocialInsta(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('socialInstagram') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
                   </label>
                 </div>
               </div>
-              <p className="shrink-0 pb-1 text-center text-[10px] text-zinc-500">Your changes save automatically when you finish editing each field.</p>
+              <div className="shrink-0 flex items-center justify-between gap-3 border-t border-white/10 pt-3 pb-1">
+                <p className="min-w-0 text-[10px] text-zinc-500">Save your profile details when you're finished. Photos have their own Save actions.</p>
+                <button type="button" onClick={() => void handleSaveProfile()}
+                  disabled={!hasUnsavedProfileChanges || isSavingProfile || isSavingCoverPhoto || !!pendingCoverFile || savingProfileFields.size > 0 || showSavedFeedback}
+                  className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white shadow-[0_6px_20px_rgba(113,56,255,0.22)] transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-45">
+                  <Check className="h-4 w-4" /> {isSavingProfile ? 'Saving…' : showSavedFeedback ? 'Saved' : 'Save profile'}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
