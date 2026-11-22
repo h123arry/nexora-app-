@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * One-way, resumable Firestore -> Cloudflare D1 staging importer.
+ * One-way, idempotent Firestore -> Cloudflare D1 staging importer.
  *
  * Required environment:
  *   GOOGLE_APPLICATION_CREDENTIALS (or ADC available to Firebase Admin)
@@ -89,8 +89,8 @@ async function writeDocuments(documents) {
         imported_at=strftime('%Y-%m-%dT%H:%M:%fZ','now'),
         migration_run_id=excluded.migration_run_id`,
     params: [
-      document.path, document.collection, document.id, document.parentPath,
-      document.payload, document.hash, document.updateTime, runId,
+      document.path, document.collection, document.id, document.parentPath ?? '',
+      document.payload, document.hash, document.updateTime ?? '', runId,
     ],
   }));
   await d1Batch(statements);
