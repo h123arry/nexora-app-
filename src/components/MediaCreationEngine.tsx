@@ -2124,7 +2124,6 @@ export default function MediaCreationEngine({
                       </footer>
                     </section>
                   )}
-                  )}
                   {activeMode === 'video' && (
                     <div className="border border-[#292244] border-dashed rounded-2xl p-6 text-center space-y-4 bg-[#120E2B]/45">
                       <Video className="w-8 h-8 text-[#8E88A7] mx-auto animate-pulse" />
