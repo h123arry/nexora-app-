@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, HardDrive, Share2, MoreVertical, MoreHorizontal, Radio, ShieldCheck, Gift } from 'lucide-react';
 import VohIcon from './VohIcon';
 import ShareSheet from './ShareSheet';
@@ -1449,11 +1449,11 @@ export default function ProfileView({
   };
 
   // Pinned items filtering
-  const pinnedPostIdsList = currentUser.pinnedPosts || [];
+  const pinnedPostIdsList = useMemo(() => currentUser.pinnedPosts || [], [currentUser.pinnedPosts]);
   // The global feed is intentionally paginated; load this author's public posts
   // independently so older profile posts do not disappear just because they are
   // outside the currently loaded home-feed window.
-  const myPosts = [...new Map([...posts, ...authorProfilePosts]
+  const myPosts = useMemo(() => [...new Map([...posts, ...authorProfilePosts]
     .filter(post => post && (post.userId === currentUser.id || post.username === currentUser.username))
     .map(post => [post.id, post] as const)).values()]
     .map(post => ({
@@ -1466,7 +1466,8 @@ export default function ProfileView({
         ? { ...comment, username: currentUser.username, name: currentUser.name, avatar: currentUser.avatar }
         : comment),
     }))
-    .sort((left, right) => Date.parse(String(right.timestamp)) - Date.parse(String(left.timestamp)));
+    .sort((left, right) => Date.parse(String(right.timestamp)) - Date.parse(String(left.timestamp))),
+  [posts, authorProfilePosts, currentUser.id, currentUser.username, currentUser.name, currentUser.avatar, currentUser.isVerified]);
   const [, setMetricsUpdateTick] = useState(0);
   
   useEffect(() => {
@@ -1517,7 +1518,14 @@ export default function ProfileView({
     }
   };
 
-  const filteredTabPosts = getTabContent();
+  const filteredTabPosts = useMemo(
+    () => getTabContent(),
+    [myPosts, profileTab, currentUser.id, currentUser.username, isOwnProfile, userSparks, userBookmarks],
+  );
+  const orderedGridPosts = useMemo(
+    () => [...filteredTabPosts].sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id))),
+    [filteredTabPosts, pinnedPostIdsList],
+  );
 
   // Keep the open viewer bound to the latest profile post snapshot so creator view totals stay current.
   useEffect(() => {
@@ -1990,7 +1998,7 @@ export default function ProfileView({
             ) : (
               <div className="nx-profile-media-grid-bleed w-full max-w-[1040px] mx-auto px-0">
                 <MediaGrid 
-                  gridPosts={[...filteredTabPosts].sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))} 
+                  gridPosts={orderedGridPosts} 
                   pinnedPostIds={pinnedPostIdsList} 
                   onSelectPost={(post) => setSelectedGridPost(post)}
                   repairVideoPosters={isOwnProfile && isLoggedIn}
@@ -4050,7 +4058,7 @@ export default function ProfileView({
         {selectedGridPost && (
           <ImmersiveVideoViewer
             initialPost={selectedGridPost}
-            creatorPosts={filteredTabPosts}
+            creatorPosts={orderedGridPosts}
             currentUser={currentUser}
             onClose={() => setSelectedGridPost(null)}
             onLikePost={onLikePost}

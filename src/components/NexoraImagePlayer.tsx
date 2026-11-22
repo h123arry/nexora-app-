@@ -49,6 +49,7 @@ interface NexoraImagePlayerProps {
   isActive?: boolean;
   shouldPreload?: boolean;
   isReleased?: boolean;
+  isImmersive?: boolean;
 }
 
 export default function NexoraImagePlayer({
@@ -65,6 +66,7 @@ export default function NexoraImagePlayer({
   isActive = true,
   shouldPreload = false,
   isReleased = false,
+  isImmersive = false,
 }: NexoraImagePlayerProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -335,9 +337,9 @@ export default function NexoraImagePlayer({
 
 
   return (
-    <div className="relative w-full overflow-hidden bg-black select-none group">
+    <div className={`relative w-full overflow-hidden bg-black select-none group ${isImmersive ? 'h-full' : ''}`}>
       {/* Background Image Display */}
-      <div className="w-full relative overflow-hidden bg-[#080612] flex items-center justify-center touch-pan-y" onTouchStart={handlePhotoTouchStart} onTouchEnd={handlePhotoTouchEnd}>
+      <div className={`w-full relative overflow-hidden bg-[#080612] flex items-center justify-center touch-pan-y ${isImmersive ? 'h-full' : ''}`} onTouchStart={handlePhotoTouchStart} onTouchEnd={handlePhotoTouchEnd}>
         {isResolvingMedia ? (
           <div role="status" aria-live="polite" className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#15102a] via-[#080612] to-[#1c0b20] p-6 text-center">
             <span className="w-8 h-8 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" aria-hidden="true" />
@@ -353,7 +355,7 @@ export default function NexoraImagePlayer({
               aria-hidden={hasImageLoadError}
               onLoad={() => { setIsImageLoading(false); setHasImageLoadError(false); }}
               onError={() => { setIsImageLoading(false); setHasImageLoadError(true); }}
-              className={`block w-full h-auto max-h-[78vh] object-contain cursor-zoom-in ${hasImageLoadError ? 'opacity-0' : ''}`}
+              className={`block w-full ${isImmersive ? 'h-full max-h-full object-contain' : 'h-auto max-h-[78vh] object-contain'} cursor-zoom-in ${hasImageLoadError ? 'opacity-0' : ''}`}
               onClick={() => { if (!suppressImageClick.current) setIsFullscreen(true); }}
               referrerPolicy="no-referrer"
               style={{ filter: (post.imageFilters && post.imageFilters[currentImageIndex]) || post.imageFilter || 'none' }}

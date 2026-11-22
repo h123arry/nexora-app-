@@ -936,6 +936,7 @@ export default function App() {
   }, [activeTab]);
 
   const [isUniversalSearchOpen, setIsUniversalSearchOpen] = useState(false);
+  const [universalSearchInitialQuery, setUniversalSearchInitialQuery] = useState('');
   const [settingsInitialSection, setSettingsInitialSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta' | 'origin'>('account');
 
   // Pause any playing videos immediately when switching main tabs
@@ -1097,7 +1098,11 @@ export default function App() {
       }
     };
     window.addEventListener('nexora-open-settings', handleOpenSettingsSection);
-    const handleOpenUniversalSearch = () => setIsUniversalSearchOpen(true);
+    const handleOpenUniversalSearch = (event: Event) => {
+      const query = (event as CustomEvent<{ query?: string }>).detail?.query;
+      setUniversalSearchInitialQuery(typeof query === 'string' ? query.trim() : '');
+      setIsUniversalSearchOpen(true);
+    };
     window.addEventListener('openUniversalSearch', handleOpenUniversalSearch);
     const handleViewProfileEvent = (e: any) => {
       const target = typeof e.detail === 'string' ? e.detail : (e.detail?.userIdOrUsername || e.detail?.userId);
@@ -3659,7 +3664,8 @@ export default function App() {
 
       {isUniversalSearchOpen && <Suspense fallback={null}><UniversalSearchModal
         isOpen={isUniversalSearchOpen}
-        onClose={() => setIsUniversalSearchOpen(false)}
+        initialQuery={universalSearchInitialQuery}
+        onClose={() => { setIsUniversalSearchOpen(false); setUniversalSearchInitialQuery(''); }}
         currentUser={getRichUser(currentUser)}
         posts={resolvedPosts}
         users={Object.values(globalUsersMap) as User[]}
