@@ -1785,7 +1785,7 @@ export default function ProfileView({
                 {isOwnProfile && (
                   <button
                     type="button"
-                    onClick={() => setActivePanel('edit-profile')}
+                    onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
                     aria-label="Change profile photo"
                     title="Change profile photo"
                     className="absolute bottom-0 right-0 z-30 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#080617] bg-violet-600 text-white shadow-lg transition-colors hover:bg-violet-500 focus-visible:outline-2 focus-visible:outline-violet-200 focus-visible:outline-offset-2"
