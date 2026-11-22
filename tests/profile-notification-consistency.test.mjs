@@ -114,9 +114,26 @@ test('public profile signup offers both username/password and email/password pat
 test('profile edits persist the private profile and update its public projection', async () => {
   const profile = await read('../src/services/firebase/profileService.ts');
   assert.match(profile, /await runTransaction\(db, async transaction =>/);
-  assert.match(profile, /transaction.update\(privateProfileRef, \{ \.\.\.updates, updatedAt: serverTimestamp\(\) \}\)/);
+  assert.match(profile, /transaction.update\(privateProfileRef, \{ \.\.\.committedUpdates, updatedAt: serverTimestamp\(\) \}\)/);
+  assert.match(profile, /assertIdentityChangeAllowed\(existingUser, updates\)/);
+  assert.match(profile, /committedUpdates\.lastDisplayNameChangeTime = identityChangedAt/);
+  assert.match(profile, /committedUpdates\.lastUsernameChangeTime = identityChangedAt/);
   assert.match(profile, /transaction.set\(publicProfileRef/);
   assert.match(profile, /doc\(db, 'publicProfiles', uid\)/);
+});
+
+
+test('profile identity grace lets everyone make one change today, then applies 7-day and 30-day cooldowns', async () => {
+  const [profile, editor] = await Promise.all([
+    read('../src/services/firebase/profileService.ts'),
+    read('../src/components/ProfileView.tsx'),
+  ]);
+  assert.match(profile, /2026-11-22T23:00:00\.000Z/);
+  assert.match(profile, /DISPLAY_NAME_CHANGE_COOLDOWN_MS = 7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(profile, /USERNAME_CHANGE_COOLDOWN_MS = 30 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(profile, /if \(now < PROFILE_IDENTITY_CHANGE_GRACE_END\) return/);
+  assert.match(editor, /ProfileService\.isIdentityChangeGraceActive\(\)/);
+  assert.match(editor, /One-time update available today/);
 });
 
 test('public profile links resolve through canonical username claims, not private user documents', async () => {

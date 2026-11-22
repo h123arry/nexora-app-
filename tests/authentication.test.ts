@@ -227,10 +227,14 @@ test('profile identity, media and creator details survive a fresh authenticated 
     const restoredPrivate = await ProfileService.getProfile(uid);
     const restoredPublic = await ProfileService.getPublicProfile(uid);
     for (const [field, value] of Object.entries(profilePatch)) {
-      assert.deepEqual((restoredPrivate as any)?.[field], value, `private profile field ${field} must survive sign-in`);
-      if (!['lastDisplayNameChangeTime', 'lastUsernameChangeTime'].includes(field)) {
-        assert.deepEqual((restoredPublic as any)?.[field], value, `public profile field ${field} must stay synchronized`);
+      if (['lastDisplayNameChangeTime', 'lastUsernameChangeTime'].includes(field)) {
+        const persistedTimestamp = (savedPrivate as any)?.[field];
+        assert.equal((restoredPrivate as any)?.[field], persistedTimestamp, `private profile field ${field} must survive sign-in`);
+        assert.ok(Number.isFinite(Date.parse(persistedTimestamp)), `private profile field ${field} must be a valid cooldown timestamp`);
+        continue;
       }
+      assert.deepEqual((restoredPrivate as any)?.[field], value, `private profile field ${field} must survive sign-in`);
+      assert.deepEqual((restoredPublic as any)?.[field], value, `public profile field ${field} must stay synchronized`);
     }
   } finally {
     await cleanUp();

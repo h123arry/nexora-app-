@@ -7,7 +7,33 @@ import { createPublicProfileProjection } from './publicProfileProjection';
 import { persistProfileWithBestEffortProjection } from './profileProvisioningPolicy';
 import { getAnonymousMemberUsername } from './anonymousOnboardingPolicy';
 
+// One-time profile identity grace: through midnight in Nigeria (WAT) on 22 Nov 2026.
+// Every successful identity edit during this window writes a fresh cooldown timestamp.
+const PROFILE_IDENTITY_CHANGE_GRACE_END = Date.parse('2026-11-22T23:00:00.000Z');
+const DISPLAY_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const USERNAME_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
+
+function assertIdentityChangeAllowed(current: User, updates: Partial<User>, now = Date.now()): void {
+  if (now < PROFILE_IDENTITY_CHANGE_GRACE_END) return;
+  const checks = [
+    { field: 'name' as const, timestamp: current.lastDisplayNameChangeTime, cooldown: DISPLAY_NAME_CHANGE_COOLDOWN_MS, label: 'Display name' },
+    { field: 'username' as const, timestamp: current.lastUsernameChangeTime, cooldown: USERNAME_CHANGE_COOLDOWN_MS, label: 'Username' },
+  ];
+  for (const check of checks) {
+    if (updates[check.field] === undefined || updates[check.field] === current[check.field] || !check.timestamp) continue;
+    const lastChange = Date.parse(check.timestamp);
+    if (Number.isFinite(lastChange) && now - lastChange < check.cooldown) {
+      const days = check.cooldown / (24 * 60 * 60 * 1000);
+      throw new Error(`${check.label} changes are locked for ${days} days after your last change.`);
+    }
+  }
+}
+
 export class ProfileService {
+  static isIdentityChangeGraceActive(): boolean {
+    return Date.now() < PROFILE_IDENTITY_CHANGE_GRACE_END;
+  }
+
   private static profileLoads = new Map<string, Promise<User>>();
   /** Public projection deliberately excludes email, phone, role, moderation flags, balances and preferences. */
   private static toPublicProfile(user: User, includeLocation = false): Partial<User> {
@@ -124,15 +150,14 @@ export class ProfileService {
     // Firestore rejects undefined values. Optional profile fields are omitted
     // rather than allowing one missing timestamp to block the entire save.
     updates = Object.fromEntries(Object.entries(updates).filter(([, value]) => value !== undefined)) as Partial<User>;
-    if (updates.username) {
-      // Profile saves include the current username for a complete form payload.
-      // Do not rewrite the canonical claim on photo-only or bio-only edits; only
-      // reserve a new claim when the handle actually changes.
-      const existingProfile = await getDoc(doc(db, 'users', uid));
-      const existingUsername = existingProfile.exists()
-        ? String(existingProfile.data().username || '')
-        : '';
-      if (updates.username !== existingUsername) {
+    // Check before reserving a new handle so a rejected cooldown cannot leave an
+    // unnecessary username claim behind. The transaction below repeats this check.
+    const existingProfile = await getDoc(doc(db, 'users', uid));
+    if (existingProfile.exists()) {
+      const existingUser = existingProfile.data() as User;
+      assertIdentityChangeAllowed(existingUser, updates);
+      const existingUsername = String(existingUser.username || '');
+      if (updates.username && updates.username !== existingUsername) {
         await this.reserveUsername(uid, updates.username);
       }
     }
@@ -152,10 +177,20 @@ export class ProfileService {
         throw new Error('Your profile could not be found. Please sign in again.');
       }
 
-      const updatedProfile = { ...(privateSnapshot.data() as User), ...updates, id: uid };
+      const existingUser = privateSnapshot.data() as User;
+      assertIdentityChangeAllowed(existingUser, updates);
+      const committedUpdates: Partial<User> = { ...updates };
+      const identityChangedAt = new Date().toISOString();
+      if (committedUpdates.name !== undefined && committedUpdates.name !== existingUser.name) {
+        committedUpdates.lastDisplayNameChangeTime = identityChangedAt;
+      }
+      if (committedUpdates.username !== undefined && committedUpdates.username !== existingUser.username) {
+        committedUpdates.lastUsernameChangeTime = identityChangedAt;
+      }
+      const updatedProfile = { ...existingUser, ...committedUpdates, id: uid };
       const locationAudience = settingsSnapshot.get('privacy.profileVisibility.location');
       const publicProjection = this.toPublicProfile(updatedProfile);
-      transaction.update(privateProfileRef, { ...updates, updatedAt: serverTimestamp() });
+      transaction.update(privateProfileRef, { ...committedUpdates, updatedAt: serverTimestamp() });
       transaction.set(publicProfileRef, {
         ...publicProjection,
         location: locationAudience === 'everyone' && typeof updatedProfile.location === 'string' && updatedProfile.location.trim()
