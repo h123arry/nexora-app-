@@ -908,6 +908,10 @@ export default function MediaCreationEngine({
   };
 
   const captureCameraSnapshot = () => {
+    if (selectedImages.length >= 20) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'You can capture up to 20 photos in one post.' }));
+      return;
+    }
     requestPermission('camera', () => {
       const video = photoPreviewRef.current;
       if (!photoCameraReady || !video || video.videoWidth === 0 || video.videoHeight === 0) {
@@ -2203,7 +2207,7 @@ export default function MediaCreationEngine({
                             </div>
                             <div className="nx-camera-control-dock flex w-full items-center justify-center gap-7 rounded-[28px] px-5 py-3">
                               <button type="button" aria-label="Choose a video from gallery" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => { setActiveMode('video'); setIsLensStudioOpen(false); }} className="nx-camera-side-control flex h-12 w-12 items-center justify-center rounded-2xl text-white disabled:opacity-40"><FileImage size={19}/></button>
-                              {isRecording ? <button onClick={handleStopReelRecord} aria-label="Stop recording" className="nx-camera-record-shutter flex h-[76px] w-[76px] items-center justify-center rounded-full border-[4px] border-white"><span className="h-7 w-7 rounded-md bg-white"/></button> : <button onClick={startReelRecording} disabled={isSavingRecordedVideo || countdownTimer !== null || Boolean(recordedVideoUrl)} aria-label="Start recording" className="nx-camera-record-shutter flex h-[76px] w-[76px] items-center justify-center rounded-full border-[4px] border-white disabled:opacity-45"><span className="h-[60px] w-[60px] rounded-full border border-white/70"/></button>}
+                              {isRecording ? <button onClick={handleStopReelRecord} aria-label="Stop recording" className="nx-camera-record-shutter flex h-[76px] w-[76px] items-center justify-center rounded-full border-[4px] border-white"><span className="h-7 w-7 rounded-md bg-white"/></button>  : <button onClick={startReelRecording} disabled={!videoCameraReady || isSavingRecordedVideo || countdownTimer !== null || Boolean(recordedVideoUrl)} aria-label="Start recording" className="nx-camera-record-shutter flex h-[76px] w-[76px] items-center justify-center rounded-full border-[4px] border-white disabled:opacity-45"><span className="h-[60px] w-[60px] rounded-full border border-white/70"/></button>}
                               <button type="button" aria-label="Switch camera" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null || Boolean(recordedVideoUrl)} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="nx-camera-side-control flex h-12 w-12 items-center justify-center rounded-2xl text-white disabled:opacity-40"><RefreshCw size={20}/></button>
                             </div>
                             {isRecording && <span className="nx-camera-recording-indicator rounded-full px-3 py-1.5 text-[10px] font-semibold tabular-nums text-white" role="status" aria-live="off"><span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-red-500"/>REC {Math.floor(loopTimerSecs / 60)}:{String(loopTimerSecs % 60).padStart(2, '0')} <span className="text-white/55">/ {Math.floor(recordingLimitSecs / 60)}:{String(recordingLimitSecs % 60).padStart(2, '0')}</span></span>}
