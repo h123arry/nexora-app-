@@ -2517,3 +2517,74 @@ body {
     max-height: 100svh !important;
   }
 }
+
+
+/* NEXORA Create — restrained, editorial first-screen visual language. */
+.nx-create-experience #creation-studio-frame {
+  background: #080A12 !important;
+  color: #F3F1F7;
+}
+.nx-create-experience #creation-studio-frame > .nx-create-hero,
+.nx-create-experience .nx-create-hero {
+  background: #0D101A !important;
+  border-color: rgba(255,255,255,.09) !important;
+  box-shadow: none !important;
+}
+.nx-create-experience .nx-create-hero > div:first-child { display: none; }
+.nx-create-experience .nx-create-hero-icon {
+  color: #B8ADD8 !important;
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(255,255,255,.09) !important;
+  box-shadow: none !important;
+}
+.nx-create-experience .nx-create-primary-action {
+  background: #6845C5 !important;
+  box-shadow: none !important;
+}
+.nx-create-experience .nx-create-primary-action:hover { background: #7554CE !important; }
+.nx-create-experience .nx-create-secondary-action {
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(255,255,255,.11) !important;
+}
+.nx-create-experience .nx-create-mode-card {
+  background: #0C0E17 !important;
+  border-color: rgba(255,255,255,.085) !important;
+  box-shadow: none !important;
+}
+.nx-create-experience .nx-create-mode-card:hover {
+  background: #11141E !important;
+  border-color: rgba(255,255,255,.2) !important;
+}
+.nx-create-experience .nx-create-mode-icon {
+  color: #B8B2C7 !important;
+  background: rgba(255,255,255,.035) !important;
+  border-color: rgba(255,255,255,.08) !important;
+}
+.nx-create-experience .nx-create-mode-card svg:last-child { color: #777383 !important; }
+.nx-create-experience .nx-create-mode-card:hover svg:last-child { color: #B8ADD8 !important; }
+.nx-create-experience .nx-create-studio-action {
+  background: #0C0E17 !important;
+  border-color: rgba(255,255,255,.09) !important;
+}
+.nx-create-experience .nx-create-studio-action:hover {
+  background: #11141E !important;
+  border-color: rgba(255,255,255,.2) !important;
+}
+.nx-create-experience #creation-studio-frame > div:nth-child(2) button[aria-pressed="true"] {
+  background: rgba(255,255,255,.09) !important;
+  border-color: rgba(255,255,255,.08) !important;
+  color: #F3F1F7 !important;
+}
+.nx-create-experience #creation-studio-frame .nx-create-hero button:focus-visible,
+.nx-create-experience #creation-studio-frame .nx-create-mode-card:focus-visible,
+.nx-create-experience #creation-studio-frame .nx-create-studio-action:focus-visible {
+  outline: 2px solid #9B87D2;
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-create-experience .nx-create-mode-card,
+  .nx-create-experience .nx-create-primary-action,
+  .nx-create-experience .nx-create-secondary-action {
+    transition: none !important;
+  }
+}
