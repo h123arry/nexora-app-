@@ -60,77 +60,71 @@ async function requireIdentityApprover(request: Request): Promise<string> {
   return uid;
 }
 
-export const submitIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {
-  const uid = await requireUid(request as Request);
-  let input;
-  try { input = validateIdentityApplicationInput(request.data || {}); }
-  catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Invalid identity application.'); }
+export const submitIdentityVerificationApplication = onCall({ maxInstances: 2 }, async request => {
+  await requireUid(request as Request);
+  throw new HttpsError(
+    'failed-precondition',
+    'NEXORA identity verification requests are currently closed. Please check back for future announcements.',
+  );
+});
 
-  // Duplicate-name and shared-evidence matches are advisory reviewer signals only.
-  // They never auto-reject an applicant because organizations and public figures can share official sources.
-  const identityNameKey = normalizeIdentityName(input.displayName);
-  const evidenceUrlHashes = Array.from(new Set(input.evidenceUrls.map(url =>
-    createHash('sha256').update(normalizeIdentityEvidenceUrl(url)).digest('hex')
-  )));
-  const nameMatches = await db.collection('identityVerificationPrivateSignals')
-    .where('identityNameKey', '==', identityNameKey)
-    .limit(100)
-    .get();
-  const evidenceMatches = await Promise.all(evidenceUrlHashes.map(hash =>
-    db.collection('identityVerificationPrivateSignals')
-      .where('evidenceUrlHashes', 'array-contains', hash)
-      .limit(100)
-      .get()
-  ));
-  const activeApplication = (status: unknown) => status === 'approved' || status === 'pending_review';
-  const nameCollisionCount = nameMatches.docs.filter(document =>
-    document.id !== uid && activeApplication(document.get('status'))
-  ).length;
-  const duplicateEvidenceLinkCount = evidenceUrlHashes.filter((hash, index) =>
-    evidenceMatches[index].docs.some(document => document.id !== uid && activeApplication(document.get('status')))
-  ).length;
-  const reviewSignals = {
-    possibleNameCollision: nameCollisionCount > 0,
-    nameCollisionCount,
-    duplicateEvidenceLinkCount,
-    evidenceScanMayBeIncomplete: evidenceMatches.some(snapshot => snapshot.size === 100) || nameMatches.size === 100,
-  };
 
-  const applicationRef = db.collection('identityVerificationApplications').doc(uid);
-  const auditRef = db.collection('identityVerificationAuditEvents').doc();
-  const version = await db.runTransaction(async transaction => {
-    const existing = await transaction.get(applicationRef);
-    const status = existing.exists ? existing.get('status') : undefined;
-    if (!canSubmitIdentityApplication(status)) {
-      throw new HttpsError('failed-precondition', 'An application is already awaiting review or this identity is already verified.');
+// One-time, founder/admin-controlled recognition for the five selected early community members.
+// The allowlist lives server-side; clients cannot choose arbitrary recipients or self-award.
+const EARLY_COMMUNITY_MEMBER_UIDS = [
+  'qHrq7408mKVpmkYOtzFt0jSvcfp1',
+  '0zmHY588PYcSbi0TP2p1TpWUwY83',
+  'bACXNpO12uRzavlSIBMpl4TJobi1',
+  'HvmFq9NAboZwTninQgIRZGwjmXy1',
+  '3gJsZA5KjIY0y4uMHXARqJrU1F12',
+] as const;
+
+export const grantEarlyCommunityRecognition = onCall({ maxInstances: 2 }, async request => {
+  const actorId = await requireIdentityApprover(request as Request);
+  const eligibleUsers = await Promise.all(EARLY_COMMUNITY_MEMBER_UIDS.map(async userId => {
+    try {
+      const account = await auth.getUser(userId);
+      return account.disabled ? null : userId;
+    } catch {
+      return null;
     }
-    const nextVersion = Number(existing.get('version') || 0) + 1;
-    const now = FieldValue.serverTimestamp();
-    transaction.set(applicationRef, {
-      id: uid,
-      userId: uid,
-      ...input,
-      status: 'pending_review',
-      version: nextVersion,
-      reviewNote: '',
-      submittedAt: now,
-      updatedAt: now,
-      createdAt: existing.exists ? existing.get('createdAt') : now,
+  }));
+  const recipients = eligibleUsers.filter((userId): userId is string => Boolean(userId));
+  const now = FieldValue.serverTimestamp();
+
+  for (const userId of recipients) {
+    const publicProfileRef = db.collection('publicProfiles').doc(userId);
+    const privateProfileRef = db.collection('users').doc(userId);
+    const notificationRef = db.collection('users').doc(userId).collection('notifications').doc('early_community_recognition_v1');
+    const auditRef = db.collection('identityVerificationAuditEvents').doc();
+    await db.runTransaction(async transaction => {
+      transaction.set(publicProfileRef, { id: userId, earlyCommunityMember: true, updatedAt: now }, { merge: true });
+      transaction.set(privateProfileRef, { earlyCommunityMember: true, updatedAt: now }, { merge: true });
+      transaction.set(notificationRef, {
+        id: 'early_community_recognition_v1',
+        type: 'system',
+        userId: 'system',
+        username: 'nexora',
+        actorName: 'NEXORA',
+        avatar: '',
+        targetId: userId,
+        content: 'NEXORA has recognised you as an early community member. Your purple community badge is now active. No action is needed.',
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        priority: 8,
+        createdAt: now,
+      }, { merge: true });
+      transaction.create(auditRef, {
+        userId,
+        actorId,
+        event: 'early_community_recognition_granted',
+        recognitionType: 'early_community_member',
+        createdAt: now,
+      });
     });
-    transaction.set(db.collection('identityVerificationPrivateSignals').doc(uid), {
-      userId: uid,
-      identityNameKey,
-      evidenceUrlHashes,
-      reviewSignals,
-      status: 'pending_review',
-      updatedAt: now,
-    });
-    transaction.create(auditRef, {
-      userId: uid, event: 'application_submitted', version: nextVersion, actorId: uid, createdAt: now,
-    });
-    return nextVersion;
-  });
-  return { accepted: true, status: 'pending_review', version };
+  }
+
+  return { granted: recipients.length, skipped: EARLY_COMMUNITY_MEMBER_UIDS.length - recipients.length };
 });
 
 export const getMyIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {
