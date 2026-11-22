@@ -4,7 +4,7 @@ import {
   evaluateProfileIdentityCooldown,
   PROFILE_IDENTITY_GRACE_END,
   PROFILE_IDENTITY_GRACE_START,
-} from '../server/profileIdentityPolicy.ts';
+} from '../server/profileIdentityPolicy';
 
 const day = 86_400_000;
 const duringGrace = Date.parse('2026-11-22T12:00:00.000Z');
