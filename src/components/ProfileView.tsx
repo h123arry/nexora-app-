@@ -4050,7 +4050,7 @@ export default function ProfileView({
         {selectedGridPost && (
           <ImmersiveVideoViewer
             initialPost={selectedGridPost}
-            creatorPosts={filteredTabPosts}
+            creatorPosts={[...filteredTabPosts].sort((a, b) => Number(pinnedPostIdsList.includes(b.id)) - Number(pinnedPostIdsList.includes(a.id)))}
             currentUser={currentUser}
             onClose={() => setSelectedGridPost(null)}
             onLikePost={onLikePost}

@@ -64,6 +64,7 @@ interface NexoraVideoPlayerProps {
   onNotInterested?: () => void;
   onViewProfile?: (userId: string) => void;
   onViewSound?: (soundId: string) => void;
+  hideTopRightSoundControl?: boolean;
 }
 
 const formatPostViews = (views?: number) => {
@@ -95,7 +96,8 @@ export default function NexoraVideoPlayer({
   isCommentsOpen = false,
   onNotInterested,
   onViewProfile,
-  onViewSound
+  onViewSound,
+  hideTopRightSoundControl = false
 }: NexoraVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1189,8 +1191,20 @@ export default function NexoraVideoPlayer({
               </div>
             )}
 
-             {/* Sound remains available through the existing tap-to-unmute and gesture controls.
-                 Keep the top edge reserved for contextual related-content discovery. */}
+             {/* Keep the sound control available on standard players, but leave immersive
+                 viewer top space for the related-content search card. */}
+             {!hideTopRightSoundControl && (
+               <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
+                 <button
+                   onClick={(e) => { e.stopPropagation(); handleVolumeToggle(); }}
+                   className="p-2.5 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full text-white border border-white/10 transition-all cursor-pointer shadow-lg active:scale-95"
+                   title={isMuted ? "Unmute sound" : "Mute sound"}
+                   aria-label={isMuted ? "Unmute sound" : "Mute sound"}
+                 >
+                   {isMuted ? <VolumeX className="w-4 h-4 text-white/80" /> : <Volume2 className="w-4 h-4 text-white" />}
+                 </button>
+               </div>
+             )}
 
              {/* 3. RIGHT-SIDE ACTION RAIL */}
              <div 

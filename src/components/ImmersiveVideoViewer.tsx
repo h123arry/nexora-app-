@@ -85,7 +85,12 @@ export default function ImmersiveVideoViewer({
       if (postsToShow.length <= 1) {
         onClose();
       } else {
-        setCurrentIndex(prev => Math.max(0, Math.min(prev, postsToShow.length - 2)));
+        setCurrentIndex(prev => {
+          const nextIndex = Math.max(0, Math.min(prev, postsToShow.length - 2));
+          const container = scrollContainerRef.current;
+          if (container) container.scrollTop = nextIndex * container.clientHeight;
+          return nextIndex;
+        });
       }
     };
     window.addEventListener('nexora-delete-post', handleDeleteEvent);
@@ -238,9 +243,9 @@ export default function ImmersiveVideoViewer({
     const tags = Array.isArray(currentPost.tags) ? currentPost.tags : [];
     const firstTag = tags.find(tag => typeof tag === 'string' && tag.trim());
     if (firstTag) return firstTag.replace(/^#/, '').trim().slice(0, 100);
-    const hashtag = currentPost.content?.match(/#[\\w]+/)?.[0];
+    const hashtag = currentPost.content?.match(/#[A-Za-z0-9_]+/)?.[0];
     if (hashtag) return hashtag.slice(1);
-    return (currentPost.content || '').replace(/\\s+/g, ' ').trim().slice(0, 100);
+    return (currentPost.content || '').replace(/\s+/g, ' ').trim().slice(0, 100);
   }, [currentPost.id, currentPost.searchSuggestion, currentPost.tags, currentPost.content]);
 
   return (
@@ -301,7 +306,7 @@ export default function ImmersiveVideoViewer({
           ref={scrollContainerRef}
           onScroll={handleStageScroll}
           className="absolute inset-0 h-full w-full overflow-y-auto overscroll-y-contain touch-pan-y"
-          style={{ scrollSnapType: 'y mandatory', scrollSnapStop: 'always', scrollbarWidth: 'none', overscrollBehaviorY: 'contain' }}
+          style={{ display: 'flex', flexDirection: 'column', scrollSnapType: 'y mandatory', scrollSnapStop: 'always', scrollbarWidth: 'none', overscrollBehaviorY: 'contain' }}
         >
           {postsToShow.map((post, idx) => {
             const isCurrent = idx === currentIndex;
@@ -339,6 +344,7 @@ export default function ImmersiveVideoViewer({
                     onSpark={() => handleLike(post.id)}
                     isProcessing={isProcessing && isCurrent}
                     isActive={isCurrent}
+                    hideTopRightSoundControl
                     preloadMode={preloadPlan.preloadMode}
                     isReleased={preloadPlan.isReleased}
                     shouldPreload={preloadPlan.shouldPreload}
