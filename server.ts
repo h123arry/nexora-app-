@@ -214,11 +214,21 @@ app.post('/api/profile/identity', async (req, res) => {
       const userSnapshot = await transaction.get(userRef);
       if (!userSnapshot.exists) throw Object.assign(new Error('Your profile could not be found. Please sign in again.'), { status: 404, code: 'profile_not_found' });
       const current = userSnapshot.data() || {};
+      if (current.isBanned === true || current.isSuspended === true) {
+        throw Object.assign(new Error('This account cannot change its profile identity right now.'), { status: 403, code: 'account_restricted' });
+      }
       const currentName = typeof current.name === 'string' ? current.name : '';
       const currentUsername = typeof current.username === 'string' ? current.username : '';
       const changedName = nextName !== undefined && nextName !== currentName;
       const changedUsername = nextUsername !== undefined && nextUsername !== currentUsername;
-      if (!changedName && !changedUsername) return { identity: {} };
+      if (!changedName && !changedUsername) return { identity: {
+        name: currentName,
+        username: currentUsername,
+        ...(typeof current.lastDisplayNameChangeTime === 'string' ? { lastDisplayNameChangeTime: current.lastDisplayNameChangeTime } : {}),
+        ...(typeof current.lastUsernameChangeTime === 'string' ? { lastUsernameChangeTime: current.lastUsernameChangeTime } : {}),
+        ...(typeof current.displayNameGraceUsedAt === 'string' ? { displayNameGraceUsedAt: current.displayNameGraceUsedAt } : {}),
+        ...(typeof current.usernameGraceUsedAt === 'string' ? { usernameGraceUsedAt: current.usernameGraceUsedAt } : {}),
+      } };
 
       const now = Date.now();
       const updates: Record<string, string> = {};
