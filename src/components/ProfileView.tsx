@@ -1799,7 +1799,7 @@ export default function ProfileView({
                   </div>
                   <div className="mt-1 flex min-w-0 items-center gap-1.5">
                     <p className={`min-w-0 truncate text-xs sm:text-sm font-bold font-mono tracking-wider ${!currentUser.username ? 'text-violet-400/60 italic' : 'text-violet-300'}`}>
-                      @${currentUser.username || (isOwnProfile ? 'add-username' : 'member')}
+                      @{currentUser.username || (isOwnProfile ? 'add-username' : 'member')}
                     </p>
                     {(identityVerification || currentUser.earlyCommunityMember) && <PurpleVerifiedBadge className="h-3.5 w-3.5 shrink-0" type={currentUser.earlyCommunityMember ? 'leader' : identityBadgeType} />}
                   </div>
