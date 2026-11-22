@@ -17,10 +17,13 @@ export interface ProfileIdentityCooldownDecision {
 /** One grace use per identity field; legacy timestamps written during the window count as that use. */
 export function evaluateProfileIdentityCooldown(input: ProfileIdentityCooldownInput): ProfileIdentityCooldownDecision {
   const lastChanged = typeof input.lastChangedAt === 'string' ? Date.parse(input.lastChangedAt) : NaN;
-  const changedDuringGraceWindow = Number.isFinite(lastChanged) && lastChanged >= PROFILE_IDENTITY_GRACE_START;
+  const graceUsed = typeof input.graceUsedAt === 'string' ? Date.parse(input.graceUsedAt) : NaN;
+  const changedDuringGraceWindow = (Number.isFinite(lastChanged) && lastChanged >= PROFILE_IDENTITY_GRACE_START)
+    || (Number.isFinite(graceUsed) && graceUsed >= PROFILE_IDENTITY_GRACE_START);
   const graceAvailable = input.now < PROFILE_IDENTITY_GRACE_END && !input.graceUsedAt && !changedDuringGraceWindow;
-  const remainingMs = Number.isFinite(lastChanged)
-    ? Math.max(0, input.cooldownMs - (input.now - lastChanged))
+  const effectiveLastChanged = Math.max(Number.isFinite(lastChanged) ? lastChanged : 0, Number.isFinite(graceUsed) ? graceUsed : 0);
+  const remainingMs = effectiveLastChanged > 0
+    ? Math.max(0, input.cooldownMs - (input.now - effectiveLastChanged))
     : 0;
   if (!graceAvailable && remainingMs > 0) {
     return { allowed: false, graceUsed: false, remainingMs };
