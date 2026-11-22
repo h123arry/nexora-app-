@@ -116,7 +116,7 @@ jobs:
       - name: Deploy reviewed core, social activity, notification and GiftVerse Functions with Firestore rules
         run: |
           npx --yes firebase-tools@15.33.0 deploy \
-            --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,firestore:rules,firestore:indexes \
+            --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,functions:grantEarlyCommunityRecognition,firestore:rules,firestore:indexes \
             --config firebase.json \
             --project "$NEXORA_PRODUCTION_PROJECT_ID" \
             --non-interactive
@@ -145,7 +145,7 @@ jobs:
           echo "## NEXORA production Functions deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "- Project: $NEXORA_PRODUCTION_PROJECT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "- Firestore database: $FIRESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Deployed functions: Founding 300, GiftVerse, push delivery, follow inbox, live-start alerts, direct-message alerts, creator follows, public comments, Sparks, replies and reposts" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Deployed functions: Founding 300, GiftVerse, push delivery, follow inbox, live-start alerts, direct-message alerts, creator follows, public comments, Sparks, replies, reposts and early-community recognition" >> "$GITHUB_STEP_SUMMARY"
           echo "- Firestore rules: deployed" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ steps.storage.outputs.deployed }}" = "true" ]; then
             echo "- Storage rules: deployed" >> "$GITHUB_STEP_SUMMARY"
