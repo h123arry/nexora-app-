@@ -15,6 +15,7 @@ import { setPostLike } from './server/postEngagement';
 import { setPublicPostCommentReplyLike } from './server/postCommentReactions';
 import { setCreatorFollowStateForUser, SocialFollowError } from './server/socialFollow';
 import { evaluateProfileIdentityCooldown } from './server/profileIdentityPolicy';
+import { createPublicProfileProjection } from './src/services/firebase/publicProfileProjection';
 import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { isAllowedApiOrigin, parseAllowedApiOrigins } from './server/corsPolicy';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
@@ -210,6 +211,7 @@ app.post('/api/profile/identity', async (req, res) => {
   try {
     const userRef = serverDb.collection('users').doc(uid);
     const publicRef = serverDb.collection('publicProfiles').doc(uid);
+    const settingsRef = userRef.collection('settings').doc('preferences');
     const result = await serverDb.runTransaction(async transaction => {
       const userSnapshot = await transaction.get(userRef);
       if (!userSnapshot.exists) throw Object.assign(new Error('Your profile could not be found. Please sign in again.'), { status: 404, code: 'profile_not_found' });
@@ -258,10 +260,11 @@ app.post('/api/profile/identity', async (req, res) => {
         newClaimRef = serverDb.collection('usernames').doc(nextUsername!);
         oldClaimRef = currentUsername ? serverDb.collection('usernames').doc(currentUsername) : null;
       }
-      const [newClaimSnapshot, oldClaimSnapshot, matchingProfiles] = await Promise.all([
+      const [newClaimSnapshot, oldClaimSnapshot, matchingProfiles, settingsSnapshot] = await Promise.all([
         newClaimRef ? transaction.get(newClaimRef) : Promise.resolve(null),
         oldClaimRef ? transaction.get(oldClaimRef) : Promise.resolve(null),
         changedUsername ? transaction.get(serverDb.collection('publicProfiles').where('username', '==', nextUsername!).limit(1)) : Promise.resolve(null),
+        transaction.get(settingsRef),
       ]);
       if (changedUsername && ((newClaimSnapshot?.exists && newClaimSnapshot.data()?.userId !== uid) || matchingProfiles?.docs.some(profile => profile.id !== uid))) {
         throw Object.assign(new Error('This username is already taken. Please choose another handle.'), { status: 409, code: 'username_taken' });
@@ -271,11 +274,16 @@ app.post('/api/profile/identity', async (req, res) => {
         updates.lastUsernameChangeTime = new Date(now).toISOString();
       }
 
+      const updatedProfile = { ...current, ...updates, id: uid };
+      const locationVisible = settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone';
+      const publicProjection = createPublicProfileProjection(updatedProfile as any, { includeLocation: locationVisible });
       transaction.update(userRef, { ...updates, updatedAt: FieldValue.serverTimestamp() });
       transaction.set(publicRef, {
-        id: uid,
-        ...(changedName ? { name: nextName } : {}),
-        ...(changedUsername ? { username: nextUsername } : {}),
+        ...publicProjection,
+        location: locationVisible && typeof updatedProfile.location === 'string' && updatedProfile.location.trim()
+          ? updatedProfile.location.trim()
+          : FieldValue.delete(),
+        interestDNA: FieldValue.delete(),
       }, { merge: true });
       if (changedUsername && newClaimRef) {
         transaction.set(newClaimRef, {
