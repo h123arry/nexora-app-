@@ -55,6 +55,8 @@ export default function GiftAnimationStage({
       aria-label={giftName}
     >
       <div className="gift-stage__backlight" aria-hidden="true" />
+      <div className="gift-stage__arrival-ring" aria-hidden="true" />
+      <div className="gift-stage__arrival-flash" aria-hidden="true" />
       <div className="gift-stage__orbit gift-stage__orbit--one" aria-hidden="true" />
       <div className="gift-stage__orbit gift-stage__orbit--two" aria-hidden="true" />
       <div className="gift-stage__particles" aria-hidden="true">
@@ -78,6 +80,10 @@ const STAGE_STYLES = `
 .gift-stage--preview{max-width:230px;margin-inline:auto}
 .gift-stage--epic,.gift-stage--legendary{--gift-glow:rgba(245,190,95,.48)}
 .gift-stage__backlight{position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle,var(--gift-glow),transparent 70%);filter:blur(12px);animation:gift-stage-breathe 3.2s ease-in-out infinite}
+.gift-stage__arrival-ring{position:absolute;z-index:2;width:24%;aspect-ratio:1;border:2px solid rgba(220,198,255,.62);border-radius:50%;opacity:0;box-shadow:0 0 28px rgba(155,110,255,.38),inset 0 0 22px rgba(155,110,255,.2);animation:gift-arrival-ring 1.25s cubic-bezier(.16,.72,.24,1) .18s both}
+.gift-stage__arrival-flash{position:absolute;z-index:3;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 52%,rgba(232,216,255,.52),rgba(154,111,255,.16) 22%,transparent 62%);opacity:0;animation:gift-arrival-flash .8s ease-out .12s both}
+.gift-stage--legendary .gift-stage__arrival-ring{border-color:rgba(255,225,157,.8);box-shadow:0 0 44px rgba(255,193,93,.5),inset 0 0 30px rgba(255,218,140,.25)}
+.gift-stage--cinematic .gift-stage__arrival-ring,.gift-stage--legendary .gift-stage__arrival-ring{animation-duration:1.7s}
 .gift-stage__art{position:relative;z-index:4;width:76%;height:76%;object-fit:contain;filter:drop-shadow(0 14px 22px rgba(5,3,20,.45));transform-origin:50% 60%;animation:gift-stage-arrive var(--gift-duration) cubic-bezier(.2,.75,.25,1) both}
 .gift-stage--sparkle{--gift-duration:3.4s}
 .gift-stage--reveal{--gift-duration:4s}
@@ -100,6 +106,8 @@ const STAGE_STYLES = `
 .gift-stage__flight-trail{position:absolute;z-index:1;width:100%;height:28%;left:-110%;top:48%;border-radius:50%;background:linear-gradient(90deg,transparent,rgba(160,120,255,.4),rgba(255,180,120,.18),transparent);filter:blur(12px);transform:rotate(-18deg);animation:gift-flight-trail 5s ease-in-out both}
 .gift-stage__ground-glow{position:absolute;z-index:2;bottom:16%;width:58%;height:9%;border-radius:50%;background:rgba(250,198,113,.28);filter:blur(14px);animation:gift-ground-pulse 1.2s ease-in-out infinite}
 .gift-stage__legendary-flare{position:absolute;z-index:6;inset:8%;border:1px solid rgba(255,220,160,.45);border-radius:50%;box-shadow:0 0 42px rgba(245,190,95,.22),inset 0 0 30px rgba(245,190,95,.12);animation:gift-flare 2.6s ease-in-out infinite}
+@keyframes gift-arrival-ring{0%{opacity:0;transform:scale(.2)}28%{opacity:.95}100%{opacity:0;transform:scale(4.2)}}
+@keyframes gift-arrival-flash{0%{opacity:0}18%{opacity:.9}100%{opacity:0}}
 @keyframes gift-stage-arrive{0%{opacity:0;transform:translateY(44px) scale(.5)}65%{opacity:1;transform:translateY(-8px) scale(1.08)}100%{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes gift-dragon-flight{0%{opacity:0;transform:translate(-110px,48px) rotate(-18deg) scale(.48)}35%{opacity:1;transform:translate(-8px,-18px) rotate(7deg) scale(1.12)}68%{transform:translate(58px,-4px) rotate(-5deg) scale(1.02)}100%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}}
 @keyframes gift-wildlife-step{0%{opacity:0;transform:translateX(-78px) translateY(18px) scale(.76)}18%{opacity:1}32%{transform:translateX(-34px) translateY(-7px) rotate(-3deg) scale(.94)}48%{transform:translateX(4px) translateY(2px) rotate(2deg) scale(1.02)}64%{transform:translateX(34px) translateY(-6px) rotate(-2deg) scale(1.03)}82%{transform:translateX(8px) translateY(0) scale(1)}100%{opacity:1;transform:translateX(0) translateY(0) scale(1)}}
@@ -137,6 +145,9 @@ const STAGE_STYLES = `
 @keyframes gift-dream-float{0%{opacity:0;transform:translateY(38px) scale(.72);filter:blur(4px)}42%{opacity:1;transform:translateY(-10px) scale(1.08);filter:blur(0)}70%{transform:translateY(5px) scale(1.02)}100%{opacity:1;transform:translateY(0) scale(1)}}
 
 .gift-stage[data-reduced-motion="true"] *{animation:none!important;transition:none!important}
+.gift-stage--live .gift-stage__art{filter:drop-shadow(0 18px 28px rgba(5,3,20,.58)) drop-shadow(0 0 16px rgba(154,112,255,.2))}
+.gift-stage--live.gift-stage--legendary{background:radial-gradient(ellipse at 50% 58%,rgba(245,190,95,.2),rgba(109,65,220,.12) 38%,transparent 72%)}
+@media(max-width:480px){.gift-stage--live{width:min(78vw,290px)}.gift-stage__particles i{width:3px;height:3px}}
 .gift-stage[data-paused="true"] *{animation-play-state:paused!important;transition:none!important}
 @media(prefers-reduced-motion:reduce){.gift-stage *{animation:none!important;transition:none!important}}
 `;
