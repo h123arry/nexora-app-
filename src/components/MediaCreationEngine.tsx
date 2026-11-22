@@ -1012,11 +1012,21 @@ export default function MediaCreationEngine({
         recorder!.onerror = () => reject(new Error('The trimmed video could not be encoded.'));
         recorder!.onstop = () => chunks.length ? resolve(new Blob(chunks, { type: recorder!.mimeType || 'video/webm' })) : reject(new Error('The selected section was empty.'));
       });
-      video.pause(); video.currentTime = videoTrimStart;
+      video.pause();
       await new Promise<void>((resolve, reject) => {
-        const onSeek = () => { clearTimeout(timeout); resolve(); };
-        const timeout = window.setTimeout(() => { video.removeEventListener('seeked', onSeek); reject(new Error('Could not seek to the selected start time.')); }, 5000);
+        let settled = false;
+        const finish = (error?: Error) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          video.removeEventListener('seeked', onSeek);
+          if (error) reject(error); else resolve();
+        };
+        const onSeek = () => finish();
+        const timeout = window.setTimeout(() => finish(new Error('Could not seek to the selected start time.')), 5000);
         video.addEventListener('seeked', onSeek, { once: true });
+        video.currentTime = videoTrimStart;
+        if (!video.seeking && Math.abs(video.currentTime - videoTrimStart) < 0.05) finish();
       });
       recorder.start(200); await video.play();
       await new Promise<void>(resolve => {
@@ -1034,7 +1044,7 @@ export default function MediaCreationEngine({
       setVideoCoverBlob(null); setVideoCoverTime(0);
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Video trimmed and ready to publish.' }));
     } catch (error) { setErrorMessage(error instanceof Error ? error.message : 'Video trimming failed.'); }
-    finally { stream?.getTracks().forEach(track => track.stop()); setIsTrimmingVideo(false); }
+    finally { if (recorder && recorder.state !== 'inactive') { try { recorder.stop(); } catch { /* The recorder may already have stopped. */ } } stream?.getTracks().forEach(track => track.stop()); setIsTrimmingVideo(false); }
   };
 
   const captureVideoCover = async () => {
