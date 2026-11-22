@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { subscribeToLiveGiftEvents, type LiveGiftEvent } from '../services/giftDeliveryService';
 import GiftAnimationStage from './GiftAnimationStage';
 import { getGiftAnimationProfile } from '../utils/giftAnimationProfile';
-import { playNexoraSound } from '../services/soundExperience';
+import { playGiftArrivalSound } from '../services/soundExperience';
 
 interface GiftLiveOverlayProps { streamId: string; soundEnabled?: boolean; audioContext?: AudioContext | null; }
 export default function GiftLiveOverlay({ streamId, soundEnabled = false, audioContext = null }: GiftLiveOverlayProps) {
@@ -37,7 +37,8 @@ export default function GiftLiveOverlay({ streamId, soundEnabled = false, audioC
   }, [active]);
   useEffect(() => {
     if (!active || !soundEnabled) return;
-    playNexoraSound(active.rarity === 'legendary' ? 'gift.legendary' : 'gift.arrival');
+    // Play the gift's own sound signature at the start of its live arrival choreography.
+    playGiftArrivalSound(active.giftId, active.rarity);
   }, [active, soundEnabled]);
   if (!active) return null;
   const cinematic = active.animation === 'cinematic' || active.animation === 'legendary';
