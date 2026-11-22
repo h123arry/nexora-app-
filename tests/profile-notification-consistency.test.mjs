@@ -212,7 +212,8 @@ test('profile identity changes are server-authorized, one-time during grace, and
   assert.match(profile, /delete remainingUpdates\.username/);
   assert.match(rules, /function editableProfileKeys\(\)[\s\S]*?'avatar', 'bio'/);
   assert.doesNotMatch(rules.match(/function editableProfileKeys\(\) \{[\s\S]*?\n    \}/)?.[0] || '', /'username'|'name'/);
-  assert.doesNotMatch(rules.match(/match \/users\/\{userId\} \{[\s\S]*?allow update: if owner\(userId\)[\s\S]*?allow delete:/)?.[0] || '', /'username', 'name'/);
+  const privateUserUpdate = rules.match(/match \/users\/\{userId\} \{[\s\S]*?allow update: if owner\(userId\)([\s\S]*?)allow delete:/)?.[1] || '';
+  assert.doesNotMatch(privateUserUpdate, /'username'|'name'/);
   assert.match(editor, /isIdentityChangeGraceAvailable\('displayName', currentUser\)/);
   assert.match(editor, /isIdentityChangeGraceAvailable\('username', currentUser\)/);
 });
