@@ -1277,7 +1277,7 @@ export default function MediaCreationEngine({
       id: `draft-${Date.now()}`,
       caption,
       images: selectedImages.map(img => img.url),
-      imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, filterName, filterStyle })),
+      imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, aspectRatio, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, aspectRatio, filterName, filterStyle })),
       videoUrl: videoFileUrl || recordedVideoUrl || undefined,
       voiceUrl: voiceFileUrl || undefined,
       transcript: voiceTranscript || undefined,
