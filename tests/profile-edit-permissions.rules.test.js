@@ -77,6 +77,19 @@ describe('profile editing Firestore permissions', () => {
     assert.equal(publicSnapshot.get('socialInstagram'), 'https://instagram.com/alice');
   });
 
+  it('does not allow an owner to recreate a public profile with a forged name or username', async () => {
+    await seed(async db => {
+      await setDoc(doc(db, 'users', 'alice'), {
+        id: 'alice', email: 'alice@example.test', username: 'alice', name: 'Alice',
+        avatar: '', bio: '', location: '', website: '', followers: 0, following: 0, sparks: 0
+      });
+    });
+    const db = dbFor('alice');
+    await assertFails(setDoc(doc(db, 'publicProfiles', 'alice'), {
+      id: 'alice', username: 'impersonator', name: 'Not Alice', avatar: '', bio: '',
+      website: '', followers: 0, following: 0, sparks: 0
+    }));
+  });
 
   it('allows the profile editor transaction to persist avatar and cover updates to both profile documents', async () => {
     await seed(async db => {
