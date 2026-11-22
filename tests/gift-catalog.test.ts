@@ -59,3 +59,12 @@ test('NEX is priced at two US cents with bundles starting at 15 units', () => {
   assert.deepEqual(info.bundles.map(bundle => [bundle.units, bundle.priceUsdCents]), [[15,30],[30,60],[50,100],[100,200]]);
   assert.equal(info.checkoutEnabled, false);
 });
+
+
+test('bundled browser fallback exactly mirrors the authoritative 1,100-gift catalogue', () => {
+  const bundled = JSON.parse(readFileSync(new URL('../public/giftverse/catalog.json', import.meta.url), 'utf8'));
+  assert.equal(bundled.version, GIFT_CATALOG_VERSION);
+  assert.equal(bundled.currency, 'NEX');
+  assert.equal(bundled.gifts.length, 1100);
+  assert.deepEqual(bundled.gifts, GIFT_CATALOG);
+});
