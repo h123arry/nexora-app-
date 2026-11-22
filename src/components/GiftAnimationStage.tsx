@@ -47,7 +47,7 @@ export default function GiftAnimationStage({
   return (
     <div
       ref={stageRef}
-      className={['gift-stage', `gift-stage--${profile.category}`, `gift-stage--${animation}`, `gift-stage--${size}`].join(' ')}
+      className={['gift-stage', `gift-stage--${profile.category}`, `gift-stage--${animation}`, `gift-stage--${size}`, `gift-stage--rarity-${rarity}`].join(' ')}
       data-reduced-motion={motionReduced ? 'true' : 'false'}
       data-paused={paused ? 'true' : 'false'}
       data-rarity={rarity}
@@ -78,7 +78,11 @@ const STAGE_STYLES = `
 .gift-stage{--gift-duration:4.2s;--gift-glow:rgba(139,92,246,.38);position:relative;isolation:isolate;display:grid;place-items:center;overflow:hidden;aspect-ratio:1;width:100%;min-width:0;border-radius:24px;background:radial-gradient(ellipse at 50% 58%,rgba(109,65,220,.13),transparent 66%)}
 .gift-stage--live{width:min(72vw,330px);max-height:330px;margin-inline:auto;background:radial-gradient(ellipse at 50% 62%,rgba(109,65,220,.22),transparent 68%)}
 .gift-stage--preview{max-width:230px;margin-inline:auto}
-.gift-stage--epic,.gift-stage--legendary{--gift-glow:rgba(245,190,95,.48)}
+.gift-stage--rarity-epic{--gift-glow:rgba(167,139,250,.52)}
+.gift-stage--rarity-legendary{--gift-glow:rgba(245,190,95,.62)}
+.gift-stage--rarity-epic .gift-stage__particles i{box-shadow:0 0 16px 4px rgba(167,139,250,.72)}
+.gift-stage--rarity-legendary .gift-stage__particles i{width:6px;height:6px;background:#ffe7a8;box-shadow:0 0 20px 6px rgba(255,199,104,.72)}
+.gift-stage--rarity-legendary .gift-stage__arrival-ring{border-color:rgba(255,225,157,.9);box-shadow:0 0 48px rgba(255,193,93,.58),inset 0 0 32px rgba(255,218,140,.28)}
 .gift-stage__backlight{position:absolute;inset:18%;border-radius:50%;background:radial-gradient(circle,var(--gift-glow),transparent 70%);filter:blur(12px);animation:gift-stage-breathe 3.2s ease-in-out infinite}
 .gift-stage__arrival-ring{position:absolute;z-index:2;width:24%;aspect-ratio:1;border:2px solid rgba(220,198,255,.62);border-radius:50%;opacity:0;box-shadow:0 0 28px rgba(155,110,255,.38),inset 0 0 22px rgba(155,110,255,.2);animation:gift-arrival-ring 1.25s cubic-bezier(.16,.72,.24,1) .18s both}
 .gift-stage__arrival-flash{position:absolute;z-index:3;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 52%,rgba(232,216,255,.52),rgba(154,111,255,.16) 22%,transparent 62%);opacity:0;animation:gift-arrival-flash .8s ease-out .12s both}
