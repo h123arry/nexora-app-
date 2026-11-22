@@ -9,6 +9,7 @@ import { trackClientObservation } from '../services/analyticsService';
 
 interface UniversalSearchModalProps {
   isOpen: boolean;
+  initialQuery?: string;
   onClose: () => void;
   currentUser: User;
   posts: Post[];
@@ -24,6 +25,7 @@ function readRecentSearches(userId: string): string[] { try { const saved = loca
 
 export default function UniversalSearchModal({
   isOpen,
+  initialQuery = '',
   onClose,
   currentUser,
   posts,
@@ -34,6 +36,10 @@ export default function UniversalSearchModal({
   onViewProfile,
 }: UniversalSearchModalProps) {
   const [query, setQuery] = useState('');
+  useEffect(() => {
+    if (isOpen) setQuery(initialQuery.trim());
+  }, [isOpen, initialQuery]);
+
   const [recentSearches, setRecentSearches] = useState<string[]>(() => readRecentSearches(currentUser.id));
   const [serverResults, setServerResults] = useState<PublicDirectoryResult | null>(null);
   const [serverSearchLoading, setServerSearchLoading] = useState(false);

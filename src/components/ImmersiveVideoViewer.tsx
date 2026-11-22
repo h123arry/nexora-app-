@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ChevronLeft, ChevronRight, Zap, Trash, Send, MessageSquare } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Zap, Trash, Send, MessageSquare, Search } from 'lucide-react';
+import { getNearestMediaIndex, resolvePreservedMediaIndex } from '../utils/immersiveMediaViewerPolicy';
 import { Post, User } from '../types';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraImagePlayer from './NexoraImagePlayer';
@@ -48,24 +49,33 @@ export default function ImmersiveVideoViewer({
     return list.length > 0 ? list : [initialPost];
   }, [creatorPosts, initialPost]);
 
-  // Initialize strictly with initialPost index
+  // Keep the selected media stable when a parent refreshes or reorders the creator feed.
   const [currentIndex, setCurrentIndex] = useState(() => {
-    if (initialPost?.id) {
-      const startIdx = postsToShow.findIndex(p => p && p.id === initialPost.id);
-      if (startIdx >= 0) return startIdx;
-    }
-    return 0;
+    const startIndex = postsToShow.findIndex(post => post?.id === initialPost?.id);
+    return startIndex >= 0 ? startIndex : 0;
   });
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const activePostIdRef = useRef(initialPost?.id || '');
+  const previousInitialPostIdRef = useRef(initialPost?.id || '');
 
-  // Sync index whenever initialPost ID changes
   useEffect(() => {
-    if (initialPost?.id) {
-      const idx = postsToShow.findIndex(p => p && p.id === initialPost.id);
-      if (idx >= 0) {
-        setCurrentIndex(idx);
-      }
-    }
+    const nextIndex = resolvePreservedMediaIndex(
+      postsToShow,
+      activePostIdRef.current,
+      initialPost?.id || '',
+      previousInitialPostIdRef.current,
+    );
+    previousInitialPostIdRef.current = initialPost?.id || '';
+    activePostIdRef.current = postsToShow[nextIndex]?.id || '';
+    setCurrentIndex(nextIndex);
+    const container = scrollContainerRef.current;
+    if (container) container.scrollTop = nextIndex * container.clientHeight;
   }, [initialPost?.id, postsToShow]);
+
+  useEffect(() => {
+    const activePost = postsToShow[currentIndex];
+    if (activePost?.id) activePostIdRef.current = activePost.id;
+  }, [currentIndex]);
 
   // Listen for post deletions while viewer is open to avoid crashing
   useEffect(() => {
@@ -117,20 +127,23 @@ export default function ImmersiveVideoViewer({
     };
   }, []);
 
-  // Handle wheel scrolling on desktop
-  const wheelTimerRef = useRef<any>(null);
-  const handleWheel = (e: React.WheelEvent) => {
+  const scrollToIndex = (index: number) => {
+    const nextIndex = Math.max(0, Math.min(postsToShow.length - 1, index));
+    const container = scrollContainerRef.current;
+    if (!container || container.clientHeight <= 0) {
+      setCurrentIndex(nextIndex);
+      return;
+    }
+    container.scrollTo({ top: nextIndex * container.clientHeight, behavior: 'smooth' });
+  };
+
+  const handleStageScroll = (event: React.UIEvent<HTMLDivElement>) => {
     if (isCommentsOpen) return;
-    if (wheelTimerRef.current) return;
-    if (Math.abs(e.deltaY) > 25) {
-      wheelTimerRef.current = setTimeout(() => {
-        wheelTimerRef.current = null;
-      }, 350);
-      if (e.deltaY > 0 && currentIndex < postsToShow.length - 1) {
-        handleNext();
-      } else if (e.deltaY < 0 && currentIndex > 0) {
-        handlePrev();
-      }
+    const container = event.currentTarget;
+    const nextIndex = getNearestMediaIndex(container.scrollTop, container.clientHeight, postsToShow.length);
+    if (nextIndex !== currentIndex) {
+      setCurrentIndex(nextIndex);
+      setIsCommentsOpen(false);
     }
   };
 
@@ -139,12 +152,12 @@ export default function ImmersiveVideoViewer({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
         if (currentIndex > 0) {
-          setCurrentIndex(prev => prev - 1);
+          scrollToIndex(currentIndex - 1);
           setIsCommentsOpen(false);
         }
       } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         if (currentIndex < postsToShow.length - 1) {
-          setCurrentIndex(prev => prev + 1);
+          scrollToIndex(currentIndex + 1);
           setIsCommentsOpen(false);
         }
       } else if (e.key === 'Escape') {
@@ -176,7 +189,7 @@ export default function ImmersiveVideoViewer({
   const handleNext = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (currentIndex < postsToShow.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+      scrollToIndex(currentIndex + 1);
       setIsCommentsOpen(false);
     }
   };
@@ -184,44 +197,15 @@ export default function ImmersiveVideoViewer({
   const handlePrev = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+      scrollToIndex(currentIndex - 1);
       setIsCommentsOpen(false);
     }
   };
 
-  const handleLike = async () => {
+  const handleLike = async (postId = currentPost.id) => {
     setIsProcessing(true);
-    await onLikePost(currentPost.id);
+    await onLikePost(postId);
     setIsProcessing(false);
-  };
-
-  // Touch/Swipe Gesture Detection Engine
-  const touchStartY = useRef(0);
-  const touchStartX = useRef(0);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-    touchStartX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const diffY = touchStartY.current - e.changedTouches[0].clientY;
-    const diffX = touchStartX.current - e.changedTouches[0].clientX;
-
-    // Distinguish scrolling up/down or swiping left/right
-    if (Math.abs(diffY) > 50 && Math.abs(diffY) > Math.abs(diffX)) {
-      if (diffY > 0 && currentIndex < postsToShow.length - 1) {
-        handleNext();
-      } else if (diffY < 0 && currentIndex > 0) {
-        handlePrev();
-      }
-    } else if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
-      if (diffX > 0 && currentIndex < postsToShow.length - 1) {
-        handleNext();
-      } else if (diffX < 0 && currentIndex > 0) {
-        handlePrev();
-      }
-    }
   };
 
   // Comment Actions
@@ -247,6 +231,18 @@ export default function ImmersiveVideoViewer({
     setActiveReplyFieldId(null);
   };
 
+
+  const relatedSearchQuery = useMemo(() => {
+    const suggestion = typeof currentPost.searchSuggestion === 'string' ? currentPost.searchSuggestion.trim() : '';
+    if (suggestion) return suggestion.slice(0, 100);
+    const tags = Array.isArray(currentPost.tags) ? currentPost.tags : [];
+    const firstTag = tags.find(tag => typeof tag === 'string' && tag.trim());
+    if (firstTag) return firstTag.replace(/^#/, '').trim().slice(0, 100);
+    const hashtag = currentPost.content?.match(/#[\\w]+/)?.[0];
+    if (hashtag) return hashtag.slice(1);
+    return (currentPost.content || '').replace(/\\s+/g, ' ').trim().slice(0, 100);
+  }, [currentPost.id, currentPost.searchSuggestion, currentPost.tags, currentPost.content]);
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -255,14 +251,22 @@ export default function ImmersiveVideoViewer({
       transition={{ duration: 0.15, ease: "easeOut" }}
       className="nx-reels-viewer fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center overflow-hidden h-[100dvh] w-full select-none"
     >
-      {/* Absolute Exit / Close button in top-right */}
-      <button 
-        onClick={onClose}
-        className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50 p-2.5 bg-black/40 hover:bg-black/80 text-white rounded-full border border-white/10 backdrop-blur-md transition-all shadow-md active:scale-95 cursor-pointer"
-        title="Exit player"
+      {/* Related-content discovery replaces redundant top-right viewer controls. */}
+      <div
+        className="absolute left-4 right-4 z-50 flex justify-center pointer-events-none"
+        style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       >
-        <X className="w-5 h-5" />
-      </button>
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent('openUniversalSearch', { detail: { query: relatedSearchQuery } }))}
+          aria-label="Find related content"
+          className="pointer-events-auto flex h-11 w-full max-w-[560px] items-center gap-3 rounded-full border border-white/12 bg-[#10131d]/82 px-4 text-left text-sm font-medium text-white/90 shadow-lg shadow-black/20 backdrop-blur-xl transition-colors hover:bg-[#171b29]/95 active:scale-[0.99]"
+        >
+          <Search className="h-4 w-4 shrink-0 text-violet-300" />
+          <span className="min-w-0 flex-1 truncate">Find related content</span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-white/45" />
+        </button>
+      </div>
 
       {/* Desktop Floating Navigation Arrows on edges */}
       {currentIndex > 0 && (
@@ -285,93 +289,103 @@ export default function ImmersiveVideoViewer({
         </button>
       )}
 
-      {/* Interactive Edge-to-Edge Fullscreen Player Stage */}
-      <motion.div 
+      {/* Full-screen vertical media pager. Native scroll + mandatory snap prevents half-visible posts. */}
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.18, ease: "easeOut" }}
-        className="w-full h-full bg-black relative flex flex-col justify-center overflow-hidden"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onWheel={handleWheel}
+        className="w-full h-full bg-black relative overflow-hidden"
       >
-        {postsToShow.map((post, idx) => {
-          if (!post.videoUrl) return null;
-          const isCurrent = idx === currentIndex;
-          const isNearby = idx >= currentIndex - 1 && idx <= currentIndex + 3;
-          if (!isNearby) return null;
-          const connection = typeof navigator !== 'undefined'
-            ? (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
-            : undefined;
-          const isSlowConnection = Boolean(connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType || ''));
-          const postVideoIndex = postsToShow.slice(0, idx + 1).filter(item => Boolean(item.videoUrl)).length - 1;
-          const activeVideoIndex = postsToShow.slice(0, currentIndex + 1).filter(item => Boolean(item.videoUrl)).length - 1;
-          const preloadPlan = getVideoPreloadPlan({
-            isVideo: Boolean(post.videoUrl),
-            isActive: isCurrent,
-            postIndex: idx,
-            activePostIndex: currentIndex,
-            postVideoIndex,
-            activeVideoIndex,
-            isSlowConnection,
-          });
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleStageScroll}
+          className="absolute inset-0 h-full w-full overflow-y-auto overscroll-y-contain touch-pan-y"
+          style={{ scrollSnapType: 'y mandatory', scrollSnapStop: 'always', scrollbarWidth: 'none', overscrollBehaviorY: 'contain' }}
+        >
+          {postsToShow.map((post, idx) => {
+            const isCurrent = idx === currentIndex;
+            const isNearby = idx >= currentIndex - 1 && idx <= currentIndex + 3;
+            const isVideo = Boolean(post.videoUrl);
+            const hasImages = Boolean(post.image || post.images?.some(Boolean));
+            const connection = typeof navigator !== 'undefined'
+              ? (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
+              : undefined;
+            const isSlowConnection = Boolean(connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType || ''));
+            const postVideoIndex = postsToShow.slice(0, idx + 1).filter(item => Boolean(item.videoUrl)).length - 1;
+            const activeVideoIndex = postsToShow.slice(0, currentIndex + 1).filter(item => Boolean(item.videoUrl)).length - 1;
+            const preloadPlan = getVideoPreloadPlan({
+              isVideo,
+              isActive: isCurrent,
+              postIndex: idx,
+              activePostIndex: currentIndex,
+              postVideoIndex,
+              activeVideoIndex,
+              isSlowConnection,
+            });
 
-          return (
-            <div 
-              key={post.id} 
-              className="w-full h-full" 
-              style={{ display: isCurrent ? 'block' : 'none' }}
-            >
-              <NexoraVideoPlayer
-                post={post}
-                videoUrl={post.videoUrl}
-                onOpenFullscreen={() => {}}
-                onSpark={handleLike}
-                isProcessing={isProcessing}
-                isActive={isCurrent}
-                preloadMode={preloadPlan.preloadMode}
-                isReleased={preloadPlan.isReleased}
-                shouldPreload={preloadPlan.shouldPreload}
-                isFollowing={followingIds ? followingIds.includes(post.userId || '') : isFollowing}
-                onToggleFollow={onToggleFollow ? () => onToggleFollow(post.userId || post.id) : undefined}
-                onCommentToggle={() => setIsCommentsOpen(!isCommentsOpen)}
-                isCommentsOpen={isCommentsOpen}
-                onNotInterested={handleNext}
-                onViewProfile={(userId) => {
-                  onClose();
-                  window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: userId || post.userId || post.username } }));
-                }}
-              />
-            </div>
-          );
-        })}
-        
-        {!currentPost.videoUrl && (currentPost.image || (currentPost.images && currentPost.images.length > 0)) ? (
-          <div className="w-full h-full">
-            <NexoraImagePlayer
-              post={currentPost}
-              image={currentPost.image}
-              images={currentPost.images}
-              onSpark={handleLike}
-              isProcessing={isProcessing}
-              isFollowing={isFollowing}
-              onToggleFollow={onToggleFollow ? () => onToggleFollow(currentPost.userId || currentPost.id) : undefined}
-              onCommentToggle={() => setIsCommentsOpen(!isCommentsOpen)}
-              isCommentsOpen={isCommentsOpen}
-              onNotInterested={handleNext}
-              onViewProfile={(userId) => {
-                onClose();
-                window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: userId || currentPost.userId || currentPost.username } }));
-              }}
-            />
-          </div>
-        ) : !currentPost.videoUrl ? (
-          <div className="w-full p-6 text-center select-none flex flex-col items-center justify-center h-full">
-            <p className="text-white text-base font-sans leading-relaxed font-bold px-4">{currentPost.content}</p>
-          </div>
-        ) : null}
-
+            return (
+              <section
+                key={post.id}
+                className="relative h-full min-h-full w-full shrink-0 overflow-hidden bg-black"
+                style={{ height: '100%', minHeight: '100%', flex: '0 0 100%', scrollSnapAlign: 'start', scrollSnapStop: 'always' }}
+                aria-label={isVideo ? 'Video post' : hasImages ? 'Photo post' : 'Post'}
+              >
+                {isNearby && isVideo ? (
+                  <NexoraVideoPlayer
+                    post={post}
+                    videoUrl={post.videoUrl}
+                    onOpenFullscreen={() => {}}
+                    onSpark={() => handleLike(post.id)}
+                    isProcessing={isProcessing && isCurrent}
+                    isActive={isCurrent}
+                    preloadMode={preloadPlan.preloadMode}
+                    isReleased={preloadPlan.isReleased}
+                    shouldPreload={preloadPlan.shouldPreload}
+                    isFollowing={followingIds ? followingIds.includes(post.userId || '') : isFollowing}
+                    onToggleFollow={onToggleFollow ? () => onToggleFollow(post.userId || post.id) : undefined}
+                    onCommentToggle={() => setIsCommentsOpen(open => !open)}
+                    isCommentsOpen={isCurrent && isCommentsOpen}
+                    onNotInterested={handleNext}
+                    onViewProfile={(userId) => {
+                      onClose();
+                      window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: userId || post.userId || post.username } }));
+                    }}
+                  />
+                ) : isNearby && hasImages ? (
+                  <div className="h-full w-full">
+                    <NexoraImagePlayer
+                      post={post}
+                      image={post.image}
+                      images={post.images}
+                      onSpark={() => handleLike(post.id)}
+                      isProcessing={isProcessing && isCurrent}
+                      isFollowing={followingIds ? followingIds.includes(post.userId || '') : isFollowing}
+                      onToggleFollow={onToggleFollow ? () => onToggleFollow(post.userId || post.id) : undefined}
+                      onCommentToggle={() => setIsCommentsOpen(open => !open)}
+                      isCommentsOpen={isCurrent && isCommentsOpen}
+                      onNotInterested={handleNext}
+                      onViewProfile={(userId) => {
+                        onClose();
+                        window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: userId || post.userId || post.username } }));
+                      }}
+                      isActive={isCurrent}
+                      shouldPreload={preloadPlan.shouldPreload}
+                      isReleased={preloadPlan.isReleased}
+                      isImmersive
+                    />
+                  </div>
+                ) : isNearby ? (
+                  <div className="flex h-full w-full items-center justify-center px-6 text-center">
+                    <p className="max-w-xl px-4 text-base font-bold leading-relaxed text-white">{post.content}</p>
+                  </div>
+                ) : (
+                  <div className="h-full w-full bg-black" aria-hidden="true" />
+                )}
+              </section>
+            );
+          })}
+        </div>
         {/* THREADED COMMENTS DRAWER ACCORDION OVERLAY */}
         <AnimatePresence>
           {isCommentsOpen && (

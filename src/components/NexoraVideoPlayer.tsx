@@ -1189,16 +1189,8 @@ export default function NexoraVideoPlayer({
               </div>
             )}
 
-             {/* TOP-RIGHT MUTE / UNMUTE BUTTON (Removed duplicate creator info overlay) */}
-             <div className="absolute top-4 right-16 sm:top-6 sm:right-20 z-20">
-               <button 
-                 onClick={(e) => { e.stopPropagation(); handleVolumeToggle(); }}
-                 className="p-2.5 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full text-white border border-white/10 transition-all cursor-pointer shadow-lg active:scale-95"
-                 title={isMuted ? "Unmute sound" : "Mute sound"}
-               >
-                 {isMuted ? <VolumeX className="w-4 h-4 text-pink-400" /> : <Volume2 className="w-4 h-4 text-white" />}
-               </button>
-             </div>
+             {/* Sound remains available through the existing tap-to-unmute and gesture controls.
+                 Keep the top edge reserved for contextual related-content discovery. */}
 
              {/* 3. RIGHT-SIDE ACTION RAIL */}
              <div 
