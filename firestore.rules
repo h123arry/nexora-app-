@@ -192,7 +192,7 @@ service cloud.firestore {
     }
     function editableProfileKeys() {
       return [
-        'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
+        'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
         'skills', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
         'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts'
       ];
@@ -396,13 +396,11 @@ service cloud.firestore {
       allow update: if owner(userId)
         && request.resource.data.id == userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
-          'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong', 'lastUsernameChangeTime', 'lastDisplayNameChangeTime',
+          'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
+          'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
           'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'preferredLanguage',
           'savedCollections', 'updatedAt'
         ])
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastDisplayNameChangeTime']) || (request.resource.data.diff(resource.data).affectedKeys().hasAny(['name']) && request.resource.data.lastDisplayNameChangeTime is string && request.resource.data.lastDisplayNameChangeTime.size() <= 40))
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastUsernameChangeTime']) || (request.resource.data.diff(resource.data).affectedKeys().hasAny(['username']) && request.resource.data.lastUsernameChangeTime is string && request.resource.data.lastUsernameChangeTime.size() <= 40))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['pronouns']) || (request.resource.data.pronouns is string && request.resource.data.pronouns.size() <= 40))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileCategory']) || (request.resource.data.profileCategory is string && request.resource.data.profileCategory.size() <= 80))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['creatorType']) || (request.resource.data.creatorType is string && request.resource.data.creatorType.size() <= 80))
@@ -602,6 +600,9 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if owner(userId)
         && request.resource.data.id == userId
+        && exists(/databases/$(database)/documents/users/$(userId))
+        && request.resource.data.name == get(/databases/$(database)/documents/users/$(userId)).data.name
+        && request.resource.data.username == get(/databases/$(database)/documents/users/$(userId)).data.username
         && request.resource.data.keys().hasOnly(publicProfileKeys())
         && !request.resource.data.keys().hasAny(['interestDNA'])
         && zeroInitialReputation(request.resource.data)

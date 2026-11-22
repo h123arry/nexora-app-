@@ -64,7 +64,8 @@ describe('verification authority rules', () => {
     await assertFails(updateDoc(doc(verifiedBobDb, 'users', 'bob'), { isVerified: true }));
     await assertFails(updateDoc(doc(verifiedBobDb, 'publicProfiles', 'bob'), { isVerified: true }));
 
-    await assertSucceeds(updateDoc(doc(db, 'users', 'alice'), { name: 'Alice Updated' }));
+    await assertFails(updateDoc(doc(db, 'users', 'alice'), { name: 'Alice Updated' }));
+    await assertSucceeds(updateDoc(doc(db, 'users', 'alice'), { bio: 'Updated bio' }));
     await assertSucceeds(getDoc(doc(db, 'identityVerificationApplications', 'alice')));
     await assertFails(getDoc(doc(db, 'identityVerificationApplications', 'bob')));
     await assertFails(getDoc(doc(db, 'identityVerificationPrivateSignals', 'alice')));
@@ -76,6 +77,7 @@ describe('verification authority rules', () => {
     await assertFails(updateDoc(doc(db, 'verifiedIdentities', 'alice'), { status: 'revoked' }));
     await assertSucceeds(getDoc(doc(db, 'verifiedIdentities', 'alice')));
     await assertFails(getDoc(doc(db, 'verifiedIdentities', 'charlie')));
-    await assertSucceeds(updateDoc(doc(db, 'publicProfiles', 'alice'), { name: 'Alice Updated' }));
+    await assertFails(updateDoc(doc(db, 'publicProfiles', 'alice'), { name: 'Alice Updated' }));
+    await assertSucceeds(updateDoc(doc(db, 'publicProfiles', 'alice'), { bio: 'Updated bio' }));
   });
 });

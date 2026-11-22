@@ -2217,30 +2217,31 @@ export default function App() {
     const ownerId = firebaseUser.uid;
     // Do not report success or update the visible profile until Firestore and
     // its public projection have both accepted the authenticated profile edit.
-    await ProfileService.updateProfile(ownerId, updatedData);
-    const freshUser = { ...currentUser, ...updatedData };
+    const serverIdentity = await ProfileService.updateProfile(ownerId, updatedData);
+    const appliedUpdates = { ...updatedData, ...serverIdentity };
+    const freshUser = { ...currentUser, ...appliedUpdates };
 
     void import('./services/voh/profileEngine').then(({ ProfileEngine }) => {
       ProfileEngine.invalidateProfile(freshUser.id);
     }).catch(error => console.warn('Unable to invalidate profile cache.', error));
 
-    setCurrentUser(prev => ({ ...prev, ...updatedData }));
+    setCurrentUser(prev => ({ ...prev, ...appliedUpdates }));
     setGlobalUsersMap(prevMap => ({ ...prevMap, [freshUser.id]: freshUser }));
     setPosts(prevPosts => prevPosts.map(post => {
       let newPost = { ...post };
       if (post.userId === ownerId) {
-        if (updatedData.name !== undefined) newPost.name = updatedData.name;
-        if (updatedData.username !== undefined) newPost.username = updatedData.username;
-        if (updatedData.avatar !== undefined) newPost.avatar = updatedData.avatar;
-        if (updatedData.isVerified !== undefined) newPost.isVerified = updatedData.isVerified;
+        if (appliedUpdates.name !== undefined) newPost.name = appliedUpdates.name;
+        if (appliedUpdates.username !== undefined) newPost.username = appliedUpdates.username;
+        if (appliedUpdates.avatar !== undefined) newPost.avatar = appliedUpdates.avatar;
+        if (appliedUpdates.isVerified !== undefined) newPost.isVerified = appliedUpdates.isVerified;
       }
       if (post.comments?.length) {
         newPost.comments = post.comments.map(comment => {
           if (comment.userId !== ownerId) return comment;
           const nextComment = { ...comment };
-          if (updatedData.name !== undefined) nextComment.name = updatedData.name;
-          if (updatedData.username !== undefined) nextComment.username = updatedData.username;
-          if (updatedData.avatar !== undefined) nextComment.avatar = updatedData.avatar;
+          if (appliedUpdates.name !== undefined) nextComment.name = appliedUpdates.name;
+          if (appliedUpdates.username !== undefined) nextComment.username = appliedUpdates.username;
+          if (appliedUpdates.avatar !== undefined) nextComment.avatar = appliedUpdates.avatar;
           return nextComment;
         });
       }

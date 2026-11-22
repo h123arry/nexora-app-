@@ -411,7 +411,7 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(unverifiedDbFor('unverified'), 'users', 'unverified'), {
       ...ownPrivate, id: 'unverified', email: 'unverified@example.test', isVerified: true
     }));
-    await assertSucceeds(setDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), publicProfile('alice')));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { ...publicProfile('alice'), name: 'Alice' }));
     await assertFails(setDoc(doc(dbFor('bob'), 'users', 'bob'), { ...ownPrivate, id: 'bob', email: 'alice@example.test' }));
     await assertFails(setDoc(doc(dbFor('bob'), 'users', 'bob'), { ...ownPrivate, id: 'bob', email: 'bob@example.test', role: 'admin' }));
     await assertFails(setDoc(doc(dbFor('bob'), 'publicProfiles', 'bob'), { ...publicProfile('bob'), email: 'bob@example.test' }));
@@ -421,6 +421,9 @@ const publicProfile = (uid) => ({
   it('rejects client-assigned public verification, reputation, and initial engagement metrics', async () => {
     const unverifiedDb = unverifiedDbFor('unverified');
     const unverifiedProfile = publicProfile('unverified');
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'users', 'unverified'), profile('unverified'));
+    });
     await assertSucceeds(setDoc(doc(unverifiedDb, 'publicProfiles', 'unverified'), unverifiedProfile));
     await assertFails(setDoc(doc(unverifiedDb, 'publicProfiles', 'forged-badge'), {
       ...publicProfile('forged-badge'), id: 'forged-badge', isVerified: true
@@ -449,11 +452,11 @@ const publicProfile = (uid) => ({
 
   it('prevents profile owners from forging follower and following totals after creation', async () => {
     const alice = dbFor('alice');
+    await seed(async adminDb => setDoc(doc(adminDb, 'users', 'alice'), {
+      id: 'alice', username: 'alice', name: 'alice', followers: 0, following: 0
+    }));
     await assertSucceeds(setDoc(doc(alice, 'publicProfiles', 'alice'), publicProfile('alice')));
     await assertFails(updateDoc(doc(alice, 'publicProfiles', 'alice'), { followers: 900000 }));
-    await seed(async adminDb => setDoc(doc(adminDb, 'users', 'alice'), {
-      id: 'alice', username: 'alice', name: 'Alice', followers: 0, following: 0
-    }));
     await assertFails(updateDoc(doc(alice, 'users', 'alice'), { following: 900000 }));
   });
 

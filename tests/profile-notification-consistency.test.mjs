@@ -111,28 +111,35 @@ test('public profile signup offers both username/password and email/password pat
   assert.match(authService, /sendEmailVerification\(fbUser\)/);
 });
 
-test('profile edits persist the private profile and update its public projection', async () => {
+test('profile edits persist non-identity fields while identity changes use the server endpoint', async () => {
   const profile = await read('../src/services/firebase/profileService.ts');
   assert.match(profile, /await runTransaction\(db, async transaction =>/);
-  assert.match(profile, /transaction.update\(privateProfileRef, \{ \.\.\.committedUpdates, updatedAt: serverTimestamp\(\) \}\)/);
-  assert.match(profile, /assertIdentityChangeAllowed\(existingUser, updates\)/);
-  assert.match(profile, /committedUpdates\.lastDisplayNameChangeTime = identityChangedAt/);
-  assert.match(profile, /committedUpdates\.lastUsernameChangeTime = identityChangedAt/);
+  assert.match(profile, /transaction.update\(privateProfileRef, \{ \.\.\.remainingUpdates, updatedAt: serverTimestamp\(\) \}\)/);
+  assert.match(profile, /fetch\(apiRequestUrl\('\/api\/profile\/identity'\)/);
+  assert.match(profile, /delete remainingUpdates\.name/);
+  assert.match(profile, /delete remainingUpdates\.username/);
+  assert.doesNotMatch(profile, /assertIdentityChangeAllowed/);
   assert.match(profile, /transaction.set\(publicProfileRef/);
   assert.match(profile, /doc\(db, 'publicProfiles', uid\)/);
 });
 
 
-test('profile identity grace lets everyone make one change today, then applies 7-day and 30-day cooldowns', async () => {
-  const [profile, editor] = await Promise.all([
-    read('../src/services/firebase/profileService.ts'),
+test('profile identity grace is one-time per field and then applies 7-day and 30-day cooldowns', async () => {
+  const [policy, server, editor] = await Promise.all([
+    read('../server/profileIdentityPolicy.ts'),
+    read('../server.ts'),
     read('../src/components/ProfileView.tsx'),
   ]);
-  assert.match(profile, /2026-11-22T23:00:00\.000Z/);
-  assert.match(profile, /DISPLAY_NAME_CHANGE_COOLDOWN_MS = 7 \* 24 \* 60 \* 60 \* 1000/);
-  assert.match(profile, /USERNAME_CHANGE_COOLDOWN_MS = 30 \* 24 \* 60 \* 60 \* 1000/);
-  assert.match(profile, /if \(now < PROFILE_IDENTITY_CHANGE_GRACE_END\) return/);
-  assert.match(editor, /ProfileService\.isIdentityChangeGraceActive\(\)/);
+  assert.match(policy, /2026-11-21T23:00:00\.000Z/);
+  assert.match(policy, /2026-11-22T23:00:00\.000Z/);
+  assert.match(policy, /changedDuringGraceWindow/);
+  assert.match(policy, /graceAvailable/);
+  assert.match(server, /7 \* 86_400_000/);
+  assert.match(server, /30 \* 86_400_000/);
+  assert.match(server, /displayNameGraceUsedAt/);
+  assert.match(server, /usernameGraceUsedAt/);
+  assert.match(editor, /ProfileService\.isIdentityChangeGraceAvailable\('displayName', currentUser\)/);
+  assert.match(editor, /ProfileService\.isIdentityChangeGraceAvailable\('username', currentUser\)/);
   assert.match(editor, /One-time update available today/);
 });
 
@@ -189,4 +196,31 @@ test('Spark and Follow actions use authenticated transactional NEXORA APIs', asy
   assert.match(server, /app\.post\('\/api\/social\/follow-state'/);
   assert.match(server, /setCreatorFollowStateForUser/);
   assert.match(server, /setPostLike/);
+});
+
+
+test('profile identity changes are server-authorized, one-time during grace, and cooldown protected', async () => {
+  const [server, profile, rules, editor] = await Promise.all([
+    read('../server.ts'),
+    read('../src/services/firebase/profileService.ts'),
+    read('../firestore.rules'),
+    read('../src/components/ProfileView.tsx'),
+  ]);
+  assert.match(server, /app\.post\('\/api\/profile\/identity'/);
+  assert.match(server, /requireFirebaseUser, identityChangeHttpLimiter/);
+  assert.match(server, /transaction\.update\(userRef, \{ \.\.\.updates/);
+  assert.match(server, /displayNameGraceUsedAt/);
+  assert.match(server, /usernameGraceUsedAt/);
+  assert.match(server, /7 \* 86_400_000/);
+  assert.match(server, /30 \* 86_400_000/);
+  assert.match(server, /transaction\.delete\(oldClaimRef\)/);
+  assert.match(profile, /fetch\(apiRequestUrl\('\/api\/profile\/identity'\)/);
+  assert.match(profile, /delete remainingUpdates\.name/);
+  assert.match(profile, /delete remainingUpdates\.username/);
+  assert.match(rules, /function editableProfileKeys\(\)[\s\S]*?'avatar', 'bio'/);
+  assert.doesNotMatch(rules.match(/function editableProfileKeys\(\) \{[\s\S]*?\n    \}/)?.[0] || '', /'username'|'name'/);
+  const privateUserUpdate = rules.match(/match \/users\/\{userId\} \{[\s\S]*?allow update: if owner\(userId\)([\s\S]*?)allow delete:/)?.[1] || '';
+  assert.doesNotMatch(privateUserUpdate, /'username'|'name'/);
+  assert.match(editor, /isIdentityChangeGraceAvailable\('displayName', currentUser\)/);
+  assert.match(editor, /isIdentityChangeGraceAvailable\('username', currentUser\)/);
 });
