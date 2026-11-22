@@ -89,7 +89,7 @@ export const grantEarlyCommunityRecognition = onCall({ maxInstances: 2 }, async 
       return null;
     }
   }));
-  const recipients = eligibleUsers.filter((userId): userId is string => Boolean(userId));
+  const recipients = eligibleUsers.filter((userId): userId is (typeof EARLY_COMMUNITY_MEMBER_UIDS)[number] => userId !== null);
   const now = FieldValue.serverTimestamp();
 
   for (const userId of recipients) {
