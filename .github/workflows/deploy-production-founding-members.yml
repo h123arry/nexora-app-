@@ -116,13 +116,41 @@ jobs:
             "$NEXORA_PRODUCTION_PROJECT_ID" "$FIRESTORE_DATABASE_ID" "$FIREBASE_STORAGE_BUCKET" \
             > "functions/.env.$NEXORA_PRODUCTION_PROJECT_ID"
 
-      - name: Deploy reviewed Firestore rules and indexes
+      - name: Deploy reviewed Firestore security rules
         run: |
           npx --yes firebase-tools@15.33.0 deploy \
-            --only firestore:rules,firestore:indexes \
+            --only firestore:rules \
             --config firebase.json \
             --project "$NEXORA_PRODUCTION_PROJECT_ID" \
             --non-interactive
+
+      - name: Deploy Firestore indexes only when the index manifest changes
+        id: indexes
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          deploy_indexes() {
+            npx --yes firebase-tools@15.33.0 deploy \
+              --only firestore:indexes \
+              --config firebase.json \
+              --project "$NEXORA_PRODUCTION_PROJECT_ID" \
+              --non-interactive
+            echo "deployed=true" >> "$GITHUB_OUTPUT"
+          }
+
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            deploy_indexes
+          elif [[ ! "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]] || [[ "$BASE_SHA" =~ ^0+$ ]]; then
+            echo "::notice::No usable previous commit was supplied; deploying indexes conservatively."
+            deploy_indexes
+          elif ! git diff --quiet "$BASE_SHA" "$GITHUB_SHA" -- firestore.indexes.json; then
+            deploy_indexes
+          else
+            echo "No Firestore index manifest changes detected; skipping unchanged indexes."
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Deploy reviewed Firebase Functions only when their source changes
         id: functions
@@ -182,6 +210,11 @@ jobs:
             echo "- Firebase Functions: unchanged; deployment correctly skipped" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "- Firestore rules: deployed" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.indexes.outputs.deployed }}" = "true" ]; then
+            echo "- Firestore indexes: deployed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Firestore indexes: unchanged; deployment correctly skipped" >> "$GITHUB_STEP_SUMMARY"
+          fi
           if [ "${{ steps.storage.outputs.deployed }}" = "true" ]; then
             echo "- Storage rules: deployed" >> "$GITHUB_STEP_SUMMARY"
           else
