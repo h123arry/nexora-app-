@@ -27,6 +27,18 @@ interface FirebaseContextType {
   logout: () => Promise<void>;
 }
 
+/** Keep infrastructure diagnostics out of account-facing UI. Detailed codes stay in restricted logs. */
+function getProfileSyncMessage(error: unknown): string {
+  const code = String((error as { code?: string } | null)?.code || '').toLowerCase();
+  if (code.includes('resource-exhausted') || code.includes('quota-exceeded')) {
+    return 'NEXORA is temporarily unable to sync your profile. Your account and sign-in are safe. Please try again later.';
+  }
+  if (code === 'unavailable' || code.endsWith('/unavailable') || code.includes('network')) {
+    return 'Your profile could not sync because the service is temporarily unavailable. Your sign-in is safe. Please try again shortly.';
+  }
+  return 'NEXORA could not sync your profile right now. Your account and sign-in are safe. Please try again later.';
+}
+
 const FirebaseContext = createContext<FirebaseContextType>({
   firebaseUser: null,
   user: null,
@@ -90,7 +102,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch (authError) {
         const code = (authError as { code?: string } | null)?.code || 'unknown';
         console.error('[NEXORA] Auth-state profile hydration failed', { code, uid: fbUser.uid });
-        if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setError(`Unable to load your account profile (${code}). Your sign-in is preserved; retry profile loading when the connection is available.`);
+        if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setError(getProfileSyncMessage(authError));
       } finally {
         if (currentSequence === sequence) { setInitializing(false); inFlightHydration = null; }
       }
@@ -277,7 +289,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const source = err as { code?: string; message?: string } | null;
       const code = source?.code || 'profile-setup-failed';
       const message = source?.message || 'NEXORA could not synchronize your account profile.';
-      setError(`${message} (${code})`);
+      setError(getProfileSyncMessage(err));
       throw err;
     } finally {
       setInitializing(false);
