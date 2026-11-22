@@ -145,7 +145,12 @@ test('email signup upgrades an anonymous account without changing its Firebase U
         const oldClaimRef = currentUsername ? adminDb.collection('usernames').doc(currentUsername) : null;
         const oldClaimSnapshot = oldClaimRef ? await transaction.get(oldClaimRef) : null;
         transaction.update(userRef, { ...updates, updatedAt: FieldValue.serverTimestamp() });
-        transaction.set(publicRef, updates, { merge: true });
+        const publicUpdates = { ...updates };
+        delete publicUpdates.lastDisplayNameChangeTime;
+        delete publicUpdates.lastUsernameChangeTime;
+        delete publicUpdates.displayNameGraceUsedAt;
+        delete publicUpdates.usernameGraceUsedAt;
+        transaction.set(publicRef, publicUpdates, { merge: true });
         if (oldClaimRef && oldClaimSnapshot?.exists && oldClaimSnapshot.data()?.userId === originalUid) transaction.delete(oldClaimRef);
       });
       return { ok: true, json: async () => ({ identity: updates }) } as Response;
