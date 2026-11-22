@@ -15,6 +15,10 @@ const {
   signOut,
 } = await import('firebase/auth');
 const { ProfileService } = await import('../src/services/firebase/profileService.ts');
+const { initializeApp, deleteApp } = await import('firebase-admin/app');
+const { getFirestore, FieldValue } = await import('firebase-admin/firestore');
+const adminApp = initializeApp({ projectId: 'demo-nexora-auth' }, 'nexora-auth-profile-identity');
+const adminDb = getFirestore(adminApp);
 
 const email = `nexora-auth-${Date.now()}@example.test`;
 const password = 'Nexora-Test-Password-42!';
@@ -117,12 +121,48 @@ test('email signup upgrades an anonymous account without changing its Firebase U
   await ProfileService.getOrCreateProfile(anonymous.user);
 
   const upgradeEmail = `nexora-upgrade-${Date.now()}@example.test`;
-  const upgraded = await AuthService.registerWithEmail(
-    upgradeEmail,
-    password,
-    'Upgraded NEXORA Member',
-    'upgraded_member',
-  );
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).includes('/api/profile/identity')) {
+      const identity = JSON.parse(String(init?.body || '{}')) as { name?: string; username?: string };
+      const userRef = adminDb.collection('users').doc(originalUid);
+      const publicRef = adminDb.collection('publicProfiles').doc(originalUid);
+      const userSnapshot = await userRef.get();
+      const currentUsername = String(userSnapshot.get('username') || '');
+      const now = new Date().toISOString();
+      const updates: Record<string, string> = {};
+      if (identity.name !== undefined && identity.name !== userSnapshot.get('name')) {
+        updates.name = identity.name;
+        updates.lastDisplayNameChangeTime = now;
+        updates.displayNameGraceUsedAt = now;
+      }
+      if (identity.username !== undefined && identity.username !== currentUsername) {
+        updates.username = identity.username;
+        updates.lastUsernameChangeTime = now;
+        updates.usernameGraceUsedAt = now;
+      }
+      await adminDb.runTransaction(async transaction => {
+        const oldClaimRef = currentUsername ? adminDb.collection('usernames').doc(currentUsername) : null;
+        const oldClaimSnapshot = oldClaimRef ? await transaction.get(oldClaimRef) : null;
+        transaction.update(userRef, { ...updates, updatedAt: FieldValue.serverTimestamp() });
+        transaction.set(publicRef, updates, { merge: true });
+        if (oldClaimRef && oldClaimSnapshot?.exists && oldClaimSnapshot.data()?.userId === originalUid) transaction.delete(oldClaimRef);
+      });
+      return { ok: true, json: async () => ({ identity: updates }) } as Response;
+    }
+    return originalFetch(input, init);
+  }) as typeof fetch;
+  let upgraded;
+  try {
+    upgraded = await AuthService.registerWithEmail(
+      upgradeEmail,
+      password,
+      'Upgraded NEXORA Member',
+      'upgraded_member',
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 
   assert.equal(upgraded.firebaseUser.uid, originalUid);
   assert.equal(upgraded.user.id, originalUid);
@@ -233,4 +273,5 @@ test('profile media and creator details survive a fresh authenticated session', 
 
 after(async () => {
   await cleanUp();
+  await deleteApp(adminApp).catch(() => undefined);
 });
