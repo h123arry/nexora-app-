@@ -1367,6 +1367,18 @@ export default function ProfileView({
     }
   };
 
+  const markProfileFieldEdited = (fieldKey: string) => {
+    setSavedProfileFields(previous => { const next = new Set(previous); next.delete(fieldKey); return next; });
+  };
+
+  const profileFieldSaveAction = (fieldKey: string, onSave: () => Promise<boolean>, changed: boolean) => (
+    <button type="button" onClick={() => void onSave()}
+      disabled={!changed || isSavingProfile || savingProfileFields.has(fieldKey) || showSavedFeedback}
+      className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-violet-400/20 bg-violet-500/10 px-2.5 text-[11px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-45">
+      {savingProfileFields.has(fieldKey) ? 'Saving…' : savedProfileFields.has(fieldKey) ? <><Check className="h-3.5 w-3.5" /> Saved</> : <><Check className="h-3.5 w-3.5" /> Save</>}
+    </button>
+  );
+
   const handleCoverPhotoSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
     const input = event.currentTarget;
     const file = input.files?.[0];
@@ -3601,15 +3613,15 @@ export default function ProfileView({
                   <ArrowLeft className="h-4 w-4" /> Cancel
                 </button>
                 <h2 className="text-base font-bold text-white">Edit profile</h2>
-                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile || isSavingCoverPhoto || savingProfileFields.size > 0 ? 'Saving…' : savedProfileFields.size > 0 ? 'Saved' : 'Auto-save on edit'}</span>
+                <span className="px-2 text-xs font-semibold text-violet-300" aria-live="polite">{isSavingProfile || isSavingCoverPhoto || savingProfileFields.size > 0 ? 'Saving…' : savedProfileFields.size > 0 ? 'Saved' : 'Unsaved changes'}</span>
               </header>
 
-              <div className="flex min-h-0 flex-1 flex-col justify-center gap-3 py-3">
+              <div className="flex min-h-0 flex-1 flex-col justify-start gap-3 overflow-y-auto overscroll-contain py-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#120E2B] p-2.5">
                     <img src={editAvatar} alt="Profile photo" className="h-20 w-20 shrink-0 rounded-full border border-white/10 object-cover" />
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-white">Profile photo</p>
+                      <p className="text-xs font-semibold text-white">Profile photo</p><p className="mt-1 text-[10px] text-zinc-500">Choose or take a photo, crop it, then tap Upload &amp; Save Photo.</p>
                       <button type="button" disabled={isSavingProfile || showSavedFeedback}
                         onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
                         className="mt-1 text-xs font-semibold text-violet-300 hover:text-violet-200">Change photo</button>
@@ -3621,13 +3633,13 @@ export default function ProfileView({
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-white">Cover photo</p>
-                      <p className="mt-0.5 text-[10px] text-zinc-400">JPG, PNG or WebP · up to 8 MB. Optimised automatically before upload.</p>
+                      <p className="mt-0.5 text-[10px] text-zinc-400">Choose a photo, preview it, then tap Save cover photo.</p>
                       <button type="button" disabled={isSavingCoverPhoto || savingProfileFields.has('coverImage') || showSavedFeedback}
                         onClick={() => coverInputRef.current?.click()}
                         className="mt-1 text-xs font-semibold text-violet-300">{pendingCoverFile ? 'Choose another' : editCover ? 'Change photo' : 'Add photo'}</button>
                       {pendingCoverFile && <div className="mt-1 flex items-center gap-2">
                         {isSavingCoverPhoto && <span className="text-[10px] text-violet-300" aria-live="polite">Preparing and uploading…</span>}
-                        <button type="button" aria-label="Confirm cover photo" disabled={isSavingCoverPhoto} onClick={() => void handleSaveCoverPhoto()} className="rounded-full bg-violet-600 p-1.5 text-white disabled:opacity-50"><Check className="h-3.5 w-3.5" /></button>
+                        <button type="button" aria-label="Save cover photo" disabled={isSavingCoverPhoto} onClick={() => void handleSaveCoverPhoto()} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-violet-600 px-3 text-[11px] font-bold text-white hover:bg-violet-500 disabled:opacity-50"><Check className="h-3.5 w-3.5" /> {isSavingCoverPhoto ? "Uploading…" : "Save cover photo"}</button>
                         <button type="button" aria-label="Cancel cover photo" disabled={isSavingCoverPhoto} onClick={() => { setPendingCoverFile(null); setPendingCoverPreview(null); }} className="rounded-full border border-white/15 p-1.5 text-zinc-300"><X className="h-3.5 w-3.5" /></button>
                       </div>}
                       {!pendingCoverFile && editCover && <button type="button" disabled={isSavingCoverPhoto || savingProfileFields.has('coverImage') || showSavedFeedback} onClick={async () => { if (await saveProfileField({ coverImage: '' })) setEditCover(''); }}
@@ -3640,63 +3652,74 @@ export default function ProfileView({
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
                   <label className="min-w-0 text-xs text-zinc-300">Name
                     <span className="mt-0.5 block text-[10px] text-zinc-500">Display name can be changed once every 7 days.</span>
-                    <input value={editName} onChange={e => setEditName(e.target.value)} onBlur={() => void saveProfileField({ name: editName })} maxLength={80} disabled={isSavingProfile || savingProfileFields.has('name') || showSavedFeedback}
+                    <input value={editName} onChange={e => setEditName(e.target.value)} maxLength={80} disabled={isSavingProfile || savingProfileFields.has('name') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-50" placeholder="Your name" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Username
                     <span className="mt-0.5 block text-[10px] text-zinc-500">Username can be changed once every 30 days.</span>
                     <div className="mt-1 flex h-10 items-center rounded-xl border border-white/10 bg-[#120E2B] px-3 focus-within:border-violet-500">
                       <span className="text-violet-300">@</span>
-                      <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} onBlur={() => void saveProfileField({ username: editUsername })} maxLength={30} disabled={isSavingProfile || savingProfileFields.has('username') || showSavedFeedback}
+                      <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} maxLength={30} disabled={isSavingProfile || savingProfileFields.has('username') || showSavedFeedback}
                         className="min-w-0 w-full bg-transparent pl-1 text-sm text-white outline-none disabled:opacity-50" placeholder="username" />
                     </div>
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Website
-                    <input value={editWebsite} onChange={e => setEditWebsite(e.target.value)} onBlur={() => void saveProfileField({ website: editWebsite })} disabled={isSavingProfile || savingProfileFields.has('website') || showSavedFeedback}
+                    <input value={editWebsite} onChange={e => setEditWebsite(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('website') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="yourwebsite.com" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Location
-                    <input value={editLocation} onChange={e => setEditLocation(e.target.value)} onBlur={() => void saveProfileField({ location: editLocation })} disabled={isSavingProfile || savingProfileFields.has('location') || showSavedFeedback}
+                    <input value={editLocation} onChange={e => setEditLocation(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('location') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="City, country" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Pronouns
-                    <input value={editPronouns} onChange={e => setEditPronouns(e.target.value)} onBlur={() => void saveProfileField({ pronouns: editPronouns.trim() })} disabled={isSavingProfile || savingProfileFields.has('pronouns') || showSavedFeedback}
+                    <input value={editPronouns} onChange={e => setEditPronouns(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('pronouns') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="Optional" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Profile type
-                    <select value={editCategory} onChange={e => setEditCategory(e.target.value)} onBlur={() => void saveProfileField({ profileCategory: editCategory })} disabled={isSavingProfile || savingProfileFields.has('profileCategory') || showSavedFeedback}
+                    <select value={editCategory} onChange={e => setEditCategory(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('profileCategory') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
                       <option value="Digital Creator">Digital creator</option><option value="Founder Mindset">Founder</option><option value="Community Leader">Community leader</option><option value="Technical Support">Technical support</option>
                     </select>
                   </label>
-                  <label className="col-span-2 min-w-0 text-xs text-zinc-300">Bio
-                    <span className="mt-0.5 block text-[10px] text-zinc-500">Up to 160 characters. No change cooldown. Saves automatically when you leave the field.</span>
-                    <textarea value={editBio} onChange={e => setEditBio(e.target.value)} onBlur={() => void saveProfileField({ bio: editBio })} maxLength={160} rows={2} disabled={isSavingProfile || savingProfileFields.has('bio') || showSavedFeedback}
-                      className="mt-1 block w-full resize-none rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2 text-sm text-white outline-none focus:border-violet-500" placeholder="Tell people a little about yourself." />
-                  </label>
-                  <div className="col-span-2 flex items-center justify-between text-[11px] text-zinc-500">
-                    <span>{editBio.length}/160 characters</span>
-                    <span>{savingProfileFields.has('bio') ? 'Saving bio…' : savedProfileFields.has('bio') ? 'Bio saved' : 'Saved automatically on blur'}</span>
+                  <div className="col-span-2 min-w-0 text-xs text-zinc-300">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <label htmlFor="nexora-edit-bio">Bio</label>
+                      {profileFieldSaveAction('bio', () => saveProfileField({ bio: editBio }), editBio !== (currentUser.bio || ''))}
+                    </div>
+                    <p className="mb-1 text-[10px] text-zinc-500">Up to 160 characters. Tap Save when you're finished.</p>
+                    <textarea id="nexora-edit-bio" value={editBio} onChange={e => { setEditBio(e.target.value); markProfileFieldEdited('bio'); }} maxLength={160} rows={3} disabled={isSavingProfile || savingProfileFields.has('bio') || showSavedFeedback}
+                      className="block w-full resize-none rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2 text-sm text-white outline-none focus:border-violet-500" placeholder="Tell people a little about yourself." />
+                    <div className="mt-1 flex items-center justify-between text-[10px] text-zinc-500">
+                      <span>{editBio.length}/160 characters</span>
+                      <span>{savingProfileFields.has('bio') ? 'Saving bio…' : savedProfileFields.has('bio') ? 'Bio saved' : editBio !== (currentUser.bio || '') ? 'Tap Save to publish your bio' : 'Your bio is up to date'}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <label className="min-w-0 text-xs text-zinc-300">Creator type
-                    <select value={editCreatorType} onChange={e => setEditCreatorType(e.target.value)} onBlur={() => void saveProfileField({ creatorType: editCreatorType })} disabled={isSavingProfile || savingProfileFields.has('creatorType') || showSavedFeedback}
+                    <select value={editCreatorType} onChange={e => setEditCreatorType(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('creatorType') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
                       <option value="Premium creator">Premium</option><option value="Creator">Creator</option><option value="Collaborator">Collaborator</option>
                     </select>
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">X profile
-                    <input value={editSocialTwitter} onChange={e => setEditSocialTwitter(e.target.value)} onBlur={() => void saveProfileField({ socialTwitter: editSocialTwitter.trim() })} disabled={isSavingProfile || savingProfileFields.has('socialTwitter') || showSavedFeedback}
+                    <input value={editSocialTwitter} onChange={e => setEditSocialTwitter(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('socialTwitter') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
                   </label>
                   <label className="col-span-2 min-w-0 text-xs text-zinc-300">Instagram
-                    <input value={editSocialInsta} onChange={e => setEditSocialInsta(e.target.value)} onBlur={() => void saveProfileField({ socialInstagram: editSocialInsta.trim() })} disabled={isSavingProfile || savingProfileFields.has('socialInstagram') || showSavedFeedback}
+                    <input value={editSocialInsta} onChange={e => setEditSocialInsta(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('socialInstagram') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
                   </label>
                 </div>
               </div>
-              <p className="shrink-0 pb-1 text-center text-[10px] text-zinc-500">Your changes save automatically when you finish editing each field.</p>
+              <div className="shrink-0 flex items-center justify-between gap-3 border-t border-white/10 pt-3 pb-1">
+                <p className="min-w-0 text-[10px] text-zinc-500">Save your profile details when you're finished. Photos have their own Save actions.</p>
+                <button type="button" onClick={() => void handleSaveProfile()}
+                  disabled={!hasUnsavedProfileChanges || isSavingProfile || isSavingCoverPhoto || !!pendingCoverFile || savingProfileFields.size > 0 || showSavedFeedback}
+                  className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white shadow-[0_6px_20px_rgba(113,56,255,0.22)] transition-colors hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-45">
+                  <Check className="h-4 w-4" /> {isSavingProfile ? 'Saving…' : showSavedFeedback ? 'Saved' : 'Save profile'}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -3750,10 +3773,21 @@ export default function ProfileView({
                   </button>
 
                   <button
-                    onClick={() => {
-                      setEditAvatar(getDefaultAvatar(editName || editUsername));
-                      setIsAvatarModalOpen(false);
-                      window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Profile photo removed.' }));
+                    onClick={async () => {
+                      if (isSavingProfile) return;
+                      setIsSavingProfile(true);
+                      try {
+                        const fallbackAvatar = getDefaultAvatar(editName || editUsername);
+                        await onUpdateProfile({ avatar: fallbackAvatar });
+                        setEditAvatar(fallbackAvatar);
+                        setIsAvatarModalOpen(false);
+                        setGalleryImage(null);
+                        window.dispatchEvent(new CustomEvent('toast', { detail: 'Profile photo removed and saved.' }));
+                      } catch {
+                        window.dispatchEvent(new CustomEvent('toast', { detail: 'NEXORA could not remove your profile photo. Please try again.' }));
+                      } finally {
+                        setIsSavingProfile(false);
+                      }
                     }}
                     className="w-full py-3 bg-red-950/40 hover:bg-red-900/50 border border-red-900/25 text-red-400 font-mono text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
                   >
