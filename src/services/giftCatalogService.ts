@@ -21,32 +21,36 @@ export interface GiftQuote {
   expiresInSeconds: number; serverIssuedAt: string;
 }
 
-const RETRYABLE_CATALOG_ERRORS = new Set([
-  'functions/unavailable', 'functions/deadline-exceeded',
-  'functions/internal', 'functions/resource-exhausted',
-]);
 const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
-/** Read-only catalogue calls may be retried safely; wallet operations must never use this retry path. */
+async function getBundledGiftCatalog(): Promise<GiftCatalogResponse> {
+  const response = await fetch('/giftverse/catalog.json', { cache: 'force-cache', credentials: 'same-origin' });
+  if (!response.ok) throw new Error('The bundled GiftVerse catalogue could not be loaded.');
+  const catalog = await response.json() as GiftCatalogResponse;
+  if (!catalog || !Array.isArray(catalog.gifts) || catalog.gifts.length < 1000
+    || new Set(catalog.gifts.map(gift => gift.id)).size !== catalog.gifts.length
+    || catalog.gifts.some(gift => !gift.id || !gift.name || !Number.isSafeInteger(gift.priceNex) || gift.priceNex < 0)) {
+    throw new Error('The bundled GiftVerse catalogue failed integrity checks.');
+  }
+  return catalog;
+}
+
+/** Server prices remain authoritative for every quote, purchase and delivery. The bundled catalogue is display-only fallback. */
 export async function getGiftCatalog(): Promise<GiftCatalogResponse> {
   const call = httpsCallable<void, GiftCatalogResponse>(functions, 'getGiftCatalog', { timeout: 15000 });
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  try {
+    const response = (await call()).data;
+    if (!response || !Array.isArray(response.gifts) || response.gifts.length < 1000) {
+      throw new Error('The GiftVerse service returned an incomplete catalogue.');
+    }
+    return response;
+  } catch (serverError) {
     try {
-      const response = (await call()).data;
-      if (!response || !Array.isArray(response.gifts) || response.gifts.length === 0) {
-        throw new Error('The GiftVerse catalogue returned no gifts.');
-      }
-      return response;
-    } catch (error) {
-      lastError = error;
-      const code = typeof error === 'object' && error !== null && 'code' in error
-        ? String((error as { code?: unknown }).code) : '';
-      if (!RETRYABLE_CATALOG_ERRORS.has(code) || attempt === 2) throw error;
-      await wait(350 * (attempt + 1));
+      return await getBundledGiftCatalog();
+    } catch {
+      throw serverError instanceof Error ? serverError : new Error('GiftVerse is temporarily unavailable.');
     }
   }
-  throw lastError instanceof Error ? lastError : new Error('GiftVerse is temporarily unavailable.');
 }
 
 export async function quoteNexGift(giftId: string): Promise<GiftQuote> {
