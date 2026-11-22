@@ -1569,7 +1569,7 @@ export default function ProfileView({
       {/* 1. TOP NAVIGATION ACTION BAR */}
       <div className="nx-page-header nx-profile-topbar sticky top-0 z-40 py-2 px-4 flex items-center justify-between border-b">
         <div className="flex items-center gap-3 relative">
-          <span className="text-sm font-extrabold tracking-tight text-white leading-none select-none">{isOwnProfile ? 'Your profile' : 'Profile'}</span>
+          <span className="text-[13px] font-extrabold tracking-tight text-white leading-none select-none">{isOwnProfile ? 'Your profile' : 'Profile'}</span>
           {onCloseProfile && (
             <button 
               onClick={onCloseProfile}
@@ -1587,7 +1587,7 @@ export default function ProfileView({
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                 aria-expanded={isProfileMenuOpen}
                 aria-haspopup="menu"
-                className="min-h-9 flex items-center gap-1.5 px-2 py-1 rounded-xl hover:bg-white/5 text-[11px] font-mono font-bold tracking-wider text-zinc-200 uppercase transition-all cursor-pointer select-none border border-white/10 bg-white/3"
+                className="min-h-10 flex items-center gap-1.5 px-2.5 py-1 rounded-xl hover:bg-white/5 text-xs font-mono font-bold tracking-wider text-zinc-200 uppercase transition-all cursor-pointer select-none border border-white/10 bg-white/3"
               >
                 <span>My Profile</span>
                 <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
