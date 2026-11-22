@@ -421,6 +421,9 @@ const publicProfile = (uid) => ({
   it('rejects client-assigned public verification, reputation, and initial engagement metrics', async () => {
     const unverifiedDb = unverifiedDbFor('unverified');
     const unverifiedProfile = publicProfile('unverified');
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'users', 'unverified'), profile('unverified'));
+    });
     await assertSucceeds(setDoc(doc(unverifiedDb, 'publicProfiles', 'unverified'), unverifiedProfile));
     await assertFails(setDoc(doc(unverifiedDb, 'publicProfiles', 'forged-badge'), {
       ...publicProfile('forged-badge'), id: 'forged-badge', isVerified: true
