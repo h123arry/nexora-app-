@@ -2652,3 +2652,48 @@ body {
   .nx-create-experience .nx-camera-photo-shutter,
   .nx-create-experience .nx-camera-record-shutter { transition: none; }
 }
+
+
+/* NEXORA Create — restrained, touch-first gallery */
+.nx-create-experience .nx-gallery {
+  color: #F5F4F8;
+  contain: layout paint;
+}
+.nx-create-experience .nx-gallery-header,
+.nx-create-experience .nx-gallery-footer {
+  background: #0B0D14;
+}
+.nx-create-experience .nx-gallery-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(178, 166, 207, .22) transparent;
+}
+.nx-create-experience .nx-gallery-empty {
+  background: linear-gradient(180deg, rgba(255,255,255,.018), rgba(255,255,255,.006));
+}
+.nx-create-experience .nx-gallery-tile {
+  isolation: isolate;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+.nx-create-experience .nx-gallery-tile:active {
+  transform: scale(.985);
+}
+.nx-create-experience .nx-gallery-tile.is-active {
+  box-shadow: 0 0 0 1px rgba(183,165,232,.42);
+}
+.nx-create-experience .nx-gallery-tile > button:first-child img {
+  transition: transform 220ms ease;
+}
+.nx-create-experience .nx-gallery-tile > button:first-child:hover img {
+  transform: scale(1.035);
+}
+.nx-create-experience .nx-gallery button:focus-visible,
+.nx-create-experience .nx-gallery label:focus-within {
+  outline: 2px solid #B7A5E8;
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-create-experience .nx-gallery-tile,
+  .nx-create-experience .nx-gallery-tile img {
+    transition: none !important;
+  }
+}
