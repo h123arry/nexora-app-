@@ -164,6 +164,130 @@ const socialSparkHttpLimiter = rateLimit({
   keyGenerator: (_req, res) => String(res.locals.userId || 'unauthenticated'),
   message: { code: 'spark_rate_limited', error: 'You are sparking too quickly. Please wait a moment.' },
 });
+const identityChangeHttpLimiter = rateLimit({
+  windowMs: 60 * 60_000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (_req, res) => String(res.locals.userId || 'unauthenticated'),
+  message: { code: 'identity_change_rate_limited', error: 'Too many profile identity changes. Please try again later.' },
+});
+
+app.use('/api/profile/identity', requireFirebaseUser, identityChangeHttpLimiter);
+app.post('/api/profile/identity', async (req, res) => {
+  const uid = res.locals.userId;
+  if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) {
+    return res.status(401).json({ code: 'unauthenticated', error: 'Sign in to update your profile identity.' });
+  }
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const allowedKeys = ['name', 'username'];
+  if (Object.keys(body).some(key => !allowedKeys.includes(key)) || !allowedKeys.some(key => Object.prototype.hasOwnProperty.call(body, key))) {
+    return res.status(400).json({ code: 'invalid_identity_request', error: 'Only a display name or username can be changed here.' });
+  }
+  let nextName: string | undefined;
+  let nextUsername: string | undefined;
+  if (Object.prototype.hasOwnProperty.call(body, 'name')) {
+    if (typeof body.name !== 'string') return res.status(400).json({ code: 'invalid_display_name', error: 'Enter a valid display name.' });
+    nextName = body.name.trim();
+    if (!nextName || nextName.length > 50 || /[\\r\\n\\u0000-\\u001f]/.test(nextName)) {
+      return res.status(400).json({ code: 'invalid_display_name', error: 'Display name must be between 1 and 50 characters.' });
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(body, 'username')) {
+    if (typeof body.username !== 'string') return res.status(400).json({ code: 'invalid_username', error: 'Enter a valid username.' });
+    nextUsername = body.username.trim().toLowerCase();
+    if (!/^[a-z0-9._]{3,20}$/.test(nextUsername)) {
+      return res.status(400).json({ code: 'invalid_username', error: 'Username must be 3–20 characters and use only letters, numbers, periods or underscores.' });
+    }
+    const reserved = new Set(['admin', 'support', 'nexora', 'official', 'security', 'api', 'help', 'system', 'developer', 'root', 'voh', 'voh_ai', 'nexora_ai']);
+    const impersonationTerms = ['official', 'verified', 'support', 'help', 'admin', 'moderator'];
+    if (reserved.has(nextUsername) || impersonationTerms.some(term => nextUsername === term || nextUsername.startsWith(term + '_') || nextUsername.endsWith('_' + term))) {
+      return res.status(400).json({ code: 'reserved_username', error: 'This username is reserved to protect accounts and prevent impersonation.' });
+    }
+  }
+
+  try {
+    const userRef = serverDb.collection('users').doc(uid);
+    const publicRef = serverDb.collection('publicProfiles').doc(uid);
+    const settingsRef = userRef.collection('settings').doc('preferences');
+    const result = await serverDb.runTransaction(async transaction => {
+      const userSnapshot = await transaction.get(userRef);
+      if (!userSnapshot.exists) throw Object.assign(new Error('Your profile could not be found. Please sign in again.'), { status: 404, code: 'profile_not_found' });
+      const current = userSnapshot.data() || {};
+      const currentName = typeof current.name === 'string' ? current.name : '';
+      const currentUsername = typeof current.username === 'string' ? current.username : '';
+      const changedName = nextName !== undefined && nextName !== currentName;
+      const changedUsername = nextUsername !== undefined && nextUsername !== currentUsername;
+      if (!changedName && !changedUsername) return { identity: {} };
+
+      const now = Date.now();
+      const configuredGraceEnd = Date.parse(process.env.PROFILE_IDENTITY_GRACE_UNTIL || '2026-11-22T23:00:00.000Z');
+      const graceEnd = Number.isFinite(configuredGraceEnd) ? configuredGraceEnd : Date.parse('2026-11-22T23:00:00.000Z');
+      const updates: Record<string, string> = {};
+      const checkCooldown = (field: 'displayName' | 'username', lastChangedAt: unknown, graceUsedAt: unknown, cooldownMs: number, label: string) => {
+        const graceAvailable = now < graceEnd && !graceUsedAt;
+        const lastChanged = typeof lastChangedAt === 'string' ? Date.parse(lastChangedAt) : NaN;
+        if (!graceAvailable && Number.isFinite(lastChanged) && now - lastChanged < cooldownMs) {
+          const remainingDays = Math.ceil((cooldownMs - (now - lastChanged)) / 86_400_000);
+          throw Object.assign(new Error(`${label} changes are locked. You can change it again in about ${remainingDays} day(s).`), { status: 429, code: 'identity_cooldown' });
+        }
+        if (graceAvailable) updates[field === 'displayName' ? 'displayNameGraceUsedAt' : 'usernameGraceUsedAt'] = new Date(now).toISOString();
+      };
+      if (changedName) {
+        checkCooldown('displayName', current.lastDisplayNameChangeTime, current.displayNameGraceUsedAt, 7 * 86_400_000, 'Display name');
+        updates.name = nextName!;
+        updates.lastDisplayNameChangeTime = new Date(now).toISOString();
+      }
+
+      let newClaimRef: any = null;
+      let oldClaimRef: any = null;
+      if (changedUsername) {
+        checkCooldown('username', current.lastUsernameChangeTime, current.usernameGraceUsedAt, 30 * 86_400_000, 'Username');
+        newClaimRef = serverDb.collection('usernames').doc(nextUsername!);
+        oldClaimRef = currentUsername ? serverDb.collection('usernames').doc(currentUsername) : null;
+      }
+      const [newClaimSnapshot, oldClaimSnapshot, settingsSnapshot] = await Promise.all([
+        newClaimRef ? transaction.get(newClaimRef) : Promise.resolve(null),
+        oldClaimRef ? transaction.get(oldClaimRef) : Promise.resolve(null),
+        transaction.get(settingsRef),
+      ]);
+      if (changedUsername && newClaimSnapshot?.exists && newClaimSnapshot.data()?.userId !== uid) {
+        throw Object.assign(new Error('This username is already taken. Please choose another handle.'), { status: 409, code: 'username_taken' });
+      }
+      if (changedUsername) {
+        updates.username = nextUsername!;
+        updates.lastUsernameChangeTime = new Date(now).toISOString();
+      }
+
+      transaction.update(userRef, { ...updates, updatedAt: FieldValue.serverTimestamp() });
+      transaction.set(publicRef, {
+        id: uid,
+        ...(changedName ? { name: nextName } : {}),
+        ...(changedUsername ? { username: nextUsername } : {}),
+      }, { merge: true });
+      if (changedUsername && newClaimRef) {
+        transaction.set(newClaimRef, {
+          userId: uid,
+          username: nextUsername,
+          ...(newClaimSnapshot?.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        if (oldClaimRef && oldClaimSnapshot?.exists && oldClaimSnapshot.data()?.userId === uid) transaction.delete(oldClaimRef);
+      }
+      return { identity: updates };
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    const status = typeof (error as any)?.status === 'number' ? (error as any).status : 503;
+    const code = typeof (error as any)?.code === 'string' ? (error as any).code : 'identity_update_unavailable';
+    if (status === 503) console.error('[ProfileIdentity] Identity update failed.', { uid, code });
+    return res.status(status).json({
+      code,
+      error: error instanceof Error && status !== 503 ? error.message : 'NEXORA could not update your profile identity right now. Please try again.',
+    });
+  }
+});
+
 
 app.use('/api/social/follow-state', requireFirebaseUser, socialFollowHttpLimiter);
 app.post('/api/social/follow-state', async (req, res) => {
