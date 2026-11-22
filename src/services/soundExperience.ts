@@ -17,6 +17,8 @@ export function readSoundPreferences(): SoundPreferences {
   try { if (typeof localStorage === 'undefined') return { ...DEFAULT_SOUND_PREFERENCES }; const raw = localStorage.getItem(STORAGE_KEY); return raw ? normalizeSoundPreferences(JSON.parse(raw)) : { ...DEFAULT_SOUND_PREFERENCES }; }
   catch { return { ...DEFAULT_SOUND_PREFERENCES }; }
 }
+export function readGiftSoundVolume(): number { try { const raw = typeof localStorage === 'undefined' ? null : localStorage.getItem('nexora_gift_sound_volume_v1'); const value = raw === null ? 0.72 : Number(raw); return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0.72; } catch { return 0.72; } }
+export function saveGiftSoundVolume(value: number): void { try { if (typeof localStorage !== 'undefined' && Number.isFinite(value)) localStorage.setItem('nexora_gift_sound_volume_v1', String(Math.max(0, Math.min(1, value)))); } catch { /* Volume persistence is optional. */ } }
 export function saveSoundPreferences(preferences: SoundPreferences): void {
   try { if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeSoundPreferences(preferences))); } catch { /* Storage denial must not interrupt the app. */ }
 }
@@ -83,7 +85,8 @@ export function playGiftArrivalSound(giftId: string, rarity: 'common' | 'uncommo
     if (audio.state !== 'running') return;
     const start = audio.currentTime + 0.025;
     const master = audio.createGain();
-    const peak = rarity === 'legendary' ? 0.105 : rarity === 'epic' ? 0.082 : 0.062;
+    const peak = (rarity === 'legendary' ? 0.105 : rarity === 'epic' ? 0.082 : 0.062) * readGiftSoundVolume();
+    if (peak <= 0) return;
     master.gain.setValueAtTime(0.0001, start);
     master.gain.linearRampToValueAtTime(peak, start + 0.045);
     master.gain.exponentialRampToValueAtTime(0.0001, start + (family === 'dragon' || family === 'elemental' ? 1.05 : 0.82));
