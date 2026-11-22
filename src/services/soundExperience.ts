@@ -55,11 +55,11 @@ export function playNexoraSound(soundId: keyof typeof TONES): boolean {
 
 type GiftSoundFamily = 'floral' | 'dragon' | 'wildlife' | 'royal' | 'gemstone' | 'celestial' | 'elemental' | 'music' | 'soft';
 const GIFT_SOUND_FAMILY: Record<string, GiftSoundFamily> = {
-  floral: 'floral', flower: 'floral', flowers: 'floral', rose: 'floral',
+  floral: 'floral', flower: 'floral', flowers: 'floral', rose: 'floral', seasonal: 'floral',
   dragon: 'dragon', dragons: 'dragon', wildlife: 'wildlife', lion: 'wildlife', animal: 'wildlife',
-  royal: 'royal', crown: 'royal', emperor: 'royal', luxury: 'royal',
-  gemstone: 'gemstone', gem: 'gemstone', diamond: 'gemstone', celestial: 'celestial', space: 'celestial',
-  elemental: 'elemental', fire: 'elemental', oceanic: 'elemental', music: 'music', love: 'soft',
+  royal: 'royal', crown: 'royal', emperor: 'royal', luxury: 'royal', couture: 'royal', arena: 'royal', architecture: 'royal',
+  gemstone: 'gemstone', gem: 'gemstone', diamond: 'gemstone', tech: 'gemstone', artifacts: 'gemstone', timepiece: 'gemstone', celestial: 'celestial', space: 'celestial', spirit: 'celestial', dreamscape: 'celestial', world: 'celestial',
+  elemental: 'elemental', fire: 'elemental', oceanic: 'elemental', music: 'music', african: 'music', culinary: 'soft', love: 'soft', fantasy: 'dragon', mythic: 'dragon', adventure: 'dragon',
 };
 const GIFT_SOUND_NOTES: Record<GiftSoundFamily, number[]> = {
   floral: [880, 1174.66, 1396.91, 1760],
