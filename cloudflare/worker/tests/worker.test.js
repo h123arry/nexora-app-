@@ -24,8 +24,9 @@ test('staging worker fails closed when D1 is unavailable', async () => {
   const env = { DB: { prepare: () => ({ first: async () => { throw new Error('private diagnostic'); } }) } };
   const response = await worker.fetch(new Request('https://staging.example/readyz'), env);
   assert.equal(response.status, 503);
-  assert.deepEqual(await response.json(), { error: 'service_not_ready' });
-  assert.equal((await response.text()).includes('private diagnostic'), false);
+  const body = await response.text();
+  assert.deepEqual(JSON.parse(body), { error: 'service_not_ready' });
+  assert.equal(body.includes('private diagnostic'), false);
 });
 
 test('staging worker rejects unapproved browser origins', async () => {
