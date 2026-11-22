@@ -1193,19 +1193,6 @@ export default function ProfileView({
       return;
     }
 
-    // 7-day display name lock
-    if (editName !== currentUser.name) {
-      const lastChange = currentUser.lastDisplayNameChangeTime;
-      if (!ProfileService.isIdentityChangeGraceActive() && lastChange) {
-        const diff = Date.now() - new Date(lastChange).getTime();
-        const days = diff / (1000 * 60 * 60 * 24); // days limit
-        if (days < 7) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Display Name change is locked for 7 days.' }));
-          return;
-        }
-      }
-    }
-
     // 30-day username lock
     if (editUsername !== currentUser.username) {
       const usernameError = validateUsername(editUsername, currentUser.id);
@@ -1214,15 +1201,6 @@ export default function ProfileView({
         return;
       }
 
-      const lastChange = currentUser.lastUsernameChangeTime;
-      if (!ProfileService.isIdentityChangeGraceActive() && lastChange) {
-        const diff = Date.now() - new Date(lastChange).getTime();
-        const days = diff / (1000 * 60 * 60 * 24);
-        if (days < 30) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Username change is locked for 30 days.' }));
-          return;
-        }
-      }
     }
 
     // Start saving animation & lock controls
@@ -1270,8 +1248,6 @@ export default function ProfileView({
         socialTwitter: editSocialTwitter.trim(), socialInstagram: editSocialInsta.trim(),
         avatar: persistedAvatar,
         coverImage: persistedCover,
-        lastDisplayNameChangeTime: editName !== currentUser.name ? new Date().toISOString() : currentUser.lastDisplayNameChangeTime,
-        lastUsernameChangeTime: editUsername !== currentUser.username ? new Date().toISOString() : currentUser.lastUsernameChangeTime,
       }));
 
       localStorage.setItem(`nexora_status_text_${currentUser.id}`, statusText);
@@ -1306,13 +1282,13 @@ export default function ProfileView({
     const patch: Partial<User> = { ...updates };
 
     if (patch.name !== undefined && patch.name !== currentUser.name) {
-      const lastChange = currentUser.lastDisplayNameChangeTime;
-      if (!ProfileService.isIdentityChangeGraceActive() && lastChange && Date.now() - new Date(lastChange).getTime() < 7 * 24 * 60 * 60 * 1000) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Display name changes are locked for 7 days.' }));
+      const cleanName = patch.name.trim();
+      if (!cleanName || cleanName.length > 50) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Display name must be between 1 and 50 characters.' }));
         setEditName(currentUser.name);
         return false;
       }
-      patch.lastDisplayNameChangeTime = new Date().toISOString();
+      patch.name = cleanName;
     }
     if (patch.username !== undefined && patch.username !== currentUser.username) {
       const usernameError = validateUsername(patch.username, currentUser.id);
@@ -1321,13 +1297,6 @@ export default function ProfileView({
         setEditUsername(currentUser.username);
         return false;
       }
-      const lastChange = currentUser.lastUsernameChangeTime;
-      if (!ProfileService.isIdentityChangeGraceActive() && lastChange && Date.now() - new Date(lastChange).getTime() < 30 * 24 * 60 * 60 * 1000) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Username changes are locked for 30 days.' }));
-        setEditUsername(currentUser.username);
-        return false;
-      }
-      patch.lastUsernameChangeTime = new Date().toISOString();
     }
 
     const changed = Object.entries(patch).some(([key, value]) =>
@@ -3660,12 +3629,12 @@ export default function ProfileView({
 
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
                   <label className="min-w-0 text-xs text-zinc-300">Name
-                    <span className="mt-0.5 block text-[10px] text-zinc-500">{ProfileService.isIdentityChangeGraceActive() ? 'One-time update available today. After saving, locked for 7 days.' : 'After changing, display name is locked for 7 days.'}</span>
+                    <span className="mt-0.5 block text-[10px] text-zinc-500">{ProfileService.isIdentityChangeGraceAvailable('displayName', currentUser) ? 'One-time update available today. After saving, locked for 7 days.' : 'After changing, display name is locked for 7 days.'}</span>
                     <input value={editName} onChange={e => setEditName(e.target.value)} maxLength={80} disabled={isSavingProfile || savingProfileFields.has('name') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-50" placeholder="Your name" />
                   </label>
                   <label className="min-w-0 text-xs text-zinc-300">Username
-                    <span className="mt-0.5 block text-[10px] text-zinc-500">{ProfileService.isIdentityChangeGraceActive() ? 'One-time update available today. After saving, locked for 30 days.' : 'After changing, username is locked for 30 days.'}</span>
+                    <span className="mt-0.5 block text-[10px] text-zinc-500">{ProfileService.isIdentityChangeGraceAvailable('username', currentUser) ? 'One-time update available today. After saving, locked for 30 days.' : 'After changing, username is locked for 30 days.'}</span>
                     <div className="mt-1 flex h-10 items-center rounded-xl border border-white/10 bg-[#120E2B] px-3 focus-within:border-violet-500">
                       <span className="text-violet-300">@</span>
                       <input value={editUsername} onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/^@/, '').replace(/\s/g, ''))} maxLength={30} disabled={isSavingProfile || savingProfileFields.has('username') || showSavedFeedback}
