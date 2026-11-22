@@ -7,7 +7,7 @@ export function createPublicProfileProjection(
 ): Partial<User> {
   const {
     id, username, name, avatar, bio, website, followers, following,
-    sparks, hasStory, coverImage, profileFrameId, profileBadgeId, joinedDate, reputationPoints,
+    sparks, hasStory, coverImage, profileFrameId, profileBadgeId, joinedDate, reputationPoints, earlyCommunityMember, earlyCommunityMember,
     reputationBreakdown, skills, statusText, statusEmoji, pronouns, profileCategory, creatorType, socialTwitter, socialInstagram,
     pinnedMusicSong, pinnedMusicArtist, pinnedMusicUrl, pinnedPosts,
     location,
