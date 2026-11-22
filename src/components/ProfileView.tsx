@@ -1592,11 +1592,7 @@ export default function ProfileView({
                 <span>My Profile</span>
                 <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
               </button>
-            ) : (
-              <span className="text-xs font-mono font-bold tracking-wider text-zinc-300 uppercase">
-                {currentUser.name}
-              </span>
-            )}
+            ) : null}
 
             <AnimatePresence>
               {isProfileMenuOpen && isOwnProfile && (
@@ -1799,55 +1795,68 @@ export default function ProfileView({
                     <h1 className={`text-xl sm:text-2xl font-black leading-tight tracking-tight ${!currentUser.name ? 'text-violet-400/70 italic text-base' : 'text-white'}`}>
                       {currentUser.name || (isOwnProfile ? 'Set your display name' : 'Member')}
                     </h1>
-                    {(identityVerification || currentUser.earlyCommunityMember) && <PurpleVerifiedBadge className="h-4 w-4 shrink-0" type={currentUser.earlyCommunityMember ? 'leader' : identityBadgeType} />}
                     {profileBadgeAsset && <img src={profileBadgeAsset.path} alt="Creator badge" title={profileBadgeAsset.title} className="h-5 w-5 shrink-0 object-contain" />}
                   </div>
-                  <p className={`text-xs sm:text-sm font-bold font-mono tracking-wider mt-0.5 ${!currentUser.username ? 'text-violet-400/60 italic' : 'text-violet-400/90'}`}>
-                    @{currentUser.username || (isOwnProfile ? 'add-username' : 'member')}
-                  </p>
+                  <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                    <p className={`min-w-0 truncate text-xs sm:text-sm font-bold font-mono tracking-wider ${!currentUser.username ? 'text-violet-400/60 italic' : 'text-violet-300'}`}>
+                      @{currentUser.username || (isOwnProfile ? 'add-username' : 'member')}
+                    </p>
+                    {(identityVerification || currentUser.earlyCommunityMember) && <PurpleVerifiedBadge className="h-3.5 w-3.5 shrink-0" type={currentUser.earlyCommunityMember ? 'leader' : identityBadgeType} />}
+                  </div>
               </div>
 
-              {/* Profile Actions */}
-              <div className="shrink-0 flex items-center gap-2">
-                {isOwnProfile ? (
-                  <div className="flex items-center gap-1.5">
-                    <button 
-                      onClick={() => setActivePanel('edit-profile')} 
-                      className="p-2.5 bg-white/5 hover:bg-white/10 active:scale-95 rounded-xl text-zinc-300 hover:text-white transition-all border border-white/10 cursor-pointer shadow-sm"
-                      title="Edit Profile"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                    <button 
-                      onClick={() => onToggleFollow?.(currentUser.id)} 
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer h-9 flex items-center justify-center ${
-                        isFollowing ? 'bg-zinc-900 text-zinc-300 border border-white/10' : 'bg-violet-600 text-white hover:bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.3)]'
-                      }`}
-                    >
-                      {isFollowing ? 'Following' : 'Follow'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowGiftVerse(true)}
-                      className="px-3.5 py-1.5 bg-violet-600/20 hover:bg-violet-600/35 rounded-xl text-xs font-bold text-violet-100 border border-violet-300/20 transition-all cursor-pointer h-9 flex items-center justify-center gap-1.5"
-                    >
-                      <Gift className="h-3.5 w-3.5"/> Gift
-                    </button>
-                    <button 
-                      onClick={() => onStartChat?.(currentUser.id)} 
-                      className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-zinc-200 transition-all cursor-pointer h-9 flex items-center justify-center"
-                    >
-                      Message
-                    </button>
-
-                  </div>
-                )}
-              </div>
+              {/* Keep owner controls in the identity row; visitor actions get a full-width, balanced row below. */}
+              {isOwnProfile && (
+                <div className="shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setActivePanel('edit-profile')}
+                    className="min-h-10 min-w-10 rounded-xl border border-white/10 bg-white/[0.05] p-2.5 text-zinc-300 shadow-sm transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-violet-300"
+                    title="Edit Profile"
+                    aria-label="Edit profile"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
+
+            {!isOwnProfile && (
+              <div className="mt-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2" aria-label="Profile actions">
+                <button
+                  type="button"
+                  onClick={() => onToggleFollow?.(currentUser.id)}
+                  aria-pressed={isFollowing}
+                  className={`flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold transition-all focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2 ${
+                    isFollowing
+                      ? 'border border-white/12 bg-white/[0.06] text-zinc-100 hover:bg-white/[0.1]'
+                      : 'border border-violet-400/30 bg-violet-600 text-white shadow-[0_5px_18px_rgba(113,56,255,0.2)] hover:bg-violet-500'
+                  }`}
+                >
+                  {isFollowing ? <UserCheck className="h-4 w-4 shrink-0" /> : <UserPlus className="h-4 w-4 shrink-0" />}
+                  <span className="truncate">{isFollowing ? 'Following' : 'Follow'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onStartChat?.(currentUser.id)}
+                  disabled={!onStartChat}
+                  className="flex min-h-11 min-w-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.045] px-3 text-xs font-bold text-zinc-100 transition-colors hover:border-violet-300/25 hover:bg-violet-500/10 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
+                >
+                  <MessageCircle className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Message</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowGiftVerse(true)}
+                  aria-label={`Send a gift to @${currentUser.username || 'member'}`}
+                  title="Send a gift"
+                  className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-xl border border-violet-300/20 bg-violet-500/10 px-3 text-violet-200 transition-colors hover:border-violet-300/35 hover:bg-violet-500/20 focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2"
+                >
+                  <Gift className="h-4 w-4" />
+                  <span className="hidden text-xs font-bold sm:inline">Gift</span>
+                </button>
+              </div>
+            )}
 
             {currentUser.website && (() => { const href = /^https?:\/\//i.test(currentUser.website) ? currentUser.website : 'https://' + currentUser.website; return <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-1.5 text-xs text-violet-300 underline-offset-4 hover:text-violet-200 hover:underline"><LinkIcon className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{currentUser.website}</span></a>; })()}
             {(currentUser.location || currentUser.pronouns) && <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-zinc-400">{currentUser.location && <span><MapPin className="mr-1 inline h-3 w-3" />{currentUser.location}</span>}{currentUser.pronouns && <span>{currentUser.pronouns}</span>}</div>}
