@@ -277,6 +277,7 @@ app.post('/api/profile/identity', async (req, res) => {
       const updatedProfile = { ...current, ...updates, id: uid };
       const locationVisible = settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone';
       const publicProjection = createPublicProfileProjection(updatedProfile as any, { includeLocation: locationVisible });
+      delete (publicProjection as any).earlyCommunityMember;
       transaction.update(userRef, { ...updates, updatedAt: FieldValue.serverTimestamp() });
       transaction.set(publicRef, {
         ...publicProjection,
