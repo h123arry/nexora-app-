@@ -339,7 +339,7 @@ export default function ImmersiveVideoViewer({
               : undefined;
             const isSlowConnection = Boolean(connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType || ''));
             const postVideoIndex = postsToShow.slice(0, idx + 1).filter(item => Boolean(getImmersiveVideoUrl(item))).length - 1;
-            const activeVideoIndex = postsToShow.slice(0, currentIndex + 1).filter(item => Boolean(item.videoUrl)).length - 1;
+            const activeVideoIndex = postsToShow.slice(0, currentIndex + 1).filter(item => Boolean(getImmersiveVideoUrl(item))).length - 1;
             const preloadPlan = getVideoPreloadPlan({
               isVideo,
               isActive: isCurrent,
