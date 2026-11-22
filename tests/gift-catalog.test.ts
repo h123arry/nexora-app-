@@ -47,7 +47,7 @@ test('880 imported artworks have unique source provenance and share-alike record
 });
 
 test('server gift lookup retains existing prices and rejects unknown ids', () => {
-  assert.equal(GIFT_CATALOG_VERSION, 3);
+  assert.equal(GIFT_CATALOG_VERSION, 4);
   assert.equal(findNexoraGift('royal-01')?.priceNex, 5);
   assert.equal(findNexoraGift('love-micro-01')?.priceNex, 1);
   assert.equal(findNexoraGift('love-micro-02')?.priceNex, 2);
