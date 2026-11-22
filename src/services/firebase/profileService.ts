@@ -14,15 +14,15 @@ const DISPLAY_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const USERNAME_CHANGE_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 
 function assertIdentityChangeAllowed(current: User, updates: Partial<User>, now = Date.now()): void {
-  if (now < PROFILE_IDENTITY_CHANGE_GRACE_END) return;
   const checks = [
-    { field: 'name' as const, timestamp: current.lastDisplayNameChangeTime, cooldown: DISPLAY_NAME_CHANGE_COOLDOWN_MS, label: 'Display name' },
-    { field: 'username' as const, timestamp: current.lastUsernameChangeTime, cooldown: USERNAME_CHANGE_COOLDOWN_MS, label: 'Username' },
+    { field: 'name' as const, timestamp: current.lastDisplayNameChangeTime, graceUsedAt: current.displayNameGraceUsedAt, cooldown: DISPLAY_NAME_CHANGE_COOLDOWN_MS, label: 'Display name' },
+    { field: 'username' as const, timestamp: current.lastUsernameChangeTime, graceUsedAt: current.usernameGraceUsedAt, cooldown: USERNAME_CHANGE_COOLDOWN_MS, label: 'Username' },
   ];
   for (const check of checks) {
     if (updates[check.field] === undefined || updates[check.field] === current[check.field] || !check.timestamp) continue;
     const lastChange = Date.parse(check.timestamp);
-    if (Number.isFinite(lastChange) && now - lastChange < check.cooldown) {
+    const oneTimeGraceAvailable = now < PROFILE_IDENTITY_CHANGE_GRACE_END && !check.graceUsedAt;
+    if (!oneTimeGraceAvailable && Number.isFinite(lastChange) && now - lastChange < check.cooldown) {
       const days = check.cooldown / (24 * 60 * 60 * 1000);
       throw new Error(`${check.label} changes are locked for ${days} days after your last change.`);
     }
@@ -32,6 +32,11 @@ function assertIdentityChangeAllowed(current: User, updates: Partial<User>, now 
 export class ProfileService {
   static isIdentityChangeGraceActive(): boolean {
     return Date.now() < PROFILE_IDENTITY_CHANGE_GRACE_END;
+  }
+
+  static isIdentityChangeGraceAvailable(field: 'displayName' | 'username', user: User): boolean {
+    if (!this.isIdentityChangeGraceActive()) return false;
+    return field === 'displayName' ? !user.displayNameGraceUsedAt : !user.usernameGraceUsedAt;
   }
 
   private static profileLoads = new Map<string, Promise<User>>();
@@ -183,9 +188,11 @@ export class ProfileService {
       const identityChangedAt = new Date().toISOString();
       if (committedUpdates.name !== undefined && committedUpdates.name !== existingUser.name) {
         committedUpdates.lastDisplayNameChangeTime = identityChangedAt;
+        committedUpdates.displayNameGraceUsedAt = identityChangedAt;
       }
       if (committedUpdates.username !== undefined && committedUpdates.username !== existingUser.username) {
         committedUpdates.lastUsernameChangeTime = identityChangedAt;
+        committedUpdates.usernameGraceUsedAt = identityChangedAt;
       }
       const updatedProfile = { ...existingUser, ...committedUpdates, id: uid };
       const locationAudience = settingsSnapshot.get('privacy.profileVisibility.location');
