@@ -22,7 +22,7 @@ const dbFor = (uid) => env.authenticatedContext(uid, {
 const seed = async (callback) => env.withSecurityRulesDisabled(async context => callback(context.firestore()));
 
 describe('profile editing Firestore permissions', () => {
-  it('allows an owner to save all profile editor identity and creator-link fields to both projections', async () => {
+  it('blocks direct client identity changes while allowing other profile editor fields', async () => {
     await seed(async db => {
       await setDoc(doc(db, 'users', 'alice'), {
         id: 'alice', email: 'alice@example.test', username: 'alice', name: 'Alice',
@@ -48,10 +48,20 @@ describe('profile editing Firestore permissions', () => {
       updatedAt: serverTimestamp()
     };
 
-    await assertSucceeds(updateDoc(doc(db, 'users', 'alice'), identity));
-    await assertSucceeds(updateDoc(doc(db, 'publicProfiles', 'alice'), {
+    await assertFails(updateDoc(doc(db, 'users', 'alice'), identity));
+    await assertFails(updateDoc(doc(db, 'publicProfiles', 'alice'), {
       name: identity.name,
-      username: identity.username,
+      username: identity.username
+    }));
+    await assertSucceeds(updateDoc(doc(db, 'users', 'alice'), {
+      pronouns: identity.pronouns,
+      profileCategory: identity.profileCategory,
+      creatorType: identity.creatorType,
+      socialTwitter: identity.socialTwitter,
+      socialInstagram: identity.socialInstagram,
+      updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(updateDoc(doc(db, 'publicProfiles', 'alice'), {
       pronouns: identity.pronouns,
       profileCategory: identity.profileCategory,
       creatorType: identity.creatorType,
