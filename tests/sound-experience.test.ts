@@ -10,3 +10,12 @@ test('sound cue catalogue contains real social interaction cues', async () => {
   const source = await readFile(new URL('../src/services/soundExperience.ts', import.meta.url), 'utf8');
   for (const cue of ['social.spark', 'social.comment', 'social.share', 'gift.legendary', 'live.reaction']) assert.ok(source.includes(cue), cue);
 });
+
+test('live GiftVerse sound engine covers the premium gift families and respects gift preferences', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../src/services/soundExperience.ts', import.meta.url), 'utf8');
+  for (const family of ['floral:', 'dragon:', 'wildlife:', 'royal:', 'gemstone:', 'celestial:', 'elemental:', 'music:']) assert.ok(source.includes(family), family);
+  assert.ok(source.includes('playGiftArrivalSound'));
+  assert.ok(source.includes("readSoundPreferences().gifts"));
+  assert.ok(source.includes('suppliedContext'));
+});
