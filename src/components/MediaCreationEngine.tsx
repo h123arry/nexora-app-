@@ -1520,6 +1520,8 @@ export default function MediaCreationEngine({
           const renderedBlob = hasEdits ? await renderEditedPhotoBlob(imageBlob, {
             rotation: selectedImage.rotation,
             zoom: selectedImage.zoom,
+            cropOffset: selectedImage.cropOffset,
+            aspectRatio: selectedImage.aspectRatio ?? null,
             filterStyle: selectedImage.filterStyle,
             brightness,
             contrast,
