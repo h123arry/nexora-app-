@@ -263,13 +263,13 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
             <div className="absolute inset-0 w-full h-full z-0">
               {isVideo ? (
                 <div className="w-full h-full bg-slate-950 relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/40 via-[#0a0521]/90 to-[#2c0b3d]/30" />
+                  <div className="absolute inset-0 z-0 bg-gradient-to-tr from-violet-950/15 via-[#0a0521]/15 to-[#2c0b3d]/10 pointer-events-none" />
                   {thumbnail ? (
                     <img 
                       src={thumbnail} 
                       loading="lazy"
                       decoding="async"
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
+                      className="relative z-10 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
                       alt={post.content || 'Video thumbnail'}
                       referrerPolicy="no-referrer"
                       onError={(event) => { event.currentTarget.style.display = 'none'; }}
