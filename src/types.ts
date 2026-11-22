@@ -77,7 +77,9 @@ export interface User {
   pinnedPosts?: string[];
   achievements?: { id: string; title: string; description: string; icon: string; date: string }[];
   lastUsernameChangeTime?: string;
+  usernameGraceUsedAt?: string;
   lastDisplayNameChangeTime?: string;
+  displayNameGraceUsedAt?: string;
 }
 
 export interface SocialMission {
