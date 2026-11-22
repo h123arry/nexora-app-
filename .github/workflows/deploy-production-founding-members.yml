@@ -125,6 +125,7 @@ jobs:
             --non-interactive
 
       - name: Deploy reviewed Firebase Functions only when their source changes
+        id: functions
         shell: bash
         env:
           BASE_SHA: ${{ github.event.before }}
@@ -136,6 +137,7 @@ jobs:
               --config firebase.json \
               --project "$NEXORA_PRODUCTION_PROJECT_ID" \
               --non-interactive
+            echo "deployed=true" >> "$GITHUB_OUTPUT"
           }
 
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
@@ -147,6 +149,7 @@ jobs:
             deploy_functions
           else
             echo "No Firebase Functions source or firebase.json changes detected; skipping unchanged Functions."
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Deploy Storage rules when Firebase Storage is provisioned
@@ -170,10 +173,14 @@ jobs:
 
       - name: Record deployment target
         run: |
-          echo "## NEXORA production Functions deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "## NEXORA production deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "- Project: $NEXORA_PRODUCTION_PROJECT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "- Firestore database: $FIRESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Deployed functions: Founding 300, GiftVerse, push delivery, follow inbox, live-start alerts, direct-message alerts, creator follows, public comments, Sparks, replies, reposts and early-community recognition" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.functions.outputs.deployed }}" = "true" ]; then
+            echo "- Firebase Functions: deployed (Founding 300, GiftVerse, notifications, creator follows, comments, Sparks, replies, reposts and early-community recognition)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Firebase Functions: unchanged; deployment correctly skipped" >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "- Firestore rules: deployed" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ steps.storage.outputs.deployed }}" = "true" ]; then
             echo "- Storage rules: deployed" >> "$GITHUB_STEP_SUMMARY"
