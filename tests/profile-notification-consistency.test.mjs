@@ -131,9 +131,14 @@ test('profile identity grace lets everyone make one change today, then applies 7
   assert.match(profile, /2026-11-22T23:00:00\.000Z/);
   assert.match(profile, /DISPLAY_NAME_CHANGE_COOLDOWN_MS = 7 \* 24 \* 60 \* 60 \* 1000/);
   assert.match(profile, /USERNAME_CHANGE_COOLDOWN_MS = 30 \* 24 \* 60 \* 60 \* 1000/);
-  assert.match(profile, /if \(now < PROFILE_IDENTITY_CHANGE_GRACE_END\) return/);
+  assert.match(profile, /oneTimeGraceAvailable = now < PROFILE_IDENTITY_CHANGE_GRACE_END && !check\.graceUsedAt/);
+  assert.match(profile, /displayNameGraceUsedAt = identityChangedAt/);
+  assert.match(profile, /usernameGraceUsedAt = identityChangedAt/);
+  assert.match(profile, /isIdentityChangeGraceAvailable\(field: 'displayName' \| 'username', user: User\)/);
   assert.match(editor, /ProfileService\.isIdentityChangeGraceActive\(\)/);
-  assert.match(editor, /One-time update available today/);
+  assert.match(editor, /One-time username update available today/);
+  assert.match(editor, /isIdentityChangeGraceAvailable\('displayName', currentUser\)/);
+  assert.match(editor, /isIdentityChangeGraceAvailable\('username', currentUser\)/);
 });
 
 test('public profile links resolve through canonical username claims, not private user documents', async () => {
