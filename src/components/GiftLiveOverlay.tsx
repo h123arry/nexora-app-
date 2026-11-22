@@ -38,7 +38,7 @@ export default function GiftLiveOverlay({ streamId, soundEnabled = false, audioC
   useEffect(() => {
     if (!active || !soundEnabled) return;
     // Play the gift's own sound signature at the start of its live arrival choreography.
-    playGiftArrivalSound(active.giftId, active.rarity);
+    playGiftArrivalSound(active.giftId, active.rarity, audioContext);
   }, [active, soundEnabled]);
   if (!active) return null;
   const cinematic = active.animation === 'cinematic' || active.animation === 'legendary';
