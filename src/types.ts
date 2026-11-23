@@ -15,6 +15,8 @@ export interface User {
   following: number;
   sparks?: number;
   isVerified: boolean;
+  /** Founder/reviewer-awarded real-world identity badge, distinct from email/phone verification. */
+  identityVerified?: boolean;
   /** Server-awarded early community recognition; never editable by profile owners. */
   earlyCommunityMember?: boolean;
   hasStory?: boolean;
