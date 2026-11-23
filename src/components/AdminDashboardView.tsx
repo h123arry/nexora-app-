@@ -4,6 +4,7 @@ import { User, Post, Report, CrashLog } from '../types';
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from '../lib/firebase';
+import { apiRequestUrl } from '../lib/apiBaseUrl';
 import { reviewModerationReport } from '../services/dataService';
 import GiftEarningsFinancePanel from './GiftEarningsFinancePanel';
 
@@ -348,19 +349,24 @@ export default function AdminDashboardView({
     }
     setManualVerificationBusy(true);
     try {
-      await httpsCallable<{
-        userId: string;
-        identityType: IdentityReviewApplication['identityType'];
-        displayName: string;
-        evidenceSummary: string;
-        evidenceUrls: string[];
-      }, { accepted: boolean; status: string }>(getFunctions(), 'grantManualIdentityVerification')({
-        userId: manualVerificationUserId,
-        identityType: manualVerificationIdentityType,
-        displayName: manualVerificationDisplayName,
-        evidenceSummary: manualVerificationEvidenceSummary,
-        evidenceUrls,
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error('Your sign-in session has expired. Sign in again and retry.');
+      const response = await fetch(apiRequestUrl('/api/admin/identity-verification/manual'), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: manualVerificationUserId,
+          identityType: manualVerificationIdentityType,
+          displayName: manualVerificationDisplayName,
+          evidenceSummary: manualVerificationEvidenceSummary,
+          evidenceUrls,
+        }),
       });
+      const result = await response.json().catch(() => ({})) as { error?: string; status?: string; accepted?: boolean };
+      if (!response.ok) throw new Error(result.error || 'Manual identity verification could not be completed.');
       const target = users.find(user => user.id === manualVerificationUserId);
       window.dispatchEvent(new CustomEvent('toast', {
         detail: 'Identity verified for @' + (target?.username || manualVerificationUserId) + '. The violet badge is now active.',
