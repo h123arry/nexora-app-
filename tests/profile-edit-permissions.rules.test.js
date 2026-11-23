@@ -184,7 +184,7 @@ describe('profile editing Firestore permissions', () => {
       followers: 42, following: 17, sparks: 125, hasStory: true,
       joinedDate: 'Joined November 2026', reputationPoints: 350,
       reputationBreakdown: { contributions: 150, helpfulness: 100, missionsCompleted: 50, skillsVerified: 50 },
-      skills: []
+      skills: ['Community building']
     }));
 
     const bobDb = dbFor('bob');
