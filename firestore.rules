@@ -187,7 +187,7 @@ service cloud.firestore {
         'followers', 'following', 'sparks', 'hasStory',
         'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
         'skills', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
-        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'dateOfBirth'
+        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts'
       ];
     }
     function editableProfileKeys() {
