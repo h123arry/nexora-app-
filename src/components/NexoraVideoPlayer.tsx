@@ -1154,7 +1154,7 @@ export default function NexoraVideoPlayer({
             <video
               ref={videoRef}
               src={isReleased ? undefined : ((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)}
-              poster={shouldLoadVideoPoster({ isActive, isNearby, shouldPreload, isReleased }) ? (post?.image || undefined) : undefined}
+              poster={shouldLoadVideoPoster({ isActive, isNearby, shouldPreload, isReleased }) ? (resolvedPosterUrl || undefined) : undefined}
               playsInline
               preload={isReleased ? "none" : (preloadMode || ((isNearby || shouldPreload) ? "auto" : "none"))}
               muted={isMuted}
