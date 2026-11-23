@@ -369,8 +369,8 @@ export class AuthService {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       const existingSession = auth.currentUser;
-      const wasAnonymous = existingSession?.isAnonymous === true;
-      const credential = existingSession?.isAnonymous
+      const wasAnonymous = Boolean(existingSession?.isAnonymous);
+      const credential = existingSession && existingSession.isAnonymous
         ? await linkWithPopup(existingSession, provider)
         : await signInWithPopup(auth, provider);
       const fbUser = credential.user;
