@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildNotificationPushData, chunkPushTokens } from '../functions/src/pushDelivery';
+import { buildNotificationPushData, chunkPushTokens, notificationPreferenceKey, shouldSendNotificationPush } from '../functions/src/pushDelivery';
 
 describe('trusted notification push delivery policy', () => {
   it('creates bounded, string-only deep-link payload data', () => {
@@ -38,6 +38,31 @@ describe('trusted notification push delivery policy', () => {
     const live = buildNotificationPushData({ type: 'pulse_alert', targetId: 'live-42', userId: 'creator-2' }, 'live-5');
     assert.match(live.url, /#live$/);
     assert.equal(new URL(live.url, 'https://nexora.example').searchParams.get('nxPushTarget'), 'live-42');
+  });
+
+  it('maps notification types to their matching preference categories', () => {
+    assert.equal(notificationPreferenceKey('spark'), 'likes');
+    assert.equal(notificationPreferenceKey('comment_reply'), 'comments');
+    assert.equal(notificationPreferenceKey('follow'), 'followers');
+    assert.equal(notificationPreferenceKey('repost'), 'reposts');
+    assert.equal(notificationPreferenceKey('mention'), 'mentions');
+    assert.equal(notificationPreferenceKey('community_invite'), 'communities');
+    assert.equal(notificationPreferenceKey('event_reminder'), 'events');
+    assert.equal(notificationPreferenceKey('verification_approved'), 'verification');
+    assert.equal(notificationPreferenceKey('creator_upload'), 'creatorUploads');
+    assert.equal(notificationPreferenceKey('friend_request'), 'friendRequests');
+    assert.equal(notificationPreferenceKey('security_alert'), 'securityAlerts');
+    assert.equal(notificationPreferenceKey('unknown_future_type'), null);
+  });
+
+  it('honors push master and per-category preferences without suppressing unknown types', () => {
+    assert.equal(shouldSendNotificationPush({ push: false }, 'follow'), false);
+    assert.equal(shouldSendNotificationPush({ push: true, followers: false }, 'follow'), false);
+    assert.equal(shouldSendNotificationPush({ push: true, followers: true }, 'follow'), true);
+    assert.equal(shouldSendNotificationPush({ comments: false }, 'comment_reply'), false);
+    assert.equal(shouldSendNotificationPush({ likes: false }, 'spark'), false);
+    assert.equal(shouldSendNotificationPush({ push: true }, 'unknown_future_type'), true);
+    assert.equal(shouldSendNotificationPush(undefined, 'follow'), true);
   });
 
   it('chunks device tokens into provider-safe batches', () => {
