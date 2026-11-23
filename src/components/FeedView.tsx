@@ -771,6 +771,26 @@ export default function FeedView({
     };
   }, [activeCommentsPostId]);
 
+  // Keep the composer above the software keyboard in mobile browsers and WebViews.
+  useEffect(() => {
+    if (!activeCommentsPostId) return;
+    const viewport = window.visualViewport;
+    const syncKeyboardInset = () => {
+      const inset = viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0;
+      document.documentElement.style.setProperty('--nexora-keyboard-inset', `${inset}px`);
+    };
+    syncKeyboardInset();
+    viewport?.addEventListener('resize', syncKeyboardInset);
+    viewport?.addEventListener('scroll', syncKeyboardInset);
+    window.addEventListener('resize', syncKeyboardInset);
+    return () => {
+      viewport?.removeEventListener('resize', syncKeyboardInset);
+      viewport?.removeEventListener('scroll', syncKeyboardInset);
+      window.removeEventListener('resize', syncKeyboardInset);
+      document.documentElement.style.removeProperty('--nexora-keyboard-inset');
+    };
+  }, [activeCommentsPostId]);
+
   // State to hold pending posts received in the background while scrolling
   const [pendingPosts, setPendingPosts] = useState<RefactoredPost[]>([]);
 
@@ -2357,7 +2377,7 @@ export default function FeedView({
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       onClick={() => setActiveCommentsPostId(null)}
-                      className="fixed inset-0 z-[89] bg-black/35"
+                      className="fixed inset-0 z-[119] bg-black/45"
                     />
                     <motion.div
                       role="dialog"
@@ -2367,7 +2387,8 @@ export default function FeedView({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: "100%", opacity: 0 }}
                       transition={{ type: "spring", damping: 28, stiffness: 260 }}
-                      className="comments-container fixed bottom-0 inset-x-0 h-[60dvh] min-h-[60dvh] max-h-[60dvh] bg-[#090714]/[0.98] z-[90] flex flex-col px-4 pt-3 pb-4 sm:px-5 overflow-hidden touch-pan-y"
+                      style={{ bottom: "var(--nexora-keyboard-inset, 0px)" }}
+                      className="comments-container fixed inset-x-0 h-[min(60dvh,calc(100dvh-env(safe-area-inset-top)-1rem))] min-h-[45dvh] max-h-[90dvh] bg-[#090714]/[0.99] z-[120] flex flex-col px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:px-5 overflow-hidden touch-pan-y"
                     >
                       {/* Header of Comments drawer */}
                       <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
