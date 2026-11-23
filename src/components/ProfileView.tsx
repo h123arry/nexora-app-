@@ -21,7 +21,7 @@ import { subscribeToFollows } from '../services/dataService';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraLoader from './NexoraLoader';
-import { useResolvedUrl } from '../utils/indexedDbStorage';
+import NexoraResolvedImage from './NexoraResolvedImage';
 import NexoraVideo from './NexoraVideo';
 import CreatorDashboardView from './CreatorDashboardView';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
@@ -441,8 +441,6 @@ export default function ProfileView({
   onOpenVohAi
 }: ProfileViewProps) {
   const reduceMotion = useReducedMotion();
-  const resolvedProfileAvatar = useResolvedUrl(currentUser.avatar);
-  const resolvedProfileCover = useResolvedUrl(currentUser.coverImage || undefined);
   const profileFrameAsset = getCreatorCommunityAsset(currentUser.profileFrameId);
   const profileBadgeAsset = getCreatorCommunityAsset(currentUser.profileBadgeId);
   // Navigation State
@@ -1756,7 +1754,7 @@ export default function ProfileView({
           {/* Profile cover with compact avatar anchored over its lower edge. */}
           <div className="nx-profile-cover relative h-36 sm:h-48 overflow-visible rounded-2xl border border-white/10 bg-[#100B25]">
             {currentUser.coverImage ? (
-              <img src={resolvedProfileCover || undefined} alt="" className="h-full w-full rounded-2xl object-cover" />
+              <NexoraResolvedImage src={currentUser.coverImage} alt="" className="h-full w-full rounded-2xl object-cover" />
             ) : (
               <div className="h-full w-full rounded-2xl bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]" />
             )}
@@ -1766,7 +1764,7 @@ export default function ProfileView({
               <div className="relative">
                 {currentUser.hasStory && <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-violet-500 via-violet-400 to-indigo-500 blur-[2px] opacity-75" />}
                 <button type="button" onClick={() => setProfilePicExpanded(true)} aria-label="View profile photo" className="relative z-10 h-[5.5rem] w-[5.5rem] sm:h-28 sm:w-28 rounded-full border-[3px] border-[#080617] bg-black overflow-visible shadow-lg cursor-zoom-in focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4">
-                  <img src={resolvedProfileAvatar || undefined} className="h-full w-full rounded-full object-cover" alt="" referrerPolicy="no-referrer" />
+                  <NexoraResolvedImage src={currentUser.avatar} className="h-full w-full rounded-full object-cover" alt="" referrerPolicy="no-referrer" />
                   {profileFrameAsset && <img src={profileFrameAsset.path} alt="" aria-hidden="true" className="pointer-events-none absolute -inset-[6px] z-20 h-[calc(100%+12px)] w-[calc(100%+12px)] object-contain" />}
                 </button>
                 {isOwnProfile && (
