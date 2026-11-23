@@ -2,14 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-test('comments sheet occupies at 60 percent of the viewport, scrolls independently and locks the feed', async () => {
+test('comments sheet is portaled above animated feed cards and keeps its composer above the mobile keyboard', async () => {
   const feed = await readFile(new URL('../src/components/FeedView.tsx', import.meta.url), 'utf8');
-  assert.match(feed, /comments-container fixed bottom-0 inset-x-0 h-\[60dvh\] min-h-\[60dvh\] max-h-\[60dvh\]/);
+  const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
+  assert.match(feed, /nx-comments-sheet comments-container fixed inset-x-0 h-\[60dvh\] min-h-\[60dvh\] max-h-\[60dvh\]/);
+  assert.match(feed, /createPortal\([\s\S]*document\.body/);
+  assert.match(feed, /window\.visualViewport/);
+  assert.match(feed, /viewport\?\.addEventListener\('resize', updateViewport\)/);
+  assert.match(feed, /commentsViewport\.bottom/);
+  assert.match(feed, /commentsViewport\.height/);
+  assert.match(feed, /nx-comments-composer/);
+  assert.match(css, /\.nx-comments-sheet \.nx-comments-composer/);
+  assert.match(css, /env\(safe-area-inset-bottom/);
   assert.match(feed, /overflow-y-auto overscroll-y-contain overscroll-contain touch-pan-y/);
-  assert.ok(feed.includes('className="comments-container fixed bottom-0 inset-x-0 h-[60dvh] min-h-[60dvh] max-h-[60dvh] bg-[#090714]/[0.98]'));
-  assert.ok(!feed.includes('comments-container fixed bottom-0 inset-x-0 h-[60dvh] min-h-[60dvh] max-h-[60dvh] rounded-t-'));
-  assert.ok(!feed.includes('p-3 rounded-2xl bg-slate-950/40 border border-white/5'));
-  assert.ok(!feed.includes('text-xs bg-white/2 p-2 rounded-xl border border-white/3'));
   assert.match(feed, /feed\.style\.overflowY = 'hidden'/);
   assert.match(feed, /document\.body\.style\.overflow = 'hidden'/);
   assert.match(feed, /expandedCommentReplyIds/);
