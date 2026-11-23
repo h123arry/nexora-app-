@@ -371,7 +371,6 @@ export default function FeedView({
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
   const [commentsViewport, setCommentsViewport] = useState<{ bottom: number; height: number } | null>(null);
   const commentInputRef = useRef<HTMLInputElement | null>(null);
-  const commentInputRef = useRef<HTMLInputElement | null>(null);
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const activePostIdRef = useRef<string | null>(null);
   activePostIdRef.current = activePostId;
@@ -802,13 +801,6 @@ export default function FeedView({
       viewport?.removeEventListener('scroll', updateViewport);
       window.removeEventListener('resize', updateViewport);
     };
-  }, [activeCommentsPostId]);
-
-  // Keep the comment entry point easy to reach after the sheet opens.
-  useEffect(() => {
-    if (!activeCommentsPostId) return;
-    const focusTimer = window.setTimeout(() => commentInputRef.current?.focus({ preventScroll: true }), 120);
-    return () => window.clearTimeout(focusTimer);
   }, [activeCommentsPostId]);
 
   // Focus the composer when the comments sheet opens so the typing area is immediately reachable.
