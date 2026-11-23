@@ -9,7 +9,7 @@ import { doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, storage } from './config';
 import { mediaStoragePath } from './storagePaths';
 import { normalizeMediaId } from './mediaId';
-import { apiRequestUrl, normalizeMediaDeliveryUrl } from '../../lib/apiBaseUrl';
+import { apiRequestUrl } from '../../lib/apiBaseUrl';
 
 export interface MediaUploadOptions {
   file: File | Blob;
@@ -162,7 +162,7 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
   }
   return {
     mediaId,
-    downloadUrl: normalizeMediaDeliveryUrl(completed.downloadUrl),
+    downloadUrl: completed.downloadUrl,
     storagePath: completed.storagePath,
     contentType: completed.contentType,
     size: completed.size,
