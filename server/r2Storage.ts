@@ -240,7 +240,7 @@ export function selectR2MediaDeliveryPath(asset: Record<string, unknown>, ownerI
   if (asset.kind === 'video') return selectR2VideoPlaybackPath(asset, ownerId, mediaId);
   if (asset.kind !== 'image' || asset.status !== 'ready' || !Array.isArray(asset.imageVariants)) return original;
   const generation = String(asset.generation || '');
-  if (!/^\\d{1,32}$/.test(generation)) return original;
+  if (!/^\d{1,32}$/.test(generation)) return original;
   const prefix = `processed/${ownerId}/${mediaId}/${generation}/`;
   const variants = asset.imageVariants.flatMap((item: any) => {
     if (!item || !Number.isSafeInteger(item.width) || item.width < 1 || item.width > 20000
