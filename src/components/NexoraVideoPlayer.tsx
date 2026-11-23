@@ -949,7 +949,7 @@ export default function NexoraVideoPlayer({
       }
       setIsReady(false);
       setIsBuffering(true);
-      if (post.mediaAssetId) setPlaybackRefreshKey(key => key + 1);
+      if (post.mediaAssetId && !isR2GatewayMedia) setPlaybackRefreshKey(key => key + 1);
       else videoRef.current?.load();
     }, delay);
   };
