@@ -614,7 +614,7 @@ service cloud.firestore {
       allow update: if owner(userId)
         && request.resource.data.id == userId
         && request.resource.data.keys().hasOnly(publicProfileKeys())
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(editableProfileKeys().concat(['interestDNA', 'followers', 'following', 'sparks', 'hasStory', 'joinedDate', 'reputationPoints', 'reputationBreakdown', 'skills']))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(editableProfileKeys().concat(['interestDNA', 'dateOfBirth', 'followers', 'following', 'sparks', 'hasStory', 'joinedDate', 'reputationPoints', 'reputationBreakdown', 'skills']))
         && publicProjectionReadOnlyFieldsMatchPrivateProfile(userId)
         && publicProfileIsSafe(request.resource.data)
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
