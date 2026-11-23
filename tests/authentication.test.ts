@@ -7,7 +7,7 @@ const { auth } = await import('../src/lib/firebase.ts');
 const { AuthService } = await import('../src/services/firebase/authService.ts');
 const { isPhoneAuthAvailable } = await import('../src/utils/authMethodAvailability.ts');
 const { getAuthSessionIdentityKey, shouldHydrateAuthSession } = await import('../src/services/firebase/authSessionPolicy.ts');
-const { persistProfileWithBestEffortProjection } = await import('../src/services/firebase/profileProvisioningPolicy.ts');
+const { persistProfileWithBestEffortProjection, withProfileProvisioningRetry } = await import('../src/services/firebase/profileProvisioningPolicy.ts');
 const {
   browserLocalPersistence,
   deleteUser,
@@ -28,6 +28,31 @@ async function cleanUp() {
 
 
 
+
+
+test('retries transient Firestore profile failures with bounded backoff', async () => {
+  let attempts = 0;
+  const result = await withProfileProvisioningRetry(async () => {
+    attempts += 1;
+    if (attempts === 1) throw Object.assign(new Error('temporary quota pressure'), { code: 'firestore/resource-exhausted' });
+    if (attempts === 2) throw Object.assign(new Error('temporary quota pressure'), { code: 'resource-exhausted' });
+    return 'profile-ready';
+  }, [0, 0]);
+  assert.equal(result, 'profile-ready');
+  assert.equal(attempts, 3);
+});
+
+test('does not retry permanent Firestore profile authorization failures', async () => {
+  let attempts = 0;
+  await assert.rejects(
+    () => withProfileProvisioningRetry(async () => {
+      attempts += 1;
+      throw Object.assign(new Error('denied'), { code: 'permission-denied' });
+    }, [0, 0]),
+    (error: { code?: string }) => error.code === 'permission-denied',
+  );
+  assert.equal(attempts, 1);
+});
 
 test('private profile persistence succeeds even when public projection synchronization is deferred', async () => {
   const completed = [];

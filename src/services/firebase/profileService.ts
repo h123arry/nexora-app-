@@ -4,7 +4,7 @@ import { User } from '../../types';
 import { User as FirebaseUser } from 'firebase/auth';
 import { checkUsernameStatus, normalizeUsername } from '../../utils/username';
 import { createPublicProfileProjection } from './publicProfileProjection';
-import { persistProfileWithBestEffortProjection } from './profileProvisioningPolicy';
+import { persistProfileWithBestEffortProjection, withProfileProvisioningRetry } from './profileProvisioningPolicy';
 import { getAnonymousMemberUsername } from './anonymousOnboardingPolicy';
 import { apiRequestUrl } from '../../lib/apiBaseUrl';
 
@@ -196,7 +196,7 @@ export class ProfileService {
     const existingLoad = this.profileLoads.get(firebaseUser.uid);
     if (existingLoad) return existingLoad;
 
-    const load = this.loadOrCreateProfile(firebaseUser, additionalData);
+    const load = withProfileProvisioningRetry(() => this.loadOrCreateProfile(firebaseUser, additionalData));
     this.profileLoads.set(firebaseUser.uid, load);
     try {
       return await load;

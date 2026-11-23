@@ -7,6 +7,38 @@ import { ProfileService } from '../services/firebase/profileService';
 import { AuthService } from '../services/firebase/authService';
 import { getAuthSessionIdentityKey, shouldHydrateAuthSession } from '../services/firebase/authSessionPolicy';
 
+/**
+ * Keep the Firebase identity usable while Firestore profile provisioning is
+ * temporarily unavailable. This in-memory shell is never persisted and is
+ * replaced by the canonical private profile as soon as sync succeeds.
+ */
+function createAuthenticatedProfileFallback(firebaseUser: FirebaseUser): User {
+  const email = firebaseUser.email || '';
+  const emailHandle = email.split('@')[0]?.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 24);
+  const username = emailHandle || `member_${firebaseUser.uid.slice(0, 10).toLowerCase()}`;
+  const now = new Date();
+  return {
+    id: firebaseUser.uid,
+    username,
+    name: firebaseUser.displayName || 'NEXORA Member',
+    avatar: firebaseUser.photoURL || '',
+    bio: '',
+    location: 'Global',
+    website: '',
+    followers: 0,
+    following: 0,
+    sparks: 0,
+    isVerified: firebaseUser.emailVerified,
+    coverImage: '',
+    joinedDate: `Joined ${now.toLocaleString('default', { month: 'long' })} ${now.getFullYear()}`,
+    email,
+    reputationPoints: 0,
+    reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+    interestDNA: {},
+    skills: [],
+  };
+}
+
 interface FirebaseContextType {
   firebaseUser: FirebaseUser | null;
   user: User | null;
@@ -102,7 +134,12 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch (authError) {
         const code = (authError as { code?: string } | null)?.code || 'unknown';
         console.error('[NEXORA] Auth-state profile hydration failed', { code, uid: fbUser.uid });
-        if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setError(getProfileSyncMessage(authError));
+        if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) {
+          // Do not make a valid Firebase session look like a logout just
+          // because Firestore could not provision/read its profile yet.
+          setUser(previous => previous?.id === fbUser.uid ? previous : createAuthenticatedProfileFallback(fbUser));
+          setError(getProfileSyncMessage(authError));
+        }
       } finally {
         if (currentSequence === sequence) { setInitializing(false); inFlightHydration = null; }
       }
