@@ -370,6 +370,7 @@ export default function FeedView({
   };
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
   const [commentsViewport, setCommentsViewport] = useState<{ bottom: number; height: number } | null>(null);
+  const commentInputRef = useRef<HTMLInputElement | null>(null);
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const activePostIdRef = useRef<string | null>(null);
   activePostIdRef.current = activePostId;
@@ -785,9 +786,9 @@ export default function FeedView({
       const offsetTop = viewport?.offsetTop || 0;
       const keyboardInset = Math.max(0, window.innerHeight - visibleHeight - offsetTop);
       const keyboardIsOpen = keyboardInset > 80;
-      const height = Math.max(220, Math.min(visibleHeight, keyboardIsOpen
-        ? Math.min(visibleHeight * 0.92, 760)
-        : Math.min(visibleHeight * 0.6, 680)));
+      const height = Math.min(visibleHeight, keyboardIsOpen
+        ? visibleHeight
+        : Math.min(Math.max(visibleHeight * 0.68, 300), 680));
       const bottom = Math.max(0, window.innerHeight - (visibleHeight + offsetTop));
       setCommentsViewport({ bottom, height });
     };
@@ -800,6 +801,13 @@ export default function FeedView({
       viewport?.removeEventListener('scroll', updateViewport);
       window.removeEventListener('resize', updateViewport);
     };
+  }, [activeCommentsPostId]);
+
+  // Keep the comment entry point easy to reach after the sheet opens.
+  useEffect(() => {
+    if (!activeCommentsPostId) return;
+    const focusTimer = window.setTimeout(() => commentInputRef.current?.focus({ preventScroll: true }), 120);
+    return () => window.clearTimeout(focusTimer);
   }, [activeCommentsPostId]);
 
   // State to hold pending posts received in the background while scrolling
@@ -1173,6 +1181,10 @@ export default function FeedView({
         recordAndPersistRecommendationEvent('comment', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
       }
       setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: error instanceof Error ? error.message : 'Your comment could not be sent. Please try again.',
+      }));
     } finally {
       setSubmittingComments(prev => ({ ...prev, [postId]: false }));
     }
@@ -2389,7 +2401,7 @@ export default function FeedView({
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       onClick={() => setActiveCommentsPostId(null)}
-                      className="fixed inset-0 z-[89] bg-black/35"
+                      className="fixed inset-0 z-[149] bg-black/45"
                     />
                     <motion.div
                       role="dialog"
@@ -2399,7 +2411,7 @@ export default function FeedView({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: "100%", opacity: 0 }}
                       transition={{ type: "spring", damping: 28, stiffness: 260 }}
-                      className="nx-comments-sheet comments-container fixed inset-x-0 h-[60dvh] min-h-[60dvh] max-h-[60dvh] bg-[#090714]/[0.98] z-[90] flex flex-col px-4 pt-3 pb-4 sm:px-5 overflow-hidden touch-pan-y" style={commentsViewport ? { bottom: `${commentsViewport.bottom}px`, height: `${commentsViewport.height}px`, minHeight: `${commentsViewport.height}px`, maxHeight: `${commentsViewport.height}px` } : undefined}
+                      className="nx-comments-sheet comments-container fixed inset-x-0 h-[68dvh] min-h-[240px] max-h-[100dvh] bg-[#090714]/[0.98] z-[150] flex flex-col px-4 pt-3 pb-0 sm:px-5 overflow-hidden touch-pan-y" style={commentsViewport ? { bottom: `${commentsViewport.bottom}px`, height: `${commentsViewport.height}px`, minHeight: `${commentsViewport.height}px`, maxHeight: `${commentsViewport.height}px` } : undefined}
                     >
                       {/* Header of Comments drawer */}
                       <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
@@ -2543,7 +2555,7 @@ export default function FeedView({
                       </div>
 
                       {/* Main comment form */}
-                      <div className="nx-comments-composer flex items-center gap-2 pt-2 border-t border-white/5 shrink-0">
+                      <div className="nx-comments-composer sticky bottom-0 z-10 flex w-full items-center gap-2 pt-3 border-t border-white/10 shrink-0">
                         <input 
                           type="text" 
                           placeholder="Write your comment..."
@@ -2551,14 +2563,14 @@ export default function FeedView({
                           value={commentInputs[post.id] || ''}
                           onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
                           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleAddCommentSubmit(post.id); } }}
-                          className="flex-1 bg-slate-950/60 border border-white/5 focus:border-white/10 text-xs text-white placeholder:text-violet-400/40 py-2.5 px-4 rounded-xl focus:outline-hidden"
+                          className="min-w-0 min-h-12 flex-1 bg-slate-950/60 border border-white/10 focus:border-violet-400/60 text-sm text-white placeholder:text-violet-300/70 py-3 px-4 rounded-xl focus:outline-hidden"
                         />
                         <button 
                           type="button"
                           onClick={() => { void handleAddCommentSubmit(post.id); }}
                           aria-label={`Send comment on @${post.username}'s post`}
                           disabled={Boolean(submittingComments[post.id]) || !commentInputs[post.id]?.trim()}
-                          className="p-2.5 bg-violet-600 hover:bg-violet-550 rounded-xl text-white transition-colors cursor-pointer"
+                          className="min-h-12 min-w-12 flex shrink-0 items-center justify-center p-3 bg-violet-600 hover:bg-violet-550 rounded-full text-white transition-colors cursor-pointer disabled:opacity-45"
                         >
                           <Send className="w-4 h-4" />
                         </button>
