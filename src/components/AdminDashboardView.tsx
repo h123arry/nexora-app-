@@ -77,6 +77,7 @@ export default function AdminDashboardView({
   const [foundingError, setFoundingError] = useState('');
   const [foundingResult, setFoundingResult] = useState<{ uid: string; email: string; username: string; passwordResetLink: string } | null>(null);
   const [manualVerificationUserId, setManualVerificationUserId] = useState('');
+  const [manualVerificationSearch, setManualVerificationSearch] = useState('');
   const [manualVerificationIdentityType, setManualVerificationIdentityType] = useState<IdentityReviewApplication['identityType']>('individual');
   const [manualVerificationDisplayName, setManualVerificationDisplayName] = useState('');
   const [manualVerificationEvidenceSummary, setManualVerificationEvidenceSummary] = useState('');
@@ -371,6 +372,8 @@ export default function AdminDashboardView({
       window.dispatchEvent(new CustomEvent('toast', {
         detail: 'Identity verified for @' + (target?.username || manualVerificationUserId) + '. The violet badge is now active.',
       }));
+      await loadData();
+      setManualVerificationSearch('');
       setManualVerificationUserId('');
       setManualVerificationDisplayName('');
       setManualVerificationEvidenceSummary('');
@@ -800,15 +803,20 @@ export default function AdminDashboardView({
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                    NEXORA account
+                    Find NEXORA account
+                    <input value={manualVerificationSearch} onChange={event => setManualVerificationSearch(event.target.value)} placeholder="Search username or name…" className="mb-1 w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-xs normal-case text-white outline-none focus:border-violet-400/60" />
                     <select value={manualVerificationUserId} onChange={event => {
                       const userId = event.target.value;
                       setManualVerificationUserId(userId);
                       setManualVerificationDisplayName(users.find(user => user.id === userId)?.name || '');
                     }} className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-3 text-xs normal-case text-white outline-none focus:border-violet-400/60">
                       <option value="">Select an account…</option>
-                      {users.map(user => <option key={user.id} value={user.id}>@{user.username} · {user.name}</option>)}
+                      {users.filter(user => {
+                        const term = manualVerificationSearch.trim().toLowerCase();
+                        return !term || user.username.toLowerCase().includes(term) || user.name.toLowerCase().includes(term);
+                      }).map(user => <option key={user.id} value={user.id}>@{user.username} · {user.name}{user.isVerified ? ' · Verified' : ''}</option>)}
                     </select>
+                    {userDirectoryUnavailable && <span className="block text-[10px] normal-case text-amber-300">The protected account directory is unavailable. Refresh the admin dashboard and try again.</span>}
                   </label>
                   <label className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                     Identity category
