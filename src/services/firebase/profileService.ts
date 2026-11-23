@@ -120,6 +120,9 @@ export class ProfileService {
         () => setDoc(doc(db, 'publicProfiles', uid), {
           ...this.toPublicProfile(newUser),
           location: deleteField(),
+          interestDNA: deleteField(),
+          dateOfBirth: deleteField(),
+          dateOfBirth: deleteField(),
         }, { merge: true }),
         (error) => {
           const code = (error as { code?: string } | null)?.code || 'unknown';
@@ -187,6 +190,7 @@ export class ProfileService {
           ? updatedProfile.location.trim()
           : deleteField(),
         interestDNA: deleteField(),
+          dateOfBirth: deleteField(),
       }, { merge: true });
     });
     return persistedIdentity;
@@ -245,6 +249,7 @@ export class ProfileService {
             ? profile.location
             : deleteField(),
           interestDNA: deleteField(),
+          dateOfBirth: deleteField(),
         }, { merge: true });
       } catch (error) {
         const code = (error as { code?: string } | null)?.code || 'unknown';
