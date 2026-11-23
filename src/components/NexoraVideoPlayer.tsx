@@ -17,6 +17,7 @@ import { hasAnalyticsObservationConsent, trackClientObservation } from '../servi
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
 import { playNexoraSound } from '../services/soundExperience';
+import { getPublicVideoViewRetryDelayMs } from '../services/videoViewRetryPolicy';
 
 interface NexoraMediaPlugin {
   saveVideo(options: { filename: string; mimeType: string; base64Data: string }): Promise<{ saved: boolean; uri?: string }>;
@@ -292,6 +293,8 @@ export default function NexoraVideoPlayer({
 
   // Watch duration log trigger state
   const viewLoggedRef = useRef(false);
+  const viewRetryAttemptRef = useRef(0);
+  const viewRetryAfterRef = useRef(0);
   const watchCompletedRef = useRef(false);
   const playStartedTimeRef = useRef<number>(0);
   const lastObservedMediaTimeRef = useRef<number | null>(null);
@@ -472,6 +475,8 @@ export default function NexoraVideoPlayer({
     creditedWatchSecondsRef.current = 0;
     lastWatchSignalWriteRef.current = 0;
     viewLoggedRef.current = false;
+    viewRetryAttemptRef.current = 0;
+    viewRetryAfterRef.current = 0;
     watchCompletedRef.current = false;
   }, [finalVideoUrl, post.id]);
 
@@ -625,7 +630,7 @@ export default function NexoraVideoPlayer({
     }
 
     // Watch History: Log view when watched for more than 3 seconds (Meaningful watch duration)
-    if (creditedWatchSecondsRef.current >= 3 && !viewLoggedRef.current) {
+    if (creditedWatchSecondsRef.current >= 3 && !viewLoggedRef.current && Date.now() >= viewRetryAfterRef.current) {
       viewLoggedRef.current = true;
       logToWatchHistory();
       recordReelSignal(post.id, { watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
@@ -634,8 +639,11 @@ export default function NexoraVideoPlayer({
       if (currentUser?.id) {
         const recordPublicView = httpsCallable(getFunctions(app), 'recordPublicVideoView');
         void recordPublicView({ postId: post.id }).catch(() => {
-          // Allow a later playback tick to retry if the network/function is unavailable.
+          // Back off retries so a missing function or offline network cannot
+          // turn every playback tick into another failed callable request.
           viewLoggedRef.current = false;
+          viewRetryAttemptRef.current = Math.min(6, viewRetryAttemptRef.current + 1);
+          viewRetryAfterRef.current = Date.now() + getPublicVideoViewRetryDelayMs(viewRetryAttemptRef.current);
         });
       }
 
