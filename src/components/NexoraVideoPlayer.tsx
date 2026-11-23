@@ -1052,6 +1052,12 @@ export default function NexoraVideoPlayer({
         exportVideo!.onerror = () => reject(new Error('The original video could not be loaded for export.'));
         exportVideo!.load();
       });
+      const logoImage = new Image();
+      logoImage.src = '/nexora-mark.png';
+      await new Promise<void>((resolve, reject) => {
+        logoImage.onload = () => resolve();
+        logoImage.onerror = () => reject(new Error('The official NEXORA watermark artwork could not be loaded.'));
+      });
       const aspect = exportVideo.videoWidth / Math.max(1, exportVideo.videoHeight);
       const targetAspect = width / height;
       let drawWidth = width;
@@ -1088,18 +1094,35 @@ export default function NexoraVideoPlayer({
         context.save();
         context.translate(width / 2, height / 2);
         context.rotate(diagonal);
-        const label = `NEXORA   @${post.username || 'creator'}${post.isVerified ? '   ✓' : ''}`;
-        context.font = '700 30px Arial';
-        context.textAlign = 'center';
+        const creatorLabel = `@${post.username || 'creator'}`;
+        context.font = '700 29px Arial';
+        context.textAlign = 'left';
         context.textBaseline = 'middle';
-        const labelWidth = Math.min(width * 1.2, context.measureText(label).width + 72);
-        context.fillStyle = 'rgba(5,7,20,.76)';
-        context.fillRect(-labelWidth / 2, -30, labelWidth, 60);
-        context.strokeStyle = 'rgba(255,255,255,.3)';
+        const labelWidth = Math.min(width * 1.2, context.measureText(creatorLabel).width + (post.isVerified ? 112 : 82));
+        context.fillStyle = 'rgba(5,7,20,.78)';
+        context.fillRect(-labelWidth / 2, -32, labelWidth, 64);
+        context.strokeStyle = 'rgba(255,255,255,.34)';
         context.lineWidth = 2;
-        context.strokeRect(-labelWidth / 2, -30, labelWidth, 60);
+        context.strokeRect(-labelWidth / 2, -32, labelWidth, 64);
+        context.drawImage(logoImage, -labelWidth / 2 + 12, -17, 34, 34);
         context.fillStyle = '#fff';
-        context.fillText(label, 0, 1, labelWidth - 30);
+        context.fillText(creatorLabel, -labelWidth / 2 + 55, 1, labelWidth - 72);
+        if (post.isVerified) {
+          const badgeX = Math.min(labelWidth / 2 - 20, -labelWidth / 2 + 59 + context.measureText(creatorLabel).width);
+          context.beginPath();
+          context.arc(badgeX, 0, 11, 0, Math.PI * 2);
+          context.fillStyle = '#7138ff';
+          context.fill();
+          context.beginPath();
+          context.moveTo(badgeX - 5, 0);
+          context.lineTo(badgeX - 1, 4);
+          context.lineTo(badgeX + 6, -5);
+          context.strokeStyle = '#fff';
+          context.lineWidth = 2.5;
+          context.lineCap = 'round';
+          context.lineJoin = 'round';
+          context.stroke();
+        }
         context.restore();
         if (!exportVideo!.ended && !exportVideo!.paused) animationFrame = requestAnimationFrame(drawFrame);
       };
