@@ -175,7 +175,7 @@ function createRemoteVideoPoster(videoUrl: string): Promise<Blob | null> {
 const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVideoPosters = false, ownerId }: MediaGridProps) => {
   const attemptedPosterRepairs = useRef(new Set<string>());
   const [repairedPosters, setRepairedPosters] = useState<Record<string, string>>({});
-  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.image || post.images?.find(Boolean) || ''}:${post.videoUrl || ''}:${post.media || ''}:${(post as any).thumbnailUrl || ''}:${(post as any).posterUrl || ''}`).join('|');
+  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.videoUrl || ''}:${post.media || ''}:${(post as any).videoThumbnailUrl || ''}:${(post as any).posterUrl || ''}`).join('|');
 
   useEffect(() => {
     let active = true;
@@ -245,10 +245,6 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
           ? repairedPosters[post.id]
             || (post as any).videoThumbnailUrl
             || (post as any).posterUrl
-            || (post as any).thumbnailUrl
-            || (post as any).thumbnail
-            || post.image
-            || post.images?.find(Boolean)
           : post.image || post.images?.find(Boolean) || (post as any).thumbnailUrl || (post as any).thumbnail || mediaUrl;
         const voiceAudioUrl = post.voiceAudioUrl || (post as any).audioUrl;
         const isMultiImage = !isVideo && (post.images?.filter(Boolean).length || 0) > 1;
