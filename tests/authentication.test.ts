@@ -92,7 +92,7 @@ test('session hydration identity ignores token refreshes but detects account and
   assert.equal(shouldHydrateAuthSession(first, null), false);
 });
 
-test('phone sign-in is available only when explicitly enabled for staging or production', () => {
+test('phone sign-in remains staging-only until production verification is complete', () => {
   assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'production', VITE_NEXORA_PHONE_AUTH_ENABLED: 'true' }), false);
   assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'staging', VITE_NEXORA_PHONE_AUTH_ENABLED: 'true' }), true);
   assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'production', VITE_NEXORA_PHONE_AUTH_ENABLED: 'false' }), false);
