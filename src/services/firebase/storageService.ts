@@ -9,6 +9,7 @@ import { doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, storage } from './config';
 import { mediaStoragePath } from './storagePaths';
 import { normalizeMediaId } from './mediaId';
+import { apiRequestUrl } from '../../lib/apiBaseUrl';
 
 export interface MediaUploadOptions {
   file: File | Blob;
@@ -66,7 +67,7 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
   const fileName = safeFileName(options.fileName || (file instanceof File ? file.name : 'upload'));
   // Force-refresh after auth hydration so the API never receives a stale cached ID token.
   const token = await user.getIdToken(true);
-  const intentResponse = await fetch('/api/media/upload-intent', {
+  const intentResponse = await fetch(apiRequestUrl('/api/media/upload-intent'), {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -90,7 +91,7 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
   const abortR2Intent = async () => {
     try {
       const cleanupToken = await user.getIdToken();
-      await fetch(`/api/media/${encodeURIComponent(mediaId)}/abort`, {
+      await fetch(apiRequestUrl(`/api/media/${encodeURIComponent(mediaId)}/abort`), {
         method: 'POST',
         headers: { Authorization: `Bearer ${cleanupToken}` },
       });
@@ -150,7 +151,7 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
 
   try {
   const completeToken = await user.getIdToken();
-  const completeResponse = await fetch(`/api/media/${encodeURIComponent(mediaId)}/complete`, {
+  const completeResponse = await fetch(apiRequestUrl(`/api/media/${encodeURIComponent(mediaId)}/complete`), {
     method: 'POST',
     headers: { Authorization: `Bearer ${completeToken}`, 'Content-Type': 'application/json' },
     signal,
@@ -181,7 +182,7 @@ export async function uploadPrivateChatMediaFile(options: MediaUploadOptions): P
   const contentType = (file.type || 'application/octet-stream').split(';')[0].trim().toLowerCase();
   const fileName = safeFileName(options.fileName || (file instanceof File ? file.name : 'attachment'));
   const token = await user.getIdToken(true);
-  const intentResponse = await fetch(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/upload-intent`, {
+  const intentResponse = await fetch(apiRequestUrl(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/upload-intent`), {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ contentType, size: file.size, fileName }),
@@ -194,7 +195,7 @@ export async function uploadPrivateChatMediaFile(options: MediaUploadOptions): P
   const abortIntent = async () => {
     try {
       const abortToken = await user.getIdToken();
-      await fetch(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/${encodeURIComponent(intent.mediaId)}/abort`, {
+      await fetch(apiRequestUrl(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/${encodeURIComponent(intent.mediaId)}/abort`), {
         method: 'POST', headers: { Authorization: `Bearer ${abortToken}` },
       });
     } catch { /* Server-side pending-upload expiry remains the fallback cleanup. */ }
@@ -226,7 +227,7 @@ export async function uploadPrivateChatMediaFile(options: MediaUploadOptions): P
       xhr.send(file);
     });
     const completeToken = await user.getIdToken(true);
-    const completeResponse = await fetch(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/${encodeURIComponent(intent.mediaId)}/complete`, {
+    const completeResponse = await fetch(apiRequestUrl(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/${encodeURIComponent(intent.mediaId)}/complete`), {
       method: 'POST', headers: { Authorization: `Bearer ${completeToken}` }, signal,
     });
     const completed = await completeResponse.json().catch(() => ({}));
@@ -252,7 +253,7 @@ export async function resolvePrivateChatMedia(storagePath: string): Promise<stri
   const route = storagePath.includes('/media/')
     ? `/api/private-chat-media/chat/${encodeURIComponent(chatId)}/media/${encodeURIComponent(uploaderId)}/${encodeURIComponent(mediaId)}`
     : `/api/private-chat-media/chat/${encodeURIComponent(chatId)}/audio/${encodeURIComponent(uploaderId)}/${encodeURIComponent(mediaId)}`;
-  const response = await fetch(route, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+  const response = await fetch(apiRequestUrl(route), { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
   if (!response.ok) throw new Error('This attachment is unavailable or you are no longer a conversation participant.');
   return URL.createObjectURL(await response.blob());
 }
@@ -287,7 +288,7 @@ async function uploadMediaFileWithFirebase(options: MediaUploadOptions): Promise
         reader.onerror = () => reject(new Error('Could not read this voice recording.'));
         reader.readAsDataURL(file);
       });
-      const response = await fetch(`/api/private-chat-media/chat/${encodeURIComponent(options.chatId!)}/audio`, {
+      const response = await fetch(apiRequestUrl(`/api/private-chat-media/chat/${encodeURIComponent(options.chatId!)}/audio`), {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ audioBase64: dataUrl.slice(dataUrl.indexOf(',') + 1), mimeType: normalizedContentType }),
@@ -390,7 +391,7 @@ export async function deleteMediaFile(storagePath: string): Promise<void> {
   const match = storagePath.match(/^users\/([A-Za-z0-9_-]{1,128})\/media\/([A-Za-z0-9_-]{1,128})$/);
   if (match && auth.currentUser?.uid === match[1]) {
     const token = await auth.currentUser.getIdToken();
-    const response = await fetch(`/api/media/${encodeURIComponent(match[2])}`, {
+    const response = await fetch(apiRequestUrl(`/api/media/${encodeURIComponent(match[2])}`), {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -411,7 +412,7 @@ export async function resolvePrivateChatAudio(storagePath: string): Promise<stri
   if (!match || !user) throw new Error('Sign in to play this private voice note.');
   const [, chatId, uploaderId, mediaId] = match;
   const token = await user.getIdToken();
-  const response = await fetch(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/audio/${encodeURIComponent(uploaderId)}/${encodeURIComponent(mediaId)}`, {
+  const response = await fetch(apiRequestUrl(`/api/private-chat-media/chat/${encodeURIComponent(chatId)}/audio/${encodeURIComponent(uploaderId)}/${encodeURIComponent(mediaId)}`), {
     headers: { Authorization: `Bearer ${token}` },
     cache: 'no-store',
   });
