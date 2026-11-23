@@ -316,7 +316,7 @@ export function recommendCreators<T extends User>(
     const followerCount = Math.max(0, Number(creator.followers) || 0);
     // Give smaller creators a bounded discovery opportunity instead of making
     // follower count the entry ticket to recommendations, especially at cold start.
-    const smallerCreatorBoost = Math.max(0, 2.5 - Math.log1p(followerCount) * 0.45);
+    const smallerCreatorBoost = Math.max(0, 3.25 - Math.log1p(followerCount) * 0.45);
     const boundedNetworkSignal = Math.min(2, Math.log1p(followerCount) * 0.25);
     const coldStartExplorationFloor = Object.keys(interests).length === 0 ? 0.75 : 0;
     const score = Math.round(overlap + (creator.isVerified ? 3 : 0)
