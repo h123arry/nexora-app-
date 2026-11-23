@@ -5,6 +5,7 @@ import { getNearestMediaIndex, resolvePreservedMediaIndex } from '../utils/immer
 import { Post, User } from '../types';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraImagePlayer from './NexoraImagePlayer';
+import NexoraResolvedImage from './NexoraResolvedImage';
 import RelativeTime from './RelativeTime';
 import { getVideoPreloadPlan } from '../utils/videoPreloadPolicy';
 
