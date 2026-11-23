@@ -55,3 +55,20 @@ export function consumeModerationReportQuota(
     retryAfterMs: MODERATION_REPORT_WINDOW_MS - elapsed,
   };
 }
+
+
+/**
+ * Resolve the account responsible for a reported Circle/community.
+ * The canonical ownerId is preferred; creatorId is accepted for legacy records.
+ * Invalid or missing ownership fails closed so moderation never targets a guessed account.
+ */
+export function resolveCommunityOwnerId(data: Record<string, unknown> | null | undefined): string | null {
+  if (!data) return null;
+  for (const candidate of [data.ownerId, data.creatorId]) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0
+      && candidate.trim().length <= 150 && !candidate.includes('/')) {
+      return candidate.trim();
+    }
+  }
+  return null;
+}
