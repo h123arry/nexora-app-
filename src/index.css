@@ -2726,3 +2726,32 @@ body {
     transition: none !important;
   }
 }
+
+
+/* Keep the NEXORA comment composer visible above mobile browser and system safe areas. */
+.nx-comments-sheet .nx-comments-composer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 0 max(12px, env(safe-area-inset-bottom, 0px));
+  background: rgba(5, 4, 11, .99);
+  border-top: 1px solid rgba(151, 119, 220, .18);
+}
+.nx-comments-sheet .nx-comments-composer input {
+  display: block;
+  min-width: 0;
+  min-height: 48px;
+  flex: 1 1 auto;
+  font-size: 14px;
+  color: #fff;
+  opacity: 1;
+}
+.nx-comments-sheet .nx-comments-composer button[aria-label*="Send"] {
+  flex: 0 0 48px;
+  width: 48px;
+  min-width: 48px;
+  min-height: 48px;
+}

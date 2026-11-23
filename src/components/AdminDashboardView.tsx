@@ -77,6 +77,7 @@ export default function AdminDashboardView({
   const [foundingError, setFoundingError] = useState('');
   const [foundingResult, setFoundingResult] = useState<{ uid: string; email: string; username: string; passwordResetLink: string } | null>(null);
   const [manualVerificationUserId, setManualVerificationUserId] = useState('');
+  const [manualVerificationSearch, setManualVerificationSearch] = useState('');
   const [manualVerificationIdentityType, setManualVerificationIdentityType] = useState<IdentityReviewApplication['identityType']>('individual');
   const [manualVerificationDisplayName, setManualVerificationDisplayName] = useState('');
   const [manualVerificationEvidenceSummary, setManualVerificationEvidenceSummary] = useState('');
@@ -88,6 +89,8 @@ export default function AdminDashboardView({
   const loadData = async () => {
     // 1. Load the protected user directory through a trusted callable.
     try {
+      // Refresh custom claims before deciding whether founder-only verification controls are available.
+      await auth.currentUser?.getIdToken(true);
       const result = await httpsCallable<void, {
         users: User[];
         permissions: { canManage: boolean; canManageRoles: boolean };
@@ -371,6 +374,8 @@ export default function AdminDashboardView({
       window.dispatchEvent(new CustomEvent('toast', {
         detail: 'Identity verified for @' + (target?.username || manualVerificationUserId) + '. The violet badge is now active.',
       }));
+      await loadData();
+      setManualVerificationSearch('');
       setManualVerificationUserId('');
       setManualVerificationDisplayName('');
       setManualVerificationEvidenceSummary('');
@@ -800,15 +805,20 @@ export default function AdminDashboardView({
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                    NEXORA account
+                    Find NEXORA account
+                    <input value={manualVerificationSearch} onChange={event => setManualVerificationSearch(event.target.value)} placeholder="Search username or name…" className="mb-1 w-full rounded-xl border border-white/10 bg-black/35 px-3 py-2.5 text-xs normal-case text-white outline-none focus:border-violet-400/60" />
                     <select value={manualVerificationUserId} onChange={event => {
                       const userId = event.target.value;
                       setManualVerificationUserId(userId);
                       setManualVerificationDisplayName(users.find(user => user.id === userId)?.name || '');
                     }} className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-3 text-xs normal-case text-white outline-none focus:border-violet-400/60">
                       <option value="">Select an account…</option>
-                      {users.map(user => <option key={user.id} value={user.id}>@{user.username} · {user.name}</option>)}
+                      {users.filter(user => {
+                        const term = manualVerificationSearch.trim().toLowerCase();
+                        return !term || user.username.toLowerCase().includes(term) || user.name.toLowerCase().includes(term);
+                      }).map(user => <option key={user.id} value={user.id}>@{user.username} · {user.name}{user.identityVerified ? ' · Identity verified' : ''}</option>)}
                     </select>
+                    {userDirectoryUnavailable && <span className="block text-[10px] normal-case text-amber-300">The protected account directory is unavailable. Refresh the admin dashboard and try again.</span>}
                   </label>
                   <label className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                     Identity category
@@ -836,6 +846,11 @@ export default function AdminDashboardView({
                   <Shield className="h-4 w-4" /> {manualVerificationBusy ? 'Verifying account…' : 'Grant verified identity badge'}
                 </button>
               </section>
+            )}
+            {!canManageRoles && (
+              <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-[11px] leading-relaxed text-zinc-400">
+                Manual identity verification is restricted to the NEXORA founder account. If founder access was recently granted, refresh this dashboard after your account claims have updated.
+              </p>
             )}
             <section className="space-y-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.03] p-4">
               <div>

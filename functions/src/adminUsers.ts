@@ -63,7 +63,10 @@ export const listAdminUsers = onCall({ maxInstances: 5 }, async request => {
     const snapshot = await db.collection('users').orderBy('createdAt', 'desc').limit(200).get();
     const users = await Promise.all(snapshot.docs.map(async item => {
       const data = item.data();
-      const status = await db.collection('accountStatus').doc(item.id).get();
+      const [status, verifiedIdentity] = await Promise.all([
+        db.collection('accountStatus').doc(item.id).get(),
+        db.collection('verifiedIdentities').doc(item.id).get(),
+      ]);
       const account = status.data() || {};
       return {
         id: item.id,
@@ -73,6 +76,7 @@ export const listAdminUsers = onCall({ maxInstances: 5 }, async request => {
         ...(canManage && typeof data.email === 'string' ? { email: data.email } : {}),
         role: String(data.role || 'user'),
         isVerified: data.isVerified === true,
+        identityVerified: verifiedIdentity.exists && verifiedIdentity.get('status') === 'verified',
         isBanned: account.banned === true || data.isBanned === true,
         isSuspended: account.suspended === true || data.isSuspended === true,
         reputationPoints: Number.isSafeInteger(data.reputationPoints) && data.reputationPoints >= 0 ? data.reputationPoints : 0,

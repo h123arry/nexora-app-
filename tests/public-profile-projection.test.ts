@@ -42,6 +42,7 @@ test('publishes changed identity fields while keeping private account data out o
     username: 'new_handle',
     name: 'New Display Name',
     avatar: 'https://cdn.example/avatar.jpg',
+    coverImage: 'https://cdn.example/cover.jpg',
     bio: 'Updated bio',
     email: 'private@example.com',
     phoneNumber: '+234000000000',
@@ -51,6 +52,7 @@ test('publishes changed identity fields while keeping private account data out o
   assert.equal(updated.username, 'new_handle');
   assert.equal(updated.name, 'New Display Name');
   assert.equal(updated.avatar, 'https://cdn.example/avatar.jpg');
+  assert.equal(updated.coverImage, 'https://cdn.example/cover.jpg');
   assert.equal(updated.bio, 'Updated bio');
   assert.equal('email' in updated, false);
   assert.equal('phoneNumber' in updated, false);

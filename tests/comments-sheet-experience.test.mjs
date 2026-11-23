@@ -5,13 +5,16 @@ import { readFile } from 'node:fs/promises';
 test('comments sheet is portaled above animated feed cards and keeps its composer above the mobile keyboard', async () => {
   const feed = await readFile(new URL('../src/components/FeedView.tsx', import.meta.url), 'utf8');
   const css = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
-  assert.match(feed, /nx-comments-sheet comments-container fixed inset-x-0 h-\[60dvh\] min-h-\[60dvh\] max-h-\[60dvh\]/);
+  assert.match(feed, /nx-comments-sheet comments-container fixed inset-x-0 h-\[68dvh\] min-h-\[240px\] max-h-\[100dvh\]/);
   assert.match(feed, /createPortal\([\s\S]*document\.body/);
   assert.match(feed, /window\.visualViewport/);
   assert.match(feed, /viewport\?\.addEventListener\('resize', updateViewport\)/);
   assert.match(feed, /commentsViewport\.bottom/);
   assert.match(feed, /commentsViewport\.height/);
-  assert.match(feed, /nx-comments-composer/);
+  assert.match(feed, /nx-comments-composer sticky bottom-0 z-10/);
+  assert.match(feed, /ref=\{commentInputRef\}/);
+  assert.match(feed, /enterKeyHint="send"/);
+  assert.match(feed, /commentInputRef\.current\?\.focus/);
   assert.match(css, /\.nx-comments-sheet \.nx-comments-composer/);
   assert.match(css, /env\(safe-area-inset-bottom/);
   assert.match(feed, /overflow-y-auto overscroll-y-contain overscroll-contain touch-pan-y/);
