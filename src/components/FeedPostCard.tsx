@@ -10,6 +10,7 @@ import {
 import { Post, User } from '../types';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraImagePlayer from './NexoraImagePlayer';
+import NexoraResolvedImage from './NexoraResolvedImage';
 import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
 import OriginAttributionPreviewModal from './OriginAttributionPreviewModal';
@@ -203,7 +204,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               onViewProfile?.(post.userId || post.username);
             }}
           >
-            <img
+            <NexoraResolvedImage
               src={post.avatar}
               alt=""
               loading="lazy"
