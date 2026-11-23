@@ -852,9 +852,13 @@ export default function FeedView({
             existingPost.audience !== matchingIncoming.audience ||
             existingPost.likes !== matchingIncoming.likes ||
             JSON.stringify(existingPost.comments) !== JSON.stringify(matchingIncoming.comments) ||
+            existingPost.commentsCount !== matchingIncoming.commentsCount ||
             existingPost.isLikedByUser !== matchingIncoming.isLikedByUser ||
             existingPost.isBookmarkedByUser !== matchingIncoming.isBookmarkedByUser ||
             existingPost.shares !== matchingIncoming.shares ||
+            existingPost.bookmarksCount !== matchingIncoming.bookmarksCount ||
+            existingPost.saves !== matchingIncoming.saves ||
+            existingPost.views !== matchingIncoming.views ||
             existingPost.scheduledTime !== matchingIncoming.scheduledTime ||
             existingPost.name !== matchingIncoming.name ||
             existingPost.avatar !== matchingIncoming.avatar ||
