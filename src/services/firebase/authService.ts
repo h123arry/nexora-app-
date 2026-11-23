@@ -370,7 +370,7 @@ export class AuthService {
       provider.setCustomParameters({ prompt: 'select_account' });
       const existingSession = auth.currentUser;
       const wasAnonymous = existingSession?.isAnonymous === true;
-      const credential = wasAnonymous
+      const credential = existingSession?.isAnonymous
         ? await linkWithPopup(existingSession, provider)
         : await signInWithPopup(auth, provider);
       const fbUser = credential.user;
