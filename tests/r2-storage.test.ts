@@ -130,7 +130,7 @@ test('R2 playback prefers a valid 720p rendition and falls back to the immutable
       { height: 720, mp4Path: 'processed/user_123/asset-456/1795090000000/720p/video.mp4' },
       { height: 1080, mp4Path: 'processed/other/asset-456/1795090000000/1080p/video.mp4' },
     ],
-  }, 'user_123', 'asset-456'), 'processed/user_123/asset-456/720p/video.mp4');
+  }, 'user_123', 'asset-456'), 'processed/user_123/asset-456/1795090000000/720p/video.mp4');
   assert.equal(selectR2VideoPlaybackPath({
     storagePath: original, kind: 'video', status: 'ready',
     renditions: [{ height: 720, mp4Path: 'processed/user_123/asset-456/1795090000000/../../private.mp4' }],
