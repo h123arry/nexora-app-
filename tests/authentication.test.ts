@@ -34,7 +34,8 @@ test('retries transient Firestore profile failures with bounded backoff', async 
   let attempts = 0;
   const result = await withProfileProvisioningRetry(async () => {
     attempts += 1;
-    if (attempts < 3) throw Object.assign(new Error('temporary quota pressure'), { code: 'resource-exhausted' });
+    if (attempts === 1) throw Object.assign(new Error('temporary quota pressure'), { code: 'firestore/resource-exhausted' });
+    if (attempts === 2) throw Object.assign(new Error('temporary quota pressure'), { code: 'resource-exhausted' });
     return 'profile-ready';
   }, [0, 0]);
   assert.equal(result, 'profile-ready');
