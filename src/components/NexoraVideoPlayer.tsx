@@ -7,8 +7,6 @@ import { useResolvedUrl } from '../utils/indexedDbStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import VideoBottomSheet from './VideoBottomSheet';
 import NexoraLoader from './NexoraLoader';
-import NexoraWatermark from './branding/NexoraWatermark';
-import NexoraPostRollCard from './branding/NexoraPostRollCard';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, Heart, MessageSquare, Send, X, EyeOff, Eye, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -232,7 +230,6 @@ export default function NexoraVideoPlayer({
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [showPostRoll, setShowPostRoll] = useState(false);
-  const [watermarkPosition, setWatermarkPosition] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const [showLongPressMenu, setShowLongPressMenu] = useState(false);
@@ -256,7 +253,6 @@ export default function NexoraVideoPlayer({
   const singleTapTimeoutRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<any>(null);
   const bufferingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const watermarkCycleRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const postRollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playStateIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const doubleTapHeartTimeoutRef = useRef<number | null>(null);
@@ -331,18 +327,6 @@ export default function NexoraVideoPlayer({
       setShowTapForSound(false);
     }
   }, [isPlaying, isMuted]);
-
-  useEffect(() => {
-    if (watermarkCycleRef.current) clearInterval(watermarkCycleRef.current);
-    if (!isPlaying || showPostRoll) return;
-    watermarkCycleRef.current = setInterval(() => {
-      setWatermarkPosition(position => (position + 1) % 4);
-    }, 5000);
-    return () => {
-      if (watermarkCycleRef.current) clearInterval(watermarkCycleRef.current);
-      watermarkCycleRef.current = null;
-    };
-  }, [isPlaying, showPostRoll]);
 
   useEffect(() => () => {
     if (postRollTimeoutRef.current) clearTimeout(postRollTimeoutRef.current);
@@ -1105,7 +1089,6 @@ export default function NexoraVideoPlayer({
         context.translate(width / 2, height / 2);
         context.rotate(diagonal);
         const label = `NEXORA   @${post.username || 'creator'}${post.isVerified ? '   ✓' : ''}`;
-        context.font = '700  thirtypx Arial';
         context.font = '700 30px Arial';
         context.textAlign = 'center';
         context.textBaseline = 'middle';
