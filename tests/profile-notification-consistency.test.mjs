@@ -102,7 +102,7 @@ test('signup uses email/password and Google without a username credential path',
     read('../src/services/firebase/profileService.ts'),
   ]);
   assert.match(setup, /onSwitchToEmailSignup/);
-  assert.match(app, /<AuthView[\s\S]*initialMode="signup"/);
+  assert.match(app, /<AuthView[\s\S]*initialMode=\{emailAuthInitialMode\}/);
   assert.match(authView, /handleEmailSignupSubmit/);
   assert.match(authService, /createUserWithEmailAndPassword\(auth, cleanEmail, password\)/);
   assert.match(authService, /GoogleAuthProvider/);
