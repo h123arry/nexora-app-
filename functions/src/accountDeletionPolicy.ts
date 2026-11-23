@@ -50,7 +50,7 @@ export async function eraseUserCommentsFromPosts(
   userId: string,
   onBatch?: () => Promise<void>,
 ): Promise<number> {
-  if (!userId || userId.includes('/') || userId.includes('\\\\')) {
+  if (!userId || userId.includes('/') || userId.includes('\\')) {
     throw new Error('A valid account ID is required for comment cleanup.');
   }
 
@@ -86,7 +86,10 @@ export async function eraseUserCommentsFromPosts(
             return [];
           }
           return [{
-            ...comment,
+            id: comment.id,
+            postId: comment.postId,
+            timestamp: comment.timestamp,
+            likes: Number.isSafeInteger(comment.likes) ? comment.likes : 0,
             userId: '',
             username: 'deleted_account',
             name: 'Deleted account',
@@ -113,8 +116,8 @@ export async function eraseUserCommentsFromPosts(
     if (batchChanges > 0) {
       await batch.commit();
       changedPosts += batchChanges;
-      await onBatch?.();
     }
+    await onBatch?.();
     cursor = snapshot.docs[snapshot.docs.length - 1];
     if (snapshot.size < PAGE_SIZE) break;
   }
