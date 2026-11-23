@@ -42,7 +42,11 @@ Firestore rules remain authoritative and were not loosened.
 
 ## Authentication methods found in the repository
 
-Email/password registration and login are implemented with Firebase Authentication. Password reset uses Firebase's `sendPasswordResetEmail`. Email verification uses Firebase's `sendEmailVerification` and `reload`. Google sign-in uses `GoogleAuthProvider` and `signInWithPopup`. Phone sign-in uses Firebase SMS authentication with `RecaptchaVerifier` and `signInWithPhoneNumber`.
+Email/password registration and login use Firebase Authentication. Password reset uses Firebase's `sendPasswordResetEmail`. Email verification currently uses Firebase's built-in `sendEmailVerification` action link. Google sign-in uses `GoogleAuthProvider` and `signInWithPopup`. Phone OTP is implemented with Firebase SMS authentication and `RecaptchaVerifier`, but is deliberately available only in a verified staging environment.
+
+The public authentication UI no longer offers username-as-login or username/password account creation. A NEXORA username remains the public profile handle selected during onboarding; it is not a credential. Existing anonymous beta accounts can still be linked to email/password, Google, or phone to preserve their UID, but opening a beta invitation no longer creates an anonymous Firebase user. The beta claim function now requires a non-anonymous authenticated account.
+
+NEXORA's custom numeric email verification code is not active yet. The email template supports a code, but the transactional sender is currently disabled; Firebase's built-in verification link remains the actual delivery path until a real transactional email provider is configured and tested.
 
 Apple sign-in is not implemented. It was not added because enabling it requires project-side provider configuration, platform-specific redirect configuration, and a verified Apple developer setup. The UI does not pretend that Apple sign-in is available.
 
@@ -74,8 +78,8 @@ The Firebase web API key in the web configuration is a public client identifier,
 2. In Authentication, confirm that Email/Password is enabled.
 3. Confirm that the deployed Nexora domains and local development domains are listed under authorized domains. A missing authorized domain produces `auth/unauthorized-domain`.
 4. Confirm that Google provider configuration is complete if Google sign-in is desired.
-5. Confirm Phone provider and reCAPTCHA configuration if SMS sign-in is desired. Configure test phone numbers for non-production testing rather than using real accounts in automated tests.
-6. Configure the Firebase email action domain, templates, and sender identity for verification and password reset.
+5. Configure Phone provider and reCAPTCHA in a separate staging Firebase project. Phone OTP must remain hidden in production until Nigeria (+234) delivery, quota/region policy, authorized domains, account linking and recovery have passed the documented staging acceptance tests.
+6. Configure the Firebase email action domain, templates, and sender identity for verification and password reset. Before replacing the current verification link with a numeric code, configure and test a transactional sender that can deliver NEXORA's custom code template.
 7. Deploy the repository's Firestore rules and indexes to the intended database. Confirm that the named database is selected rather than silently using an empty default database.
 8. Deploy Storage rules and verify the configured bucket exactly matches the owner-verified bucket in `nexora-prod-voiceharrison`.
 9. Configure App Check only after the deployed domain has a registered reCAPTCHA Enterprise site key. Keep the key in the public `VITE_FIREBASE_APPCHECK_SITE_KEY` configuration; never place a secret key in frontend code.
