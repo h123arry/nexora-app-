@@ -171,7 +171,7 @@ export default function NexoraVideoPlayer({
   // on the API server. Do not ask the Firebase Storage callable to look for an
   // R2 object in the separate Firebase Storage bucket.
   const isR2GatewayMedia = typeof videoUrl === 'string'
-    && /\\/api\\/media\\/[A-Za-z0-9_-]{1,128}(?:[?#]|$)/.test(videoUrl);
+    && videoUrl.includes('/api/media/');
   const originalResolvedUrl = videoUrl?.startsWith('db-media://') || isR2GatewayMedia ? resolvedUrl : videoUrl;
   const [processedPlaybackUrl, setProcessedPlaybackUrl] = useState<string | null>(null);
   const [playbackRefreshKey, setPlaybackRefreshKey] = useState(0);
