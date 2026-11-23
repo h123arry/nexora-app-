@@ -232,6 +232,7 @@ export default function NexoraImagePlayer({
   // Keep resolved URLs by their original carousel index. Only the active image
   // and its immediate successor are resolved, rather than every image at once.
   const [displayImages, setDisplayImages] = useState<Array<string | undefined>>([]);
+  const [imageRetryKey, setImageRetryKey] = useState(0);
 
   useEffect(() => {
     setCurrentImageIndex(0);
@@ -348,6 +349,7 @@ export default function NexoraImagePlayer({
         ) : displayImages[currentImageIndex] ? (
           <>
             <img loading={isActive || shouldPreload ? "eager" : "lazy"}
+              key={`${displayImages[currentImageIndex]}-${imageRetryKey}`}
               src={displayImages[currentImageIndex]}
               alt={post.imageAltText || post.content || 'Post media'}
               decoding="async"
@@ -373,6 +375,7 @@ export default function NexoraImagePlayer({
                 </div>
                 <p className="text-sm font-bold text-white">Media unavailable</p>
                 <p className="text-xs text-zinc-400 max-w-xs">This image could not be loaded. The post caption and actions are still available.</p>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setIsImageLoading(true); setHasImageLoadError(false); setImageRetryKey(key => key + 1); }} className="mt-1 rounded-full border border-violet-400/30 bg-violet-500/15 px-4 py-2 text-xs font-semibold text-violet-100 hover:bg-violet-500/25 focus-visible:outline-2 focus-visible:outline-violet-300">Try again</button>
               </div>
             )}
           </>
