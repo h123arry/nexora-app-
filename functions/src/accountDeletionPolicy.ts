@@ -158,7 +158,9 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string, on
     }
   }
   // Comments are embedded in other users' posts, so scrub them separately from owned documents.
-  await eraseUserCommentsFromPosts(db, userId, onBatch);\n\n  // Reporter signals are nested under the reported account; remove both target- and reporter-owned rows.
+  await eraseUserCommentsFromPosts(db, userId, onBatch);
+
+  // Reporter signals are nested under the reported account; remove both target- and reporter-owned rows.
   const targetSignals = db.collection('identityImpersonationSignals').doc(userId);
   while (true) {
     const rows = await targetSignals.collection('reporters').limit(PAGE_SIZE).get();
