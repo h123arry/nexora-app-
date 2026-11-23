@@ -154,6 +154,49 @@ describe('profile editing Firestore permissions', () => {
     assert.deepEqual(publicSnapshot.get('skills'), ['Community building']);
   });
 
+  it('allows owners to rebuild a missing public profile using real private counters without allowing forged counters', async () => {
+    await seed(async db => {
+      await setDoc(doc(db, 'users', 'alice'), {
+        id: 'alice', email: 'alice@example.test', username: 'alice', name: 'Alice',
+        bio: 'Existing bio', avatar: 'https://media.example.test/alice.webp',
+        location: '', website: 'https://alice.example.test',
+        coverImage: 'https://media.example.test/alice-cover.webp',
+        followers: 42, following: 17, sparks: 125, hasStory: true,
+        joinedDate: 'Joined November 2026', reputationPoints: 350,
+        reputationBreakdown: { contributions: 150, helpfulness: 100, missionsCompleted: 50, skillsVerified: 50 },
+        skills: ['Community building']
+      });
+      await setDoc(doc(db, 'users', 'bob'), {
+        id: 'bob', email: 'bob@example.test', username: 'bob', name: 'Bob',
+        bio: '', avatar: '', location: '', website: '', coverImage: '',
+        followers: 7, following: 3, sparks: 9, hasStory: false,
+        joinedDate: 'Joined November 2026', reputationPoints: 80,
+        reputationBreakdown: { contributions: 30, helpfulness: 20, missionsCompleted: 20, skillsVerified: 10 },
+        skills: []
+      });
+    });
+
+    const aliceDb = dbFor('alice');
+    await assertSucceeds(setDoc(doc(aliceDb, 'publicProfiles', 'alice'), {
+      id: 'alice', username: 'alice', name: 'Alice',
+      bio: 'Existing bio', avatar: 'https://media.example.test/alice.webp',
+      website: 'https://alice.example.test', coverImage: 'https://media.example.test/alice-cover.webp',
+      followers: 42, following: 17, sparks: 125, hasStory: true,
+      joinedDate: 'Joined November 2026', reputationPoints: 350,
+      reputationBreakdown: { contributions: 150, helpfulness: 100, missionsCompleted: 50, skillsVerified: 50 },
+      skills: []
+    }));
+
+    const bobDb = dbFor('bob');
+    await assertFails(setDoc(doc(bobDb, 'publicProfiles', 'bob'), {
+      id: 'bob', username: 'bob', name: 'Bob', bio: '', avatar: '', website: '', coverImage: '',
+      followers: 999, following: 3, sparks: 9, hasStory: false,
+      joinedDate: 'Joined November 2026', reputationPoints: 80,
+      reputationBreakdown: { contributions: 30, helpfulness: 20, missionsCompleted: 20, skillsVerified: 10 },
+      skills: []
+    }));
+  });
+
   it('allows early community members to update bio, avatar and cover without losing their protected recognition flag', async () => {
     await seed(async db => {
       await setDoc(doc(db, 'users', 'early-alice'), {
