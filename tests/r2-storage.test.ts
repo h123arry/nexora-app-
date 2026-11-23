@@ -9,6 +9,7 @@ import {
   isCurrentPublicProfileMedia,
   r2MediaGatewayUrl,
   selectR2VideoPlaybackPath,
+  selectR2MediaDeliveryPath,
 } from '../server/r2Storage';
 
 const env = {
@@ -95,6 +96,26 @@ test('public profile media is delivered only while the profile points to the exa
   assert.equal(isCurrentPublicProfileMedia('profile-cover', 'cover-456', { coverImage: avatarUrl }), false);
   assert.equal(isCurrentPublicProfileMedia('post', 'avatar-123', { avatar: avatarUrl }), false);
   assert.equal(isCurrentPublicProfileMedia('profile-avatar', 'avatar-123', null), false);
+});
+
+
+
+test('R2 image delivery selects only a generation-matched optimized WebP rendition', () => {
+  const original = 'users/user_123/media/image-456';
+  const asset = {
+    storagePath: original, kind: 'image', status: 'ready', generation: '1795090000000',
+    imageVariants: [
+      { width: 480, path: 'processed/user_123/image-456/1795090000000/image-480.webp' },
+      { width: 1280, path: 'processed/user_123/image-456/1795090000000/image-1280.webp' },
+      { width: 1920, path: 'processed/user_123/image-456/1795090000000/image-1920.webp' },
+      { width: 2048, path: 'processed/other/image-456/1795090000000/image-2048.webp' },
+    ],
+  };
+  assert.equal(selectR2MediaDeliveryPath(asset, 'user_123', 'image-456'),
+    'processed/user_123/image-456/1795090000000/image-1280.webp');
+  assert.equal(selectR2MediaDeliveryPath({ ...asset, imageVariants: [] }, 'user_123', 'image-456'), original);
+  assert.equal(selectR2MediaDeliveryPath({ ...asset, generation: 'bad' }, 'user_123', 'image-456'), original);
+  assert.equal(selectR2MediaDeliveryPath(asset, 'other-user', 'image-456'), null);
 });
 
 
