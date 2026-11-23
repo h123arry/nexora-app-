@@ -263,7 +263,7 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
   const handlePhoneOtpRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!PHONE_AUTH_ENABLED) {
-      setErrorMsg('Phone verification is not available yet. Please use email sign-in.');
+      setErrorMsg('Phone verification is not available yet. Please use email and password or Google.');
       return;
     }
     setErrorMsg('');
@@ -916,7 +916,7 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
                     onChange={(e) => setIdentifierInput(e.target.value)}
                     placeholder="name@example.com"
                     required
-                    autoComplete="username"
+                    autoComplete="email"
                     className="w-full px-4 py-3.5 bg-black/40 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 transition-all"
                   />
                   <div className="absolute right-3.5 text-zinc-500">
