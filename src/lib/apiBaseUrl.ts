@@ -48,7 +48,10 @@ export function apiRequestUrl(path: string): string {
  */
 export function normalizeMediaDeliveryUrl(value: string | undefined | null): string {
   if (!value) return '';
-  if (/^\\/api\\/media\\/[A-Za-z0-9_-]{1,128}(?:[?#].*)?$/.test(value)) {
+  const path = value.split(/[?#]/, 1)[0];
+  const mediaPrefix = '/api/media/';
+  if (path.startsWith(mediaPrefix)
+    && /^[A-Za-z0-9_-]{1,128}$/.test(path.slice(mediaPrefix.length))) {
     return apiRequestUrl(value);
   }
   return value;
