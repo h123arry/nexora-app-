@@ -298,6 +298,7 @@ export function recommendCreators<T extends User>(
     if (key && Number.isFinite(value)) out[key] = Math.max(0, Math.min(100, value));
     return out;
   }, {});
+  const hasViewerInterests = Object.values(interests).some(weight => weight > 0);
   const limit = Math.min(50, Math.max(1, options.limit ?? 12));
   const unique = creators.filter((creator, index, all) =>
     creator.id !== options.viewerId && !following.has(creator.id) &&
@@ -318,7 +319,7 @@ export function recommendCreators<T extends User>(
     // follower count the entry ticket to recommendations, especially at cold start.
     const smallerCreatorBoost = Math.max(0, 3.25 - Math.log1p(followerCount) * 0.45);
     const boundedNetworkSignal = Math.min(2, Math.log1p(followerCount) * 0.25);
-    const coldStartExplorationFloor = Object.keys(interests).length === 0 ? 0.75 : 0;
+    const coldStartExplorationFloor = hasViewerInterests ? 0 : 0.75;
     const score = Math.round(overlap + (creator.isVerified ? 3 : 0)
       + boundedNetworkSignal + smallerCreatorBoost + coldStartExplorationFloor);
     const reason = sharedTopics.length
@@ -326,7 +327,7 @@ export function recommendCreators<T extends User>(
       : followerCount <= 20 ? 'A smaller creator to discover' : 'A creator to discover';
     return { creator, score, sharedTopics, reason, index };
   })
-    .filter(item => item.score > 0 && (Object.keys(interests).length === 0 || item.sharedTopics.length > 0))
+    .filter(item => item.score > 0 && (!hasViewerInterests || item.sharedTopics.length > 0))
     .sort((a, b) => b.score - a.score || a.index - b.index);
 
   // Prevent one dominant interest from occupying the entire recommendation
