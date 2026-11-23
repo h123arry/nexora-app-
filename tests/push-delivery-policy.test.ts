@@ -48,6 +48,7 @@ describe('trusted notification push delivery policy', () => {
     assert.equal(notificationPreferenceKey('mention'), 'mentions');
     assert.equal(notificationPreferenceKey('community_invite'), 'communities');
     assert.equal(notificationPreferenceKey('event_reminder'), 'events');
+    assert.equal(notificationPreferenceKey('community_event'), 'events');
     assert.equal(notificationPreferenceKey('verification_approved'), 'verification');
     assert.equal(notificationPreferenceKey('creator_upload'), 'creatorUploads');
     assert.equal(notificationPreferenceKey('friend_request'), 'friendRequests');
