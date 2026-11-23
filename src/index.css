@@ -922,14 +922,30 @@ body {
 .nx-feed-stage .nx-post-card .nx-video-frame {
   border-radius: 0;
 }
-.nx-feed-stage .nx-post-card .comments-container {
+
+.nx-comments-sheet {
+  isolation: isolate;
+  border: 1px solid rgba(151,119,220,.22);
+  border-bottom: 0;
+  border-radius: 24px 24px 0 0;
+  box-shadow: 0 -20px 60px rgba(0,0,0,.5);
+  background: rgba(7,5,15,.98);
+  padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+}
+.nx-comments-sheet .nx-comments-composer {
+  flex-shrink: 0;
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  background: rgba(7,5,15,.98);
+}
+
+.nx-comments-sheet {
   background: rgba(5,4,11,.98);
   border-color: rgba(151,119,220,.2);
 }
-.nx-feed-stage .nx-post-card .comments-container > div {
+.nx-comments-sheet > div {
   border-color: rgba(151,119,220,.12);
 }
-.nx-feed-stage .nx-post-card .comments-container [class*="bg-slate-950"] {
+.nx-comments-sheet [class*="bg-slate-950"] {
   background: rgba(17,12,31,.75);
   border-color: rgba(151,119,220,.12);
 }
@@ -1154,7 +1170,7 @@ body {
   height: 42px;
   border-radius: 14px;
 }
-.nx-feed-stage .nx-post-card .comments-container {
+.nx-comments-sheet {
   border: 1px solid rgba(151,119,220,.22);
   border-bottom: 0;
   border-radius: 24px 24px 0 0;
@@ -1162,36 +1178,36 @@ body {
   box-shadow: 0 -20px 60px rgba(0,0,0,.5);
   background: rgba(7,5,15,.98);
 }
-.nx-feed-stage .nx-post-card .comments-container > div:first-child {
+.nx-comments-sheet > div:first-child {
   min-height: 44px;
 }
-.nx-feed-stage .nx-post-card .comments-container > div:first-child > span {
+.nx-comments-sheet > div:first-child > span {
   font-size: 11px;
   letter-spacing: .13em;
 }
-.nx-feed-stage .nx-post-card .comments-container input {
+.nx-comments-sheet input {
   min-height: 44px;
   border-radius: 999px;
   padding-inline: 16px;
   background: #100b20;
   border-color: rgba(151,119,220,.2);
 }
-.nx-feed-stage .nx-post-card .comments-container button[aria-label*="Send"] {
+.nx-comments-sheet button[aria-label*="Send"] {
   min-width: 44px;
   min-height: 44px;
   border-radius: 50%;
   background: linear-gradient(135deg,#7138FF,#315BFF);
 }
-.nx-feed-stage .nx-post-card .comments-container button:focus-visible {
+.nx-comments-sheet button:focus-visible {
   outline: 2px solid #a78bfa;
   outline-offset: 3px;
 }
-.nx-feed-stage .nx-post-card .comments-container > div:nth-child(2) > div {
+.nx-comments-sheet > div:nth-child(2) > div {
   border-radius: 16px;
   background: rgba(17,12,31,.7);
   border-color: rgba(151,119,220,.12);
 }
-.nx-feed-stage .nx-post-card .comments-container p {
+.nx-comments-sheet p {
   line-height: 1.65;
 }
 .nx-feed-stage .nx-post-card [role="menu"] {
@@ -1255,12 +1271,12 @@ body {
     padding: 28px 18px;
     border-radius: 20px;
   }
-  .nx-feed-stage .nx-post-card .comments-container {
+  .nx-comments-sheet {
     height: min(76%, 680px);
     padding: 15px 13px max(14px,env(safe-area-inset-bottom));
     border-radius: 22px 22px 0 0;
   }
-  .nx-feed-stage .nx-post-card .comments-container > div:nth-child(2) > div {
+  .nx-comments-sheet > div:nth-child(2) > div {
     padding: 11px;
   }
   .nx-feed-stage .nx-post-card [role="menu"] {
