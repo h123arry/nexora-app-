@@ -156,6 +156,74 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
   return result;
 });
 
+/**
+ * Record one qualified public video view without requiring optional analytics
+ * consent. This endpoint stores only the per-post/day deduplication marker and
+ * aggregate counter; detailed watch-session telemetry remains consent-gated.
+ */
+export const recordPublicVideoView = onCall({ maxInstances: 20 }, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to record a video view.');
+  const uid = request.auth.uid;
+  const postId = request.data?.postId;
+  if (!validId(postId)) throw new HttpsError('invalid-argument', 'A valid post ID is required.');
+
+  const postRef = db.collection('posts').doc(postId);
+  const postViewerRef = db.collection('postVideoViewers').doc(digest(postId + ':' + uid));
+  const now = Timestamp.now();
+  const day = utcDay(now.toDate());
+
+  return db.runTransaction(async tx => {
+    const [postSnap, markerSnap] = await Promise.all([
+      tx.get(postRef),
+      tx.get(postViewerRef),
+    ]);
+    if (!postSnap.exists) throw new HttpsError('not-found', 'This video is unavailable.');
+    const post = postSnap.data()!;
+    const creatorId = typeof post.userId === 'string' ? post.userId : '';
+    if (post.isArchived === true || post.isDraft === true || post.audience !== 'public'
+      || !creatorId || !(post.videoUrl || post.mediaType === 'video')) {
+      throw new HttpsError('not-found', 'This public video is unavailable.');
+    }
+    if (creatorId === uid) {
+      return { counted: false, reason: 'creator_view', views: Number(post.views) || 0 };
+    }
+
+    const [viewerSnap, creatorSnap] = await Promise.all([
+      tx.get(db.collection('users').doc(uid)),
+      tx.get(db.collection('users').doc(creatorId)),
+    ]);
+    const viewerBlocks = viewerSnap.get('messaging')?.blockedUserIds;
+    const creatorBlocks = creatorSnap.get('messaging')?.blockedUserIds;
+    if ((Array.isArray(viewerBlocks) && viewerBlocks.includes(creatorId))
+      || (Array.isArray(creatorBlocks) && creatorBlocks.includes(uid))) {
+      throw new HttpsError('permission-denied', 'This video is unavailable to this account.');
+    }
+
+    const currentViews = post.views;
+    const safeViews = Number.isSafeInteger(currentViews) && (currentViews as number) >= 0
+      ? currentViews as number
+      : 0;
+    if (markerSnap.exists && markerSnap.get('lastCountedDay') === day) {
+      return { counted: false, reason: 'already_counted_today', views: safeViews };
+    }
+
+    const marker = {
+      postId,
+      creatorId,
+      lastCountedDay: day,
+      viewerHash: digest(uid),
+      lastCountedAt: FieldValue.serverTimestamp(),
+    };
+    if (markerSnap.exists) tx.update(postViewerRef, marker);
+    else tx.create(postViewerRef, marker);
+    tx.update(postRef, {
+      views: safeViews + 1,
+      viewsUpdatedAt: FieldValue.serverTimestamp(),
+    });
+    return { counted: true, views: safeViews + 1 };
+  });
+});
+
 export const getCreatorVideoRetention = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to view creator analytics.');
   const creatorId = request.auth.uid;
