@@ -460,7 +460,7 @@ body {
     width: 100%;
   }
   .nx-profile-media-grid > * {
-    aspect-ratio: 3 / 5;
+    aspect-ratio: 1 / 2;
     min-width: 0;
     border-radius: 0;
   }
@@ -2422,7 +2422,7 @@ body {
   width: 100% !important;
   min-width: 0 !important;
   min-height: 0 !important;
-  aspect-ratio: 3 / 5 !important;
+  aspect-ratio: 1 / 2 !important;
   border: 0 !important;
   border-radius: 0 !important;
   overflow: hidden !important;
