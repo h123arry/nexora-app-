@@ -186,8 +186,8 @@ service cloud.firestore {
         'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
         'followers', 'following', 'sparks', 'hasStory',
         'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
-        'interestDNA', 'skills', 'dateOfBirth', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
-        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'dateOfBirth', 'earlyCommunityMember'
+        'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
+        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'earlyCommunityMember'
       ];
     }
     function editableProfileKeys() {
@@ -595,6 +595,18 @@ service cloud.firestore {
         && (!changed.hasAny(['skills']) || request.resource.data.skills == privateData.get('skills', []));
     }
 
+    function publicProjectionReadOnlyFieldsMatchPrivateProfileOnCreate(userId) {
+      let privateData = get(/databases/$(database)/documents/users/$(userId)).data;
+      return request.resource.data.get('followers', 0) == privateData.get('followers', 0)
+        && request.resource.data.get('following', 0) == privateData.get('following', 0)
+        && request.resource.data.get('sparks', 0) == privateData.get('sparks', 0)
+        && request.resource.data.get('hasStory', false) == privateData.get('hasStory', false)
+        && (!privateData.keys().hasAny(['joinedDate']) || request.resource.data.get('joinedDate', null) == privateData.get('joinedDate', null))
+        && request.resource.data.get('reputationPoints', 0) == privateData.get('reputationPoints', 0)
+        && request.resource.data.get('reputationBreakdown', {'contributions': 0, 'helpfulness': 0, 'missionsCompleted': 0, 'skillsVerified': 0}) == privateData.get('reputationBreakdown', {'contributions': 0, 'helpfulness': 0, 'missionsCompleted': 0, 'skillsVerified': 0})
+        && request.resource.data.get('skills', []) == privateData.get('skills', []);
+    }
+
     // Public directory contains an allowlisted projection, never private account fields.
     match /publicProfiles/{userId} {
       allow get, list: if true;
@@ -606,8 +618,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(publicProfileKeys())
         && !request.resource.data.keys().hasAny(['interestDNA'])
         && (!request.resource.data.keys().hasAny(['earlyCommunityMember']) || (request.resource.data.earlyCommunityMember is bool && request.resource.data.earlyCommunityMember == get(/databases/$(database)/documents/users/$(userId)).data.get('earlyCommunityMember', false)))
-        && zeroInitialReputation(request.resource.data)
-        && zeroInitialEngagement(request.resource.data);
+        && publicProjectionReadOnlyFieldsMatchPrivateProfileOnCreate(userId);
       allow update: if owner(userId)
         && request.resource.data.id == userId
         && request.resource.data.keys().hasOnly(publicProfileKeys())
