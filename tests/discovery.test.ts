@@ -200,6 +200,24 @@ describe('discovery service', () => {
     assert.match(results[0].reason, /#ai/);
   });
 
+  it('gives smaller creators a fair cold-start discovery opportunity without viewer interests', () => {
+    const creator = (id: string, followers: number) => ({
+      id, username: id, name: id, avatar: '', bio: '', location: '', website: '', followers, following: 0,
+      isVerified: false, coverImage: '', joinedDate: '', reputationPoints: 0,
+      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+      interestDNA: {}, skills: [],
+    } as User);
+    const results = recommendCreators([
+      creator('established', 5000),
+      creator('new-creator', 0),
+      creator('small-creator', 8),
+    ], { viewerId: 'viewer', interests: {} });
+    assert.equal(results[0].creator.id, 'new-creator');
+    assert.ok(results.some(item => item.creator.id === 'small-creator'));
+    assert.ok(results.every(item => item.score > 0));
+    assert.match(results[0].reason, /smaller creator/);
+  });
+
   it('trends topics using recent posts from distinct creators, excluding stale and single-author spikes', () => {
     const now = Date.now();
     const topics = rankTrendingTopics([
