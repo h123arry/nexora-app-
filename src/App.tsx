@@ -1384,11 +1384,13 @@ export default function App() {
       if (!message) return;
       
       const id = crypto.randomUUID();
-      setToasts(prev => [...prev, { id, message }]);
-      
-      setTimeout(() => {
+      setToasts(prev => {
+        if (prev.some(toast => toast.message === message)) return prev;
+        return [...prev, { id, message }].slice(-2);
+      });
+      window.setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== id));
-      }, 3500);
+      }, 2500);
     };
 
     window.addEventListener('online', handleOnline);
@@ -1678,10 +1680,12 @@ export default function App() {
   // 5. Shared Post Interact Controllers
   const handleLikePost = (postId: string) => {
     requireAuth(() => {
-      if (!firebaseUser || !likeStateReadyRef.current) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your liked-post state is still syncing. Please try again.' }));
+      if (!firebaseUser) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Please sign in again to send a Spark.' }));
         return;
       }
+      // The server transaction is authoritative and idempotent. It safely
+      // reconciles a stale local Spark cache instead of blocking the first tap.
       if (pendingLikeRequestsRef.current.has(postId)) return;
       const desiredLiked = !userSparks.includes(postId);
       pendingLikeRequestsRef.current.add(postId);
