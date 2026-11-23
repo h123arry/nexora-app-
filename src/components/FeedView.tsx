@@ -18,7 +18,7 @@ import { rankPosts } from '../services/discovery/discoveryService';
 import { SettingsService } from '../services/firebase/settingsService';
 import { normalizeFeedPreferences, resetFeedPreferences } from '../services/discovery/feedPreferences';
 import { auth } from '../services/firebase/config';
-import { apiRequestUrl } from '../lib/apiBaseUrl';
+import { apiRequestUrl, normalizeMediaDeliveryUrl } from '../lib/apiBaseUrl';
 import { ProfileService } from '../services/firebase/profileService';
 import { readUserScopedJson, writeUserScopedJson } from '../utils/userScopedStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
@@ -86,7 +86,7 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
         {images.map((img, idx) => (
           <div key={idx} className="w-full h-full shrink-0 relative">
             <img 
-              src={img} 
+              src={normalizeMediaDeliveryUrl(img)} 
               alt={`Slide ${idx + 1}`} 
               className="w-full h-full object-cover pointer-events-none"
               referrerPolicy="no-referrer"
