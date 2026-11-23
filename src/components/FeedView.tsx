@@ -371,6 +371,7 @@ export default function FeedView({
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
   const [commentsViewport, setCommentsViewport] = useState<{ bottom: number; height: number } | null>(null);
   const commentInputRef = useRef<HTMLInputElement | null>(null);
+  const commentInputRef = useRef<HTMLInputElement | null>(null);
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const activePostIdRef = useRef<string | null>(null);
   activePostIdRef.current = activePostId;
@@ -804,6 +805,13 @@ export default function FeedView({
   }, [activeCommentsPostId]);
 
   // Keep the comment entry point easy to reach after the sheet opens.
+  useEffect(() => {
+    if (!activeCommentsPostId) return;
+    const focusTimer = window.setTimeout(() => commentInputRef.current?.focus({ preventScroll: true }), 120);
+    return () => window.clearTimeout(focusTimer);
+  }, [activeCommentsPostId]);
+
+  // Focus the composer when the comments sheet opens so the typing area is immediately reachable.
   useEffect(() => {
     if (!activeCommentsPostId) return;
     const focusTimer = window.setTimeout(() => commentInputRef.current?.focus({ preventScroll: true }), 120);
@@ -2556,8 +2564,12 @@ export default function FeedView({
 
                       {/* Main comment form */}
                       <div className="nx-comments-composer sticky bottom-0 z-10 flex w-full items-center gap-2 pt-3 border-t border-white/10 shrink-0">
-                        <input 
-                          type="text" 
+                        <input
+                          ref={commentInputRef}
+                          type="text"
+                          inputMode="text"
+                          enterKeyHint="send"
+                          autoComplete="off"
                           placeholder="Write your comment..."
                           aria-label={`Write a comment on @${post.username}'s post`}
                           value={commentInputs[post.id] || ''}
