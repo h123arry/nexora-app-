@@ -220,7 +220,7 @@ export function selectR2VideoPlaybackPath(asset: Record<string, unknown>, ownerI
       || segments[0] !== 'processed'
       || segments[1] !== ownerId
       || segments[2] !== mediaId
-      || !/^\\d{1,32}$/.test(segments[3])
+      || !/^\d{1,32}$/.test(segments[3])
       || segments[4] !== `${item.height}p`
       || segments[5] !== 'video.mp4'
       || segments.some((part: string) => !part || part === '.' || part === '..')
