@@ -5,6 +5,7 @@ import { test, after } from 'node:test';
 
 const { auth } = await import('../src/lib/firebase.ts');
 const { AuthService } = await import('../src/services/firebase/authService.ts');
+const { EmailService } = await import('../src/services/firebase/emailService.ts');
 const { isPhoneAuthAvailable } = await import('../src/utils/authMethodAvailability.ts');
 const { getAuthSessionIdentityKey, shouldHydrateAuthSession } = await import('../src/services/firebase/authSessionPolicy.ts');
 const { persistProfileWithBestEffortProjection, withProfileProvisioningRetry } = await import('../src/services/firebase/profileProvisioningPolicy.ts');
@@ -29,6 +30,18 @@ async function cleanUp() {
 
 
 
+
+test('email verification template presents a six-digit code without a dead action link', () => {
+  const email = EmailService.generateEmailHTML('VERIFY_EMAIL', {
+    toEmail: 'member@example.test',
+    userName: 'NEXORA Member',
+    verificationCode: '482916',
+  });
+  assert.match(email.html, /482916/);
+  assert.match(email.text, /482916/);
+  assert.match(email.html, /Expires in <strong>10 minutes<\/strong>/);
+  assert.doesNotMatch(email.html, /Verify Email Address/);
+});
 
 test('retries transient Firestore profile failures with bounded backoff', async () => {
   let attempts = 0;
