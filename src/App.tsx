@@ -102,13 +102,12 @@ const WorldWeaveView = lazy(() => import('./components/WorldWeaveView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
 import NexoraLoader from './components/NexoraLoader';
 import PublicAccountSetup from './components/PublicAccountSetup';
-import UsernameLoginModal from './components/UsernameLoginModal';
 import OfflineBanner from './components/OfflineBanner';
 import PwaUpdatePrompt from './components/PwaUpdatePrompt';
 import IncomingDirectCallListener from './components/IncomingDirectCallListener';
 
 export default function App() {
-  const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, retryProfileLoad, logout, loginWithUsername } = useFirebase();
+  const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, retryProfileLoad, logout } = useFirebase();
   useEffect(() => {
     const connection = (navigator as Navigator & {
       connection?: EventTarget & { saveData?: boolean };
@@ -218,7 +217,7 @@ export default function App() {
   const [showPublicAccountSetup, setShowPublicAccountSetup] = useState(false);
   const [showAuthChoice, setShowAuthChoice] = useState(false);
   const [showEmailAuth, setShowEmailAuth] = useState(false);
-  const [showUsernameLogin, setShowUsernameLogin] = useState(false);
+  const [emailAuthInitialMode, setEmailAuthInitialMode] = useState<'login' | 'signup'>('signup');
   const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
 
@@ -273,7 +272,7 @@ export default function App() {
     if (firebaseUser?.isAnonymous) {
       setActiveTab('settings');
       window.dispatchEvent(new CustomEvent('toast', {
-        detail: 'Secure this account first by linking an email and password or a phone number. This keeps your profile and posts recoverable on another device.',
+        detail: 'Secure this account first by signing in with email and password, Google, or a verified phone number. This keeps your profile and posts recoverable on another device.',
       }));
       return;
     }
@@ -2381,15 +2380,6 @@ export default function App() {
   // Render Core layout
   return (
     <div id="nexora-master-wrapper" lang={resolveLocale(currentUser.preferredLanguage)} dir={getLocaleDirection(currentUser.preferredLanguage)} className={`nx-app-shell ${getThemeWrapperClass(theme)} transition-colors duration-500`}>
-      {isLoggedIn && firebaseUser?.isAnonymous && (
-        <button
-          type="button"
-          onClick={() => setShowUsernameLogin(true)}
-          className="fixed right-4 top-4 z-[80] rounded-full border border-violet-400/30 bg-[#0B1424]/95 px-4 py-2 text-xs font-bold text-violet-200 shadow-lg backdrop-blur hover:bg-violet-600 hover:text-white"
-        >
-          Log in
-        </button>
-      )}
       <a
         href="#nexora-main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-violet-600 focus:px-4 focus:py-3 focus:text-sm focus:font-bold focus:text-white focus:shadow-xl"
@@ -3688,8 +3678,8 @@ export default function App() {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15 text-2xl text-violet-200">N</div>
             <h2 className="text-xl font-bold text-white">Join the conversation</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">Sign in or create a NEXORA account to follow people, post and connect.</p>
-            <button type="button" onClick={() => { setShowAuthChoice(false); setShowUsernameLogin(true); }} className="mt-6 w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white hover:bg-violet-500">Log in</button>
-            <button type="button" onClick={() => { setShowAuthChoice(false); setShowEmailAuth(true); }} className="mt-3 w-full rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-white hover:bg-white/5">Create account</button>
+            <button type="button" onClick={() => { setEmailAuthInitialMode('login'); setShowAuthChoice(false); setShowEmailAuth(true); }} className="mt-6 w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white hover:bg-violet-500">Log in</button>
+            <button type="button" onClick={() => { setEmailAuthInitialMode('signup'); setShowAuthChoice(false); setShowEmailAuth(true); }} className="mt-3 w-full rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-white hover:bg-white/5">Create account</button>
           </div>
         </div>
       )}
@@ -3698,15 +3688,7 @@ export default function App() {
         <PublicAccountSetup
           user={firebaseProfile}
           onCancel={dismissPublicAccountSetup}
-          onSwitchToLogin={() => { setShowPublicAccountSetup(false); setShowUsernameLogin(true); }}
-          onSwitchToEmailSignup={() => { setShowPublicAccountSetup(false); setShowEmailAuth(true); }}
-          onComplete={(updatedUser) => {
-            setCurrentUser(getRichUser(updatedUser));
-            setShowPublicAccountSetup(false);
-            void retryProfileLoad().catch(() => {
-              window.dispatchEvent(new CustomEvent('toast', { detail: 'Your profile was saved, but NEXORA could not refresh it yet. Please retry.' }));
-            });
-          }}
+          onSwitchToEmailSignup={() => { setEmailAuthInitialMode('signup'); setShowPublicAccountSetup(false); setShowEmailAuth(true); }}
         />
       )}
 
@@ -3714,7 +3696,7 @@ export default function App() {
         <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#04020a]">
           <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-violet-200">Preparing secure signup…</div>}>
             <AuthView
-              initialMode="signup"
+              initialMode={emailAuthInitialMode}
               promptReason="Create your NEXORA account to continue."
               onLoginSuccess={(user) => {
                 setCurrentUser(getRichUser(user));
@@ -3729,25 +3711,12 @@ export default function App() {
           </Suspense>
           <button
             type="button"
-            onClick={() => { setShowEmailAuth(false); setShowPublicAccountSetup(false); setShowAuthChoice(true); }}
+            onClick={() => { setShowEmailAuth(false); if (requiresPublicAccountSetup) setShowPublicAccountSetup(true); else setShowAuthChoice(true); }}
             className="fixed right-4 top-4 z-[110] rounded-xl border border-white/15 bg-[#0B1424]/95 px-3 py-2 text-xs font-semibold text-violet-200 shadow-lg backdrop-blur"
           >
             Back
           </button>
         </div>
-      )}
-
-      {showUsernameLogin && (
-        <UsernameLoginModal
-          onClose={() => setShowUsernameLogin(false)}
-          onLogin={async (username, password) => {
-            await loginWithUsername(username, password);
-            setShowUsernameLogin(false);
-            setShowAuthChoice(false);
-            setShowPublicAccountSetup(false);
-            void retryProfileLoad().catch(() => undefined);
-          }}
-        />
       )}
 
       {securityReminderStep > 0 && firebaseUser && (
@@ -3756,7 +3725,7 @@ export default function App() {
             <div className="mt-0.5 rounded-xl bg-violet-500/15 p-2 text-violet-300"><ShieldCheck className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-white">Secure your NEXORA account</p>
-              <p className="mt-1 text-xs leading-relaxed text-violet-100/75">Your account is ready to use. Add an email, password and phone number when you’re ready to protect it and recover this same account on another device.</p>
+              <p className="mt-1 text-xs leading-relaxed text-violet-100/75">Your account is ready to use. Connect email and password, Google, or a verified phone number to recover this same account on another device.</p>
               <div className="mt-3 flex items-center gap-2">
                 <button type="button" onClick={() => setActiveTab('settings')} className="rounded-xl bg-violet-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-violet-500">Secure account</button>
                 <button type="button" onClick={() => {
