@@ -59,7 +59,7 @@ export const createBetaInviteLink = onCall({ maxInstances: 2 }, async request =>
 });
 
 /**
- * Claims one of the 300 beta places for the caller's anonymous Firebase UID.
+ * Claims one of the 300 beta places for an authenticated, non-anonymous NEXORA UID.
  * The transaction is idempotent per UID and shares the existing founding_300
  * counter with administrator-created founding accounts.
  */
@@ -70,8 +70,8 @@ export const claimBetaInvite = onCall({ maxInstances: 20 }, async request => {
   await assertCallableSessionActive(db, uid, caller.token?.auth_time);
 
   const firebaseClaims = (caller.token.firebase || {}) as Record<string, unknown>;
-  if (firebaseClaims.sign_in_provider !== 'anonymous') {
-    throw new HttpsError('failed-precondition', 'The beta invitation is only for new anonymous beta sessions.');
+  if (firebaseClaims.sign_in_provider === 'anonymous') {
+    throw new HttpsError('failed-precondition', 'Complete sign-up with email, Google or phone before claiming this invitation.');
   }
 
   const code = typeof request.data?.code === 'string' ? request.data.code.trim() : '';
@@ -114,7 +114,7 @@ export const claimBetaInvite = onCall({ maxInstances: 20 }, async request => {
       cohort: COHORT_ID,
       inviteId: inviteRef.id,
       claimedAt: FieldValue.serverTimestamp(),
-      accountType: 'anonymous_beta',
+      accountType: 'member',
     });
     transaction.set(inviteRef, {
       claims: inviteClaims + 1,
