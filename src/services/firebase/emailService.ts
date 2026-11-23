@@ -60,7 +60,7 @@ export class EmailService {
       case 'VERIFY_EMAIL':
         subject = 'Verify Your Nexora Email Address';
         title = 'Email Verification Required';
-        buttonText = 'Verify Email Address';
+        buttonText = params.verificationCode ? '' : 'Verify Email Address';
         bodyContent = `
           <p style="margin-bottom: 16px; font-size: 15px; line-height: 1.6; color: #E4E4E7;">
             Hi <strong>${params.userName}</strong>,
@@ -273,7 +273,9 @@ export class EmailService {
       </html>
     `;
 
-    const text = `${title}\n\nHi ${params.userName},\n\n${subject}\n\nAction URL: ${buttonUrl}\n\n© ${year} Nexora Inc.`;
+    const text = type === 'VERIFY_EMAIL' && params.verificationCode
+      ? `${title}\n\nHi ${params.userName},\n\nYour 6-digit NEXORA verification code is: ${params.verificationCode}\n\nIt expires in 10 minutes. Never share this code with anyone.\n\n© ${year} Nexora Inc.`
+      : `${title}\n\nHi ${params.userName},\n\n${subject}\n\nAction URL: ${buttonUrl}\n\n© ${year} Nexora Inc.`;
 
     return { subject, html, text };
   }

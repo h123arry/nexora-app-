@@ -5,7 +5,9 @@ import { test, after } from 'node:test';
 
 const { auth } = await import('../src/lib/firebase.ts');
 const { AuthService } = await import('../src/services/firebase/authService.ts');
+const { EmailService } = await import('../src/services/firebase/emailService.ts');
 const { isPhoneAuthAvailable } = await import('../src/utils/authMethodAvailability.ts');
+const { normalizeE164PhoneNumber } = await import('../src/utils/phoneNumber.ts');
 const { getAuthSessionIdentityKey, shouldHydrateAuthSession } = await import('../src/services/firebase/authSessionPolicy.ts');
 const { persistProfileWithBestEffortProjection, withProfileProvisioningRetry } = await import('../src/services/firebase/profileProvisioningPolicy.ts');
 const {
@@ -29,6 +31,18 @@ async function cleanUp() {
 
 
 
+
+test('email verification template presents a six-digit code without a dead action link', () => {
+  const email = EmailService.generateEmailHTML('VERIFY_EMAIL', {
+    toEmail: 'member@example.test',
+    userName: 'NEXORA Member',
+    verificationCode: '482916',
+  });
+  assert.match(email.html, /482916/);
+  assert.match(email.text, /482916/);
+  assert.match(email.html, /Expires in <strong>10 minutes<\/strong>/);
+  assert.doesNotMatch(email.html, /Verify Email Address/);
+});
 
 test('retries transient Firestore profile failures with bounded backoff', async () => {
   let attempts = 0;
@@ -92,8 +106,16 @@ test('session hydration identity ignores token refreshes but detects account and
   assert.equal(shouldHydrateAuthSession(first, null), false);
 });
 
-test('phone sign-in is available only when explicitly enabled for staging or production', () => {
-  assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'production', VITE_NEXORA_PHONE_AUTH_ENABLED: 'true' }), true);
+test('phone number input normalizes Nigerian national and international forms to E.164', () => {
+  assert.equal(normalizeE164PhoneNumber('08012345678', '+234'), '+2348012345678');
+  assert.equal(normalizeE164PhoneNumber('8012345678', '+234'), '+2348012345678');
+  assert.equal(normalizeE164PhoneNumber('+234 801 234 5678', '+234'), '+2348012345678');
+  assert.equal(normalizeE164PhoneNumber('23408012345678', '+234'), '+2348012345678');
+  assert.equal(normalizeE164PhoneNumber('123', '+234'), null);
+});
+
+test('phone sign-in remains staging-only until production verification is complete', () => {
+  assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'production', VITE_NEXORA_PHONE_AUTH_ENABLED: 'true' }), false);
   assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'staging', VITE_NEXORA_PHONE_AUTH_ENABLED: 'true' }), true);
   assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'production', VITE_NEXORA_PHONE_AUTH_ENABLED: 'false' }), false);
   assert.equal(isPhoneAuthAvailable({ VITE_NEXORA_ENV: 'local', VITE_NEXORA_PHONE_AUTH_ENABLED: 'true' }), false);

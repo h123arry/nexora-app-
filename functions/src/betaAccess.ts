@@ -10,7 +10,7 @@ const db = getFirestore(app, resolveFirestoreDatabaseId());
 const auth = getAuth(app);
 const COHORT_ID = 'founding_300';
 const COHORT_LIMIT = 300;
-const APP_ORIGIN = 'https://nexora-o3od.onrender.com';
+const APP_ORIGIN = 'https://nexoraapp.com.ng';
 
 const hashInvite = (code: string) => createHash('sha256').update(code).digest('hex');
 
@@ -59,19 +59,27 @@ export const createBetaInviteLink = onCall({ maxInstances: 2 }, async request =>
 });
 
 /**
- * Claims one of the 300 beta places for the caller's anonymous Firebase UID.
+ * Claims one of the 300 beta places for an authenticated, non-anonymous NEXORA UID.
  * The transaction is idempotent per UID and shares the existing founding_300
  * counter with administrator-created founding accounts.
  */
 export const claimBetaInvite = onCall({ maxInstances: 20 }, async request => {
   const caller = request.auth;
   const uid = caller?.uid;
-  if (!caller || !uid) throw new HttpsError('unauthenticated', 'Start a NEXORA beta session first.');
+  if (!caller || !uid) throw new HttpsError('unauthenticated', 'Sign in to NEXORA before claiming this invitation.');
   await assertCallableSessionActive(db, uid, caller.token?.auth_time);
 
-  const firebaseClaims = (caller.token.firebase || {}) as Record<string, unknown>;
-  if (firebaseClaims.sign_in_provider !== 'anonymous') {
-    throw new HttpsError('failed-precondition', 'The beta invitation is only for new anonymous beta sessions.');
+  // Inspect the persisted Firebase provider links rather than relying on the
+  // token's original sign_in_provider claim, which can remain tied to an
+  // anonymous session after that UID is upgraded with a real credential.
+  const account = await auth.getUser(uid);
+  const hasPermanentProvider = account.providerData.some(provider =>
+    provider.providerId === 'password'
+    || provider.providerId === 'google.com'
+    || provider.providerId === 'phone'
+  );
+  if (!hasPermanentProvider) {
+    throw new HttpsError('failed-precondition', 'Complete sign-up with email, Google or phone before claiming this invitation.');
   }
 
   const code = typeof request.data?.code === 'string' ? request.data.code.trim() : '';
@@ -114,7 +122,7 @@ export const claimBetaInvite = onCall({ maxInstances: 20 }, async request => {
       cohort: COHORT_ID,
       inviteId: inviteRef.id,
       claimedAt: FieldValue.serverTimestamp(),
-      accountType: 'anonymous_beta',
+      accountType: 'member',
     });
     transaction.set(inviteRef, {
       claims: inviteClaims + 1,

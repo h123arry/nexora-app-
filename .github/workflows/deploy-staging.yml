@@ -31,6 +31,7 @@ jobs:
       FIRESTORE_DATABASE_ID: ${{ vars.FIRESTORE_DATABASE_ID }}
       FIREBASE_STORAGE_BUCKET: ${{ vars.FIREBASE_STORAGE_BUCKET }}
       VITE_NEXORA_ENV: staging
+      VITE_NEXORA_PHONE_AUTH_ENABLED: ${{ vars.VITE_NEXORA_PHONE_AUTH_ENABLED || 'false' }}
       VITE_FIREBASE_PROJECT_ID: ${{ vars.NEXORA_STAGING_PROJECT_ID }}
       VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
       VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
@@ -121,6 +122,7 @@ jobs:
           IMAGE="europe-west1-docker.pkg.dev/$NEXORA_STAGING_PROJECT_ID/nexora/nexora-api-staging:$GITHUB_SHA"
           docker build -f Dockerfile -t "$IMAGE" \
             --build-arg VITE_NEXORA_ENV=staging \
+            --build-arg VITE_NEXORA_PHONE_AUTH_ENABLED="$VITE_NEXORA_PHONE_AUTH_ENABLED" \
             --build-arg VITE_API_BASE_URL= \
             --build-arg VITE_FIREBASE_PROJECT_ID="$VITE_FIREBASE_PROJECT_ID" \
             --build-arg VITE_FIREBASE_APP_ID="$VITE_FIREBASE_APP_ID" \

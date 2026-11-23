@@ -47,7 +47,6 @@ interface FirebaseContextType {
   loading: boolean;
   error: string | null;
   loginWithEmail: (email: string, password: string) => Promise<void>;
-  loginWithUsername: (username: string, password: string) => Promise<void>;
   registerWithEmail: (email: string, password: string, name: string, username: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   sendPhoneCode: (phone: string, verifier: any) => Promise<ConfirmationResult>;
@@ -79,7 +78,6 @@ const FirebaseContext = createContext<FirebaseContextType>({
   loading: false,
   error: null,
   loginWithEmail: async () => {},
-  loginWithUsername: async () => {},
   registerWithEmail: async () => {},
   loginWithGoogle: async () => {},
   sendPhoneCode: async () => ({} as ConfirmationResult),
@@ -187,21 +185,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setError(null);
     try {
       const res = await AuthService.loginWithEmail(email, pass);
-      setFirebaseUser(res.firebaseUser);
-      setUser(res.user);
-    } catch (err: any) {
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loginWithUsername = async (username: string, pass: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await AuthService.loginWithUsername(username, pass, true);
       setFirebaseUser(res.firebaseUser);
       setUser(res.user);
     } catch (err: any) {
@@ -362,7 +345,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         loading,
         error,
         loginWithEmail,
-        loginWithUsername,
         registerWithEmail,
         loginWithGoogle,
         sendPhoneCode,
