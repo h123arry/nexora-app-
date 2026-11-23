@@ -227,10 +227,10 @@ test('profile identity changes are server-authorized, one-time during grace, and
 
 test('auth profile hydration avoids redundant public-projection reads and writes', async () => {
   const profile = await read('../src/services/firebase/profileService.ts');
-  const hydration = profile.match(/private static async loadOrCreateProfile[\\s\\S]*?(?=\\n  static async checkUsernameExists)/)?.[0] || '';
+  const hydration = profile.match(/private static async loadOrCreateProfile[\s\S]*?(?=\n  static async checkUsernameExists)/)?.[0] || '';
   assert.ok(hydration, 'profile hydration implementation should be present');
-  assert.match(hydration, /await this\\.getProfile\\(firebaseUser\\.uid\\)/);
+  assert.match(hydration, /await this\.getProfile\(firebaseUser\.uid\)/);
   assert.doesNotMatch(hydration, /settings', 'preferences/);
-  assert.doesNotMatch(hydration, /setDoc\\(doc\\(db, 'publicProfiles'/);
+  assert.doesNotMatch(hydration, /setDoc\(doc\(db, 'publicProfiles'/);
   assert.match(hydration, /Projection writes belong to profile creation and explicit profile mutations/);
 });
