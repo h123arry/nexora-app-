@@ -233,24 +233,11 @@ export class ProfileService {
         isVerified: firebaseUser.emailVerified,
         ...additionalData
       }, firebaseUser.email || '');
-    } else if (db) {
-      // Refresh the public projection separately. A projection failure must never
-      // invalidate an otherwise readable private account profile.
-      try {
-        const settingsSnapshot = await getDoc(doc(db, 'users', firebaseUser.uid, 'settings', 'preferences'));
-        const includeLocation = settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone';
-        await setDoc(doc(db, 'publicProfiles', firebaseUser.uid), {
-          ...this.toPublicProfile(profile, includeLocation),
-          location: includeLocation && typeof profile.location === 'string' && profile.location.trim()
-            ? profile.location
-            : deleteField(),
-          interestDNA: deleteField(),
-        }, { merge: true });
-      } catch (error) {
-        const code = (error as { code?: string } | null)?.code || 'unknown';
-        console.warn('[NEXORA] Public profile refresh deferred; private sign-in remains valid', { code });
-      }
     }
+    // Do not refresh the public projection during every authentication hydration.
+    // Doing so adds a preferences read and a public-profile write to every sign-in,
+    // even when nothing changed. Projection writes belong to profile creation and
+    // explicit profile mutations; hydration must remain a single private-profile read.
     return profile;
   }
 
