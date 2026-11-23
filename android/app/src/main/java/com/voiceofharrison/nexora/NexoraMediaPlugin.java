@@ -35,8 +35,10 @@ public class NexoraMediaPlugin extends Plugin {
                 values.put(MediaStore.MediaColumns.RELATIVE_PATH, "Movies/NEXORA");
                 values.put(MediaStore.MediaColumns.IS_PENDING, 1);
             }
-            destination = getContext().getContentResolver().insert(
-                MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY), values);
+            Uri collection = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                ? MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                : MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+            destination = getContext().getContentResolver().insert(collection, values);
             if (destination == null) throw new IllegalStateException("Could not create a device media entry.");
             try (OutputStream output = getContext().getContentResolver().openOutputStream(destination)) {
                 if (output == null) throw new IllegalStateException("Could not open device media storage.");
