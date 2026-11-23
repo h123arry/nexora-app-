@@ -54,6 +54,7 @@ async function cleanupOriginFixtures(): Promise<void> {
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Account deletion policy tests require the Firestore Emulator.');
   await cleanupOriginFixtures();
+  await db.collection('posts').doc('delete-comment-host-post').delete().catch(() => undefined);
   await cleanupIdentityFixtures();
   await cleanupPayoutFixtures();
   for (const collection of ['mediaAssets', 'academyProgress', 'academyLessonNotes', 'posts']) {
@@ -65,6 +66,7 @@ before(async () => {
 });
 after(async () => {
   await cleanupOriginFixtures();
+  await db.collection('posts').doc('delete-comment-host-post').delete().catch(() => undefined);
   await cleanupIdentityFixtures();
   await cleanupPayoutFixtures();
   for (const collection of ['mediaAssets', 'academyProgress', 'academyLessonNotes', 'posts']) {
