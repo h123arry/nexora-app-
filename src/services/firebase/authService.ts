@@ -1,6 +1,5 @@
 import { 
   createUserWithEmailAndPassword, 
-  signInAnonymously,
   signInWithEmailAndPassword, 
   browserLocalPersistence,
   sendEmailVerification, 
@@ -30,9 +29,6 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from './config';
 import { canUpgradeAnonymousBetaSession, hasLinkedProvider, isRecentAuthentication } from './accountLinkingPolicy';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
-
-const USERNAME_LOGIN_DOMAIN = 'accounts.nexora.app';
-const usernameLoginEmail = (username: string) => `${username.trim().toLowerCase()}@${USERNAME_LOGIN_DOMAIN}`;
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_TIME_MS = 5 * 60 * 1000; // 5 minutes
@@ -127,7 +123,7 @@ export class AuthService {
       case 'functions/invalid-argument':
         return 'This beta invitation link is invalid. Open the complete invitation link you received.';
       case 'functions/failed-precondition':
-        return 'This invitation must be claimed from a new beta session. Sign out and reopen the invitation link.';
+        return 'Sign in with an email, Google or verified phone account before claiming this invitation.';
       case 'auth/invalid-action-code':
         return 'This recovery or verification link is invalid or has already been used.';
       default: {
@@ -197,79 +193,23 @@ export class AuthService {
     }
   }
 
-  /** Join the private beta on this device, preserving Firebase's device-local anonymous UID. */
-  static async joinBetaWithInvite(code: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+  /** Claim a private beta invitation only after a permanent Firebase sign-in exists. */
+  static async claimBetaInvite(code: string): Promise<{ claimed: boolean; alreadyClaimed: boolean; cohort: string }> {
     this.requireConfigured();
+    const currentUser = auth.currentUser;
+    if (!currentUser || currentUser.isAnonymous) {
+      throw new Error('Create or sign in to a NEXORA account before claiming this invitation.');
+    }
     const cleanCode = code.trim();
-    if (!cleanCode) throw new Error('Open the official NEXORA beta invitation link to continue.');
-
-    let currentUser = auth.currentUser;
-    if (currentUser && !currentUser.isAnonymous) {
-      throw new Error('You are already signed in to a NEXORA account. Sign out before claiming a beta invitation.');
-    }
-
+    if (!cleanCode) throw new Error('This invitation link is missing its beta access code.');
     try {
-      if (!currentUser) {
-        const credential = await signInAnonymously(auth);
-        currentUser = credential.user;
-      }
-
       const claim = httpsCallable<{ code: string }, { claimed: boolean; alreadyClaimed: boolean; cohort: string }>(functions, 'claimBetaInvite');
-      await claim({ code: cleanCode });
+      const result = await claim({ code: cleanCode });
       await currentUser.getIdToken(true);
-
-      // Share the same UID-keyed provisioning path used by auth-state hydration.
-      // This avoids racing two profile creates when Firebase emits a token change.
-      const userProfile = await ProfileService.getOrCreateProfile(currentUser);
-      // Notify the auth-state listener after the beta profile exists so the app
-      // hydrates this same UID as a full NEXORA member.
-      await currentUser.getIdToken(true);
-
-      return { firebaseUser: currentUser, user: userProfile };
+      return result.data;
     } catch (error) {
       throw this.publicAuthError(error);
     }
-  }
-
-  /** Create a permanent username/password credential on the current anonymous UID. */
-  static async completeUsernameRegistration(input: {
-    username: string; password: string; preferredName: string;
-  }): Promise<{ firebaseUser: FirebaseUser; user: User }> {
-    this.requireConfigured();
-    const username = input.username.trim().toLowerCase();
-    if (!input.password || input.password.length < 8) throw new Error('Choose a password with at least 8 characters.');
-    let current = auth.currentUser;
-    try {
-      const email = usernameLoginEmail(username);
-      if (current?.isAnonymous) {
-        const linked = await linkWithCredential(current, EmailAuthProvider.credential(email, input.password));
-        current = linked.user;
-      } else if (!current) {
-        current = (await createUserWithEmailAndPassword(auth, email, input.password)).user;
-      } else if (!current.providerData.some(provider => provider.providerId === EmailAuthProvider.PROVIDER_ID)) {
-        const linked = await linkWithCredential(current, EmailAuthProvider.credential(email, input.password));
-        current = linked.user;
-      } else {
-        throw new Error('This account already has a password sign-in. Sign out before creating another account.');
-      }
-      await current.getIdToken(true);
-      await ProfileService.reserveUsername(current.uid, username);
-      let profile = await ProfileService.getOrCreateProfile(current);
-      await ProfileService.updateProfile(current.uid, {
-        name: input.preferredName.trim(), username,
-      });
-      profile = { ...profile, name: input.preferredName.trim(), username };
-      return { firebaseUser: current, user: profile };
-    } catch (error) {
-      throw this.publicAuthError(error);
-    }
-  }
-
-  /** Username login uses a deterministic internal Firebase email; users only enter their public handle. */
-  static async loginWithUsername(username: string, password: string, rememberDevice = true) {
-    const clean = username.trim().replace(/^@/, '').toLowerCase();
-    if (!/^[a-z0-9._]{3,20}$/.test(clean)) throw new Error('Enter a valid NEXORA username.');
-    return this.loginWithEmail(usernameLoginEmail(clean), password, rememberDevice);
   }
 
   /**
@@ -428,9 +368,13 @@ export class AuthService {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      const credential = await signInWithPopup(auth, provider);
+      const existingSession = auth.currentUser;
+      const wasAnonymous = existingSession?.isAnonymous === true;
+      const credential = wasAnonymous
+        ? await linkWithPopup(existingSession, provider)
+        : await signInWithPopup(auth, provider);
       const fbUser = credential.user;
-      const isNewUser = !(await ProfileService.getProfile(fbUser.uid));
+      const isNewUser = wasAnonymous || !(await ProfileService.getProfile(fbUser.uid));
       let userProfile = await ProfileService.getOrCreateProfile(fbUser, {
         name: fbUser.displayName || 'Google User',
         avatar: fbUser.photoURL || '',
@@ -480,7 +424,10 @@ export class AuthService {
   static async sendPhoneCode(phoneNumber: string, verifier: RecaptchaVerifier): Promise<ConfirmationResult> {
     this.requireConfigured();
     try {
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
+      const existingSession = auth.currentUser;
+      const confirmationResult = existingSession?.isAnonymous
+        ? await linkWithPhoneNumber(existingSession, phoneNumber, verifier)
+        : await signInWithPhoneNumber(auth, phoneNumber, verifier);
       return confirmationResult;
     } catch (err: any) {
       throw this.publicAuthError(err);
