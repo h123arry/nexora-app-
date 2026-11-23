@@ -2361,7 +2361,7 @@ export default function App() {
       .slice(0, 5);
   }, [posts]);
 
-  // Public browsing must not wait for Firebase's silent anonymous bootstrap.
+  // Public browsing remains signed out; Firebase accounts are created only after an explicit sign-up.
   // Only hide a stale signed-in profile while the identity is being switched.
   const staleAccountVisible = currentUser.id !== 'public_explore_session' && currentUser.id !== firebaseUser?.uid;
   if (staleAccountVisible) {
@@ -2518,7 +2518,7 @@ export default function App() {
                 {!isLoggedIn && ['matrix', 'inbox', 'activity', 'admin', 'creator', 'saved', 'wallet', 'settings', 'worldweave'].includes(activeTab) ? (
                   <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 p-8 text-center text-white">
                     <h2 className="text-lg font-bold">Your NEXORA session is getting ready</h2>
-                    <p className="max-w-md text-sm text-zinc-400">Private workspaces become available after your anonymous Firebase session is ready and your quick profile setup is complete.</p>
+                    <p className="max-w-md text-sm text-zinc-400">Sign in or create a NEXORA account to access private workspaces and keep your activity connected to your profile.</p>
                     <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold" onClick={requestProfileSetup}>Continue</button>
                   </div>
                 ) : (
@@ -3694,10 +3694,10 @@ export default function App() {
 
       {showEmailAuth && (
         <div className="fixed inset-0 z-[100] overflow-y-auto bg-[#04020a]">
-          <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-violet-200">Preparing secure signup…</div>}>
+          <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-violet-200">Preparing secure sign-in…</div>}>
             <AuthView
               initialMode={emailAuthInitialMode}
-              promptReason="Create your NEXORA account to continue."
+              promptReason={emailAuthInitialMode === 'login' ? "Sign in to your NEXORA account to continue." : "Create your NEXORA account to continue."}
               onLoginSuccess={(user) => {
                 setCurrentUser(getRichUser(user));
                 setShowEmailAuth(false);
