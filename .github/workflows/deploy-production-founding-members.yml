@@ -16,6 +16,7 @@ on:
       - 'firestore.indexes.json'
       - 'firebase.json'
       - 'functions/src/index.ts'
+      - 'functions/src/betaAccess.ts'
       - 'functions/src/giftCatalog.ts'
       - 'functions/src/giftCatalogPolicy.ts'
       - 'functions/src/giftPurchases.ts'
