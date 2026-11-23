@@ -313,8 +313,17 @@ export function recommendCreators<T extends User>(
       .slice(0, 3);
     const overlap = sharedTopics.reduce((sum, tag) =>
       sum + Math.min(interests[tag] || 0, Math.max(0, Math.min(100, Number(creator.interestDNA[tag] || creator.interestDNA[`#${tag}`] || 0)))), 0);
-    const score = Math.round(overlap + (creator.isVerified ? 3 : 0) + Math.min(5, Math.log1p(Math.max(0, creator.followers || 0))));
-    return { creator, score, sharedTopics, reason: sharedTopics.length ? `Shares your interest in ${sharedTopics.map(tag => `#${tag}`).join(', ')}` : 'A creator to discover', index };
+    const followerCount = Math.max(0, Number(creator.followers) || 0);
+    // Give smaller creators a bounded discovery opportunity instead of making
+    // follower count the entry ticket to recommendations, especially at cold start.
+    const smallerCreatorBoost = Math.max(0, 2.5 - Math.log1p(followerCount));
+    const coldStartExplorationFloor = Object.keys(interests).length === 0 ? 0.75 : 0;
+    const score = Math.round(overlap + (creator.isVerified ? 3 : 0)
+      + Math.min(5, Math.log1p(followerCount)) + smallerCreatorBoost + coldStartExplorationFloor);
+    const reason = sharedTopics.length
+      ? `Shares your interest in ${sharedTopics.map(tag => `#${tag}`).join(', ')}`
+      : followerCount <= 20 ? 'A smaller creator to discover' : 'A creator to discover';
+    return { creator, score, sharedTopics, reason, index };
   })
     .filter(item => item.score > 0 && (Object.keys(interests).length === 0 || item.sharedTopics.length > 0))
     .sort((a, b) => b.score - a.score || a.index - b.index);
