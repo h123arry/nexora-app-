@@ -211,11 +211,19 @@ export function selectR2VideoPlaybackPath(asset: Record<string, unknown>, ownerI
   const prefix = `processed/${ownerId}/${mediaId}/`;
   const renditions = asset.renditions.flatMap((item: any) => {
     if (!item || !Number.isSafeInteger(item.height) || item.height < 144 || item.height > 4320
-      || typeof item.mp4Path !== 'string' || !item.mp4Path.startsWith(prefix)
-      || item.mp4Path.split('/').length !== 5
-      || item.mp4Path.split('/')[3] !== `${item.height}p`
-      || item.mp4Path.split('/')[4] !== 'video.mp4'
-      || item.mp4Path.split('/').some((part: string) => !part || part === '.' || part === '..')
+      || typeof item.mp4Path !== 'string' || !item.mp4Path.startsWith(prefix)) return [];
+    const segments = item.mp4Path.split('/');
+    // The media worker stores renditions under
+    // processed/{owner}/{asset}/{generation}/{height}p/video.mp4.
+    // Validate the complete immutable-generation path before signing it.
+    if (segments.length !== 6
+      || segments[0] !== 'processed'
+      || segments[1] !== ownerId
+      || segments[2] !== mediaId
+      || !/^\\d{1,32}$/.test(segments[3])
+      || segments[4] !== `${item.height}p`
+      || segments[5] !== 'video.mp4'
+      || segments.some((part: string) => !part || part === '.' || part === '..')
       || item.mp4Path.includes(String.fromCharCode(92))) return [];
     return [{ height: item.height as number, path: item.mp4Path as string }];
   }).sort((a, b) => a.height - b.height);
