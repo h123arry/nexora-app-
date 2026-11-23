@@ -1030,60 +1030,42 @@ export default function NexoraVideoPlayer({
     setNewCollectionName('');
   };
 
-  // Download video asset directly and reliably as playable MP4
+  // In-app export is deliberately fail-closed: never fall back to a browser URL download.
+  // The branded export pipeline is invoked through the native media bridge when available.
   const handleSimulateDownload = async () => {
     if (!downloadsOn) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: '🔒 Downloads are restricted for this video by creator settings!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Downloads are restricted for this video by creator settings.' }));
       return;
     }
-
-    setExportState({
-      isExporting: true,
-      progress: 25,
-      statusText: 'Preparing video download...'
-    });
-
-    const videoSrc = finalVideoUrl || videoUrl;
-    const safeUsername = post.username || 'creator';
-    const filename = `Nexora_${safeUsername}_${post.id || Date.now()}.mp4`;
-
+    const nativeBridge = (window as any).NexoraMedia;
+    if (!nativeBridge || typeof nativeBridge.saveBrandedVideo !== 'function') {
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: 'In-app branded downloads are not available on this app build yet. Your video has not been downloaded.'
+      }));
+      return;
+    }
+    setExportState({ isExporting: true, progress: 10, statusText: 'Preparing branded video...' });
     try {
-      setExportState(prev => prev ? { ...prev, progress: 60, statusText: 'Fetching original video asset...' } : null);
-      const response = await fetch(videoSrc, { mode: 'cors' });
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
-      
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      setTimeout(() => {
-        URL.revokeObjectURL(blobUrl);
-      }, 10000);
-
-      setExportState(prev => prev ? { ...prev, progress: 100, statusText: 'Download complete!' } : null);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✅ Video downloaded successfully as playable MP4.' }));
-      if (exportStateTimeoutRef.current) clearTimeout(exportStateTimeoutRef.current);
-      exportStateTimeoutRef.current = setTimeout(() => {
-        setExportState(null);
-        exportStateTimeoutRef.current = null;
-      }, 800);
-    } catch (err) {
-      console.warn('Direct blob fetch download fallback triggered:', err);
-      // Fallback to direct anchor download
-      const link = document.createElement('a');
-      link.href = videoSrc;
-      link.download = filename;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✅ Video stream download initiated.' }));
+      const result = await nativeBridge.saveBrandedVideo({
+        sourceUrl: finalVideoUrl || videoUrl,
+        username: post.username || 'creator',
+        userId: post.userId || '',
+        isVerified: Boolean(post.isVerified),
+        filename: `NEXORA_${(post.username || 'creator').replace(/[^a-z0-9_-]/gi, '_')}_${post.id || Date.now()}.mp4`,
+        watermark: {
+          diagonalAlternationSeconds: 5,
+          includeNexoraLogo: true,
+          includeUsername: true,
+          includeVerificationTick: Boolean(post.isVerified),
+          blurBackground: true,
+        },
+      });
+      if (!result?.saved) throw new Error('Native media saver did not confirm a saved file.');
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Branded video saved to your device.' }));
+      setExportState({ isExporting: false, progress: 100, statusText: 'Saved to device' });
+    } catch (error) {
+      console.error('[NEXORA] Branded in-app download failed:', error);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not save this video. No browser download was started.' }));
       setExportState(null);
     }
   };
@@ -1168,28 +1150,8 @@ export default function NexoraVideoPlayer({
               style={{ filter: `brightness(${brightnessLevel}%)` }}
             />
             <audio ref={sonicAudioRef} src="/sounds/nexora-sonic-logo.mp3" preload="auto" aria-hidden="true" />
-            <AnimatePresence mode="wait">
-              {!showPostRoll && (
-                <motion.div
-                  key={`watermark-${watermarkPosition}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.28 }}
-                  className={`absolute z-[18] ${[
-                    'bottom-[29%] right-4 sm:right-6',
-                    'top-[23%] left-4 sm:left-6',
-                    'bottom-[23%] left-4 sm:left-6',
-                    'top-[29%] right-4 sm:right-6',
-                  ][watermarkPosition]}`}
-                >
-                  <NexoraWatermark username={post.username} isVerified={post.isVerified} size="md" />
-                </motion.div>
-              )}
-              {showPostRoll && (
-                <NexoraPostRollCard username={post.username} isVerified={post.isVerified} avatar={post.avatar} />
-              )}
-            </AnimatePresence>
+            {/* Published videos remain completely clean. NEXORA branding is
+                applied only to the exported download, never to playback. */}
             {isBuffering && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none z-10 animate-fade-in">
                 <div className="rounded-full bg-black/55 px-3 py-2 backdrop-blur-md"><NexoraLoader size="sm" center={true} /></div>
