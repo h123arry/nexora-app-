@@ -89,6 +89,8 @@ export default function AdminDashboardView({
   const loadData = async () => {
     // 1. Load the protected user directory through a trusted callable.
     try {
+      // Refresh custom claims before deciding whether founder-only verification controls are available.
+      await auth.currentUser?.getIdToken(true);
       const result = await httpsCallable<void, {
         users: User[];
         permissions: { canManage: boolean; canManageRoles: boolean };
@@ -844,6 +846,11 @@ export default function AdminDashboardView({
                   <Shield className="h-4 w-4" /> {manualVerificationBusy ? 'Verifying account…' : 'Grant verified identity badge'}
                 </button>
               </section>
+            )}
+            {!canManageRoles && (
+              <p className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-[11px] leading-relaxed text-zinc-400">
+                Manual identity verification is restricted to the NEXORA founder account. If founder access was recently granted, refresh this dashboard after your account claims have updated.
+              </p>
             )}
             <section className="space-y-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.03] p-4">
               <div>
