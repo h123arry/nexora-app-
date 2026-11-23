@@ -58,6 +58,24 @@ function retryProfileMediaLoad(event: React.SyntheticEvent<HTMLImageElement>) {
   }
 }
 
+/** Retry profile uploads after transient mobile-network failures. Each retry obtains a fresh R2 upload intent. */
+async function uploadProfileMediaWithRetry(options: Parameters<typeof uploadMediaFile>[0]): Promise<Awaited<ReturnType<typeof uploadMediaFile>>> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await uploadMediaFile(options);
+    } catch (error) {
+      lastError = error;
+      const message = error instanceof Error ? error.message : '';
+      const isAbort = error instanceof DOMException && error.name === 'AbortError';
+      const isPermanent = /HTTP (400|401|403|404|413|415)|invalid|unsupported|not authorized|sign in to the same account/i.test(message);
+      if (isAbort || isPermanent || attempt === 2) throw error;
+      await new Promise(resolve => window.setTimeout(resolve, 500 * (attempt + 1)));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('NEXORA could not upload this profile photo. Please try again.');
+}
+
 /** Convert profile cover uploads to a predictable, browser-friendly JPEG before signing the R2 PUT. */
 async function prepareProfileCoverImage(source: File): Promise<File> {
   let bitmap: ImageBitmap | null = null;
@@ -852,6 +870,29 @@ export default function ProfileView({
   const coverInputRef = useRef<HTMLInputElement | null>(null);
   const [pendingCoverFile, setPendingCoverFile] = useState<File | null>(null);
   const [pendingCoverPreview, setPendingCoverPreview] = useState<string | null>(null);
+  const profileEditorWasOpenRef = useRef(false);
+  useEffect(() => {
+    const editorIsOpen = activePanel === 'edit-profile';
+    if (editorIsOpen && !profileEditorWasOpenRef.current) {
+      // Rehydrate the editor from the latest authenticated profile each time it opens.
+      // This avoids editing stale placeholder values after async profile hydration.
+      setEditName(currentUser.name || '');
+      setEditUsername(currentUser.username || '');
+      setEditBio(currentUser.bio || '');
+      setEditLocation(currentUser.location || '');
+      setEditWebsite(currentUser.website || '');
+      setEditPronouns(currentUser.pronouns || '');
+      setEditCategory(currentUser.profileCategory || 'Digital Creator');
+      setEditCreatorType(currentUser.creatorType || 'Premium creator');
+      setEditAvatar(currentUser.avatar || '');
+      setEditCover(currentUser.coverImage || '');
+      setEditSocialTwitter(currentUser.socialTwitter || '');
+      setEditSocialInsta(currentUser.socialInstagram || '');
+      setPendingCoverFile(null);
+      setPendingCoverPreview(null);
+    }
+    profileEditorWasOpenRef.current = editorIsOpen;
+  }, [activePanel, currentUser.id, currentUser.name, currentUser.username, currentUser.bio, currentUser.location, currentUser.website, currentUser.pronouns, currentUser.profileCategory, currentUser.creatorType, currentUser.avatar, currentUser.coverImage, currentUser.socialTwitter, currentUser.socialInstagram]);
 
   useEffect(() => {
     return () => { if (pendingCoverPreview) URL.revokeObjectURL(pendingCoverPreview); };
@@ -1059,7 +1100,7 @@ export default function ProfileView({
             const response = await fetch(finalDataUrl);
             if (!response.ok) throw new Error('NEXORA could not prepare your profile photo.');
             const avatarBlob = await response.blob();
-            const uploadedAvatar = await uploadMediaFile({
+            const uploadedAvatar = await uploadProfileMediaWithRetry({
               file: new File([avatarBlob], 'profile-avatar.jpg', { type: 'image/jpeg' }),
               userId: currentUser.id,
               fileName: 'profile-avatar',
@@ -1246,7 +1287,7 @@ export default function ProfileView({
           if (!response.ok) throw new Error('NEXORA could not prepare your cover photo.');
           return response.blob();
         });
-        const uploadedCover = await uploadMediaFile({
+        const uploadedCover = await uploadProfileMediaWithRetry({
           file: coverBlob,
           userId: currentUser.id,
           fileName: 'profile-cover',
@@ -1387,7 +1428,7 @@ export default function ProfileView({
     setIsSavingCoverPhoto(true);
     try {
       const preparedCover = await prepareProfileCoverImage(pendingCoverFile);
-      const uploaded = await uploadMediaFile({
+      const uploaded = await uploadProfileMediaWithRetry({
         file: preparedCover,
         userId: currentUser.id,
         fileName: 'profile-cover',
