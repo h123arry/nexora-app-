@@ -855,6 +855,7 @@ export default function FeedView({
             existingPost.isLikedByUser !== matchingIncoming.isLikedByUser ||
             existingPost.isBookmarkedByUser !== matchingIncoming.isBookmarkedByUser ||
             existingPost.shares !== matchingIncoming.shares ||
+            existingPost.views !== matchingIncoming.views ||
             existingPost.scheduledTime !== matchingIncoming.scheduledTime ||
             existingPost.name !== matchingIncoming.name ||
             existingPost.avatar !== matchingIncoming.avatar ||
