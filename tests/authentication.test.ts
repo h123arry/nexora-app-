@@ -7,6 +7,7 @@ const { auth } = await import('../src/lib/firebase.ts');
 const { AuthService } = await import('../src/services/firebase/authService.ts');
 const { EmailService } = await import('../src/services/firebase/emailService.ts');
 const { isPhoneAuthAvailable } = await import('../src/utils/authMethodAvailability.ts');
+const { normalizeE164PhoneNumber } = await import('../src/utils/phoneNumber.ts');
 const { getAuthSessionIdentityKey, shouldHydrateAuthSession } = await import('../src/services/firebase/authSessionPolicy.ts');
 const { persistProfileWithBestEffortProjection, withProfileProvisioningRetry } = await import('../src/services/firebase/profileProvisioningPolicy.ts');
 const {
@@ -103,6 +104,14 @@ test('session hydration identity ignores token refreshes but detects account and
   assert.equal(shouldHydrateAuthSession(first, getAuthSessionIdentityKey({ uid: 'member-1', isAnonymous: true }, false)), true);
   assert.equal(shouldHydrateAuthSession(null, first), true);
   assert.equal(shouldHydrateAuthSession(first, null), false);
+});
+
+test('phone number input normalizes Nigerian national and international forms to E.164', () => {
+  assert.equal(normalizeE164PhoneNumber('08012345678', '+234'), '+2348012345678');
+  assert.equal(normalizeE164PhoneNumber('8012345678', '+234'), '+2348012345678');
+  assert.equal(normalizeE164PhoneNumber('+234 801 234 5678', '+234'), '+2348012345678');
+  assert.equal(normalizeE164PhoneNumber('23408012345678', '+234'), '+2348012345678');
+  assert.equal(normalizeE164PhoneNumber('123', '+234'), null);
 });
 
 test('phone sign-in remains staging-only until production verification is complete', () => {
