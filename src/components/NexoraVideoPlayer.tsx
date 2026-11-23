@@ -216,6 +216,7 @@ export default function NexoraVideoPlayer({
   // Connection & Speed playback status states
   const [isPlaying, setIsPlaying] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [hasPlaybackError, setHasPlaybackError] = useState(false);
   const [isMuted, setIsMuted] = useState(() => {
     return globalVideoPlaybackManager.getMute();
   });
@@ -930,12 +931,16 @@ export default function NexoraVideoPlayer({
   };
 
 
-  // Recover silently while the viewer remains on this video. Backoff is bounded,
-  // but retries are never capped, so transient failures and expired signatures
-  // cannot permanently strand a published post.
+  // Retry transient media failures with exponential backoff, but stop after a
+  // bounded number of attempts and expose an explicit recovery action.
   const scheduleAutomaticPlaybackRetry = () => {
     if (playbackRetryTimerRef.current) clearTimeout(playbackRetryTimerRef.current);
     const attempt = playbackRetryAttemptRef.current++;
+    if (attempt >= 5) {
+      setIsBuffering(false);
+      setHasPlaybackError(true);
+      return;
+    }
     const delay = Math.min(30_000, 1_000 * (2 ** Math.min(attempt, 5)));
     playbackRetryTimerRef.current = setTimeout(() => {
       playbackRetryTimerRef.current = null;
@@ -962,6 +967,7 @@ export default function NexoraVideoPlayer({
   };
 
   const handleVideoCanPlay = () => {
+    setHasPlaybackError(false);
     markVideoReady();
     playbackRetryAttemptRef.current = 0;
     if (playbackRetryTimerRef.current) {
