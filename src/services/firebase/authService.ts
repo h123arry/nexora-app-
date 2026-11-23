@@ -366,28 +366,26 @@ export class AuthService {
         console.warn('Email verification could not be sent; check Firebase email action configuration.');
       }
 
-      const existingProfile = await ProfileService.getProfile(fbUser.uid);
-      let userProfile: User;
-      if (existingProfile) {
-        // Firebase Authentication owns the verified email. Firestore rules
-        // intentionally prevent clients from mutating the private email field.
-        // Persist only profile-editable fields and expose the auth email in memory.
-        await ProfileService.updateProfile(fbUser.uid, {
-          name: fullName.trim(),
-        });
-        userProfile = {
-          ...existingProfile,
-          name: fullName.trim(),
-          email: cleanEmail,
-        };
-      } else {
-        userProfile = await ProfileService.createProfile(fbUser.uid, {
-          name: fullName.trim(),
-          username: cleanUsername,
-          email: cleanEmail,
-          isVerified: fbUser.emailVerified
-        }, cleanEmail);
+      // Share the exact UID-keyed single-flight provisioning path used by
+      // onIdTokenChanged. Signup and auth-state hydration can fire together;
+      // they must never race two different default/registration profile writes.
+      let userProfile = await ProfileService.getOrCreateProfile(fbUser, {
+        name: fullName.trim(),
+        username: cleanUsername,
+      });
+
+      // If auth-state hydration started first, it may have completed the
+      // minimal profile before the signup form supplied its chosen identity.
+      // Apply the submitted identity through the existing server-authorized
+      // profile mutation path rather than issuing a second create write.
+      const identityUpdates: Partial<User> = {};
+      if (userProfile.name !== fullName.trim()) identityUpdates.name = fullName.trim();
+      if (userProfile.username !== cleanUsername) identityUpdates.username = cleanUsername;
+      if (Object.keys(identityUpdates).length) {
+        await ProfileService.updateProfile(fbUser.uid, identityUpdates);
+        userProfile = { ...userProfile, ...identityUpdates };
       }
+      userProfile = { ...userProfile, email: cleanEmail, isVerified: fbUser.emailVerified };
 
       EmailService.sendTransactionalEmail('WELCOME', {
         toEmail: cleanEmail,
