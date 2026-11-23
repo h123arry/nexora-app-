@@ -58,6 +58,14 @@ function retryProfileMediaLoad(event: React.SyntheticEvent<HTMLImageElement>) {
   }
 }
 
+/** Accept common mobile gallery formats even when a file provider omits its MIME type. All selected images are rasterised to JPEG before upload. */
+function isSupportedProfileImageFile(file: File): boolean {
+  const mime = (file.type || '').split(';')[0].trim().toLowerCase();
+  const extension = file.name.toLowerCase().split('.').pop() || '';
+  return ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif', 'image/heic', 'image/heif'].includes(mime)
+    || ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic', 'heif'].includes(extension);
+}
+
 /** Retry profile uploads after transient mobile-network failures. Each retry obtains a fresh R2 upload intent. */
 async function uploadProfileMediaWithRetry(options: Parameters<typeof uploadMediaFile>[0]): Promise<Awaited<ReturnType<typeof uploadMediaFile>>> {
   let lastError: unknown;
@@ -86,17 +94,27 @@ async function prepareProfileCoverImage(source: File): Promise<File> {
     let height = 0;
     let draw: CanvasImageSource;
     if (typeof createImageBitmap === 'function') {
-      bitmap = await createImageBitmap(source, { imageOrientation: 'from-image' });
+      try {
+        bitmap = await createImageBitmap(source, { imageOrientation: 'from-image' });
+      } catch {
+        // Some mobile browsers expose createImageBitmap but cannot decode every
+        // gallery format. Fall back to the browser image decoder before rejecting.
+        bitmap = null;
+      }
+    }
+    if (bitmap) {
       width = bitmap.width;
       height = bitmap.height;
       draw = bitmap;
     } else {
       objectUrl = URL.createObjectURL(source);
       image = new Image();
-      image.src = objectUrl;
       await new Promise<void>((resolve, reject) => {
-        image!.onload = () => resolve();
-        image!.onerror = () => reject(new Error('NEXORA could not read this cover photo. Choose another image.'));
+        const timeout = window.setTimeout(() => reject(new Error('Photo preparation took too long. Choose another image or a smaller file.')), 15000);
+        image!.onload = () => { window.clearTimeout(timeout); resolve(); };
+        image!.onerror = () => { window.clearTimeout(timeout); reject(new Error('NEXORA could not read this cover photo. Choose another image.')); };
+        image!.src = objectUrl!;
+        if (image!.complete && image!.naturalWidth > 0) { window.clearTimeout(timeout); resolve(); }
       });
       width = image.naturalWidth;
       height = image.naturalHeight;
@@ -1213,8 +1231,8 @@ export default function ProfileView({
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/') || file.size > 12 * 1024 * 1024) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose an image smaller than 12 MB.' }));
+    if (!isSupportedProfileImageFile(file) || file.size <= 0 || file.size > 12 * 1024 * 1024) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a supported image under 12 MB.' }));
       return;
     }
     const objectUrl = URL.createObjectURL(file);
@@ -1413,8 +1431,8 @@ export default function ProfileView({
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size <= 0 || file.size > 8 * 1024 * 1024) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a JPG, PNG or WebP photo under 8 MB.' }));
+    if (!isSupportedProfileImageFile(file) || file.size <= 0 || file.size > 12 * 1024 * 1024) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a supported photo (JPG, PNG, WebP, GIF, AVIF or HEIC) under 12 MB.' }));
       return;
     }
     if (!isLoggedIn || auth.currentUser?.uid !== currentUser.id) {
@@ -3697,7 +3715,7 @@ export default function ProfileView({
                       {!pendingCoverFile && editCover && <button type="button" disabled={isSavingCoverPhoto || savingProfileFields.has('coverImage') || showSavedFeedback} onClick={async () => { if (await saveProfileField({ coverImage: '' })) setEditCover(''); }}
                         className="ml-2 text-xs text-zinc-400">Remove</button>}
                     </div>
-                    <input ref={coverInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={isSavingCoverPhoto || savingProfileFields.has('coverImage')} onChange={handleCoverPhotoSelection} />
+                    <input ref={coverInputRef} type="file" accept="image/*,.heic,.heif,.avif" className="hidden" disabled={isSavingCoverPhoto || savingProfileFields.has('coverImage')} onChange={handleCoverPhotoSelection} />
                   </div>
                 </div>
 

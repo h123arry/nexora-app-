@@ -113,7 +113,9 @@ async function uploadMediaFileViaR2(options: MediaUploadOptions): Promise<MediaU
     };
     const abort = () => xhr.abort();
     xhr.open('PUT', intent.uploadUrl, true);
-    xhr.timeout = 120000;
+    // Video files can be large on mobile networks. Keep the transfer alive long enough
+    // to use most of the signed URL lifetime instead of failing after two minutes.
+    xhr.timeout = 12 * 60 * 1000;
     xhr.setRequestHeader('Content-Type', contentType);
     xhr.setRequestHeader('If-None-Match', '*');
     xhr.upload.onprogress = event => {
