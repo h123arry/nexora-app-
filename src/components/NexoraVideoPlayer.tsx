@@ -167,7 +167,11 @@ export default function NexoraVideoPlayer({
   const serverWatchSessionId = useRef(`vw_${post.id}_${Math.random().toString(36).slice(2, 18)}`).current;
 
   const resolvedUrl = useResolvedUrl(videoUrl);
-  const originalResolvedUrl = videoUrl?.startsWith('db-media://') ? resolvedUrl : videoUrl;
+  // Resolve legacy device-local blobs and relative R2 gateway paths alike.
+  // Native builds must use VITE_API_BASE_URL rather than capacitor://localhost.
+  const originalResolvedUrl = resolvedUrl;
+  const resolvedPosterUrl = useResolvedUrl(post.image || post.images?.[0]);
+  const resolvedPostAvatar = useResolvedUrl(post.avatar);
   const [processedPlaybackUrl, setProcessedPlaybackUrl] = useState<string | null>(null);
   const [playbackRefreshKey, setPlaybackRefreshKey] = useState(0);
   const playbackRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1132,7 +1136,7 @@ export default function NexoraVideoPlayer({
 
             {posterUrl && (
               <img
-                src={posterUrl}
+                src={resolvedPosterUrl || undefined}
                 alt=""
                 aria-hidden="true"
                 loading={(isActive || isNearby || shouldPreload) ? 'eager' : 'lazy'}
@@ -1292,7 +1296,7 @@ export default function NexoraVideoPlayer({
                  onClick={(e) => { e.stopPropagation(); if (post.userId) onViewProfile?.(post.userId); }}
                  aria-label={`Open ${post.name}'s profile`}
                  className="flex min-w-0 items-center gap-2 text-left">
-                 <img src={post.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full border border-white/50 object-cover shadow-lg" loading="lazy" />
+                 <img src={resolvedPostAvatar || undefined} alt="" className="h-9 w-9 shrink-0 rounded-full border border-white/50 object-cover shadow-lg" loading="lazy" />
                  <span className="min-w-0">
                    <span className="flex items-center gap-1 text-xs font-bold text-white drop-shadow-md">
                      <span className="truncate">{post.name || post.username}</span>
