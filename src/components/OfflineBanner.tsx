@@ -34,12 +34,12 @@ export default function OfflineBanner() {
       {!isOnline ? (
         <div className="pointer-events-auto flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-rose-950/90 border border-rose-500/30 text-rose-200 shadow-md backdrop-blur-md text-xs font-mono animate-pulse">
           <WifiOff className="w-4 h-4 text-rose-400 shrink-0" />
-          <span>You are currently offline. Showing cached content.</span>
+          <span>Offline</span>
         </div>
       ) : showReconnected ? (
         <div className="pointer-events-auto flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-emerald-950/90 border border-emerald-500/30 text-emerald-200 shadow-md backdrop-blur-md text-xs font-mono">
           <Wifi className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>Connection restored. Syncing latest updates...</span>
+          <span>Back online</span>
         </div>
       ) : null}
     </div>
