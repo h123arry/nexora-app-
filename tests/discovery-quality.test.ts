@@ -189,3 +189,22 @@ test('cold-start creator recommendations diversify across creators own topics', 
   assert.equal(results.length, 6);
   assert.ok(results.slice(0, 4).some(item => item.creator.id === 'travel-a' || item.creator.id === 'food-a'));
 });
+
+
+test('For You gives low-reach posts a bounded discovery opportunity without changing Following or Latest', () => {
+  const now = Date.parse('2026-11-07T12:00:00.000Z');
+  const makePost = (id: string, views: number) => ({
+    id, userId: id, username: id, name: id, avatar: '', isVerified: false,
+    content: 'A creator post', tags: [], likes: 0, commentsCount: 0, shares: 0,
+    views, timestamp: '2026-11-07T11:00:00.000Z', comments: [],
+  }) as any;
+  const lowReach = makePost('low-reach', 0);
+  const established = makePost('established', 5000);
+  const forYou = rankPosts([established, lowReach], { mode: 'forYou', now });
+  assert.equal(forYou[0]?.post.id, 'low-reach');
+  assert.ok(forYou[0]?.reasons.includes('giving under-reached content a chance to be discovered'));
+  const latest = rankPosts([established, lowReach], { mode: 'latest', now });
+  assert.deepEqual(latest.map(item => item.post.id), ['established', 'low-reach']);
+  const following = rankPosts([established, lowReach], { mode: 'following', followingIds: ['established'], now });
+  assert.deepEqual(following.map(item => item.post.id), ['established']);
+});

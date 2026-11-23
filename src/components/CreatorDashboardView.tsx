@@ -141,16 +141,32 @@ export default function CreatorDashboardView({
   useEffect(() => {
     if (activeTab !== 'analytics') return;
     let cancelled = false;
+    let refreshInFlight = false;
     setIsAudienceLoading(true);
     setAudienceError(false);
-    getCreatorAudienceAnalytics(analyticsDays).then(data => {
-      if (!cancelled) setAudienceAnalytics(data);
-    }).catch(() => {
-      if (!cancelled) setAudienceError(true);
-    }).finally(() => {
-      if (!cancelled) setIsAudienceLoading(false);
-    });
-    return () => { cancelled = true; };
+    const refreshAudience = async () => {
+      if (refreshInFlight) return;
+      refreshInFlight = true;
+      try {
+        const data = await getCreatorAudienceAnalytics(analyticsDays);
+        if (!cancelled) {
+          setAudienceAnalytics(data);
+          setAudienceError(false);
+        }
+      } catch {
+        // Keep the last verified snapshot visible if a background refresh fails.
+        if (!cancelled && !audienceAnalytics) setAudienceError(true);
+      } finally {
+        refreshInFlight = false;
+        if (!cancelled) setIsAudienceLoading(false);
+      }
+    };
+    void refreshAudience();
+    // The audience collection is intentionally server-write-only. Refresh the
+    // authenticated callable periodically while the analytics tab is open
+    // instead of weakening Firestore rules to expose private aggregates.
+    const refreshTimer = window.setInterval(() => { void refreshAudience(); }, 60_000);
+    return () => { cancelled = true; window.clearInterval(refreshTimer); };
   }, [activeTab, currentUser.id, analyticsDays]);
 
   useEffect(() => {

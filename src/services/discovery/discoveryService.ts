@@ -79,6 +79,15 @@ function adjacentInterestScore(tags: string[], interests: Record<string, number>
   return Math.min(3.5, score);
 }
 
+/** Gives genuinely under-reached posts a bounded discovery opportunity. This is
+ * deliberately based on current post reach, not creator identity, follower count,
+ * verification, or paid status. It applies only to For You exploration. */
+function creatorOpportunityScore(post: Post): number {
+  const views = typeof post.views === 'number' && Number.isFinite(post.views)
+    ? Math.max(0, Math.min(1_000_000, post.views)) : 0;
+  return 12 / (1 + Math.log1p(views) / 2);
+}
+
 function engagementScore(post: Post): number {
   return boundedEngagementScore({
     likes: post.likes,
@@ -154,6 +163,7 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
           : mode === 'trending'
             ? engagementScore(post) * RANKING_WEIGHTS.popularity * freshnessMultiplier(age, 72) + Math.max(0, 48 - age) * 0.025
             : interestScore + explorationScore + freshness + followBoost + unseenBoost
+              + creatorOpportunityScore(post)
               + engagementScore(post) * RANKING_WEIGHTS.popularity * freshnessMultiplier(age, 36)
               + (post.isVerified ? RANKING_WEIGHTS.verifiedTrust : 0)
               + feedbackScore * 0.5;
@@ -163,6 +173,7 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
       else if (explorationScore > 0) reasons.push('explores a topic related to your interests');
       if (age < 24) reasons.push('recently published');
       if (!seen.has(post.id)) reasons.push('new to your feed');
+      if (mode === 'forYou' && creatorOpportunityScore(post) >= 8) reasons.push('giving under-reached content a chance to be discovered');
       if (mode === 'trending') reasons.push('showing recent community activity');
       if (mode === 'forYou' && feedbackScore !== 0) reasons.push('adjusted using your recent feedback');
       if (reasons.length === 0) reasons.push('eligible from available post metadata');
