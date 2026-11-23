@@ -436,8 +436,8 @@ export class AuthService {
         avatar: fbUser.photoURL || '',
       });
       const googleProfileUpdates: Partial<User> = {};
-      if (userProfile.name !== (fbUser.displayName || 'Google User')) googleProfileUpdates.name = fbUser.displayName || 'Google User';
-      if (userProfile.avatar !== (fbUser.photoURL || '')) googleProfileUpdates.avatar = fbUser.photoURL || '';
+      if (isNewUser && userProfile.name !== (fbUser.displayName || 'Google User')) googleProfileUpdates.name = fbUser.displayName || 'Google User';
+      if (isNewUser && userProfile.avatar !== (fbUser.photoURL || '')) googleProfileUpdates.avatar = fbUser.photoURL || '';
       if (Object.keys(googleProfileUpdates).length) {
         await ProfileService.updateProfile(fbUser.uid, googleProfileUpdates);
         userProfile = { ...userProfile, ...googleProfileUpdates };
@@ -493,10 +493,11 @@ export class AuthService {
       const credential = await confirmationResult.confirm(code);
       const fbUser = credential.user;
 
+      const existingPhoneProfile = await ProfileService.getProfile(fbUser.uid);
       let userProfile = await ProfileService.getOrCreateProfile(fbUser, {
         name: 'Phone User',
       });
-      if (userProfile.name !== 'Phone User') {
+      if (!existingPhoneProfile && userProfile.name !== 'Phone User') {
         await ProfileService.updateProfile(fbUser.uid, { name: 'Phone User' });
         userProfile = { ...userProfile, name: 'Phone User' };
       }
