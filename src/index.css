@@ -2422,7 +2422,7 @@ body {
   width: 100% !important;
   min-width: 0 !important;
   min-height: 0 !important;
-  aspect-ratio: 1 / 1 !important;
+  aspect-ratio: 3 / 4 !important;
   border: 0 !important;
   border-radius: 0 !important;
   overflow: hidden !important;
@@ -2651,6 +2651,20 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .nx-create-experience .nx-camera-photo-shutter,
   .nx-create-experience .nx-camera-record-shutter { transition: none; }
+}
+
+
+/* Home feed: preserve native vertical scrolling without a visible side scrollbar or reserved gutter. */
+.nx-feed-stage > .w-full.h-full.overflow-y-auto {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scrollbar-gutter: auto;
+  padding-right: 0 !important;
+}
+.nx-feed-stage > .w-full.h-full.overflow-y-auto::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* NEXORA Create — restrained, touch-first gallery */
