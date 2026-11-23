@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowRight, ArrowLeft, Smartphone, Lock, Mail, User as UserIcon, X, 
@@ -73,14 +73,12 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
   // Navigation & Auth Flow Modes
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>(() => initialMode || (typeof window !== 'undefined' && (new URLSearchParams(window.location.search).has('beta') || new URLSearchParams(window.location.search).has('signup')) ? 'signup' : 'login'));
   const [betaInviteCode] = useState(() => typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('beta') || '' : '');
-  const betaJoinStartedRef = useRef(false);
   
   // Method selection in signup: 'choose' | 'email' | 'phone'
   const [signupMethod, setSignupMethod] = useState<'choose' | 'email' | 'phone'>('choose');
 
   // Login & Registration Inputs
   const [identifierInput, setIdentifierInput] = useState(''); // Email for password login; phone uses OTP flow.
-  const [detectedType, setDetectedType] = useState<'email' | 'username' | 'phone'>('username');
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -138,23 +136,6 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [policyTab, setPolicyTab] = useState<'terms' | 'privacy'>('terms');
 
-  // Detect input type intelligently for login identifier
-  useEffect(() => {
-    const val = identifierInput.trim();
-    if (!val) {
-      setDetectedType('username');
-      return;
-    }
-
-    if (val.includes('@')) {
-      setDetectedType('email');
-    } else if (/^[\d\+\-\s\(\)]+$/.test(val) && val.replace(/\D/g, '').length >= 7) {
-      setDetectedType('phone');
-    } else {
-      setDetectedType('username');
-    }
-  }, [identifierInput]);
-
   // Username validation effect during onboarding
   useEffect(() => {
     if (onboardingUser) {
@@ -182,33 +163,20 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
     setVerificationCode('');
   };
 
-  // Claim a one of the 300 private beta places and create a device-bound Firebase session.
-  const handleBetaJoin = useCallback(async () => {
-    if (!betaInviteCode) {
-      setErrorMsg('This invitation link is missing its beta access code.');
-      return;
-    }
-    setErrorMsg('');
-    setIsPending(true);
-    setStatusMessage('Securing your NEXORA beta place...');
+  // Beta invitations are claimed only after the visitor completes a real sign-in.
+  const applyBetaInvite = async () => {
+    if (!betaInviteCode) return;
     try {
-      const { user } = await AuthService.joinBetaWithInvite(betaInviteCode);
-      setIsPending(false);
-      window.history.replaceState({}, '', window.location.pathname + window.location.hash);
-      onLoginSuccess(user);
-    } catch (error: any) {
-      setIsPending(false);
-      setErrorMsg(error?.message || 'NEXORA could not claim this beta invitation. Please try again.');
+      await AuthService.claimBetaInvite(betaInviteCode);
+      const params = new URLSearchParams(window.location.search);
+      params.delete('beta');
+      const query = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (query ? `?${query}` : '') + window.location.hash);
+      setSuccessMsg('Your NEXORA Founding Beta invitation is active.');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Your account is ready, but the beta invitation could not be applied.');
     }
-  }, [betaInviteCode, onLoginSuccess]);
-
-  // A valid private invitation starts anonymous registration immediately.
-  // The button remains available as a retry if the first network attempt fails.
-  useEffect(() => {
-    if (!betaInviteCode || betaJoinStartedRef.current) return;
-    betaJoinStartedRef.current = true;
-    void handleBetaJoin();
-  }, [betaInviteCode, handleBetaJoin]);
+  };
 
   // Google Sign In Handler
   const handleGoogleSignInClick = async () => {
@@ -218,6 +186,7 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
 
     try {
       const { user, isNewUser } = await AuthService.signInWithGoogle();
+      await applyBetaInvite();
       setIsPending(false);
       if (isNewUser) {
         setOnboardingUser(user);
@@ -242,11 +211,11 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
     setErrorMsg('');
 
     if (!identifierInput.trim()) {
-      setErrorMsg('Please enter your email address. Phone sign-in uses verification code.');
+      setErrorMsg('Please enter your email address. Phone sign-in uses a verification code.');
       return;
     }
-    if (detectedType === 'email' && !/^\S+@\S+\.\S+$/.test(identifierInput.trim())) {
-      setErrorMsg('Enter a valid email address, or use your NEXORA username.');
+    if (!/^\S+@\S+\.\S+$/.test(identifierInput.trim())) {
+      setErrorMsg('Enter a valid email address.');
       return;
     }
     if (!passwordInput) {
@@ -267,9 +236,8 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
     setStatusMessage('Checking your sign-in details…');
 
     try {
-      const { user } = detectedType === 'username'
-        ? await AuthService.loginWithUsername(query, passwordInput, rememberMe)
-        : await AuthService.loginWithEmail(query, passwordInput, rememberMe);
+      const { user } = await AuthService.loginWithEmail(query, passwordInput, rememberMe);
+      await applyBetaInvite();
       AuthService.clearFailedAttempts(query);
       if (rememberMe) {
         localStorage.setItem('nexora_remembered_identifier', query);
@@ -357,10 +325,16 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
     try {
       if (phoneConfirmationResult) {
         // Verify code with real Firebase Auth ConfirmationResult
-        const { user: nexoraUser } = await AuthService.confirmPhoneOTP(phoneConfirmationResult, cleanCode);
-
+        const { user: nexoraUser, isNewUser } = await AuthService.confirmPhoneOTP(phoneConfirmationResult, cleanCode);
+        await applyBetaInvite();
         setIsPending(false);
-        onLoginSuccess(nexoraUser);
+        if (isNewUser) {
+          setOnboardingUser(nexoraUser);
+          setOnboardingUsername(nexoraUser.username);
+          setOnboardingStep(1);
+        } else {
+          onLoginSuccess(nexoraUser);
+        }
 
       } else {
         throw new Error('Your code has expired. Please request a new one.');
@@ -413,6 +387,7 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
         signupName.trim(),
         defaultUsername
       );
+      await applyBetaInvite();
 
       // Onboarding transition
       setIsPending(false);
@@ -1079,11 +1054,7 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
                   {betaInviteCode && (
                     <div className="rounded-2xl border border-violet-400/30 bg-violet-500/10 p-4 space-y-2">
                       <div className="text-sm font-black text-white">You’re invited to NEXORA Founding Beta</div>
-                      <p className="text-xs leading-relaxed text-violet-100/80">Join now without email or phone verification. Your account will stay on this device until you choose to secure it.</p>
-                      <button type="button" onClick={handleBetaJoin} disabled={isPending} className="w-full py-3.5 px-4 bg-gradient-to-r from-violet-600 to-indigo-700 hover:from-violet-500 hover:to-indigo-600 disabled:opacity-50 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_rgba(109,40,217,0.3)] cursor-pointer">
-                        <Sparkles className="w-4 h-4" />
-                        <span>{isPending ? 'Joining NEXORA...' : 'Join the Founding Beta'}</span>
-                      </button>
+                      <p className="text-xs leading-relaxed text-violet-100/80">Complete sign-up with email, Google or a verified phone number. Your founding invitation will be applied after authentication. Opening this link will not create an account by itself.</p>
                     </div>
                   )}
                   <button
