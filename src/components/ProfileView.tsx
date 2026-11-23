@@ -175,14 +175,15 @@ function createRemoteVideoPoster(videoUrl: string): Promise<Blob | null> {
 const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVideoPosters = false, ownerId }: MediaGridProps) => {
   const attemptedPosterRepairs = useRef(new Set<string>());
   const [repairedPosters, setRepairedPosters] = useState<Record<string, string>>({});
-  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.videoUrl || ''}:${post.media || ''}:${(post as any).videoThumbnailUrl || ''}:${(post as any).posterUrl || ''}`).join('|');
+  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.videoUrl || ''}:${post.media || ''}:${(post as any).mediaType || (post as any).type || ''}:${(post as any).videoThumbnailUrl || ''}:${(post as any).posterUrl || ''}`).join('|');
 
   useEffect(() => {
     let active = true;
     const objectUrls: string[] = [];
     const repairVideoPosters = async () => {
       for (const post of gridPosts) {
-        const videoSource = post.videoUrl || (typeof post.media === 'string' && /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media) ? post.media : '');
+        const mediaType = String((post as any).mediaType || (post as any).type || '').toLowerCase();
+        const videoSource = post.videoUrl || (typeof post.media === 'string' && (mediaType === 'video' || /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media)) ? post.media : '');
         if (!videoSource || attemptedPosterRepairs.current.has(post.id)) continue;
         attemptedPosterRepairs.current.add(post.id);
         try {
