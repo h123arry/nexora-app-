@@ -69,8 +69,16 @@ export const claimBetaInvite = onCall({ maxInstances: 20 }, async request => {
   if (!caller || !uid) throw new HttpsError('unauthenticated', 'Sign in to NEXORA before claiming this invitation.');
   await assertCallableSessionActive(db, uid, caller.token?.auth_time);
 
-  const firebaseClaims = (caller.token.firebase || {}) as Record<string, unknown>;
-  if (firebaseClaims.sign_in_provider === 'anonymous') {
+  // Inspect the persisted Firebase provider links rather than relying on the
+  // token's original sign_in_provider claim, which can remain tied to an
+  // anonymous session after that UID is upgraded with a real credential.
+  const account = await auth.getUser(uid);
+  const hasPermanentProvider = account.providerData.some(provider =>
+    provider.providerId === 'password'
+    || provider.providerId === 'google.com'
+    || provider.providerId === 'phone'
+  );
+  if (!hasPermanentProvider) {
     throw new HttpsError('failed-precondition', 'Complete sign-up with email, Google or phone before claiming this invitation.');
   }
 
