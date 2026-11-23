@@ -416,6 +416,7 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('bob'), 'users', 'bob'), { ...ownPrivate, id: 'bob', email: 'bob@example.test', role: 'admin' }));
     await assertFails(setDoc(doc(dbFor('bob'), 'publicProfiles', 'bob'), { ...publicProfile('bob'), email: 'bob@example.test' }));
     await assertFails(setDoc(doc(dbFor('bob'), 'publicProfiles', 'bob'), { ...publicProfile('bob'), interestDNA: { AI: 1 } }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { ...publicProfile('alice'), dateOfBirth: '2000-01-01' }));
   });
 
   it('rejects client-assigned public verification, reputation, and initial engagement metrics', async () => {
@@ -495,12 +496,27 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice')));
   });
 
+  it('blocks public reads of legacy profile projections containing private fields until the owner removes them', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'users', 'alice'), profile('alice'));
+      await setDoc(doc(adminDb, 'publicProfiles', 'alice'), {
+        ...publicProfile('alice'), interestDNA: { AI: 0.9 }, dateOfBirth: '2000-01-01'
+      });
+    });
+    await assertFails(getDoc(doc(guestDb(), 'publicProfiles', 'alice')));
+    await assertSucceeds(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), {
+      interestDNA: deleteField(), dateOfBirth: deleteField()
+    }));
+    await assertSucceeds(getDoc(doc(guestDb(), 'publicProfiles', 'alice')));
+  });
+
   it('allows users to update their public bio but blocks changes to protected account fields and other accounts', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'users', 'alice'), { ...profile('alice'), isVerified: false });
       await setDoc(doc(db, 'users', 'bob'), { ...profile('bob'), isVerified: true });
       await setDoc(doc(db, 'publicProfiles', 'alice'), { ...publicProfile('alice'), interestDNA: { AI: 0.9 } });
     });
+    await assertSucceeds(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { interestDNA: deleteField() }));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { bio: 'updated by owner' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { role: 'admin' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { email: 'attacker@example.test' }));
