@@ -454,7 +454,7 @@ export default function ImmersiveVideoViewer({
                           window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: c.userId || c.username } }));
                         }}
                       >
-                        <img src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover ring-1 ring-violet-500/30" />
+                        <NexoraResolvedImage src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover ring-1 ring-violet-500/30" />
                         <div>
                           <span className="font-sans font-bold text-violet-200 group-hover/commentuser:underline">{c.name}</span>
                           <span className="text-[10px] font-mono text-violet-400/60 block group-hover/commentuser:underline">
@@ -505,7 +505,7 @@ export default function ImmersiveVideoViewer({
                                 window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: rep.userId || rep.username } }));
                               }}
                             >
-                              <img src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover ring-1 ring-violet-500/20" />
+                              <NexoraResolvedImage src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover ring-1 ring-violet-500/20" />
                               <div>
                                 <span className="font-sans font-black text-violet-200 text-[11px] group-hover/replyuser:underline">{rep.name}</span>
                                 <span className="text-[9px] font-mono text-violet-400/50 block group-hover/replyuser:underline">
