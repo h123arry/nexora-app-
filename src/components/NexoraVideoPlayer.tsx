@@ -629,6 +629,15 @@ export default function NexoraVideoPlayer({
       viewLoggedRef.current = true;
       logToWatchHistory();
       recordReelSignal(post.id, { watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
+      // Public view totals are essential product metrics, not optional analytics.
+      // The server stores only a per-viewer/post/day marker and aggregate count.
+      if (currentUser?.id) {
+        const recordPublicView = httpsCallable(getFunctions(app), 'recordPublicVideoView');
+        void recordPublicView({ postId: post.id }).catch(() => {
+          // Allow a later playback tick to retry if the network/function is unavailable.
+          viewLoggedRef.current = false;
+        });
+      }
 
 
     }
