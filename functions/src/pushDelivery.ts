@@ -43,6 +43,36 @@ export function buildNotificationPushData(
   };
 }
 
+export type NotificationPreferenceKey =
+  | 'likes' | 'comments' | 'followers' | 'reposts' | 'mentions'
+  | 'communities' | 'events' | 'verification' | 'creatorUploads'
+  | 'friendRequests' | 'securityAlerts';
+
+/** Resolve an inbox event to the user's matching push preference. Unknown
+ * notification types remain deliverable rather than being silently dropped. */
+export function notificationPreferenceKey(type: string): NotificationPreferenceKey | null {
+  if (type === 'spark' || type === 'like') return 'likes';
+  if (type === 'comment' || type === 'comment_reply' || type === 'reply') return 'comments';
+  if (type === 'follow' || type === 'profile_view') return 'followers';
+  if (type === 'repost') return 'reposts';
+  if (type === 'mention') return 'mentions';
+  if (type.startsWith('community_') || type === 'community') return 'communities';
+  if (type === 'event' || type.startsWith('event_') || type === 'community_event') return 'events';
+  if (type === 'verification' || type.startsWith('verification_') || type === 'identity_verification') return 'verification';
+  if (type === 'creator_upload' || type === 'creator_uploads') return 'creatorUploads';
+  if (type === 'friend_request' || type === 'friend_request_received') return 'friendRequests';
+  if (type === 'security' || type === 'security_alert' || type.startsWith('security_') || type === 'account_security') return 'securityAlerts';
+  return null;
+}
+
+export function shouldSendNotificationPush(preferences: unknown, type: string): boolean {
+  if (!preferences || typeof preferences !== 'object') return true;
+  const settings = preferences as Record<string, unknown>;
+  if (settings.push === false) return false;
+  const key = notificationPreferenceKey(type);
+  return !key || settings[key] !== false;
+}
+
 export function chunkPushTokens(tokens: string[], size = 500): string[][] {
   if (!Number.isInteger(size) || size < 1 || size > 500) throw new Error('Push token batch size must be between 1 and 500.');
   const chunks: string[][] = [];
@@ -80,7 +110,8 @@ export function createNotificationPushDelivery(db: Firestore, app: App) {
       if (tokensSnapshot.empty) return;
 
       const preferences = preferencesSnapshot.data()?.notifications;
-      if (preferences && typeof preferences === 'object' && (preferences as Record<string, unknown>).push === false) return;
+      const type = typeof notification.type === 'string' ? notification.type : 'system';
+      if (!shouldSendNotificationPush(preferences, type)) return;
 
       const tokenDocs = tokensSnapshot.docs.filter((tokenDoc) => {
         const value = tokenDoc.data().token;
@@ -89,7 +120,6 @@ export function createNotificationPushDelivery(db: Firestore, app: App) {
       const tokenValues = tokenDocs.map((tokenDoc) => tokenDoc.data().token as string);
       if (!tokenValues.length) return;
 
-      const type = typeof notification.type === 'string' ? notification.type : 'system';
       const detail = typeof notification.content === 'string' ? notification.content.slice(0, 300) : 'You have a new update.';
       const username = typeof notification.username === 'string' ? notification.username.replace(/^@+/, '').slice(0, 40) : '';
       const title = username ? `@${username}` : notificationTitle(type);
