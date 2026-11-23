@@ -3379,11 +3379,10 @@ export default function ProfileView({
 
                         {relationsTab === 'blocked' && (
                           <button
-                            onClick={() => {
-                              setBlockedUsers(blockedUsers.filter(u => u !== item.id));
-                              window.dispatchEvent(new CustomEvent('toast', { detail: '🔓 Account unblocked!' }));
-                            }}
-                            className="p-1 px-2.5 bg-violet-600 text-white rounded-lg text-[9px] font-mono uppercase font-black cursor-pointer"
+                            type="button"
+                            onClick={() => { void handleUnblockAccount(item.id); }}
+                            disabled={isSafetyActionBusy}
+                            className="p-1 px-2.5 bg-violet-600 text-white rounded-lg text-[9px] font-mono uppercase font-black cursor-pointer disabled:cursor-wait disabled:opacity-50"
                           >
                             Unblock
                           </button>
