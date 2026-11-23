@@ -105,7 +105,8 @@ test('public profile signup offers both username/password and email/password pat
   assert.match(authService, /createUserWithEmailAndPassword\(auth, cleanEmail, password\)/);
   assert.match(authService, /if \(existingUser\?\.isAnonymous\)/);
   assert.match(authService, /linkWithCredential\(\s*existingUser,\s*EmailAuthProvider\.credential\(cleanEmail, password\)/);
-  assert.match(authService, /ProfileService\.getOrCreateProfile\(fbUser, \{[\s\S]*?name: fullName\.trim\(\),[\s\S]*?username: cleanUsername/);\n  assert.match(authService, /ProfileService\.updateProfile\(fbUser\.uid, identityUpdates\)/);
+  assert.match(authService, /ProfileService\.getOrCreateProfile\(fbUser, \{[\s\S]*?name: fullName\.trim\(\),[\s\S]*?username: cleanUsername/);
+  assert.match(authService, /ProfileService\.updateProfile\(fbUser\.uid, identityUpdates\)/);
   assert.match(profileService, /email: firebaseUser\.email/);
 
   assert.match(authService, /sendEmailVerification\(fbUser\)/);
