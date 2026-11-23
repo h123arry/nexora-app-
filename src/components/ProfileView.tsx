@@ -274,7 +274,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
             <motion.div
               key={post.id}
               layout
-              className="aspect-[1/2] min-w-0 overflow-hidden bg-gradient-to-br from-[#1d1242] to-[#050314] p-2.5 flex flex-col justify-between text-left"
+              className="aspect-[3/5] min-w-0 overflow-hidden bg-gradient-to-br from-[#1d1242] to-[#050314] p-2.5 flex flex-col justify-between text-left"
             >
               <div className="flex items-center justify-between gap-1">
                 <Mic className="h-4 w-4 shrink-0 text-violet-300" />
@@ -303,7 +303,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="group aspect-[1/2] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-3px]"
+            className="group aspect-[3/5] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-3px]"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
@@ -1610,7 +1610,7 @@ export default function ProfileView({
       {/* 1. TOP NAVIGATION ACTION BAR */}
       <div className="nx-page-header nx-profile-topbar sticky top-0 z-40 py-2 px-4 flex items-center justify-between border-b">
         <div className="flex items-center gap-3 relative">
-          <span className="text-[13px] font-extrabold tracking-tight text-white leading-none select-none">{isOwnProfile ? 'Your profile' : 'Profile'}</span>
+          
           {onCloseProfile && (
             <button 
               onClick={onCloseProfile}
@@ -1811,13 +1811,13 @@ export default function ProfileView({
           )}
 
           {/* Profile cover with compact avatar anchored over its lower edge. */}
-          <div className="nx-profile-cover relative h-36 sm:h-48 overflow-visible rounded-2xl border border-white/10 bg-[#100B25]">
+          <div className="nx-profile-cover relative h-40 sm:h-52 overflow-visible rounded-none border-0 bg-[#100B25]">
             {currentUser.coverImage ? (
-              <img src={normalizeMediaDeliveryUrl(currentUser.coverImage)} alt="" onError={retryProfileMediaLoad} className="h-full w-full rounded-2xl object-cover" />
+              <img src={normalizeMediaDeliveryUrl(currentUser.coverImage)} alt="" onError={retryProfileMediaLoad} className="h-full w-full rounded-none object-cover" />
             ) : (
-              <div className="h-full w-full rounded-2xl bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]" />
+              <div className="h-full w-full rounded-none bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]" />
             )}
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute inset-0 rounded-none bg-gradient-to-b from-black/35 via-transparent to-black/35 pointer-events-none" />
             {isOwnProfile && <button type="button" onClick={() => setActivePanel('edit-profile')} className="absolute right-3 bottom-3 z-10 rounded-xl border border-white/15 bg-black/55 px-3 py-2 text-[10px] font-bold text-white backdrop-blur-md hover:bg-black/75"><Camera className="mr-1.5 inline h-3.5 w-3.5" /> Edit cover</button>}
             <div className="absolute left-4 -bottom-7">
               <div className="relative">

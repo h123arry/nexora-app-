@@ -2755,3 +2755,124 @@ body {
   min-width: 48px;
   min-height: 48px;
 }
+
+
+/* Profile refresh: full-bleed cover with the existing profile controls layered over it. */
+.nx-profile-shell {
+  position: relative;
+}
+.nx-profile-shell .nx-profile-topbar {
+  position: absolute !important;
+  inset: 0 0 auto 0;
+  z-index: 45;
+  min-height: 64px;
+  padding: max(8px, env(safe-area-inset-top, 0px)) 14px 8px;
+  border: 0 !important;
+  background: linear-gradient(180deg, rgba(3,2,10,.58), rgba(3,2,10,.12)) !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.nx-profile-shell .nx-profile-topbar > div:first-child {
+  min-height: 42px;
+}
+.nx-profile-shell .nx-profile-topbar button {
+  border-color: rgba(255,255,255,.2);
+  background: rgba(5,4,12,.34);
+  color: #fff;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.nx-profile-shell .nx-profile-topbar button:hover {
+  background: rgba(5,4,12,.58);
+  border-color: rgba(255,255,255,.34);
+}
+.nx-profile-shell .nx-profile-main {
+  width: 100%;
+  max-width: none !important;
+  padding: 0 !important;
+}
+.nx-profile-shell .nx-profile-cover {
+  width: 100vw;
+  max-width: 100vw;
+  height: clamp(164px, 27vw, 224px);
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+.nx-profile-shell .nx-profile-cover > img,
+.nx-profile-shell .nx-profile-cover > div {
+  border-radius: 0 !important;
+}
+.nx-profile-shell .nx-profile-identity {
+  width: calc(100% - 24px);
+  max-width: 1000px;
+  margin: 0 auto 2px;
+  padding: 38px 12px 8px;
+  gap: 7px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.nx-profile-shell .nx-profile-identity > div:first-child {
+  gap: 8px;
+}
+.nx-profile-shell .nx-profile-identity > div:last-child p {
+  line-height: 1.45;
+}
+.nx-profile-shell .nx-profile-stats {
+  gap: 5px;
+  margin-top: 2px;
+}
+.nx-profile-shell .nx-profile-stats > div {
+  min-height: 48px;
+  padding: 5px 4px;
+  border-radius: 10px;
+}
+.nx-profile-shell .nx-profile-tabbar {
+  top: 0;
+  margin-top: 7px;
+}
+.nx-profile-shell .nx-profile-content {
+  padding-top: 8px;
+}
+.nx-profile-shell .nx-profile-media-grid > * {
+  aspect-ratio: 3 / 5 !important;
+}
+.nx-profile-shell .nx-profile-media-grid > button,
+.nx-profile-shell .nx-profile-media-grid > div {
+  aspect-ratio: 3 / 5 !important;
+}
+@media (max-width: 640px) {
+  .nx-profile-shell .nx-profile-topbar {
+    min-height: 58px;
+    padding-inline: 10px;
+  }
+  .nx-profile-shell .nx-profile-main {
+    padding-inline: 0 !important;
+  }
+  .nx-profile-shell .nx-profile-cover {
+    height: 174px;
+  }
+  .nx-profile-shell .nx-profile-identity {
+    width: calc(100% - 18px);
+    padding: 35px 7px 6px;
+    gap: 5px;
+  }
+  .nx-profile-shell .nx-profile-stats {
+    gap: 4px;
+    margin-top: 0;
+  }
+  .nx-profile-shell .nx-profile-stats > div {
+    min-height: 45px;
+    padding: 4px 3px;
+  }
+  .nx-profile-shell .nx-profile-tabbar {
+    margin-top: 4px;
+  }
+  .nx-profile-shell .nx-profile-content {
+    padding-top: 5px;
+  }
+}
