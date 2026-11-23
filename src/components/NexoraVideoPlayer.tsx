@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { registerPlugin } from '@capacitor/core';
 import QuickActionsSheet from './QuickActionsSheet';
 import ShareSheet from './ShareSheet';
 import { recordRecommendationEvent } from '../utils/recommendations';
@@ -18,6 +19,11 @@ import { hasAnalyticsObservationConsent, trackClientObservation } from '../servi
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
 import { playNexoraSound } from '../services/soundExperience';
+
+interface NexoraMediaPlugin {
+  saveVideo(options: { filename: string; mimeType: string; base64Data: string }): Promise<{ saved: boolean; uri?: string }>;
+}
+const NexoraMedia = registerPlugin<NexoraMediaPlugin>('NexoraMedia');
 
 interface Post {
   id: string;
@@ -1030,43 +1036,127 @@ export default function NexoraVideoPlayer({
     setNewCollectionName('');
   };
 
-  // In-app export is deliberately fail-closed: never fall back to a browser URL download.
-  // The branded export pipeline is invoked through the native media bridge when available.
+  // Export a clean playback stream into a branded file, then save it through
+  // Android MediaStore. Nothing is downloaded through a browser URL or anchor.
   const handleSimulateDownload = async () => {
     if (!downloadsOn) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Downloads are restricted for this video by creator settings.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Downloads are restricted for this video.' }));
       return;
     }
-    const nativeBridge = (window as any).NexoraMedia;
-    if (!nativeBridge || typeof nativeBridge.saveBrandedVideo !== 'function') {
-      window.dispatchEvent(new CustomEvent('toast', {
-        detail: 'In-app branded downloads are not available on this app build yet. Your video has not been downloaded.'
-      }));
-      return;
-    }
-    setExportState({ isExporting: true, progress: 10, statusText: 'Preparing branded video...' });
+    const source = finalVideoUrl || videoUrl;
+    if (!source) return;
+    setExportState({ isExporting: true, progress: 5, statusText: 'Preparing branded video...' });
+    let exportVideo: HTMLVideoElement | null = null;
+    let recorder: MediaRecorder | null = null;
+    let animationFrame = 0;
+    let objectUrl: string | null = null;
     try {
-      const result = await nativeBridge.saveBrandedVideo({
-        sourceUrl: finalVideoUrl || videoUrl,
-        username: post.username || 'creator',
-        userId: post.userId || '',
-        isVerified: Boolean(post.isVerified),
-        filename: `NEXORA_${(post.username || 'creator').replace(/[^a-z0-9_-]/gi, '_')}_${post.id || Date.now()}.mp4`,
-        watermark: {
-          diagonalAlternationSeconds: 5,
-          includeNexoraLogo: true,
-          includeUsername: true,
-          includeVerificationTick: Boolean(post.isVerified),
-          blurBackground: true,
-        },
+      const canvas = document.createElement('canvas');
+      const width = 720;
+      const height = 1280;
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Video export canvas is unavailable.');
+      exportVideo = document.createElement('video');
+      exportVideo.crossOrigin = 'anonymous';
+      exportVideo.playsInline = true;
+      exportVideo.preload = 'auto';
+      exportVideo.src = source;
+      await new Promise<void>((resolve, reject) => {
+        exportVideo!.onloadedmetadata = () => resolve();
+        exportVideo!.onerror = () => reject(new Error('The original video could not be loaded for export.'));
+        exportVideo!.load();
       });
-      if (!result?.saved) throw new Error('Native media saver did not confirm a saved file.');
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Branded video saved to your device.' }));
+      const aspect = exportVideo.videoWidth / Math.max(1, exportVideo.videoHeight);
+      const targetAspect = width / height;
+      let drawWidth = width;
+      let drawHeight = height;
+      if (aspect > targetAspect) drawWidth = height * aspect;
+      else drawHeight = width / aspect;
+      const drawX = (width - drawWidth) / 2;
+      const drawY = (height - drawHeight) / 2;
+      const canvasStream = canvas.captureStream(30);
+      const sourceStream = (exportVideo as any).captureStream?.() || (exportVideo as any).mozCaptureStream?.();
+      sourceStream?.getAudioTracks().forEach((track: MediaStreamTrack) => canvasStream.addTrack(track));
+      const mimeType = ['video/mp4;codecs=h264,aac', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus']
+        .find(type => MediaRecorder.isTypeSupported(type));
+      if (!mimeType) throw new Error('This device does not support video export.');
+      recorder = new MediaRecorder(canvasStream, { mimeType, videoBitsPerSecond: 5_000_000 });
+      const chunks: BlobPart[] = [];
+      const recording = new Promise<Blob>((resolve, reject) => {
+        recorder!.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+        recorder!.onstop = () => resolve(new Blob(chunks, { type: mimeType.split(';')[0] }));
+        recorder!.onerror = () => reject(new Error('Video encoding failed.'));
+      });
+      const startedAt = performance.now();
+      const drawFrame = () => {
+        if (!exportVideo || !context) return;
+        context.save();
+        context.clearRect(0, 0, width, height);
+        // Keep the entire video softly blurred; the diagonal creator/NEXORA
+        // signature is rendered sharply above it as the visual focal point.
+        context.filter = 'blur(13px) brightness(.62)';
+        context.drawImage(exportVideo, drawX, drawY, drawWidth, drawHeight);
+        context.restore();
+        const elapsed = (performance.now() - startedAt) / 1000;
+        const diagonal = Math.floor(elapsed / 5) % 2 === 0 ? -Math.PI / 4 : Math.PI / 4;
+        context.save();
+        context.translate(width / 2, height / 2);
+        context.rotate(diagonal);
+        const label = `NEXORA   @${post.username || 'creator'}${post.isVerified ? '   ✓' : ''}`;
+        context.font = '700  thirtypx Arial';
+        context.font = '700 30px Arial';
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        const labelWidth = Math.min(width * 1.2, context.measureText(label).width + 72);
+        context.fillStyle = 'rgba(5,7,20,.76)';
+        context.fillRect(-labelWidth / 2, -30, labelWidth, 60);
+        context.strokeStyle = 'rgba(255,255,255,.3)';
+        context.lineWidth = 2;
+        context.strokeRect(-labelWidth / 2, -30, labelWidth, 60);
+        context.fillStyle = '#fff';
+        context.fillText(label, 0, 1, labelWidth - 30);
+        context.restore();
+        if (!exportVideo!.ended && !exportVideo!.paused) animationFrame = requestAnimationFrame(drawFrame);
+      };
+      recorder.start(250);
+      await exportVideo.play();
+      drawFrame();
+      setExportState({ isExporting: true, progress: 35, statusText: 'Rendering watermark...' });
+      await new Promise<void>(resolve => { exportVideo!.onended = () => resolve(); });
+      cancelAnimationFrame(animationFrame);
+      recorder.stop();
+      const brandedBlob = await recording;
+      if (!brandedBlob.size) throw new Error('The branded video export was empty.');
+      setExportState({ isExporting: true, progress: 80, statusText: 'Saving to device...' });
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+        reader.onerror = () => reject(new Error('Could not prepare the video for device storage.'));
+        reader.readAsDataURL(brandedBlob);
+      });
+      const extension = brandedBlob.type.includes('mp4') ? 'mp4' : 'webm';
+      const result = await NexoraMedia.saveVideo({
+        filename: `NEXORA_${(post.username || 'creator').replace(/[^a-z0-9_-]/gi, '_')}_${post.id || Date.now()}.${extension}`,
+        mimeType: brandedBlob.type,
+        base64Data,
+      });
+      if (!result?.saved) throw new Error('Device storage did not confirm the saved file.');
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Branded video saved to Movies/NEXORA.' }));
       setExportState({ isExporting: false, progress: 100, statusText: 'Saved to device' });
+      if (exportStateTimeoutRef.current) clearTimeout(exportStateTimeoutRef.current);
+      exportStateTimeoutRef.current = setTimeout(() => setExportState(null), 1200);
     } catch (error) {
-      console.error('[NEXORA] Branded in-app download failed:', error);
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not save this video. No browser download was started.' }));
+      console.error('[NEXORA] Branded in-app video export failed:', error);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not create or save the branded video. No browser download was started.' }));
       setExportState(null);
+    } finally {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
+      if (recorder && recorder.state !== 'inactive') recorder.stop();
+      exportVideo?.pause();
+      if (exportVideo) { exportVideo.removeAttribute('src'); exportVideo.load(); }
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     }
   };
 
