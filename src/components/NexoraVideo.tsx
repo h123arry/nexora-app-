@@ -10,7 +10,7 @@ interface NexoraVideoProps extends VideoHTMLAttributes<HTMLVideoElement> {
 export const NexoraVideo = forwardRef<HTMLVideoElement, NexoraVideoProps>(
   ({ src, lazy = true, ...props }, ref) => {
     const resolvedUrl = useResolvedUrl(src);
-    const finalSrc = src?.startsWith('db-media://') ? resolvedUrl : src;
+    const finalSrc = resolvedUrl;
     const internalRef = useRef<HTMLVideoElement | null>(null);
     const [isVisible, setIsVisible] = useState(!lazy);
 
@@ -48,7 +48,7 @@ export const NexoraVideo = forwardRef<HTMLVideoElement, NexoraVideoProps>(
     };
 
     // Render Nexora unified loading state while resolving custom local media DB URLs
-    if (src && src.startsWith('db-media://') && !resolvedUrl) {
+    if (src && !resolvedUrl) {
       return (
         <div className="w-full h-full min-h-[150px] bg-black/40 flex items-center justify-center">
           <NexoraLoader size="md" />
