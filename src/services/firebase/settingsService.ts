@@ -9,6 +9,7 @@ import {
 import { db, auth } from './config';
 import { buildFeedSettingsPatch, normalizeRecommendationSignals, type FeedPreferences } from '../discovery/feedPreferences';
 import { normalizeChatPreferences, type ChatPreferences } from '../messaging/chatPreferences';
+import { clearBlockedUserLists, updateBlockedUserLists } from './blockListPolicy';
 
 export interface NexoraSettings {
   privacy: {
@@ -241,6 +242,64 @@ export class SettingsService {
       transaction.set(settingsRef, snapshot.exists()
         ? { messaging: next, updatedAt: serverTimestamp() }
         : { ...DEFAULT_SETTINGS, messaging: next, updatedAt: serverTimestamp() }, { merge: true });
+    });
+  }
+
+  static async toggleBlockedUser(uid: string, targetId: string) {
+    return this.writeBlockedUser(uid, targetId);
+  }
+
+  static async setBlockedUser(uid: string, targetId: string, blocked: boolean) {
+    return this.writeBlockedUser(uid, targetId, blocked);
+  }
+
+  private static async writeBlockedUser(uid: string, targetId: string, blocked?: boolean) {
+    if (!uid || auth.currentUser?.uid !== uid) throw new Error('Only the signed-in owner can update blocked accounts.');
+    const settingsRef = doc(db, 'users', uid, 'settings', 'preferences');
+    return runTransaction(db, async transaction => {
+      const snapshot = await transaction.get(settingsRef);
+      const current = snapshot.exists()
+        ? mergeSettings(snapshot.data() as Partial<NexoraSettings>)
+        : DEFAULT_SETTINGS;
+      const lists = updateBlockedUserLists({
+        ownerId: uid,
+        targetId,
+        blockedUserIds: current.messaging.blockedUserIds,
+        blockedCreatorIds: current.feed.blockedCreatorIds,
+        blocked,
+      });
+      const messaging = normalizeChatPreferences({
+        ...current.messaging,
+        blockedUserIds: lists.blockedUserIds,
+      });
+      const feed = { ...current.feed, blockedCreatorIds: lists.blockedCreatorIds };
+      const feedPatch = buildFeedSettingsPatch(feed, serverTimestamp());
+      transaction.set(settingsRef, snapshot.exists()
+        ? { messaging, ...feedPatch }
+        : { ...DEFAULT_SETTINGS, messaging, ...feedPatch }, { merge: true });
+      return lists;
+    });
+  }
+
+  static async clearBlockedUsers(uid: string) {
+    if (!uid || auth.currentUser?.uid !== uid) throw new Error('Only the signed-in owner can update blocked accounts.');
+    const settingsRef = doc(db, 'users', uid, 'settings', 'preferences');
+    return runTransaction(db, async transaction => {
+      const snapshot = await transaction.get(settingsRef);
+      const current = snapshot.exists()
+        ? mergeSettings(snapshot.data() as Partial<NexoraSettings>)
+        : DEFAULT_SETTINGS;
+      const lists = clearBlockedUserLists();
+      const messaging = normalizeChatPreferences({
+        ...current.messaging,
+        blockedUserIds: lists.blockedUserIds,
+      });
+      const feed = { ...current.feed, blockedCreatorIds: lists.blockedCreatorIds };
+      const feedPatch = buildFeedSettingsPatch(feed, serverTimestamp());
+      transaction.set(settingsRef, snapshot.exists()
+        ? { messaging, ...feedPatch }
+        : { ...DEFAULT_SETTINGS, messaging, ...feedPatch }, { merge: true });
+      return lists;
     });
   }
 

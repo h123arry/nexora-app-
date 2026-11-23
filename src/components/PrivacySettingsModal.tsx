@@ -418,10 +418,7 @@ export default function PrivacySettingsModal({
       return;
     }
     try {
-      await Promise.all([
-        SettingsService.updateMessagingPreferences(userId, { blockedUserIds: [] }),
-        SettingsService.updateFeed(userId, { blockedCreatorIds: [] }),
-      ]);
+      await SettingsService.clearBlockedUsers(userId);
       setBlockedUsers([]);
       window.dispatchEvent(new CustomEvent('toast', { detail: 'All blocked accounts were removed from your saved safety preferences.' }));
     } catch {
@@ -440,11 +437,7 @@ export default function PrivacySettingsModal({
       return;
     }
     try {
-      const settings = await SettingsService.getSettings(userId);
-      await Promise.all([
-        SettingsService.updateMessagingPreferences(userId, { blockedUserIds: settings.messaging.blockedUserIds.filter(value => value !== id) }),
-        SettingsService.updateFeed(userId, { blockedCreatorIds: settings.feed.blockedCreatorIds.filter(value => value !== id) }),
-      ]);
+      await SettingsService.setBlockedUser(userId, id, false);
       setBlockedUsers(prev => prev.filter(u => u.id !== id));
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Account unblocked in your saved safety preferences.' }));
     } catch {
