@@ -292,9 +292,9 @@ export class SettingsService {
       const lists = clearBlockedUserLists();
       const messaging = normalizeChatPreferences({
         ...current.messaging,
-        ...lists,
+        blockedUserIds: lists.blockedUserIds,
       });
-      const feed = { ...current.feed, ...lists };
+      const feed = { ...current.feed, blockedCreatorIds: lists.blockedCreatorIds };
       const feedPatch = buildFeedSettingsPatch(feed, serverTimestamp());
       transaction.set(settingsRef, snapshot.exists()
         ? { messaging, ...feedPatch }
