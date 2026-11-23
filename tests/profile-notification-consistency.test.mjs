@@ -61,14 +61,16 @@ test('photo and video publishing use the Firebase UID, not a potentially stale p
   assert.doesNotMatch(composer, /userId: currentUser\.id/);
 });
 
-test('public profile onboarding creates a real username/password credential on the same Firebase UID', async () => {
-  const [setup, auth] = await Promise.all([
+test('public profile setup no longer creates username/password credentials', async () => {
+  const [setup, auth, app] = await Promise.all([
     read('../src/components/PublicAccountSetup.tsx'),
     read('../src/services/firebase/authService.ts'),
+    read('../src/App.tsx'),
   ]);
-  assert.match(setup, /AuthService\.completeUsernameRegistration/);
-  assert.match(auth, /linkWithCredential\(current, EmailAuthProvider\.credential\(email, input\.password\)\)/);
-  assert.match(auth, /ProfileService\.reserveUsername\(current\.uid, username\)/);
+  assert.doesNotMatch(setup, /completeUsernameRegistration/);
+  assert.doesNotMatch(auth, /loginWithUsername|completeUsernameRegistration|USERNAME_LOGIN_DOMAIN/);
+  assert.doesNotMatch(app, /UsernameLoginModal|loginWithUsername/);
+  assert.match(setup, /onSwitchToEmailSignup/);
 });
 
 test('Google signup does not assign a stock-person avatar when Google has no photo', async () => {
@@ -77,7 +79,7 @@ test('Google signup does not assign a stock-person avatar when Google has no pho
   assert.doesNotMatch(auth, /photo-1535713875002-d1d0cf377fde/);
 });
 
-test('missing public profile links finish at the new member own profile after signup', async () => {
+test('public profile links still resolve through canonical username claims after auth-flow cleanup', async () => {
   const [app, profile, setup] = await Promise.all([
     read('../src/App.tsx'),
     read('../src/services/firebase/profileService.ts'),
@@ -88,10 +90,10 @@ test('missing public profile links finish at the new member own profile after si
   assert.match(app, /getPublicProfileByUsername\(cleanIdOrUser\)/);
   assert.match(app, /navigateTo\('profile', null\)/);
   assert.doesNotMatch(app, /void handleViewProfile\(userIdOrUsername\)/);
-  assert.match(setup, /AuthService\.completeUsernameRegistration/);
+  assert.doesNotMatch(setup, /completeUsernameRegistration/);
 });
 
-test('public profile signup offers both username/password and email/password paths', async () => {
+test('signup uses email/password and Google without a username credential path', async () => {
   const [app, setup, authView, authService, profileService] = await Promise.all([
     read('../src/App.tsx'),
     read('../src/components/PublicAccountSetup.tsx'),
@@ -103,12 +105,10 @@ test('public profile signup offers both username/password and email/password pat
   assert.match(app, /<AuthView[\s\S]*initialMode="signup"/);
   assert.match(authView, /handleEmailSignupSubmit/);
   assert.match(authService, /createUserWithEmailAndPassword\(auth, cleanEmail, password\)/);
-  assert.match(authService, /if \(existingUser\?\.isAnonymous\)/);
-  assert.match(authService, /linkWithCredential\(\s*existingUser,\s*EmailAuthProvider\.credential\(cleanEmail, password\)/);
-  assert.match(authService, /ProfileService\.getOrCreateProfile\(fbUser, \{[\s\S]*?name: fullName\.trim\(\),[\s\S]*?username: cleanUsername/);
-  assert.match(authService, /ProfileService\.updateProfile\(fbUser\.uid, identityUpdates\)/);
+  assert.match(authService, /GoogleAuthProvider/);
+  assert.match(authService, /signInWithPopup\(auth, provider\)/);
+  assert.doesNotMatch(authService, /loginWithUsername|completeUsernameRegistration|USERNAME_LOGIN_DOMAIN/);
   assert.match(profileService, /email: firebaseUser\.email/);
-
   assert.match(authService, /sendEmailVerification\(fbUser\)/);
 });
 
