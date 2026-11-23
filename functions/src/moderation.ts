@@ -4,7 +4,7 @@ import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError } from 'firebase-functions/v2/https';
 import { onCallWithSession as onCall } from './callableSession.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { consumeModerationReportQuota } from './moderationPolicy.js';
+import { consumeModerationReportQuota, resolveCommunityOwnerId } from './moderationPolicy.js';
 import { shouldOpenImpersonationCase } from './identityVerificationPolicy.js';
 
 const app = getFirebaseAdminApp();
@@ -54,6 +54,10 @@ async function resolveAccountId(report: Record<string, any>): Promise<string | n
     const post = await db.collection('posts').doc(String(report.targetId)).get();
     const data = post.data();
     return typeof data?.userId === 'string' ? data.userId : typeof data?.authorId === 'string' ? data.authorId : null;
+  }
+  if (report.targetType === 'community') {
+    const community = await db.collection('communities').doc(String(report.targetId)).get();
+    return resolveCommunityOwnerId(community.exists ? community.data() : null);
   }
   if (report.targetType === 'message') {
     const messageTarget = typeof report.targetId === 'string' ? report.targetId.split(':') : [];
