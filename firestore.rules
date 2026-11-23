@@ -186,7 +186,7 @@ service cloud.firestore {
         'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
         'followers', 'following', 'sparks', 'hasStory',
         'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
-        'interestDNA', 'skills', 'dateOfBirth', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
+        'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
         'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'earlyCommunityMember'
       ];
     }
@@ -618,8 +618,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(publicProfileKeys())
         && !request.resource.data.keys().hasAny(['interestDNA'])
         && (!request.resource.data.keys().hasAny(['earlyCommunityMember']) || (request.resource.data.earlyCommunityMember is bool && request.resource.data.earlyCommunityMember == get(/databases/$(database)/documents/users/$(userId)).data.get('earlyCommunityMember', false)))
-        && zeroInitialReputation(request.resource.data)
-        && zeroInitialEngagement(request.resource.data);
+        && publicProjectionReadOnlyFieldsMatchPrivateProfileOnCreate(userId);
       allow update: if owner(userId)
         && request.resource.data.id == userId
         && request.resource.data.keys().hasOnly(publicProfileKeys())
