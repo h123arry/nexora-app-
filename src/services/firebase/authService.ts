@@ -430,16 +430,17 @@ export class AuthService {
       provider.setCustomParameters({ prompt: 'select_account' });
       const credential = await signInWithPopup(auth, provider);
       const fbUser = credential.user;
-      let userProfile = await ProfileService.getProfile(fbUser.uid);
-      let isNewUser = false;
-
-      if (!userProfile) {
-        isNewUser = true;
-        userProfile = await ProfileService.createProfile(fbUser.uid, {
-          name: fbUser.displayName || 'Google User',
-          avatar: fbUser.photoURL || '',
-          isVerified: fbUser.emailVerified
-        }, fbUser.email || '');
+      const isNewUser = !(await ProfileService.getProfile(fbUser.uid));
+      let userProfile = await ProfileService.getOrCreateProfile(fbUser, {
+        name: fbUser.displayName || 'Google User',
+        avatar: fbUser.photoURL || '',
+      });
+      const googleProfileUpdates: Partial<User> = {};
+      if (userProfile.name !== (fbUser.displayName || 'Google User')) googleProfileUpdates.name = fbUser.displayName || 'Google User';
+      if (userProfile.avatar !== (fbUser.photoURL || '')) googleProfileUpdates.avatar = fbUser.photoURL || '';
+      if (Object.keys(googleProfileUpdates).length) {
+        await ProfileService.updateProfile(fbUser.uid, googleProfileUpdates);
+        userProfile = { ...userProfile, ...googleProfileUpdates };
       }
 
       SecurityNotificationService.notifySecurityEvent(
@@ -492,12 +493,12 @@ export class AuthService {
       const credential = await confirmationResult.confirm(code);
       const fbUser = credential.user;
 
-      let userProfile = await ProfileService.getProfile(fbUser.uid);
-      if (!userProfile) {
-        userProfile = await ProfileService.createProfile(fbUser.uid, {
-          name: 'Phone User',
-          isVerified: true
-        }, fbUser.email || `${fbUser.uid}@phone.auth`);
+      let userProfile = await ProfileService.getOrCreateProfile(fbUser, {
+        name: 'Phone User',
+      });
+      if (userProfile.name !== 'Phone User') {
+        await ProfileService.updateProfile(fbUser.uid, { name: 'Phone User' });
+        userProfile = { ...userProfile, name: 'Phone User' };
       }
 
       SecurityNotificationService.notifySecurityEvent(
