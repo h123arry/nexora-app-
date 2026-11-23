@@ -16,6 +16,8 @@ on:
       - 'firestore.indexes.json'
       - 'firebase.json'
       - 'functions/src/index.ts'
+      - 'functions/src/videoWatchAnalytics.ts'
+      - 'functions/src/videoWatchAnalyticsPolicy.ts'
       - 'functions/src/giftCatalog.ts'
       - 'functions/src/giftCatalogPolicy.ts'
       - 'functions/src/giftPurchases.ts'
@@ -161,7 +163,7 @@ jobs:
           set -euo pipefail
           deploy_functions() {
             npx --yes firebase-tools@15.33.0 deploy \
-              --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,functions:grantEarlyCommunityRecognition \
+              --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,functions:recordPublicVideoView,functions:recordVideoWatchHeartbeat,functions:getCreatorVideoRetention,functions:grantEarlyCommunityRecognition \
               --config firebase.json \
               --project "$NEXORA_PRODUCTION_PROJECT_ID" \
               --non-interactive
