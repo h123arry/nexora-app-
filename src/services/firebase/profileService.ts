@@ -121,8 +121,7 @@ export class ProfileService {
           ...this.toPublicProfile(newUser),
           location: deleteField(),
           interestDNA: deleteField(),
-          dateOfBirth: deleteField(),
-          dateOfBirth: deleteField(),
+        dateOfBirth: deleteField(),
         }, { merge: true }),
         (error) => {
           const code = (error as { code?: string } | null)?.code || 'unknown';
