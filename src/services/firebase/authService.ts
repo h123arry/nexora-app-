@@ -203,6 +203,9 @@ export class AuthService {
     const cleanCode = code.trim();
     if (!cleanCode) throw new Error('This invitation link is missing its beta access code.');
     try {
+      // Linking an email, Google or phone credential to a legacy anonymous UID
+      // changes the provider claim. Refresh before the callable inspects it.
+      await currentUser.getIdToken(true);
       const claim = httpsCallable<{ code: string }, { claimed: boolean; alreadyClaimed: boolean; cohort: string }>(functions, 'claimBetaInvite');
       const result = await claim({ code: cleanCode });
       await currentUser.getIdToken(true);
