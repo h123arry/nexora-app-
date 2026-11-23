@@ -355,11 +355,11 @@ export default function NexoraImagePlayer({
               alt={post.imageAltText || post.content || 'Post media'}
               decoding="async"
               fetchPriority={isActive ? "high" : shouldPreload ? "auto" : "low"}
-              aria-hidden={hasImageLoadError}
+              aria-hidden={false}
               onLoad={() => { setIsImageLoading(false); setHasImageLoadError(false); }}
               onError={() => {
                 const failedUrl = displayImages[currentImageIndex];
-                if (failedUrl?.includes('/api/media/') && imageRetryAttempt < 2) {
+                if (failedUrl?.includes('/api/media/') && imageRetryAttempt < 3) {
                   try {
                     const retryUrl = new URL(failedUrl, window.location.href);
                     retryUrl.searchParams.set('_nx_retry', `${Date.now()}-${imageRetryAttempt + 1}`);
@@ -379,7 +379,7 @@ export default function NexoraImagePlayer({
                 setIsImageLoading(false);
                 setHasImageLoadError(true);
               }}
-              className={`block w-full ${isImmersive ? 'h-full max-h-full object-contain' : 'h-auto max-h-[78vh] object-contain'} cursor-zoom-in ${hasImageLoadError ? 'opacity-0' : ''}`}
+              className={`block w-full ${isImmersive ? 'h-full max-h-full object-contain' : 'h-auto max-h-[78vh] object-contain'} cursor-zoom-in`}
               onClick={() => { if (!suppressImageClick.current) setIsFullscreen(true); }}
               referrerPolicy="no-referrer"
               style={{ filter: (post.imageFilters && post.imageFilters[currentImageIndex]) || post.imageFilter || 'none' }}
