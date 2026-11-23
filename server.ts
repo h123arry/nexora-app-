@@ -175,6 +175,15 @@ const identityChangeHttpLimiter = rateLimit({
   message: { code: 'identity_change_rate_limited', error: 'Too many profile identity changes. Please try again later.' },
 });
 
+const manualIdentityVerificationHttpLimiter = rateLimit({
+  windowMs: 60 * 60_000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (_req, res) => String(res.locals.userId || 'unauthenticated'),
+  message: { code: 'identity_verification_rate_limited', error: 'Too many manual identity verification attempts. Please try again later.' },
+});
+
 app.use('/api/profile/identity', requireFirebaseUser, identityChangeHttpLimiter);
 app.post('/api/profile/identity', async (req, res) => {
   const uid = res.locals.userId;
@@ -310,6 +319,158 @@ app.post('/api/profile/identity', async (req, res) => {
 });
 
 
+app.use('/api/admin/identity-verification/manual', requireFirebaseUser, manualIdentityVerificationHttpLimiter);
+app.post('/api/admin/identity-verification/manual', async (req, res) => {
+  const reviewerId = res.locals.userId;
+  const claims = res.locals.userClaims as Record<string, unknown> | undefined;
+  if (claims?.founder !== true && claims?.role !== 'founder') {
+    return res.status(403).json({ code: 'founder_required', error: 'Only the NEXORA founder can manually grant an identity badge.' });
+  }
+
+  const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
+  const allowedKeys = ['userId', 'identityType', 'displayName', 'evidenceSummary', 'evidenceUrls'];
+  if (Object.keys(body).some(key => !allowedKeys.includes(key))) {
+    return res.status(400).json({ code: 'invalid_identity_request', error: 'The identity verification request contains unsupported fields.' });
+  }
+  const userId = typeof body.userId === 'string' ? body.userId.trim() : '';
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(userId)) {
+    return res.status(400).json({ code: 'invalid_target_account', error: 'Choose a valid NEXORA account to verify.' });
+  }
+  if (userId === reviewerId) {
+    return res.status(409).json({ code: 'self_verification_not_allowed', error: 'You cannot use manual verification to award your own account.' });
+  }
+
+  const identityTypes = new Set(['individual', 'creator', 'public_figure', 'organization']);
+  const identityType = typeof body.identityType === 'string' ? body.identityType : '';
+  const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : '';
+  const evidenceSummary = typeof body.evidenceSummary === 'string' ? body.evidenceSummary.trim() : '';
+  if (!identityTypes.has(identityType)) {
+    return res.status(400).json({ code: 'invalid_identity_type', error: 'Choose a supported identity category.' });
+  }
+  if (displayName.length < 2 || displayName.length > 120) {
+    return res.status(400).json({ code: 'invalid_display_name', error: 'The public identity name must be between 2 and 120 characters.' });
+  }
+  if (evidenceSummary.length < 20 || evidenceSummary.length > 1000) {
+    return res.status(400).json({ code: 'invalid_evidence_summary', error: 'Explain the identity claim in 20 to 1,000 characters.' });
+  }
+  if (!Array.isArray(body.evidenceUrls) || body.evidenceUrls.length < 1 || body.evidenceUrls.length > 5) {
+    return res.status(400).json({ code: 'invalid_evidence_links', error: 'Provide between 1 and 5 public evidence links.' });
+  }
+
+  const evidenceUrls: string[] = [];
+  try {
+    for (const value of body.evidenceUrls) {
+      if (typeof value !== 'string' || value.length > 500) throw new Error('Each evidence link must be a valid HTTPS URL.');
+      const url = new URL(value);
+      if (url.protocol !== 'https:' || !url.hostname || url.username || url.password) {
+        throw new Error('Evidence links must use HTTPS and cannot contain embedded credentials.');
+      }
+      url.hash = '';
+      url.searchParams.sort();
+      evidenceUrls.push(url.toString());
+    }
+  } catch (error) {
+    return res.status(400).json({ code: 'invalid_evidence_link', error: error instanceof Error ? error.message : 'Provide valid HTTPS evidence links.' });
+  }
+  if (new Set(evidenceUrls).size !== evidenceUrls.length) {
+    return res.status(400).json({ code: 'duplicate_evidence_links', error: 'Remove duplicate evidence links.' });
+  }
+
+  try {
+    const targetAccount = await getAuth(firebaseAdminApp).getUser(userId);
+    if (targetAccount.disabled) {
+      return res.status(409).json({ code: 'target_account_disabled', error: 'This account is disabled and cannot be verified.' });
+    }
+  } catch {
+    return res.status(404).json({ code: 'target_account_not_found', error: 'The selected NEXORA account could not be found.' });
+  }
+
+  const profileRef = serverDb.collection('users').doc(userId);
+  const applicationRef = serverDb.collection('identityVerificationApplications').doc(userId);
+  const verifiedRef = serverDb.collection('verifiedIdentities').doc(userId);
+  const auditRef = serverDb.collection('identityVerificationAuditEvents').doc();
+  const notificationRef = profileRef.collection('notifications').doc('identity_manual_verification_granted_v1');
+  const now = FieldValue.serverTimestamp();
+
+  try {
+    const version = await serverDb.runTransaction(async transaction => {
+      const [profile, application, existingVerified] = await Promise.all([
+        transaction.get(profileRef),
+        transaction.get(applicationRef),
+        transaction.get(verifiedRef),
+      ]);
+      if (!profile.exists) throw Object.assign(new Error('The selected account profile could not be found.'), { status: 404, code: 'profile_not_found' });
+      const profileData = profile.data() || {};
+      if (profileData.isBanned === true || profileData.isSuspended === true) {
+        throw Object.assign(new Error('This account is restricted and cannot receive an identity badge.'), { status: 409, code: 'target_account_restricted' });
+      }
+      if (existingVerified.exists && existingVerified.get('status') === 'verified') {
+        throw Object.assign(new Error('This account already has an active NEXORA identity badge.'), { status: 409, code: 'identity_already_verified' });
+      }
+
+      const currentVersion = Number(application.get('version') || 0);
+      const nextVersion = Number.isSafeInteger(currentVersion) && currentVersion > 0 ? currentVersion + 1 : 1;
+      transaction.set(applicationRef, {
+        userId,
+        identityType,
+        displayName,
+        evidenceSummary,
+        evidenceUrls,
+        status: 'approved',
+        version: nextVersion,
+        submittedAt: application.exists ? application.get('submittedAt') || now : now,
+        reviewNote: 'Founder-authorized manual verification after independent evidence review.',
+        reviewerId,
+        reviewedAt: now,
+        updatedAt: now,
+      }, { merge: true });
+      transaction.set(verifiedRef, {
+        userId,
+        status: 'verified',
+        identityType,
+        displayName,
+        verifiedAt: now,
+        updatedAt: now,
+      });
+      transaction.set(notificationRef, {
+        id: 'identity_manual_verification_granted_v1',
+        type: 'system',
+        userId: 'system',
+        username: 'nexora',
+        actorName: 'NEXORA',
+        avatar: '',
+        targetId: userId,
+        content: 'NEXORA has verified your identity. Your violet identity badge is now active.',
+        timestamp: new Date().toISOString(),
+        isRead: false,
+        priority: 8,
+        createdAt: now,
+      }, { merge: true });
+      transaction.create(auditRef, {
+        userId,
+        reviewerId,
+        event: 'manual_identity_verification_granted',
+        decision: 'approved',
+        identityType,
+        displayName,
+        evidenceSummary,
+        evidenceUrls,
+        createdAt: now,
+      });
+      return nextVersion;
+    });
+    return res.status(200).json({ accepted: true, userId, status: 'verified', version });
+  } catch (error) {
+    const status = typeof (error as { status?: unknown } | null)?.status === 'number' ? (error as { status: number }).status : 503;
+    const code = typeof (error as { code?: unknown } | null)?.code === 'string' ? (error as { code: string }).code : 'identity_verification_unavailable';
+    if (status === 503) console.error('[IdentityVerification] Manual verification failed.', { reviewerId, targetId: userId, code });
+    return res.status(status).json({
+      code,
+      error: error instanceof Error && status !== 503 ? error.message : 'NEXORA could not complete manual identity verification right now. Please retry.',
+    });
+  }
+});
+
 app.use('/api/social/follow-state', requireFirebaseUser, socialFollowHttpLimiter);
 app.post('/api/social/follow-state', async (req, res) => {
   const uid = res.locals.userId;
@@ -438,6 +599,7 @@ async function requireFirebaseUser(req: express.Request, res: express.Response, 
     }
   }
   res.locals.userId = decoded.uid;
+  res.locals.userClaims = decoded;
   return next();
 }
 
