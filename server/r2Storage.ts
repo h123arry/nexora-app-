@@ -232,6 +232,29 @@ export function selectR2VideoPlaybackPath(asset: Record<string, unknown>, ownerI
     || renditions[0])?.path || original;
 }
 
+
+/** Prefer a generation-matched, bandwidth-friendly WebP for public images. */
+export function selectR2MediaDeliveryPath(asset: Record<string, unknown>, ownerId: string, mediaId: string): string | null {
+  const original = asset.storagePath;
+  if (typeof original !== 'string' || original !== `users/${ownerId}/media/${mediaId}`) return null;
+  if (asset.kind === 'video') return selectR2VideoPlaybackPath(asset, ownerId, mediaId);
+  if (asset.kind !== 'image' || asset.status !== 'ready' || !Array.isArray(asset.imageVariants)) return original;
+  const generation = String(asset.generation || '');
+  if (!/^\\d{1,32}$/.test(generation)) return original;
+  const prefix = `processed/${ownerId}/${mediaId}/${generation}/`;
+  const variants = asset.imageVariants.flatMap((item: any) => {
+    if (!item || !Number.isSafeInteger(item.width) || item.width < 1 || item.width > 20000
+      || typeof item.path !== 'string' || !item.path.startsWith(prefix)) return [];
+    const segments = item.path.split('/');
+    if (segments.length !== 5 || segments[0] !== 'processed' || segments[1] !== ownerId
+      || segments[2] !== mediaId || segments[3] !== generation
+      || segments[4] !== `image-${item.width}.webp`) return [];
+    return [{ width: item.width as number, path: item.path as string }];
+  }).sort((a, b) => a.width - b.width);
+  return variants.filter(item => item.width <= 1280).at(-1)?.path
+    || variants[0]?.path || original;
+}
+
 export function r2MediaGatewayUrl(mediaId: string): string {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) throw new Error('Invalid media asset identifier.');
   return `/api/media/${encodeURIComponent(mediaId)}`;
