@@ -44,6 +44,8 @@ Firestore rules remain authoritative and were not loosened.
 
 Email/password registration and login use Firebase Authentication. Password reset uses Firebase's `sendPasswordResetEmail`. Email verification currently uses Firebase's built-in `sendEmailVerification` action link. Google sign-in uses `GoogleAuthProvider` and `signInWithPopup`. Phone OTP is implemented with Firebase SMS authentication and `RecaptchaVerifier`, but is deliberately available only in a verified staging environment.
 
+Google popup sign-in is currently web-only. Native Capacitor builds intentionally reject Google popup auth until a native Firebase Authentication plugin and the Android/iOS OAuth configuration are added and verified.
+
 The public authentication UI no longer offers username-as-login or username/password account creation. A NEXORA username remains the public profile handle selected during onboarding; it is not a credential. Existing anonymous beta accounts can still be linked to email/password, Google, or phone to preserve their UID, but opening a beta invitation no longer creates an anonymous Firebase user. The beta claim function now requires a non-anonymous authenticated account.
 
 NEXORA's custom numeric email verification code is not active yet. The email template supports a code, but the transactional sender is currently disabled; Firebase's built-in verification link remains the actual delivery path until a real transactional email provider is configured and tested.
