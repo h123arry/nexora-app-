@@ -601,9 +601,9 @@ service cloud.firestore {
         && request.resource.data.get('following', 0) == privateData.get('following', 0)
         && request.resource.data.get('sparks', 0) == privateData.get('sparks', 0)
         && request.resource.data.get('hasStory', false) == privateData.get('hasStory', false)
-        && request.resource.data.get('joinedDate', null) == privateData.get('joinedDate', null)
+        && (!privateData.keys().hasAny(['joinedDate']) || request.resource.data.get('joinedDate', null) == privateData.get('joinedDate'))
         && request.resource.data.get('reputationPoints', 0) == privateData.get('reputationPoints', 0)
-        && request.resource.data.get('reputationBreakdown', null) == privateData.get('reputationBreakdown', null)
+        && request.resource.data.get('reputationBreakdown', {'contributions': 0, 'helpfulness': 0, 'missionsCompleted': 0, 'skillsVerified': 0}) == privateData.get('reputationBreakdown', {'contributions': 0, 'helpfulness': 0, 'missionsCompleted': 0, 'skillsVerified': 0})
         && request.resource.data.get('skills', []) == privateData.get('skills', []);
     }
 
