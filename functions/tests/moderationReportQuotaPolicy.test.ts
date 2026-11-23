@@ -43,3 +43,20 @@ test('fails closed on malformed persisted quota state or invalid time', () => {
   assert.equal(consumeModerationReportQuota({ windowStartedAtMs: 1, attempts: 99 }, 10_000).allowed, false);
   assert.equal(consumeModerationReportQuota(null, -1).allowed, false);
 });
+
+
+test('resolves a reported community to its canonical owner', async () => {
+  const { resolveCommunityOwnerId } = await import('../src/moderationPolicy.js');
+  assert.equal(resolveCommunityOwnerId({ ownerId: 'owner-1', creatorId: 'creator-1' }), 'owner-1');
+});
+
+test('supports legacy creatorId only when canonical ownerId is absent', async () => {
+  const { resolveCommunityOwnerId } = await import('../src/moderationPolicy.js');
+  assert.equal(resolveCommunityOwnerId({ creatorId: 'creator-1' }), 'creator-1');
+});
+
+test('fails closed when a reported community has no valid owner', async () => {
+  const { resolveCommunityOwnerId } = await import('../src/moderationPolicy.js');
+  assert.equal(resolveCommunityOwnerId(null), null);
+  assert.equal(resolveCommunityOwnerId({ ownerId: '', creatorId: 'bad/path' }), null);
+});
