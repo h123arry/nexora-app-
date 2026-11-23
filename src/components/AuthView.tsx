@@ -16,6 +16,7 @@ import {
   ConfirmationResult
 } from 'firebase/auth';
 import { AuthService } from '../services/firebase/authService';
+import { normalizeE164PhoneNumber } from '../utils/phoneNumber';
 import { ProfileService } from '../services/firebase/profileService';
 import { EmailService } from '../services/firebase/emailService';
 import { SecurityNotificationService } from '../services/firebase/securityNotificationService';
@@ -269,13 +270,13 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (!phoneNumber.trim() || phoneNumber.trim().length < 7) {
-      setErrorMsg('Please enter a valid phone number.');
+    const fullPhone = normalizeE164PhoneNumber(phoneNumber, selectedCountry.code);
+    if (!fullPhone) {
+      setErrorMsg('Please enter a valid phone number. You can include your country code or use the selected country.');
       return;
     }
 
     setIsPending(true);
-    const fullPhone = `${selectedCountry.code}${phoneNumber.trim()}`;
     setStatusMessage(`Sending SMS verification code to ${fullPhone}...`);
 
     try {
