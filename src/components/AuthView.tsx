@@ -92,7 +92,7 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
 
   // Phone Auth states
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]); // USA default
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES.find(country => country.code === '+234') || COUNTRIES[0]);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
   const [smsSent, setSmsSent] = useState(false);
