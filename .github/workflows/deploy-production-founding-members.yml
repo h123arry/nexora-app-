@@ -16,6 +16,7 @@ on:
       - 'firestore.indexes.json'
       - 'firebase.json'
       - 'functions/src/index.ts'
+      - 'functions/src/identityVerification.ts'
       - 'functions/src/giftCatalog.ts'
       - 'functions/src/giftCatalogPolicy.ts'
       - 'functions/src/giftPurchases.ts'
@@ -161,7 +162,7 @@ jobs:
           set -euo pipefail
           deploy_functions() {
             npx --yes firebase-tools@15.33.0 deploy \
-              --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,functions:grantEarlyCommunityRecognition \
+              --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,functions:grantEarlyCommunityRecognition,functions:grantManualIdentityVerification \
               --config firebase.json \
               --project "$NEXORA_PRODUCTION_PROJECT_ID" \
               --non-interactive
@@ -205,7 +206,7 @@ jobs:
           echo "- Project: $NEXORA_PRODUCTION_PROJECT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "- Firestore database: $FIRESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ steps.functions.outputs.deployed }}" = "true" ]; then
-            echo "- Firebase Functions: deployed (Founding 300, GiftVerse, notifications, creator follows, comments, Sparks, replies, reposts and early-community recognition)" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Firebase Functions: deployed (Founding 300, GiftVerse, notifications, creator follows, comments, Sparks, replies, reposts, early-community recognition and founder manual identity verification)" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "- Firebase Functions: unchanged; deployment correctly skipped" >> "$GITHUB_STEP_SUMMARY"
           fi
