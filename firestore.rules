@@ -187,7 +187,7 @@ service cloud.firestore {
         'followers', 'following', 'sparks', 'hasStory',
         'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
         'interestDNA', 'skills', 'dateOfBirth', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
-        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'dateOfBirth', 'earlyCommunityMember'
+        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'earlyCommunityMember'
       ];
     }
     function editableProfileKeys() {
@@ -593,6 +593,18 @@ service cloud.firestore {
         && (!changed.hasAny(['reputationPoints']) || request.resource.data.reputationPoints == privateData.get('reputationPoints', 0))
         && (!changed.hasAny(['reputationBreakdown']) || request.resource.data.reputationBreakdown == privateData.get('reputationBreakdown', null))
         && (!changed.hasAny(['skills']) || request.resource.data.skills == privateData.get('skills', []));
+    }
+
+    function publicProjectionReadOnlyFieldsMatchPrivateProfileOnCreate(userId) {
+      let privateData = get(/databases/$(database)/documents/users/$(userId)).data;
+      return request.resource.data.get('followers', 0) == privateData.get('followers', 0)
+        && request.resource.data.get('following', 0) == privateData.get('following', 0)
+        && request.resource.data.get('sparks', 0) == privateData.get('sparks', 0)
+        && request.resource.data.get('hasStory', false) == privateData.get('hasStory', false)
+        && request.resource.data.get('joinedDate', null) == privateData.get('joinedDate', null)
+        && request.resource.data.get('reputationPoints', 0) == privateData.get('reputationPoints', 0)
+        && request.resource.data.get('reputationBreakdown', null) == privateData.get('reputationBreakdown', null)
+        && request.resource.data.get('skills', []) == privateData.get('skills', []);
     }
 
     // Public directory contains an allowlisted projection, never private account fields.
