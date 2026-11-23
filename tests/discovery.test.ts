@@ -216,6 +216,11 @@ describe('discovery service', () => {
     assert.ok(results.some(item => item.creator.id === 'small-creator'));
     assert.ok(results.every(item => item.score > 0));
     assert.match(results[0].reason, /smaller creator/);
+
+    const zeroWeightResults = recommendCreators([
+      creator('established', 5000), creator('new-creator', 0),
+    ], { viewerId: 'viewer', interests: { ai: 0 } });
+    assert.equal(zeroWeightResults[0].creator.id, 'new-creator');
   });
 
   it('trends topics using recent posts from distinct creators, excluding stale and single-author spikes', () => {
