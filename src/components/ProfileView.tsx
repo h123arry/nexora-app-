@@ -709,24 +709,18 @@ export default function ProfileView({
     if (currentUser.id === ownerId || isSafetyActionBusy) return;
     setIsSafetyActionBusy(true);
     try {
-      const settings = await SettingsService.getSettings(ownerId);
-      const currentlyBlocked = settings.messaging.blockedUserIds.includes(currentUser.id);
-      const blockedIds = currentlyBlocked
-        ? settings.messaging.blockedUserIds.filter(id => id !== currentUser.id)
-        : [...new Set([...settings.messaging.blockedUserIds, currentUser.id])].slice(0, 500);
-      const blockedCreatorIds = currentlyBlocked
-        ? settings.feed.blockedCreatorIds.filter(id => id !== currentUser.id)
-        : [...new Set([...settings.feed.blockedCreatorIds, currentUser.id])].slice(0, 500);
-      await Promise.all([
-        SettingsService.updateMessagingPreferences(ownerId, { blockedUserIds: blockedIds }),
-        SettingsService.updateFeed(ownerId, { blockedCreatorIds }),
-      ]);
-      setBlockedUsers(blockedIds);
-      window.dispatchEvent(new CustomEvent('toast', { detail: currentlyBlocked ? 'Account unblocked.' : 'This account is blocked from messaging you and appearing in your feed.' }));
+      const result = await SettingsService.toggleBlockedUser(ownerId, currentUser.id);
+      setBlockedUsers(result.blockedUserIds);
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: result.blocked
+          ? 'This account is blocked from messaging you and hidden from your feed.'
+          : 'Account unblocked.',
+      }));
       setActivePanel('profile');
-    } catch {
+    } catch (error) {
       await refreshSafetyLists();
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'The block setting could not be saved completely. Please retry.' }));
+      const message = error instanceof Error ? error.message : 'The block setting could not be saved. Please retry.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     } finally {
       setIsSafetyActionBusy(false);
     }
@@ -757,18 +751,13 @@ export default function ProfileView({
     if (!ownerId || isSafetyActionBusy) return;
     setIsSafetyActionBusy(true);
     try {
-      const settings = await SettingsService.getSettings(ownerId);
-      const blockedIds = settings.messaging.blockedUserIds.filter(id => id !== targetId);
-      const blockedCreatorIds = settings.feed.blockedCreatorIds.filter(id => id !== targetId);
-      await Promise.all([
-        SettingsService.updateMessagingPreferences(ownerId, { blockedUserIds: blockedIds }),
-        SettingsService.updateFeed(ownerId, { blockedCreatorIds }),
-      ]);
-      setBlockedUsers(blockedIds);
+      const result = await SettingsService.setBlockedUser(ownerId, targetId, false);
+      setBlockedUsers(result.blockedUserIds);
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Account unblocked.' }));
-    } catch {
+    } catch (error) {
       await refreshSafetyLists();
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'This account could not be unblocked. Please retry.' }));
+      const message = error instanceof Error ? error.message : 'This account could not be unblocked. Please retry.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     } finally {
       setIsSafetyActionBusy(false);
     }
