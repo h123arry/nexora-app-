@@ -2016,9 +2016,12 @@ export default function App() {
   const handleToggleFollow = (creatorId: string) => {
     requireAuth(() => {
       const followerId = firebaseUser?.uid;
-      if (!followerId || currentUser.id !== followerId) {
+      // The verified Firebase UID is the canonical actor identity. Do not block
+      // a legitimate follow because a cached presentation profile is briefly stale;
+      // the server independently verifies the ID token and derives the UID itself.
+      if (!followerId) {
         window.dispatchEvent(new CustomEvent('toast', {
-          detail: 'Your account is still syncing. Please try following again.',
+          detail: 'Please sign in again to follow this account.',
         }));
         return;
       }
