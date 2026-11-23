@@ -12,6 +12,7 @@ import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
 import FeedPostCard from './FeedPostCard';
 import NexoraVideo from './NexoraVideo';
+import NexoraResolvedImage from './NexoraResolvedImage';
 import { getRecommendationProfile, recordRecommendationEvent, resetRecommendationProfile, saveRecommendationProfile } from '../utils/recommendations';
 import { trackClientObservation } from '../services/analyticsService';
 import { rankPosts } from '../services/discovery/discoveryService';
@@ -85,7 +86,7 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
       >
         {images.map((img, idx) => (
           <div key={idx} className="w-full h-full shrink-0 relative">
-            <img 
+            <NexoraResolvedImage 
               src={img} 
               alt={`Slide ${idx + 1}`} 
               className="w-full h-full object-cover pointer-events-none"
@@ -2009,7 +2010,7 @@ export default function FeedView({
         {/* INLINE CREATE POST COMPOSER */}
         <div className="nx-composer px-4 sm:px-7 py-5 border-b border-white/10 transition-all">
           <div className="flex items-center gap-3">
-            <img
+            <NexoraResolvedImage
               src={currentUser.avatar}
               alt={currentUser.name}
               className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/30 shrink-0 cursor-pointer hover:scale-105 transition-transform"
@@ -2165,7 +2166,7 @@ export default function FeedView({
                   {creators.filter(creator => creator?.id && creator.id !== currentUser.id && !followingIds.includes(creator.id)).slice(0, 3).map(creator => (
                     <div key={creator.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
                       <button type="button" onClick={() => onViewProfile?.(creator.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-label={`View ${creator.name}'s profile`}>
-                        <img src={creator.avatar} alt="" loading="lazy" className="h-10 w-10 rounded-full border border-white/10 object-cover" referrerPolicy="no-referrer" />
+                        <NexoraResolvedImage src={creator.avatar} alt="" loading="lazy" className="h-10 w-10 rounded-full border border-white/10 object-cover" referrerPolicy="no-referrer" />
                         <span className="min-w-0">
                           <span className="block truncate text-sm font-semibold text-white">{creator.name}</span>
                           <span className="block truncate text-xs text-violet-300">@{creator.username}</span>
@@ -2220,7 +2221,7 @@ export default function FeedView({
                       className="p-4 rounded-3xl bg-[#0e0a2b]/95 border border-white/10 hover:border-white/10 shadow-md flex flex-col justify-between transition-all hover:-translate-y-0.5"
                     >
                       <div className="flex gap-3">
-                        <img 
+                        <NexoraResolvedImage 
                           src={u.avatar} 
                           alt={u.name}
                           className="w-12 h-12 rounded-full object-cover border border-white/10 cursor-pointer shrink-0"
@@ -2393,7 +2394,7 @@ export default function FeedView({
                           <div key={c.id} className="py-3 border-b border-white/8 space-y-2.5">
                             <div className="flex items-start justify-between gap-2 text-xs">
                               <button type="button" onClick={() => onViewProfile?.(c.userId || c.username)} aria-label={`View @${c.username}'s profile`} className="flex min-h-11 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
-                                <img src={c.avatar} alt="" className="w-7 h-7 rounded-lg object-cover" />
+                                <NexoraResolvedImage src={c.avatar} alt="" className="w-7 h-7 rounded-lg object-cover" />
                                 <span>
                                   <span className="font-sans font-bold text-violet-200 hover:underline">{c.name}</span>
                                   <span className="block text-[10px] font-mono text-violet-400/60 hover:underline">@{c.username} • <RelativeTime timestamp={c.timestamp} /></span>
@@ -2431,7 +2432,7 @@ export default function FeedView({
                                 {c.replies.slice(0, expandedCommentReplyIds[c.id] ? c.replies.length : 1).map(rep => (
                                   <div key={rep.id} className="text-xs py-2 border-b border-white/5">
                                     <button type="button" onClick={() => onViewProfile?.(rep.userId || rep.username)} aria-label={`View @${rep.username}'s profile`} className="mb-1 flex min-h-10 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
-                                      <img src={rep.avatar} alt="" className="h-5 w-5 rounded-md object-cover" />
+                                      <NexoraResolvedImage src={rep.avatar} alt="" className="h-5 w-5 rounded-md object-cover" />
                                       <span>
                                         <span className="font-sans font-black text-violet-200 text-[11px] hover:underline">{rep.name}</span>
                                         <span className="block text-[9px] font-mono text-violet-400/50 hover:underline">@{rep.username} • <RelativeTime timestamp={rep.timestamp} /></span>
@@ -2749,7 +2750,7 @@ export default function FeedView({
               {/* Title & metadata bar at bottom inside video */}
               <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/5 space-y-2.5 max-w-lg z-20">
                 <div className="flex items-center gap-2.5">
-                  <img src={activeVideoFullscreen.avatar} alt={activeVideoFullscreen.name} className="w-8 h-8 rounded-lg object-cover" />
+                  <NexoraResolvedImage src={activeVideoFullscreen.avatar} alt={activeVideoFullscreen.name} className="w-8 h-8 rounded-lg object-cover" />
                   <div>
                     <span className="font-sans font-black text-xs text-white">{activeVideoFullscreen.name}</span>
                     <span className="text-[9.5px] font-mono text-violet-300 block">@{activeVideoFullscreen.username}</span>
@@ -3219,7 +3220,7 @@ export default function FeedView({
               <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-2" />
 
               <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-                <img src={contextualMenuPost.avatar} alt={contextualMenuPost.username} className="w-10 h-10 rounded-xl object-cover" />
+                <NexoraResolvedImage src={contextualMenuPost.avatar} alt={contextualMenuPost.username} className="w-10 h-10 rounded-xl object-cover" />
                 <div>
                   <h4 className="text-xs font-sans font-black text-white">{contextualMenuPost.name}</h4>
                   <p className="text-[10px] font-mono text-violet-400">@{contextualMenuPost.username} • {contextualMenuPost.timestamp}</p>
