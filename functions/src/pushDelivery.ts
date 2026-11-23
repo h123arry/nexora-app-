@@ -56,8 +56,8 @@ export function notificationPreferenceKey(type: string): NotificationPreferenceK
   if (type === 'follow' || type === 'profile_view') return 'followers';
   if (type === 'repost') return 'reposts';
   if (type === 'mention') return 'mentions';
-  if (type.startsWith('community_') || type === 'community') return 'communities';
   if (type === 'event' || type.startsWith('event_') || type === 'community_event') return 'events';
+  if (type.startsWith('community_') || type === 'community') return 'communities';
   if (type === 'verification' || type.startsWith('verification_') || type === 'identity_verification') return 'verification';
   if (type === 'creator_upload' || type === 'creator_uploads') return 'creatorUploads';
   if (type === 'friend_request' || type === 'friend_request_received') return 'friendRequests';
