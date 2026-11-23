@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { normalizeMediaDeliveryUrl } from '../lib/apiBaseUrl';
 
 /**
  * Nexora Persistent IndexedDB Media Storage Utility
@@ -103,7 +104,7 @@ const objectUrlPromises = new Map<string, Promise<string>>();
  */
 export async function resolveMediaUrl(url: string): Promise<string> {
   if (!url || !url.startsWith('db-media://')) {
-    return url;
+    return normalizeMediaDeliveryUrl(url);
   }
 
   const cached = objectUrlCache.get(url);
