@@ -816,7 +816,7 @@ export default function AdminDashboardView({
                       {users.filter(user => {
                         const term = manualVerificationSearch.trim().toLowerCase();
                         return !term || user.username.toLowerCase().includes(term) || user.name.toLowerCase().includes(term);
-                      }).map(user => <option key={user.id} value={user.id}>@{user.username} · {user.name}{user.isVerified ? ' · Verified' : ''}</option>)}
+                      }).map(user => <option key={user.id} value={user.id}>@{user.username} · {user.name}{user.identityVerified ? ' · Identity verified' : ''}</option>)}
                     </select>
                     {userDirectoryUnavailable && <span className="block text-[10px] normal-case text-amber-300">The protected account directory is unavailable. Refresh the admin dashboard and try again.</span>}
                   </label>
