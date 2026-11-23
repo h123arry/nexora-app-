@@ -10,7 +10,7 @@ const db = getFirestore(app, resolveFirestoreDatabaseId());
 const auth = getAuth(app);
 const COHORT_ID = 'founding_300';
 const COHORT_LIMIT = 300;
-const APP_ORIGIN = 'https://nexora-o3od.onrender.com';
+const APP_ORIGIN = 'https://nexoraapp.com.ng';
 
 const hashInvite = (code: string) => createHash('sha256').update(code).digest('hex');
 
@@ -66,7 +66,7 @@ export const createBetaInviteLink = onCall({ maxInstances: 2 }, async request =>
 export const claimBetaInvite = onCall({ maxInstances: 20 }, async request => {
   const caller = request.auth;
   const uid = caller?.uid;
-  if (!caller || !uid) throw new HttpsError('unauthenticated', 'Start a NEXORA beta session first.');
+  if (!caller || !uid) throw new HttpsError('unauthenticated', 'Sign in to NEXORA before claiming this invitation.');
   await assertCallableSessionActive(db, uid, caller.token?.auth_time);
 
   const firebaseClaims = (caller.token.firebase || {}) as Record<string, unknown>;
