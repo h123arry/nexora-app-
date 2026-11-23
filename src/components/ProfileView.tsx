@@ -175,39 +175,50 @@ function createRemoteVideoPoster(videoUrl: string): Promise<Blob | null> {
 const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVideoPosters = false, ownerId }: MediaGridProps) => {
   const attemptedPosterRepairs = useRef(new Set<string>());
   const [repairedPosters, setRepairedPosters] = useState<Record<string, string>>({});
-  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.image || post.images?.find(Boolean) || ''}:${post.videoUrl || ''}:${post.media || ''}:${(post as any).thumbnailUrl || ''}:${(post as any).posterUrl || ''}`).join('|');
+  const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.videoUrl || ''}:${post.media || ''}:${(post as any).mediaType || (post as any).type || ''}:${(post as any).videoThumbnailUrl || ''}:${(post as any).posterUrl || ''}`).join('|');
 
   useEffect(() => {
-    if (!repairVideoPosters || !ownerId || auth.currentUser?.uid !== ownerId) return;
     let active = true;
-    const repairMissingPosters = async () => {
+    const objectUrls: string[] = [];
+    const repairVideoPosters = async () => {
       for (const post of gridPosts) {
-        const existingPoster = post.image || post.images?.find(Boolean) || (post as any).thumbnailUrl || (post as any).thumbnail || (post as any).posterUrl;
-        const videoSource = post.videoUrl || (typeof post.media === 'string' && /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media) ? post.media : '');
-        if (!videoSource || existingPoster || post.userId !== ownerId || attemptedPosterRepairs.current.has(post.id)) continue;
+        const mediaType = String((post as any).mediaType || (post as any).type || '').toLowerCase();
+        const videoSource = post.videoUrl || (typeof post.media === 'string' && (mediaType === 'video' || /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media)) ? post.media : '');
+        if (!videoSource || attemptedPosterRepairs.current.has(post.id)) continue;
         attemptedPosterRepairs.current.add(post.id);
         try {
-          const posterBlob = await createRemoteVideoPoster(videoSource);
-          if (!posterBlob || auth.currentUser?.uid !== ownerId) continue;
-          const uploaded = await uploadMediaFile({
-            file: new File([posterBlob], `profile-poster-${post.id}.jpg`, { type: 'image/jpeg' }),
-            userId: ownerId,
-            fileName: `profile-poster-${post.id}.jpg`,
-          });
-          if (auth.currentUser?.uid !== ownerId) continue;
-          // Firestore rules permit the owner to update the existing image field;
-          // keep poster metadata out of the public post document.
-          await updateDoc(doc(db, 'posts', post.id), { image: uploaded.downloadUrl });
-          if (active) setRepairedPosters(current => ({ ...current, [post.id]: uploaded.downloadUrl }));
+          // Never mistake a caption image or generic post.image for the video's
+          // actual frame. Derive the profile poster from the uploaded video itself.
+          const posterBlob = await createRemoteVideoPoster(normalizeMediaDeliveryUrl(videoSource));
+          if (!posterBlob || !active) continue;
+          const localPoster = URL.createObjectURL(posterBlob);
+          objectUrls.push(localPoster);
+          setRepairedPosters(current => ({ ...current, [post.id]: localPoster }));
+          // Persist only for the authenticated owner; other viewers use the
+          // generated poster locally and never attempt to write another user's post.
+          if (ownerId && post.userId === ownerId && auth.currentUser?.uid === ownerId) {
+            const uploaded = await uploadMediaFile({
+              file: new File([posterBlob], `profile-poster-${post.id}.jpg`, { type: 'image/jpeg' }),
+              userId: ownerId,
+              fileName: `profile-poster-${post.id}.jpg`,
+            });
+            if (active && auth.currentUser?.uid === ownerId) {
+              await updateDoc(doc(db, 'posts', post.id), { image: uploaded.downloadUrl });
+              setRepairedPosters(current => ({ ...current, [post.id]: uploaded.downloadUrl }));
+            }
+          }
         } catch (error) {
-          // A CORS-blocked or unavailable source should not break profile browsing.
-          console.warn('[ProfileMedia] Could not repair video poster for post:', post.id, error);
+          // A CORS-blocked source is handled by the live-video preview fallback.
+          console.warn('[ProfileMedia] Could not generate the real video poster:', post.id, error);
         }
       }
     };
-    void repairMissingPosters();
-    return () => { active = false; };
-  }, [posterRepairSignature, ownerId, repairVideoPosters]);
+    void repairVideoPosters();
+    return () => {
+      active = false;
+      objectUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [posterRepairSignature, ownerId]);
   if (gridPosts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-20 px-6 w-full col-span-full">
@@ -231,13 +242,11 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
         const isVideo = !!post.videoUrl || (mediaType === 'video' && !!mediaUrl) || /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(mediaUrl);
         const videoSource = post.videoUrl || (isVideo ? mediaUrl : '');
         // Resolve actual uploaded media and saved posters across legacy and current post schemas.
-        const thumbnail = post.image
-          || post.images?.find(Boolean)
-          || (post as any).thumbnailUrl
-          || (post as any).thumbnail
-          || (post as any).posterUrl
-          || (!isVideo ? mediaUrl : '')
-          || repairedPosters[post.id];
+        const thumbnail = isVideo
+          ? repairedPosters[post.id]
+            || (post as any).videoThumbnailUrl
+            || (post as any).posterUrl
+          : post.image || post.images?.find(Boolean) || (post as any).thumbnailUrl || (post as any).thumbnail || mediaUrl;
         const voiceAudioUrl = post.voiceAudioUrl || (post as any).audioUrl;
         const isMultiImage = !isVideo && (post.images?.filter(Boolean).length || 0) > 1;
         const isPinned = pinnedPostIds.includes(post.id);
@@ -285,7 +294,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
                   <div className="absolute inset-0 z-0 bg-gradient-to-tr from-violet-950/15 via-[#0a0521]/15 to-[#2c0b3d]/10 pointer-events-none" />
                   {thumbnail ? (
                     <img 
-                      src={thumbnail} 
+                      src={normalizeMediaDeliveryUrl(thumbnail)} 
                       loading="lazy"
                       decoding="async"
                       className="relative z-10 w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
@@ -325,7 +334,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
               ) : thumbnail ? (
                 <>
                 <img 
-                  src={thumbnail} 
+                  src={normalizeMediaDeliveryUrl(thumbnail)} 
                   loading="lazy"
                   decoding="async"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
