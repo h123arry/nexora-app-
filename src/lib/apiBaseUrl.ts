@@ -39,3 +39,20 @@ export function apiRequestUrl(path: string): string {
     nativeRuntime: isNativeRuntime(),
   });
 }
+
+
+/**
+ * Resolve persisted NEXORA media gateway paths against the configured API
+ * origin. Browser builds remain same-origin; Capacitor builds must use the
+ * explicit API base URL instead of the WebView's local origin.
+ */
+export function normalizeMediaDeliveryUrl(value: string | undefined | null): string {
+  if (!value) return '';
+  const path = value.split(/[?#]/, 1)[0];
+  const mediaPrefix = '/api/media/';
+  if (path.startsWith(mediaPrefix)
+    && /^[A-Za-z0-9_-]{1,128}$/.test(path.slice(mediaPrefix.length))) {
+    return apiRequestUrl(value);
+  }
+  return value;
+}

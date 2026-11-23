@@ -76,6 +76,7 @@ export default function NexoraImagePlayer({
   const [isResolvingMedia, setIsResolvingMedia] = useState(true);
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [hasImageLoadError, setHasImageLoadError] = useState(false);
+  const [imageRetryAttempt, setImageRetryAttempt] = useState(0);
   const [showSwipeHint, setShowSwipeHint] = useState(() => {
     try { return localStorage.getItem('nexora_photo_swipe_hint_seen') !== 'true'; } catch { return false; }
   });
@@ -236,6 +237,7 @@ export default function NexoraImagePlayer({
   useEffect(() => {
     setCurrentImageIndex(0);
     setDisplayImages([]);
+    setImageRetryAttempt(0);
   }, [rawImagesKey]);
 
   useEffect(() => {
@@ -293,6 +295,7 @@ export default function NexoraImagePlayer({
   useEffect(() => {
     setIsImageLoading(true);
     setHasImageLoadError(false);
+    setImageRetryAttempt(0);
   }, [currentImageIndex]);
 
   useEffect(() => {
@@ -354,7 +357,28 @@ export default function NexoraImagePlayer({
               fetchPriority={isActive ? "high" : shouldPreload ? "auto" : "low"}
               aria-hidden={hasImageLoadError}
               onLoad={() => { setIsImageLoading(false); setHasImageLoadError(false); }}
-              onError={() => { setIsImageLoading(false); setHasImageLoadError(true); }}
+              onError={() => {
+                const failedUrl = displayImages[currentImageIndex];
+                if (failedUrl?.includes('/api/media/') && imageRetryAttempt < 2) {
+                  try {
+                    const retryUrl = new URL(failedUrl, window.location.href);
+                    retryUrl.searchParams.set('_nx_retry', `${Date.now()}-${imageRetryAttempt + 1}`);
+                    setImageRetryAttempt(attempt => attempt + 1);
+                    setIsImageLoading(true);
+                    setHasImageLoadError(false);
+                    setDisplayImages(previous => {
+                      const next = [...previous];
+                      next[currentImageIndex] = retryUrl.toString();
+                      return next;
+                    });
+                    return;
+                  } catch {
+                    // Fall through to the stable unavailable state.
+                  }
+                }
+                setIsImageLoading(false);
+                setHasImageLoadError(true);
+              }}
               className={`block w-full ${isImmersive ? 'h-full max-h-full object-contain' : 'h-auto max-h-[78vh] object-contain'} cursor-zoom-in ${hasImageLoadError ? 'opacity-0' : ''}`}
               onClick={() => { if (!suppressImageClick.current) setIsFullscreen(true); }}
               referrerPolicy="no-referrer"

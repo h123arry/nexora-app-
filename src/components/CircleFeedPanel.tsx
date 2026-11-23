@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { normalizeMediaDeliveryUrl } from '../lib/apiBaseUrl';
 import { Send, RefreshCw, Users } from 'lucide-react';
 import { CommunityService } from '../services/firebase/communityService';
 import CircleReportButton from './CircleReportButton';
@@ -59,7 +60,7 @@ export default function CircleFeedPanel({ communityId, currentUserId }: { commun
       : posts.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center"><Users size={22} className="mx-auto text-violet-300/60"/><p className="mt-3 text-sm font-bold text-white">Your Circle feed is ready</p><p className="mt-1 text-xs text-white/40">There are no posts yet. Start the first real conversation.</p></div>
       : <div className="space-y-3">{posts.map(post => <article key={post.id} className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
         <div className="flex items-center gap-3">
-          {post.authorAvatar ? <img src={post.authorAvatar} alt="" className="h-9 w-9 rounded-full object-cover"/> : <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-500/15 text-xs font-black text-violet-200">{post.authorName.slice(0,1).toUpperCase()}</div>}
+          {post.authorAvatar ? <img src={normalizeMediaDeliveryUrl(post.authorAvatar)} alt="" className="h-9 w-9 rounded-full object-cover"/> : <div className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-500/15 text-xs font-black text-violet-200">{post.authorName.slice(0,1).toUpperCase()}</div>}
           <div className="min-w-0"><p className="truncate text-xs font-bold text-white">{post.authorName}</p><p className="truncate text-[10px] text-white/40">{post.authorUsername ? '@'+post.authorUsername+' · ' : ''}{post.createdAt}</p></div>
         </div>
         <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-white/85">{post.content}</p>

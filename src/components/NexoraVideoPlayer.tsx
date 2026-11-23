@@ -167,7 +167,12 @@ export default function NexoraVideoPlayer({
   const serverWatchSessionId = useRef(`vw_${post.id}_${Math.random().toString(36).slice(2, 18)}`).current;
 
   const resolvedUrl = useResolvedUrl(videoUrl);
-  const originalResolvedUrl = videoUrl?.startsWith('db-media://') ? resolvedUrl : videoUrl;
+  // R2 gateway URLs already resolve the correct generation-scoped MP4 rendition
+  // on the API server. Do not ask the Firebase Storage callable to look for an
+  // R2 object in the separate Firebase Storage bucket.
+  const isR2GatewayMedia = typeof videoUrl === 'string'
+    && videoUrl.includes('/api/media/');
+  const originalResolvedUrl = videoUrl?.startsWith('db-media://') || isR2GatewayMedia ? resolvedUrl : videoUrl;
   const [processedPlaybackUrl, setProcessedPlaybackUrl] = useState<string | null>(null);
   const [playbackRefreshKey, setPlaybackRefreshKey] = useState(0);
   const playbackRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -181,7 +186,7 @@ export default function NexoraVideoPlayer({
     let cancelled = false;
     let readinessRetry: ReturnType<typeof setTimeout> | null = null;
     setProcessedPlaybackUrl(null);
-    if (!post.mediaAssetId || !((isActive ?? true) || shouldPreload)) return () => { cancelled = true; };
+    if (!post.mediaAssetId || isR2GatewayMedia || !((isActive ?? true) || shouldPreload)) return () => { cancelled = true; };
     const resolvePlayback = httpsCallable<
       { postId: string; mediaAssetId: string },
       { ready: boolean; playbackUrl?: string }
@@ -206,7 +211,7 @@ export default function NexoraVideoPlayer({
       cancelled = true;
       if (readinessRetry) clearTimeout(readinessRetry);
     };
-  }, [post.id, post.mediaAssetId, isActive, shouldPreload, playbackRefreshKey]);
+  }, [post.id, post.mediaAssetId, videoUrl, isR2GatewayMedia, isActive, shouldPreload, playbackRefreshKey]);
   const posterUrl = post.image || post.images?.[0];
 
   // Connection & Speed playback status states
@@ -944,7 +949,7 @@ export default function NexoraVideoPlayer({
       }
       setIsReady(false);
       setIsBuffering(true);
-      if (post.mediaAssetId) setPlaybackRefreshKey(key => key + 1);
+      if (post.mediaAssetId && !isR2GatewayMedia) setPlaybackRefreshKey(key => key + 1);
       else videoRef.current?.load();
     }, delay);
   };

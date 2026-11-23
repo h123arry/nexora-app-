@@ -9,6 +9,7 @@ import {
   isCurrentPublicProfileMedia,
   r2MediaGatewayUrl,
   selectR2VideoPlaybackPath,
+  selectR2MediaDeliveryPath,
 } from '../server/r2Storage';
 
 const env = {
@@ -98,6 +99,26 @@ test('public profile media is delivered only while the profile points to the exa
 });
 
 
+
+test('R2 image delivery selects only a generation-matched optimized WebP rendition', () => {
+  const original = 'users/user_123/media/image-456';
+  const asset = {
+    storagePath: original, kind: 'image', status: 'ready', generation: '1795090000000',
+    imageVariants: [
+      { width: 480, path: 'processed/user_123/image-456/1795090000000/image-480.webp' },
+      { width: 1280, path: 'processed/user_123/image-456/1795090000000/image-1280.webp' },
+      { width: 1920, path: 'processed/user_123/image-456/1795090000000/image-1920.webp' },
+      { width: 2048, path: 'processed/other/image-456/1795090000000/image-2048.webp' },
+    ],
+  };
+  assert.equal(selectR2MediaDeliveryPath(asset, 'user_123', 'image-456'),
+    'processed/user_123/image-456/1795090000000/image-1280.webp');
+  assert.equal(selectR2MediaDeliveryPath({ ...asset, imageVariants: [] }, 'user_123', 'image-456'), original);
+  assert.equal(selectR2MediaDeliveryPath({ ...asset, generation: 'bad' }, 'user_123', 'image-456'), original);
+  assert.equal(selectR2MediaDeliveryPath(asset, 'other-user', 'image-456'), null);
+});
+
+
 test('R2 playback prefers a valid 720p rendition and falls back to the immutable original', () => {
   const original = 'users/user_123/media/asset-456';
   assert.equal(selectR2VideoPlaybackPath({ storagePath: original, kind: 'video', status: 'uploaded' }, 'user_123', 'asset-456'), original);
@@ -105,14 +126,18 @@ test('R2 playback prefers a valid 720p rendition and falls back to the immutable
   assert.equal(selectR2VideoPlaybackPath({
     storagePath: original, kind: 'video', status: 'ready',
     renditions: [
-      { height: 360, mp4Path: 'processed/user_123/asset-456/360p/video.mp4' },
-      { height: 720, mp4Path: 'processed/user_123/asset-456/720p/video.mp4' },
-      { height: 1080, mp4Path: 'processed/other/asset-456/1080p/video.mp4' },
+      { height: 360, mp4Path: 'processed/user_123/asset-456/1795090000000/360p/video.mp4' },
+      { height: 720, mp4Path: 'processed/user_123/asset-456/1795090000000/720p/video.mp4' },
+      { height: 1080, mp4Path: 'processed/other/asset-456/1795090000000/1080p/video.mp4' },
     ],
-  }, 'user_123', 'asset-456'), 'processed/user_123/asset-456/720p/video.mp4');
+  }, 'user_123', 'asset-456'), 'processed/user_123/asset-456/1795090000000/720p/video.mp4');
   assert.equal(selectR2VideoPlaybackPath({
     storagePath: original, kind: 'video', status: 'ready',
-    renditions: [{ height: 720, mp4Path: 'processed/user_123/asset-456/../../private.mp4' }],
+    renditions: [{ height: 720, mp4Path: 'processed/user_123/asset-456/1795090000000/../../private.mp4' }],
+  }, 'user_123', 'asset-456'), original);
+  assert.equal(selectR2VideoPlaybackPath({
+    storagePath: original, kind: 'video', status: 'ready',
+    renditions: [{ height: 720, mp4Path: 'processed/user_123/asset-456/not-a-generation/720p/video.mp4' }],
   }, 'user_123', 'asset-456'), original);
   assert.equal(selectR2VideoPlaybackPath({ storagePath: 'users/other/media/asset-456', kind: 'video', status: 'ready' }, 'user_123', 'asset-456'), null);
 });

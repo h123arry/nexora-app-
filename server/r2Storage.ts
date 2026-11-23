@@ -211,17 +211,48 @@ export function selectR2VideoPlaybackPath(asset: Record<string, unknown>, ownerI
   const prefix = `processed/${ownerId}/${mediaId}/`;
   const renditions = asset.renditions.flatMap((item: any) => {
     if (!item || !Number.isSafeInteger(item.height) || item.height < 144 || item.height > 4320
-      || typeof item.mp4Path !== 'string' || !item.mp4Path.startsWith(prefix)
-      || item.mp4Path.split('/').length !== 5
-      || item.mp4Path.split('/')[3] !== `${item.height}p`
-      || item.mp4Path.split('/')[4] !== 'video.mp4'
-      || item.mp4Path.split('/').some((part: string) => !part || part === '.' || part === '..')
+      || typeof item.mp4Path !== 'string' || !item.mp4Path.startsWith(prefix)) return [];
+    const segments = item.mp4Path.split('/');
+    // The media worker stores renditions under
+    // processed/{owner}/{asset}/{generation}/{height}p/video.mp4.
+    // Validate the complete immutable-generation path before signing it.
+    if (segments.length !== 6
+      || segments[0] !== 'processed'
+      || segments[1] !== ownerId
+      || segments[2] !== mediaId
+      || !/^\d{1,32}$/.test(segments[3])
+      || segments[4] !== `${item.height}p`
+      || segments[5] !== 'video.mp4'
+      || segments.some((part: string) => !part || part === '.' || part === '..')
       || item.mp4Path.includes(String.fromCharCode(92))) return [];
     return [{ height: item.height as number, path: item.mp4Path as string }];
   }).sort((a, b) => a.height - b.height);
   return (renditions.find(item => item.height === 720)
     || renditions.filter(item => item.height <= 720).at(-1)
     || renditions[0])?.path || original;
+}
+
+
+/** Prefer a generation-matched, bandwidth-friendly WebP for public images. */
+export function selectR2MediaDeliveryPath(asset: Record<string, unknown>, ownerId: string, mediaId: string): string | null {
+  const original = asset.storagePath;
+  if (typeof original !== 'string' || original !== `users/${ownerId}/media/${mediaId}`) return null;
+  if (asset.kind === 'video') return selectR2VideoPlaybackPath(asset, ownerId, mediaId);
+  if (asset.kind !== 'image' || asset.status !== 'ready' || !Array.isArray(asset.imageVariants)) return original;
+  const generation = String(asset.generation || '');
+  if (!/^\d{1,32}$/.test(generation)) return original;
+  const prefix = `processed/${ownerId}/${mediaId}/${generation}/`;
+  const variants = asset.imageVariants.flatMap((item: any) => {
+    if (!item || !Number.isSafeInteger(item.width) || item.width < 1 || item.width > 20000
+      || typeof item.path !== 'string' || !item.path.startsWith(prefix)) return [];
+    const segments = item.path.split('/');
+    if (segments.length !== 5 || segments[0] !== 'processed' || segments[1] !== ownerId
+      || segments[2] !== mediaId || segments[3] !== generation
+      || segments[4] !== `image-${item.width}.webp`) return [];
+    return [{ width: item.width as number, path: item.path as string }];
+  }).sort((a, b) => a.width - b.width);
+  return variants.filter(item => item.width <= 1280).at(-1)?.path
+    || variants[0]?.path || original;
 }
 
 export function r2MediaGatewayUrl(mediaId: string): string {

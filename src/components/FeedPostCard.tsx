@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { normalizeMediaDeliveryUrl } from '../lib/apiBaseUrl';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { getMotionPreset } from '../utils/motionPresets';
 import { 
@@ -204,7 +205,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             }}
           >
             <img
-              src={post.avatar}
+              src={normalizeMediaDeliveryUrl(post.avatar)}
               alt=""
               loading="lazy"
               decoding="async"

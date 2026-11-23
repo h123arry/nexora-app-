@@ -16,6 +16,7 @@ import ReportModal from './ReportModal';
 import { auth, db } from '../services/firebase/config';
 import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
 import { uploadMediaFile } from '../services/firebase/storageService';
+import { normalizeMediaDeliveryUrl } from '../lib/apiBaseUrl';
 import { SettingsService } from '../services/firebase/settingsService';
 import { subscribeToFollows } from '../services/dataService';
 import RelativeTimestamp from './RelativeTimestamp';
@@ -38,6 +39,24 @@ import {
   getDefaultAvatar
 } from '../data/database';
 
+
+/** Retry a transient public media gateway failure once without changing profile layout. */
+function retryProfileMediaLoad(event: React.SyntheticEvent<HTMLImageElement>) {
+  const image = event.currentTarget;
+  if (!image.src.includes('/api/media/')) return;
+  if (image.dataset.nexoraRetry === '1') {
+    image.style.opacity = '0';
+    return;
+  }
+  try {
+    const retryUrl = new URL(image.src);
+    retryUrl.searchParams.set('_nx_retry', String(Date.now()));
+    image.dataset.nexoraRetry = '1';
+    image.src = retryUrl.toString();
+  } catch {
+    image.style.opacity = '0';
+  }
+}
 
 /** Convert profile cover uploads to a predictable, browser-friendly JPEG before signing the R2 PUT. */
 async function prepareProfileCoverImage(source: File): Promise<File> {
@@ -1753,7 +1772,7 @@ export default function ProfileView({
           {/* Profile cover with compact avatar anchored over its lower edge. */}
           <div className="nx-profile-cover relative h-36 sm:h-48 overflow-visible rounded-2xl border border-white/10 bg-[#100B25]">
             {currentUser.coverImage ? (
-              <img src={currentUser.coverImage} alt="" className="h-full w-full rounded-2xl object-cover" />
+              <img src={normalizeMediaDeliveryUrl(currentUser.coverImage)} alt="" onError={retryProfileMediaLoad} className="h-full w-full rounded-2xl object-cover" />
             ) : (
               <div className="h-full w-full rounded-2xl bg-gradient-to-br from-[#25105a] via-[#120d2b] to-[#070914]" />
             )}
@@ -1763,7 +1782,7 @@ export default function ProfileView({
               <div className="relative">
                 {currentUser.hasStory && <div className="absolute -inset-1 rounded-full bg-gradient-to-tr from-violet-500 via-violet-400 to-indigo-500 blur-[2px] opacity-75" />}
                 <button type="button" onClick={() => setProfilePicExpanded(true)} aria-label="View profile photo" className="relative z-10 h-[5.5rem] w-[5.5rem] sm:h-28 sm:w-28 rounded-full border-[3px] border-[#080617] bg-black overflow-visible shadow-lg cursor-zoom-in focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4">
-                  <img src={currentUser.avatar} className="h-full w-full rounded-full object-cover" alt="" referrerPolicy="no-referrer" />
+                  <img src={normalizeMediaDeliveryUrl(currentUser.avatar)} onError={retryProfileMediaLoad} className="h-full w-full rounded-full object-cover" alt="" referrerPolicy="no-referrer" />
                   {profileFrameAsset && <img src={profileFrameAsset.path} alt="" aria-hidden="true" className="pointer-events-none absolute -inset-[6px] z-20 h-[calc(100%+12px)] w-[calc(100%+12px)] object-contain" />}
                 </button>
                 {isOwnProfile && (
@@ -2219,7 +2238,7 @@ export default function ProfileView({
                     {/* User profile brief */}
                     <div className="p-3.5 rounded-2xl bg-linear-to-tr from-[#130f3c]/90 to-[#0c0926]/90 border border-white/10 flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <img src={currentUser.avatar} className="w-10 h-10 rounded-xl object-cover border border-white/10" alt="" />
+                        <img src={normalizeMediaDeliveryUrl(currentUser.avatar)} className="w-10 h-10 rounded-xl object-cover border border-white/10" alt="" />
                         <div className="leading-tight">
                           <p className="text-xs font-bold text-white flex items-center gap-1">
                             {currentUser.name} {(identityVerification || currentUser.earlyCommunityMember) && <PurpleVerifiedBadge className="h-3.5 w-3.5" type={currentUser.earlyCommunityMember ? 'leader' : identityBadgeType} />}
@@ -4068,7 +4087,7 @@ export default function ProfileView({
               className="relative max-w-md w-full aspect-square rounded-[36px] overflow-hidden border border-white/10"
               onClick={(e) => e.stopPropagation()}
             >
-              <img src={currentUser.avatar} className="w-full h-full object-cover" alt="Expanded user profile avatar" referrerPolicy="no-referrer" />
+              <img src={normalizeMediaDeliveryUrl(currentUser.avatar)} className="w-full h-full object-cover" alt="Expanded user profile avatar" referrerPolicy="no-referrer" />
               <button 
                 onClick={() => setProfilePicExpanded(false)}
                 className="absolute top-4 right-4 p-2 rounded-2xl bg-black/50 hover:bg-black/80 border border-white/10 text-white"
