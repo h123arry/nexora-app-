@@ -1274,8 +1274,8 @@ export default function ProfileView({
           if (!response.ok) throw new Error('NEXORA could not prepare your profile photo.');
           return response.blob();
         });
-        const uploadedAvatar = await uploadMediaFile({
-          file: avatarBlob,
+        const uploadedAvatar = await uploadProfileMediaWithRetry({
+          file: new File([avatarBlob], 'profile-avatar.jpg', { type: avatarBlob.type || 'image/jpeg' }),
           userId: currentUser.id,
           fileName: 'profile-avatar',
           metadata: { purpose: 'profile-avatar' },
@@ -1296,7 +1296,7 @@ export default function ProfileView({
         persistedCover = uploadedCover.downloadUrl;
       }
 
-      await Promise.resolve(onUpdateProfile({
+      await onUpdateProfile({
         name: editName,
         username: editUsername,
         bio: editBio,
@@ -1306,7 +1306,9 @@ export default function ProfileView({
         socialTwitter: editSocialTwitter.trim(), socialInstagram: editSocialInsta.trim(),
         avatar: persistedAvatar,
         coverImage: persistedCover,
-      }));
+      });
+      setEditAvatar(persistedAvatar);
+      setEditCover(persistedCover);
 
       localStorage.setItem(`nexora_status_text_${currentUser.id}`, statusText);
       localStorage.setItem(`nexora_status_emoji_${currentUser.id}`, statusEmoji);
