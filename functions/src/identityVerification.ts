@@ -60,6 +60,14 @@ async function requireIdentityApprover(request: Request): Promise<string> {
   return uid;
 }
 
+async function requireFounderIdentityApprover(request: Request): Promise<string> {
+  const { uid, claims } = await currentIdentityReviewerClaims(request);
+  if (claims.founder !== true && claims.role !== 'founder') {
+    throw new HttpsError('permission-denied', 'Only the NEXORA founder can manually grant an identity badge.');
+  }
+  return uid;
+}
+
 export const submitIdentityVerificationApplication = onCall({ maxInstances: 2 }, async request => {
   await requireUid(request as Request);
   throw new HttpsError(
@@ -125,6 +133,92 @@ export const grantEarlyCommunityRecognition = onCall({ maxInstances: 2 }, async 
   }
 
   return { granted: recipients.length, skipped: EARLY_COMMUNITY_MEMBER_UIDS.length - recipients.length };
+});
+
+// Founder-only manual verification for a specifically reviewed account. The same
+// verifiedIdentities record powers the public badge; evidence stays in the private
+// application/audit records and every grant is attributable to the founder.
+export const grantManualIdentityVerification = onCall({ maxInstances: 5 }, async request => {
+  const reviewerId = await requireFounderIdentityApprover(request as Request);
+  const data = request.data || {};
+  const userId = typeof data.userId === 'string' ? data.userId.trim() : '';
+  if (!userId || userId.length > 128 || userId.includes('/')) {
+    throw new HttpsError('invalid-argument', 'Choose a valid NEXORA account to verify.');
+  }
+  if (userId === reviewerId) {
+    throw new HttpsError('failed-precondition', 'You cannot use manual verification to award your own account.');
+  }
+
+  let identity: ReturnType<typeof validateIdentityApplicationInput>;
+  try {
+    identity = validateIdentityApplicationInput(data);
+  } catch (error) {
+    throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Provide valid identity evidence.');
+  }
+
+  let targetAccount;
+  try {
+    targetAccount = await auth.getUser(userId);
+  } catch {
+    throw new HttpsError('not-found', 'The selected NEXORA account could not be found.');
+  }
+  if (targetAccount.disabled) throw new HttpsError('failed-precondition', 'This account is disabled and cannot be verified.');
+
+  const profileRef = db.collection('users').doc(userId);
+  const applicationRef = db.collection('identityVerificationApplications').doc(userId);
+  const verifiedRef = db.collection('verifiedIdentities').doc(userId);
+  const auditRef = db.collection('identityVerificationAuditEvents').doc();
+  const notificationRef = db.collection('users').doc(userId).collection('notifications').doc('identity_manual_verification_granted_v1');
+  const now = FieldValue.serverTimestamp();
+
+  const version = await db.runTransaction(async transaction => {
+    const [profile, application, existingVerified] = await Promise.all([
+      transaction.get(profileRef),
+      transaction.get(applicationRef),
+      transaction.get(verifiedRef),
+    ]);
+    if (!profile.exists) throw new HttpsError('not-found', 'The selected account profile could not be found.');
+    if (existingVerified.exists && existingVerified.get('status') === 'verified') {
+      throw new HttpsError('already-exists', 'This account already has an active NEXORA identity badge.');
+    }
+
+    const nextVersion = Math.max(1, Number(application.get('version') || 0) + 1);
+    transaction.set(applicationRef, {
+      userId,
+      ...identity,
+      status: 'approved',
+      version: nextVersion,
+      submittedAt: application.exists ? application.get('submittedAt') || now : now,
+      reviewNote: 'Founder-authorized manual verification after independent evidence review.',
+      reviewerId,
+      reviewedAt: now,
+      updatedAt: now,
+    }, { merge: true });
+    transaction.set(verifiedRef, {
+      userId,
+      status: 'verified',
+      identityType: identity.identityType,
+      displayName: identity.displayName,
+      verifiedAt: now,
+      updatedAt: now,
+    });
+    const notification = buildIdentityReviewNotification(userId, 'approved', nextVersion, new Date().toISOString());
+    transaction.set(notificationRef, { ...notification, id: 'identity_manual_verification_granted_v1', createdAt: now }, { merge: true });
+    transaction.create(auditRef, {
+      userId,
+      reviewerId,
+      event: 'manual_identity_verification_granted',
+      decision: 'approved',
+      identityType: identity.identityType,
+      displayName: identity.displayName,
+      evidenceSummary: identity.evidenceSummary,
+      evidenceUrls: identity.evidenceUrls,
+      createdAt: now,
+    });
+    return nextVersion;
+  });
+
+  return { accepted: true, userId, status: 'verified', version };
 });
 
 export const getMyIdentityVerificationApplication = onCall({ maxInstances: 10 }, async request => {

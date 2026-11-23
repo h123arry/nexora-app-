@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Zap, Repeat, MessageCircle, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreHorizontal, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Bell, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity, Menu } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
@@ -368,6 +369,7 @@ export default function FeedView({
     }
   };
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
+  const [commentsViewport, setCommentsViewport] = useState<{ bottom: number; height: number } | null>(null);
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const activePostIdRef = useRef<string | null>(null);
   activePostIdRef.current = activePostId;
@@ -768,6 +770,35 @@ export default function FeedView({
     return () => {
       if (feed) feed.style.overflowY = previousFeedOverflow;
       document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [activeCommentsPostId]);
+
+  // Keep the comments drawer above the on-screen keyboard on mobile browsers and Capacitor.
+  useEffect(() => {
+    if (!activeCommentsPostId) {
+      setCommentsViewport(null);
+      return;
+    }
+    const viewport = window.visualViewport;
+    const updateViewport = () => {
+      const visibleHeight = viewport?.height || window.innerHeight;
+      const offsetTop = viewport?.offsetTop || 0;
+      const keyboardInset = Math.max(0, window.innerHeight - visibleHeight - offsetTop);
+      const keyboardIsOpen = keyboardInset > 80;
+      const height = Math.max(220, Math.min(visibleHeight, keyboardIsOpen
+        ? Math.min(visibleHeight * 0.92, 760)
+        : Math.min(visibleHeight * 0.6, 680)));
+      const bottom = Math.max(0, window.innerHeight - (visibleHeight + offsetTop));
+      setCommentsViewport({ bottom, height });
+    };
+    updateViewport();
+    viewport?.addEventListener('resize', updateViewport);
+    viewport?.addEventListener('scroll', updateViewport);
+    window.addEventListener('resize', updateViewport);
+    return () => {
+      viewport?.removeEventListener('resize', updateViewport);
+      viewport?.removeEventListener('scroll', updateViewport);
+      window.removeEventListener('resize', updateViewport);
     };
   }, [activeCommentsPostId]);
 
@@ -2347,9 +2378,10 @@ export default function FeedView({
               />
 
                 {/* 5. TIKTOK-STYLE HALF-SCREEN COMMENTS SHEET */}
-                <AnimatePresence>
-                  {isCommentsOpen && (
-                    <>
+                {createPortal(
+                  <AnimatePresence>
+                    {isCommentsOpen && (
+                      <>
                     <motion.button
                       type="button"
                       aria-label="Close comments"
@@ -2367,7 +2399,7 @@ export default function FeedView({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: "100%", opacity: 0 }}
                       transition={{ type: "spring", damping: 28, stiffness: 260 }}
-                      className="comments-container fixed bottom-0 inset-x-0 h-[60dvh] min-h-[60dvh] max-h-[60dvh] bg-[#090714]/[0.98] z-[90] flex flex-col px-4 pt-3 pb-4 sm:px-5 overflow-hidden touch-pan-y"
+                      className="nx-comments-sheet comments-container fixed inset-x-0 h-[60dvh] min-h-[60dvh] max-h-[60dvh] bg-[#090714]/[0.98] z-[90] flex flex-col px-4 pt-3 pb-4 sm:px-5 overflow-hidden touch-pan-y" style={commentsViewport ? { bottom: `${commentsViewport.bottom}px`, height: `${commentsViewport.height}px`, minHeight: `${commentsViewport.height}px`, maxHeight: `${commentsViewport.height}px` } : undefined}
                     >
                       {/* Header of Comments drawer */}
                       <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
@@ -2511,7 +2543,7 @@ export default function FeedView({
                       </div>
 
                       {/* Main comment form */}
-                      <div className="flex items-center gap-2 pt-2 border-t border-white/5 shrink-0">
+                      <div className="nx-comments-composer flex items-center gap-2 pt-2 border-t border-white/5 shrink-0">
                         <input 
                           type="text" 
                           placeholder="Write your comment..."
@@ -2532,9 +2564,11 @@ export default function FeedView({
                         </button>
                       </div>
                     </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
+                      </>
+                    )}
+                  </AnimatePresence>,
+                  document.body
+                )}
             </React.Fragment>
           );
         })}

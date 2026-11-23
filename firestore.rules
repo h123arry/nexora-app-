@@ -187,7 +187,7 @@ service cloud.firestore {
         'followers', 'following', 'sparks', 'hasStory',
         'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
         'interestDNA', 'skills', 'dateOfBirth', 'statusText', 'statusEmoji', 'pronouns', 'profileCategory', 'creatorType', 'socialTwitter', 'socialInstagram', 'pinnedMusicSong',
-        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'dateOfBirth'
+        'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'dateOfBirth', 'earlyCommunityMember'
       ];
     }
     function editableProfileKeys() {
@@ -605,6 +605,7 @@ service cloud.firestore {
         && request.resource.data.username == get(/databases/$(database)/documents/users/$(userId)).data.username
         && request.resource.data.keys().hasOnly(publicProfileKeys())
         && !request.resource.data.keys().hasAny(['interestDNA'])
+        && (!request.resource.data.keys().hasAny(['earlyCommunityMember']) || (request.resource.data.earlyCommunityMember is bool && request.resource.data.earlyCommunityMember == get(/databases/$(database)/documents/users/$(userId)).data.get('earlyCommunityMember', false)))
         && zeroInitialReputation(request.resource.data)
         && zeroInitialEngagement(request.resource.data);
       allow update: if owner(userId)

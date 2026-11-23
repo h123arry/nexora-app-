@@ -75,6 +75,13 @@ export default function AdminDashboardView({
   const [foundingProvisioning, setFoundingProvisioning] = useState(false);
   const [foundingError, setFoundingError] = useState('');
   const [foundingResult, setFoundingResult] = useState<{ uid: string; email: string; username: string; passwordResetLink: string } | null>(null);
+  const [manualVerificationUserId, setManualVerificationUserId] = useState('');
+  const [manualVerificationIdentityType, setManualVerificationIdentityType] = useState<IdentityReviewApplication['identityType']>('individual');
+  const [manualVerificationDisplayName, setManualVerificationDisplayName] = useState('');
+  const [manualVerificationEvidenceSummary, setManualVerificationEvidenceSummary] = useState('');
+  const [manualVerificationEvidenceUrls, setManualVerificationEvidenceUrls] = useState('');
+  const [manualVerificationBusy, setManualVerificationBusy] = useState(false);
+
 
   // Load and refresh administrative data
   const loadData = async () => {
@@ -329,6 +336,46 @@ export default function AdminDashboardView({
       }));
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Identity review could not be completed.' }));
+    }
+  };
+
+  const handleGrantManualIdentityVerification = async () => {
+    if (!canManageRoles || manualVerificationBusy) return;
+    const evidenceUrls = manualVerificationEvidenceUrls.split(/\r?\n/).map(value => value.trim()).filter(Boolean);
+    if (!manualVerificationUserId) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose the account you want to verify.' }));
+      return;
+    }
+    setManualVerificationBusy(true);
+    try {
+      await httpsCallable<{
+        userId: string;
+        identityType: IdentityReviewApplication['identityType'];
+        displayName: string;
+        evidenceSummary: string;
+        evidenceUrls: string[];
+      }, { accepted: boolean; status: string }>(getFunctions(), 'grantManualIdentityVerification')({
+        userId: manualVerificationUserId,
+        identityType: manualVerificationIdentityType,
+        displayName: manualVerificationDisplayName,
+        evidenceSummary: manualVerificationEvidenceSummary,
+        evidenceUrls,
+      });
+      const target = users.find(user => user.id === manualVerificationUserId);
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: 'Identity verified for @' + (target?.username || manualVerificationUserId) + '. The violet badge is now active.',
+      }));
+      setManualVerificationUserId('');
+      setManualVerificationDisplayName('');
+      setManualVerificationEvidenceSummary('');
+      setManualVerificationEvidenceUrls('');
+      setManualVerificationIdentityType('individual');
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: error instanceof Error ? error.message : 'Manual identity verification could not be completed.',
+      }));
+    } finally {
+      setManualVerificationBusy(false);
     }
   };
 
@@ -739,6 +786,51 @@ export default function AdminDashboardView({
               <h3 className="text-sm font-black text-violet-300 uppercase tracking-widest font-mono">Identity verification queue</h3>
               <p className="mt-1 text-xs text-zinc-400">Review official public evidence independently. Email or phone verification is not proof of real-world identity.</p>
             </div>
+            {canManageRoles && (
+              <section className="space-y-3 rounded-2xl border border-violet-400/20 bg-violet-500/[0.035] p-4">
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-violet-200">Founder manual verification</h3>
+                  <p className="mt-1 text-[11px] leading-relaxed text-zinc-400">For a specific account after you independently check its public identity evidence. This founder-only action creates the same verified identity record used by profile and content badges. Evidence is kept private and the decision is audited.</p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                    NEXORA account
+                    <select value={manualVerificationUserId} onChange={event => {
+                      const userId = event.target.value;
+                      setManualVerificationUserId(userId);
+                      setManualVerificationDisplayName(users.find(user => user.id === userId)?.name || '');
+                    }} className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-3 text-xs normal-case text-white outline-none focus:border-violet-400/60">
+                      <option value="">Select an account…</option>
+                      {users.map(user => <option key={user.id} value={user.id}>@{user.username} · {user.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                    Identity category
+                    <select value={manualVerificationIdentityType} onChange={event => setManualVerificationIdentityType(event.target.value as IdentityReviewApplication['identityType'])} className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-3 text-xs normal-case text-white outline-none focus:border-violet-400/60">
+                      <option value="individual">Individual</option>
+                      <option value="creator">Creator</option>
+                      <option value="public_figure">Public figure</option>
+                      <option value="organization">Organization</option>
+                    </select>
+                  </label>
+                  <label className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 sm:col-span-2">
+                    Public identity name
+                    <input value={manualVerificationDisplayName} onChange={event => setManualVerificationDisplayName(event.target.value)} maxLength={120} placeholder="Name shown by the verified identity" className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-3 text-xs normal-case text-white outline-none focus:border-violet-400/60" />
+                  </label>
+                  <label className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 sm:col-span-2">
+                    Evidence review summary
+                    <textarea value={manualVerificationEvidenceSummary} onChange={event => setManualVerificationEvidenceSummary(event.target.value)} rows={3} maxLength={1000} placeholder="Explain how the public evidence confirms this account's identity (20–1,000 characters)." className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-3 text-xs normal-case text-white outline-none focus:border-violet-400/60" />
+                  </label>
+                  <label className="space-y-1 text-[10px] font-bold uppercase tracking-wider text-zinc-400 sm:col-span-2">
+                    Public evidence links (one HTTPS URL per line, 1–5 links)
+                    <textarea value={manualVerificationEvidenceUrls} onChange={event => setManualVerificationEvidenceUrls(event.target.value)} rows={3} placeholder={'https://official-website.example\nhttps://official-social.example'} className="w-full rounded-xl border border-white/10 bg-black/35 px-3 py-3 text-xs normal-case text-white outline-none focus:border-violet-400/60" />
+                  </label>
+                </div>
+                <button type="button" onClick={() => void handleGrantManualIdentityVerification()} disabled={manualVerificationBusy || !manualVerificationUserId || !manualVerificationDisplayName.trim() || manualVerificationEvidenceSummary.trim().length < 20 || manualVerificationEvidenceUrls.trim().length === 0} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-black text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-45">
+                  <Shield className="h-4 w-4" /> {manualVerificationBusy ? 'Verifying account…' : 'Grant verified identity badge'}
+                </button>
+              </section>
+            )}
             <section className="space-y-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.03] p-4">
               <div>
                 <h3 className="text-sm font-black uppercase tracking-widest text-amber-200">Impersonation escalation cases ({impersonationCases.length})</h3>

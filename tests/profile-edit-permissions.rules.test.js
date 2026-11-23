@@ -154,6 +154,63 @@ describe('profile editing Firestore permissions', () => {
     assert.deepEqual(publicSnapshot.get('skills'), ['Community building']);
   });
 
+  it('allows early community members to update bio, avatar and cover without losing their protected recognition flag', async () => {
+    await seed(async db => {
+      await setDoc(doc(db, 'users', 'early-alice'), {
+        id: 'early-alice', email: 'early-alice@example.test', username: 'early_alice', name: 'Early Alice',
+        bio: '', avatar: '', location: '', website: '', coverImage: '',
+        followers: 0, following: 0, sparks: 0, hasStory: false,
+        joinedDate: 'Joined November 2026', reputationPoints: 0,
+        reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+        skills: [], earlyCommunityMember: true
+      });
+      await setDoc(doc(db, 'publicProfiles', 'early-alice'), {
+        id: 'early-alice', username: 'early_alice', name: 'Early Alice', avatar: '', bio: '',
+        website: '', followers: 0, following: 0, sparks: 0, coverImage: '', earlyCommunityMember: true
+      });
+    });
+
+    const db = dbFor('early-alice');
+    await assertSucceeds(runTransaction(db, async transaction => {
+      const privateRef = doc(db, 'users', 'early-alice');
+      const publicRef = doc(db, 'publicProfiles', 'early-alice');
+      const settingsRef = doc(db, 'users', 'early-alice', 'settings', 'preferences');
+      const [privateSnapshot, settingsSnapshot] = await Promise.all([
+        transaction.get(privateRef), transaction.get(settingsRef)
+      ]);
+      const updates = {
+        avatar: 'https://media.example.test/early-avatar.webp',
+        coverImage: 'https://media.example.test/early-cover.webp',
+        bio: 'A recognised early NEXORA community member.'
+      };
+      transaction.update(privateRef, { ...updates, updatedAt: serverTimestamp() });
+      transaction.set(publicRef, {
+        id: 'early-alice',
+        username: 'early_alice',
+        name: 'Early Alice',
+        ...updates,
+        followers: 0,
+        following: 0,
+        sparks: 0,
+        hasStory: false,
+        joinedDate: 'Joined November 2026',
+        reputationPoints: 0,
+        reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+        skills: [],
+        earlyCommunityMember: true,
+        location: settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone' ? '' : deleteField(),
+        interestDNA: deleteField()
+      }, { merge: true });
+    }));
+
+    const privateSnapshot = await getDoc(doc(db, 'users', 'early-alice'));
+    const publicSnapshot = await getDoc(doc(db, 'publicProfiles', 'early-alice'));
+    assert.equal(privateSnapshot.get('bio'), 'A recognised early NEXORA community member.');
+    assert.equal(publicSnapshot.get('avatar'), 'https://media.example.test/early-avatar.webp');
+    assert.equal(publicSnapshot.get('coverImage'), 'https://media.example.test/early-cover.webp');
+    assert.equal(publicSnapshot.get('earlyCommunityMember'), true);
+  });
+
   it('does not allow profile editing to change private account or moderation fields', async () => {
     await seed(async db => {
       await setDoc(doc(db, 'users', 'alice'), {
