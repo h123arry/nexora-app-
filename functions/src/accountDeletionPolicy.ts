@@ -39,6 +39,88 @@ export function accountStoragePrefixes(userId: string): string[] {
   ];
 }
 
+
+/**
+ * Erase a deleted account's embedded comments and replies from posts they did not own.
+ * Keep other people's replies readable by replacing a deleted parent with a neutral
+ * placeholder only when that thread still contains replies.
+ */
+export async function eraseUserCommentsFromPosts(
+  db: Firestore,
+  userId: string,
+  onBatch?: () => Promise<void>,
+): Promise<number> {
+  if (!userId || userId.includes('/') || userId.includes('\\\\')) {
+    throw new Error('A valid account ID is required for comment cleanup.');
+  }
+
+  let changedPosts = 0;
+  let cursor: QueryDocumentSnapshot | undefined;
+  while (true) {
+    let query = db.collection('posts').orderBy(FieldPath.documentId()).limit(PAGE_SIZE);
+    if (cursor) query = query.startAfter(cursor);
+    const snapshot = await query.get();
+    if (snapshot.empty) break;
+
+    const batch = db.batch();
+    let batchChanges = 0;
+    for (const post of snapshot.docs) {
+      const original = post.get('comments');
+      if (!Array.isArray(original) || original.length === 0) continue;
+      let removedTopLevel = 0;
+      let changed = false;
+      const comments = original.flatMap((raw: unknown) => {
+        if (!raw || typeof raw !== 'object') return [raw];
+        const comment = raw as Record<string, any>;
+        const replies = Array.isArray(comment.replies) ? comment.replies : [];
+        const remainingReplies = replies.filter((reply: unknown) =>
+          !reply || typeof reply !== 'object' || (reply as Record<string, unknown>).userId !== userId
+        );
+        const repliesChanged = remainingReplies.length !== replies.length;
+
+        if (comment.userId === userId) {
+          changed = true;
+          if (repliesChanged) changed = true;
+          if (remainingReplies.length === 0) {
+            removedTopLevel += 1;
+            return [];
+          }
+          return [{
+            ...comment,
+            userId: '',
+            username: 'deleted_account',
+            name: 'Deleted account',
+            avatar: '',
+            content: 'Comment removed',
+            replies: remainingReplies,
+          }];
+        }
+
+        if (!repliesChanged) return [raw];
+        changed = true;
+        return [{ ...comment, replies: remainingReplies }];
+      });
+
+      if (!changed) continue;
+      const storedCount = post.get('commentsCount');
+      const commentsCount = Number.isSafeInteger(storedCount) && storedCount >= 0
+        ? Math.max(0, storedCount - removedTopLevel)
+        : comments.length;
+      batch.update(post.ref, { comments, commentsCount });
+      batchChanges += 1;
+    }
+
+    if (batchChanges > 0) {
+      await batch.commit();
+      changedPosts += batchChanges;
+      await onBatch?.();
+    }
+    cursor = snapshot.docs[snapshot.docs.length - 1];
+    if (snapshot.size < PAGE_SIZE) break;
+  }
+  return changedPosts;
+}
+
 export async function deleteUserOwnedDocuments(db: Firestore, userId: string, onBatch?: () => Promise<void>): Promise<number> {
   if (!userId) throw new Error('A valid account ID is required for data cleanup.');
   let deleted = 0;
@@ -72,7 +154,7 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string, on
       if (snapshot.size < PAGE_SIZE) break;
     }
   }
-  // Reporter signals are nested under the reported account; remove both target- and reporter-owned rows.
+  // Comments are embedded in other users' posts, so scrub them separately from owned documents.\n  await eraseUserCommentsFromPosts(db, userId, onBatch);\n\n  // Reporter signals are nested under the reported account; remove both target- and reporter-owned rows.
   const targetSignals = db.collection('identityImpersonationSignals').doc(userId);
   while (true) {
     const rows = await targetSignals.collection('reporters').limit(PAGE_SIZE).get();
