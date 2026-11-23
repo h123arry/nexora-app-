@@ -1363,14 +1363,11 @@ export default function App() {
   useEffect(() => {
     const handleOnline = () => {
       setIsOffline(false);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📶 Dynamic sync restored! Back online.' }));
-      
+      // Connection state is shown by the compact OfflineBanner. Avoid stacking
+      // transient toasts for connectivity and background queue completion.
       setIsSyncPending(prev => {
         if (prev) {
-          setTimeout(() => {
-            setIsSyncPending(false);
-            window.dispatchEvent(new CustomEvent('toast', { detail: '✨ All pending data packets successfully updated!' }));
-          }, 2000);
+          window.setTimeout(() => setIsSyncPending(false), 2000);
           return true;
         }
         return false;
@@ -1379,7 +1376,6 @@ export default function App() {
 
     const handleOffline = () => {
       setIsOffline(true);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ You are currently offline. New posts will be queued.' }));
     };
 
     const handleToast = (e: Event) => {
