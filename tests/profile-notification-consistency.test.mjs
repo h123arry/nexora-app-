@@ -232,5 +232,5 @@ test('auth profile hydration avoids redundant public-projection reads and writes
   assert.match(hydration, /await this\.getProfile\(firebaseUser\.uid\)/);
   assert.doesNotMatch(hydration, /settings', 'preferences/);
   assert.doesNotMatch(hydration, /setDoc\(doc\(db, 'publicProfiles'/);
-  assert.match(hydration, /Projection writes belong to profile creation and explicit profile mutations/);
+  assert.match(hydration, /Projection writes belong to profile creation and[\\s\\S]*explicit profile mutations/);
 });
