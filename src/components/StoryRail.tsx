@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { normalizeMediaDeliveryUrl } from '../lib/apiBaseUrl';
 import { AnimatePresence, motion } from 'motion/react';
 import { ChevronLeft, ChevronRight, FileImage, LoaderCircle, Plus, Send, X } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -40,7 +41,7 @@ function StoryAvatar({ story, size = 'h-14 w-14', text = 'text-base' }: { story:
   if (story.avatar) {
     return (
       <img
-        src={story.avatar}
+        src={normalizeMediaDeliveryUrl(story.avatar)}
         alt=""
         className={`${size} rounded-full object-cover`}
         referrerPolicy="no-referrer"
@@ -479,7 +480,7 @@ function StoryViewer({
           </div>
           <div className="flex-1 grid place-items-center px-6">
             {story.mediaType === 'image' && story.mediaUrl ? (
-              <img src={story.mediaUrl} alt={story.caption || `Story from ${story.name || story.username}`} loading="eager" decoding="async" className="max-h-full max-w-full rounded-2xl object-contain" />
+              <img src={normalizeMediaDeliveryUrl(story.mediaUrl)} alt={story.caption || `Story from ${story.name || story.username}`} loading="eager" decoding="async" className="max-h-full max-w-full rounded-2xl object-contain" />
             ) : story.mediaType === 'video' && story.mediaUrl ? (
               <video
                 ref={videoRef}
