@@ -434,13 +434,16 @@ export class AuthService {
     }
   }
 
-  static async verifyPhoneCode(confirmationResult: ConfirmationResult, code: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+  static async verifyPhoneCode(confirmationResult: ConfirmationResult, code: string): Promise<{ firebaseUser: FirebaseUser; user: User; isNewUser: boolean }> {
     this.requireConfigured();
     try {
       const credential = await confirmationResult.confirm(code);
       const fbUser = credential.user;
 
       const existingPhoneProfile = await ProfileService.getProfile(fbUser.uid);
+      const isNewUser = !existingPhoneProfile
+        || existingPhoneProfile.name === 'NEXORA Member'
+        || existingPhoneProfile.username.startsWith('member_');
       let userProfile = await ProfileService.getOrCreateProfile(fbUser, {
         name: 'Phone User',
       });
@@ -457,7 +460,7 @@ export class AuthService {
         { browser: navigator.userAgent }
       );
 
-      return { firebaseUser: fbUser, user: userProfile };
+      return { firebaseUser: fbUser, user: userProfile, isNewUser };
     } catch (err: any) {
       throw this.publicAuthError(err);
     }
