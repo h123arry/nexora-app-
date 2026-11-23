@@ -11,6 +11,17 @@ test('requires an explicit API origin in native builds', () => {
 test('resolves API requests against the configured HTTPS origin', () => {
   assert.equal(resolveApiRequestUrl('/api/private-chat-media/chat/123/audio', { baseUrl: 'https://api-staging.example.test', nativeRuntime: true }), 'https://api-staging.example.test/api/private-chat-media/chat/123/audio');
 });
+
+test('routes native public R2 media gateway requests through the configured HTTPS API origin', () => {
+  assert.equal(
+    resolveApiRequestUrl('/api/media/media_123', { baseUrl: 'https://nexoraapp.com.ng', nativeRuntime: true }),
+    'https://nexoraapp.com.ng/api/media/media_123',
+  );
+});
+test('keeps public R2 media gateway requests same-origin on the web', () => {
+  assert.equal(resolveApiRequestUrl('/api/media/media_123', { nativeRuntime: false }), '/api/media/media_123');
+});
+
 test('preserves an API base path', () => {
   assert.equal(resolveApiRequestUrl('/health', { baseUrl: 'https://api.example.test/nexora/', nativeRuntime: true }), 'https://api.example.test/nexora/health');
 });
