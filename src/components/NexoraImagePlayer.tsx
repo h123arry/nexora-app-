@@ -289,7 +289,7 @@ export default function NexoraImagePlayer({
       });
 
     return () => { active = false; };
-  }, [rawImagesKey, currentImageIndex, isActive, shouldPreload, isReleased]);
+  }, [rawImagesKey, currentImageIndex, isActive, shouldPreload, isReleased, imageRetryKey]);
 
   useEffect(() => {
     setIsImageLoading(true);
@@ -375,7 +375,7 @@ export default function NexoraImagePlayer({
                 </div>
                 <p className="text-sm font-bold text-white">Media unavailable</p>
                 <p className="text-xs text-zinc-400 max-w-xs">This image could not be loaded. The post caption and actions are still available.</p>
-                <button type="button" onClick={(event) => { event.stopPropagation(); setIsImageLoading(true); setHasImageLoadError(false); setImageRetryKey(key => key + 1); }} className="mt-1 rounded-full border border-violet-400/30 bg-violet-500/15 px-4 py-2 text-xs font-semibold text-violet-100 hover:bg-violet-500/25 focus-visible:outline-2 focus-visible:outline-violet-300">Try again</button>
+                <button type="button" onClick={(event) => { event.stopPropagation(); setIsImageLoading(true); setHasImageLoadError(false); setDisplayImages(previous => { const next = [...previous]; next[currentImageIndex] = undefined; return next; }); setImageRetryKey(key => key + 1); }} className="mt-1 rounded-full border border-violet-400/30 bg-violet-500/15 px-4 py-2 text-xs font-semibold text-violet-100 hover:bg-violet-500/25 focus-visible:outline-2 focus-visible:outline-violet-300">Try again</button>
               </div>
             )}
           </>
