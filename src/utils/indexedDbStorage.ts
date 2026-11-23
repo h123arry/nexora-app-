@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { apiRequestUrl } from '../lib/apiBaseUrl';
 
 /**
  * Nexora Persistent IndexedDB Media Storage Utility
@@ -102,9 +103,11 @@ const objectUrlPromises = new Map<string, Promise<string>>();
  * Pass-through if it's already a regular URL or base64.
  */
 export async function resolveMediaUrl(url: string): Promise<string> {
-  if (!url || !url.startsWith('db-media://')) {
-    return url;
-  }
+  if (!url) return url;
+  // Public R2 gateway URLs are stored as relative /api/media paths. Native
+  // Capacitor WebViews must send them to the configured HTTPS API origin.
+  if (url.startsWith('/api/')) return apiRequestUrl(url);
+  if (!url.startsWith('db-media://')) return url;
 
   const cached = objectUrlCache.get(url);
   if (cached) return cached;
