@@ -139,7 +139,7 @@ export default function App() {
       void retryProfileLoad().catch(() => undefined);
     }, 15000);
     return () => window.clearTimeout(retry);
-  }, [firebaseUser?.uid, authError, authInitializing, retryProfileLoad]);
+  }, [firebaseUser?.uid, authError, authInitializing]);
 
   // Anonymous Firebase identities can browse, but incomplete account profiles
   // must open the signup/profile flow before attempting follow or post writes.
