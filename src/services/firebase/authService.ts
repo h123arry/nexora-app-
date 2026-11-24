@@ -2,7 +2,6 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   browserLocalPersistence,
-  sendEmailVerification, 
   sendPasswordResetEmail, 
   updatePassword,
   RecaptchaVerifier, 
@@ -498,15 +497,13 @@ export class AuthService {
   static async sendVerificationEmail(user?: FirebaseUser): Promise<boolean> {
     this.requireConfigured();
     const targetUser = user || auth.currentUser;
-    if (!targetUser) throw new Error('No user currently authenticated.');
+    if (!targetUser || auth.currentUser?.uid !== targetUser.uid) {
+      throw new Error('Sign in to request an email verification code.');
+    }
     try {
-      await sendEmailVerification(targetUser);
-      if (targetUser.email) {
-        await EmailService.sendTransactionalEmail('VERIFY_EMAIL', {
-          toEmail: targetUser.email,
-          userName: targetUser.displayName || 'Nexora User'
-        });
-      }
+      await reload(targetUser);
+      if (targetUser.emailVerified) return true;
+      await this.sendEmailVerificationCode();
       return true;
     } catch (err: any) {
       throw this.publicAuthError(err);
