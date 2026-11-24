@@ -3390,7 +3390,7 @@ export default function App() {
                   setIsAiCommandCenterOpen(false);
                   
                   // Redirect to AI matrix view
-                  setActiveTab('matrix');
+                  navigateTo('matrix');
                   setMatrixSubTabRedirect('ai');
                   
                   // Dispatch custom event to trigger prompt in VohAiView
@@ -3428,7 +3428,7 @@ export default function App() {
                     type="button"
                     onClick={() => {
                       setIsAiCommandCenterOpen(false);
-                      setActiveTab('matrix');
+                      navigateTo('matrix');
                       setMatrixSubTabRedirect('ai');
                     }}
                     className="text-[10px] text-violet-400 hover:underline font-bold font-sans cursor-pointer"
