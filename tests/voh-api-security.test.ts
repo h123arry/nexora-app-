@@ -121,14 +121,14 @@ describe('VOH API security boundary', () => {
     assert.equal(invalid.status, 401);
   });
 
-  it('keeps retired custom email OTP endpoints disabled', async () => {
+  it('requires an authenticated account for email OTP endpoints', async () => {
     for (const path of ['/api/auth/send-email-otp', '/api/auth/verify-email-otp']) {
       const response = await fetch(`${baseUrl}${path}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email: 'test@example.test', code: '123456' }),
       });
-      assert.equal(response.status, 410);
+      assert.equal(response.status, 401);
     }
   });
 
