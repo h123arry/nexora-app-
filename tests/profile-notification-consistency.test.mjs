@@ -313,11 +313,11 @@ test('unimplemented hidden-chat PIN controls cannot collect or store a real secr
 
 test('video player refreshes the displayed view total from the authoritative server response', async () => {
   const player = await read('../src/components/NexoraVideoPlayer.tsx');
-  assert.match(player, /const \\[displayedViews, setDisplayedViews\\] = useState/);
-  assert.match(player, /setDisplayedViews\\(Math\\.max\\(0, Number\\(post\\.views\\) \\|\\| 0\\)\\)/);
-  assert.match(player, /recordPublicView\\(\\{ postId: post\\.id \\}\\)\\.then\\(result =>/);
-  assert.match(player, /const payload = result\\.data as \\{ counted\\?: boolean; views\\?: number \\}/);
-  assert.match(player, /Number\\.isSafeInteger\\(payload\\?\\.views\\)/);
-  assert.match(player, /setDisplayedViews\\(payload\\.views as number\\)/);
-  assert.match(player, /formatPostViews\\(displayedViews\\)\\}\\s*views/);
+  assert.match(player, /const \[displayedViews, setDisplayedViews\] = useState/);
+  assert.match(player, /setDisplayedViews\(Math\.max\(0, Number\(post\.views\) \|\| 0\)\)/);
+  assert.match(player, /recordPublicView\(\{ postId: post\.id \}\)\.then\(result =>/);
+  assert.match(player, /const payload = result\.data as \{ counted\?: boolean; views\?: number \}/);
+  assert.match(player, /Number\.isSafeInteger\(payload\?\.views\)/);
+  assert.match(player, /setDisplayedViews\(payload\.views as number\)/);
+  assert.match(player, /formatPostViews\(displayedViews\)\}\s*views/);
 });
