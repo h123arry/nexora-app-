@@ -262,8 +262,7 @@ test('recent search actions use separate accessible keyboard-operable buttons', 
   assert.match(recentSearches, /Remove \$\{term\} from recent searches/);
   assert.match(recentSearches, /min-h-10/);
   assert.match(recentSearches, /h-10 w-10/);
-  assert.doesNotMatch(recentSearches, /<div[\s\S]*?onClick=\{\(\) => \{[\s\S]*?<button/);
-});
+  const wrapper = recentSearches.match(/<div\\b[^>]*>/)?.[0] || '';\n  assert.doesNotMatch(wrapper, /onClick=/);\n  assert.equal((recentSearches.match(/<button/g) || []).length, 2);\n});
 
 
 test('universal search dialog traps and restores keyboard focus', async () => {
