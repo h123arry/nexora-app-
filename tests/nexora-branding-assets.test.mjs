@@ -72,3 +72,14 @@ test('native CI regenerates matching platform assets before compiling', async ()
   assert.match(workflow, /Generate official iOS app icon and launch resources[\s\S]*?npm run mobile:assets:ios/);
   assert.match(workflow, /Generate iOS, Android and PWA assets from approved PNG[\s\S]*?npm run mobile:assets/);
 });
+
+
+test('shared Nexora design tokens resolve to the approved violet palette', async () => {
+  const css = await readText('../src/index.css');
+  assert.match(css, /--nx-violet:\s*#7138FF;/);
+  assert.match(css, /--nx-violet-bright:\s*#A855F7;/);
+  assert.match(css, /--nx-violet-deep:\s*#4B10F2;/);
+  assert.match(css, /--nx-gradient:\s*linear-gradient\(110deg,\s*#8A3FFC 0%,\s*#7138FF 38%,\s*#4B10F2 72%,\s*#1600A3 100%\);/);
+  assert.doesNotMatch(css, /--nx-violet:\s*#315BFF|--nx-violet-bright:\s*#55C9F2/);
+  assert.doesNotMatch(css, /--nx-gradient:.*#E94BFF|--nx-gradient:.*#00D8F0/);
+});
