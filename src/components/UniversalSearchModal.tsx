@@ -147,31 +147,65 @@ export default function UniversalSearchModal({
   };
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
+    if (!isOpen) return;
 
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          onClose();
-        }
-      };
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    focusTimerRef.current = window.setTimeout(() => {
+      inputRef.current?.focus();
+      focusTimerRef.current = null;
+    }, 50);
 
-      const handleEscape = (e: Event) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
-      };
+        return;
+      }
 
-      window.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('nexora-escape', handleEscape);
-      return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('nexora-escape', handleEscape);
-      };
-    }
+      if (e.key !== 'Tab') return;
+      const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) {
+        e.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !modalRef.current?.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !modalRef.current?.contains(document.activeElement))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    const handleEscape = (e: Event) => {
+      e.preventDefault();
+      onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('nexora-escape', handleEscape);
+    return () => {
+      if (focusTimerRef.current !== null) {
+        window.clearTimeout(focusTimerRef.current);
+        focusTimerRef.current = null;
+      }
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('nexora-escape', handleEscape);
+      if (previousFocusRef.current?.isConnected) previousFocusRef.current.focus();
+      previousFocusRef.current = null;
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -302,7 +336,7 @@ export default function UniversalSearchModal({
     (serverResults !== null && (serverResults.people.length > 0 || serverResults.pages.length > 0 || serverResults.circles.length > 0)) || serverSearchLoading || Boolean(serverSearchError) || Boolean(universalSearchResults?.results.length) || universalSearchLoading || Boolean(universalSearchError);
 
   return (
-    <div id="universal-search-modal" role="dialog" aria-modal="true" aria-label="NEXORA universal search" className="fixed inset-0 z-100 bg-[#060412]/98 backdrop-blur-2xl flex flex-col overflow-hidden text-white animate-fade-in select-none">
+    <div ref={modalRef} id="universal-search-modal" role="dialog" aria-modal="true" aria-label="NEXORA universal search" className="fixed inset-0 z-100 bg-[#060412]/98 backdrop-blur-2xl flex flex-col overflow-hidden text-white animate-fade-in select-none">
       
       {/* Top Header & Search Input Bar */}
       <div className="shrink-0 border-b border-white/10 bg-[#0c091d]/90 px-4 sm:px-8 py-4 sm:py-5 flex flex-col gap-3">
