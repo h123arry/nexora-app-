@@ -514,6 +514,7 @@ const publicProfile = (uid) => ({
       interestDNA: deleteField(), dateOfBirth: deleteField()
     }, { merge: true }));
     await assertSucceeds(getDoc(doc(guestDb(), 'publicProfiles', 'alice')));
+    await assertSucceeds(getDocs(query(collection(guestDb(), 'publicProfiles'), where('username', '==', 'alice'))));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { bio: 'public bio' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { email: 'leak@example.test' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { interestDNA: { AI: 0.1 } }));
