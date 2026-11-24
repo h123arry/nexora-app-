@@ -265,7 +265,7 @@ These items should be verified against the current app and either completed, sup
 - PR #582 has passed Nexora CI, CodeQL, and native/container CI. It remains unmerged until the public-profile scrub dry-run and owner-approved production migration are completed.
 - PR #581 remains a draft audit-report PR; its latest recorded Nexora CI and CodeQL checks passed before the most recent report update and must rerun before merge.
 
-The repository had 73 open PRs at the beginning of this audit. Five audit PRs (#581–#585) were opened; #584 (navigation consistency) and #585 (privacy scrub migration tooling) have since been merged into main. Three audit PRs remain open: #581 (draft audit report), #582 (privacy rule fix, awaiting a production scrub dry-run/approval), and #583 (video analytics deployment allowlist, awaiting final CI and the Cloud Build deployment permission). The current open backlog is 76 PRs. No production deployment has been claimed as complete in this audit session. Main is now at 97d849da8d873c7babc3894b106cdba8af60ca43, with its post-merge CI, CodeQL, and native/container checks running.
+The repository had 73 open PRs at the beginning of this audit. Six audit PRs (#581–#586) were opened. Three have been merged into main: #584 (navigation consistency), #585 (privacy scrub migration tooling), and #586 (offline recovery and social interaction reliability). Two older PRs were closed as superseded: #573 by #583 and #564 by #582/#585/#586. Four audit-related PRs remain open: #581 (draft audit report), #582 (privacy rule fix, awaiting production scrub dry-run/owner approval), #583 (video analytics deployment allowlist, awaiting Cloud Build deployment permission), and the pre-existing #580 remains misbased and under review. The current repository open backlog is 74 PRs. No production deployment has been claimed as complete in this audit session. Main is now at c2832ed1f681eb0d68ed5f208b119f11ca2776a4, with its post-merge CI, CodeQL, and native/container checks running.
 
 
 ## Dependency audit: verified major-upgrade incompatibility
@@ -296,3 +296,15 @@ The three-file patch itself needs review:
 - Anonymous-session references remain in the account-linking and migration paths so legacy anonymous UIDs can be upgraded to permanent credentials or handled safely.
 - This supports the distinction between legacy anonymous-account compatibility and automatically creating new anonymous users.
 - The Firebase Console's Anonymous provider toggle cannot be verified from repository source. The code audit alone cannot prove whether the provider is enabled in the live project.
+
+
+## Final validation snapshot for this audit session
+
+- PR #582: Nexora CI, Firestore/Auth/Storage emulator suites, production build, CodeQL, Android, iOS, and container checks passed. Not merged because the production public-profile scrub has not yet been run and approved.
+- PR #583: Nexora CI, deployment-metadata validation, and CodeQL passed. Not merged because merging its workflow change would trigger a production Functions deployment that is currently blocked by Cloud Build API permission.
+- PR #586: all Nexora CI, CodeQL, Android, iOS, and container checks passed; merged as commit `c2832ed1f681eb0d68ed5f208b119f11ca2776a4`.
+- PR #585: all Nexora CI, CodeQL, migration emulator, Android, iOS, and container checks passed; merged.
+- PR #584: all Nexora CI, CodeQL, Android, iOS, and container checks passed; merged.
+- Main post-merge CI/CodeQL/native-container checks for `c2832ed` were running at the latest check.
+- PR #581 is a draft documentation PR. Its latest changes require the final CI/CodeQL run before it can be marked ready and merged.
+- Render production deployment was not verified because the Render connector has no workspace selected. No Render workspace was selected or modified.
