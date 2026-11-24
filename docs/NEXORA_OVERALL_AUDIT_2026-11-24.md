@@ -108,3 +108,37 @@ The most urgent cross-cutting risk is release coordination: the open pull-reques
 ## Audit limitations
 
 This is an initial repository and workflow audit based on GitHub source, metadata, pull-request diffs, and Actions logs. It is not a claim that every route, production database record, connected service, or real device has been exercised. No production data was read or changed. The ten workstreams remain open until their detailed inspection and verification are complete.
+
+
+## Additional source-level inspection
+
+### Maintainability concentration
+The following existing files are unusually large and should receive focused responsibility-boundary review before any broad refactor:
+
+| File | Lines | Approx. source bytes |
+|---|---:|---:|
+| `src/components/ProfileView.tsx` | 4,210 | 246,799 |
+| `src/App.tsx` | 3,749 | 182,086 |
+| `src/components/FeedView.tsx` | 3,503 | 174,762 |
+| `server.ts` | 1,914 | 106,918 |
+| `src/components/NexoraVideoPlayer.tsx` | 1,767 | 78,015 |
+| `src/components/NexoraStudio.tsx` | 1,526 | 138,534 |
+| `functions/src/index.ts` | 1,203 | 79,788 |
+
+These figures identify review candidates, not proof that splitting a file is automatically beneficial. The follow-up must map state ownership, side effects, data contracts, and test seams first, then refactor only where it reduces coupling without changing behavior.
+
+### Navigation consistency
+- The app defines a central `navigateTo` path that tracks scroll position, navigation history, viewed profiles, and the URL's `tab` parameter.
+- Some existing navigation entry points call `setActiveTab` directly instead. Examples visible in the current source include the Creator Studio action in `Sidebar.tsx` and the feed's Messages/VOH AI callbacks in `App.tsx`.
+- This creates a concrete consistency risk: those transitions do not necessarily pass through the same history, URL, and scroll-restoration behavior as destinations using `navigateTo`.
+- Follow-up: inventory every route transition and route all equivalent top-level navigation through one tested navigation contract. Preserve intentional overlay/subtab transitions.
+
+### Audit coverage inventory
+- The current tree contains 110 React component TSX files under `src/components`.
+- It contains 114 root `tests/*` test/spec files and 71 `functions/tests/*` test/spec files.
+- Test count is not a coverage percentage. The next QA pass must map tests to critical user journeys and distinguish behavior/integration tests from source-text assertions.
+
+### Pull-request base-branch anomaly
+- PR #580 targets `fix/auth-email-google-phone-only` instead of `main`.
+- Its changes are limited to three files and appear to be media retry and directory-search rendering changes. Do not retarget or merge it until comparing the feature branch against current `main` and verifying that no required authentication changes would be lost or duplicated.
+- PR #573 is dirty/non-mergeable and its production deployment change is still outstanding. PR #564 is also dirty/non-mergeable. Other current PRs need a similar base, overlap, check, and supersession review before the backlog is reduced.
