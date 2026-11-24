@@ -1,7 +1,7 @@
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { FieldPath, FieldValue, getFirestore, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { writeFile } from 'node:fs/promises';
-import { resolveFirebaseProjectId } from '../runtimeConfig.js';
+import { resolveFirebaseProjectId, resolveFirestoreDatabaseId } from '../runtimeConfig.js';
 
 const PAGE_SIZE = 200;
 const PRODUCTION_PROJECT_ID = 'nexora-prod-voiceharrison';
@@ -87,11 +87,12 @@ async function main(): Promise<void> {
     throw new Error(`Refusing non-emulator writes. Production apply requires project ${PRODUCTION_PROJECT_ID} and the explicit --confirm-production flag. No changes were made.`);
   }
 
+  const databaseId = resolveFirestoreDatabaseId();
   const app = initializeApp(
     { credential: applicationDefault(), projectId },
     `public-profile-private-field-scrub-${process.pid}`,
   );
-  const summary = await runPublicProfilePrivateFieldScrub(getFirestore(app), {
+  const summary = await runPublicProfilePrivateFieldScrub(getFirestore(app, databaseId), {
     dryRun: !apply,
     onProgress: progress => console.log(JSON.stringify({
       projectId,
