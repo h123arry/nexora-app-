@@ -1882,13 +1882,6 @@ function hashEmailOtp(uid: string, email: string, code: string, secret: string):
   return createHash('sha256').update(`${uid}:${email.toLowerCase()}:${code}:${secret}`).digest();
 }
 
-function escapeEmailHtml(value: string): string {
-  const entities: Record<string, string> = {
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  };
-  return value.replace(/[&<>"']/g, character => entities[character] || character);
-}
-
 app.post('/api/auth/send-email-otp', requireFirebaseUser, async (_req, res) => {
   const uid = res.locals.userId as string;
   const apiKey = process.env.RESEND_API_KEY?.trim();
@@ -1951,11 +1944,7 @@ app.post('/api/auth/send-email-otp', requireFirebaseUser, async (_req, res) => {
       });
     }
 
-    const profile = await serverDb.collection('users').doc(uid).get();
-    const rawName = profile.data()?.name;
-    const userName = typeof rawName === 'string' && rawName.trim() ? rawName.trim() : account.displayName || 'there';
-    const safeName = escapeEmailHtml(userName);
-    const html = `<!doctype html><html><body style="margin:0;background:#070914;padding:32px 12px;font-family:Arial,sans-serif;color:#f5f7ff"><div style="max-width:480px;margin:auto;background:#111329;border:1px solid #29234b;border-radius:18px;padding:32px"><div style="font-size:12px;letter-spacing:3px;color:#a78bfa;font-weight:700">NEXORA</div><h1 style="font-size:24px;margin:24px 0 12px">Verify your email</h1><p style="color:#c4c4d4;line-height:1.6">Hi ${safeName}, enter this six-digit code in NEXORA to verify your email address.</p><div style="margin:28px 0;padding:20px;text-align:center;background:#1c1740;border:1px solid #5941a5;border-radius:12px;font:800 34px monospace;letter-spacing:9px;color:#fff">${code}</div><p style="color:#a4a4b5;font-size:13px">This code expires in 10 minutes. Never share it with anyone. If you did not request it, you can ignore this message.</p><p style="margin-top:28px;color:#a78bfa;font-size:13px">The NEXORA Security Team</p></div></body></html>`;
+    const html = `<!doctype html><html><body style="margin:0;background:#070914;padding:32px 12px;font-family:Arial,sans-serif;color:#f5f7ff"><div style="max-width:480px;margin:auto;background:#111329;border:1px solid #29234b;border-radius:18px;padding:32px"><div style="font-size:12px;letter-spacing:3px;color:#a78bfa;font-weight:700">NEXORA</div><h1 style="font-size:24px;margin:24px 0 12px">Verify your email</h1><p style="color:#c4c4d4;line-height:1.6">Enter this six-digit code in NEXORA to verify your email address.</p><div style="margin:28px 0;padding:20px;text-align:center;background:#1c1740;border:1px solid #5941a5;border-radius:12px;font:800 34px monospace;letter-spacing:9px;color:#fff">${code}</div><p style="color:#a4a4b5;font-size:13px">This code expires in 10 minutes. Never share it with anyone. If you did not request it, you can ignore this message.</p><p style="margin-top:28px;color:#a78bfa;font-size:13px">The NEXORA Security Team</p></div></body></html>`;
     const delivery = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -1964,7 +1953,7 @@ app.post('/api/auth/send-email-otp', requireFirebaseUser, async (_req, res) => {
         to: [email],
         subject: 'Your NEXORA verification code',
         html,
-        text: `Hi ${userName}, your NEXORA email verification code is ${code}. It expires in 10 minutes. Never share this code.`,
+        text: `Your NEXORA email verification code is ${code}. It expires in 10 minutes. Never share this code.`,
       }),
     });
     if (!delivery.ok) {
