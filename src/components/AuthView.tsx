@@ -88,6 +88,9 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [emailOtpPending, setEmailOtpPending] = useState(false);
+  const [emailVerificationCode, setEmailVerificationCode] = useState('');
+  const [pendingEmailSignupUser, setPendingEmailSignupUser] = useState<User | null>(null);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   // Phone Auth states
@@ -237,14 +240,30 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
     setStatusMessage('Checking your sign-in details…');
 
     try {
-      const { user } = await AuthService.loginWithEmail(query, passwordInput, rememberMe);
-      await applyBetaInvite();
+      const { firebaseUser, user } = await AuthService.loginWithEmail(query, passwordInput, rememberMe);
       AuthService.clearFailedAttempts(query);
       if (rememberMe) {
         localStorage.setItem('nexora_remembered_identifier', query);
       } else {
         localStorage.removeItem('nexora_remembered_identifier');
       }
+      if (firebaseUser.email && !firebaseUser.emailVerified) {
+        setPendingEmailSignupUser(user);
+        setSignupEmail(firebaseUser.email);
+        setSignupMethod('email');
+        setEmailOtpPending(true);
+        setAuthMode('signup');
+        setOtpCountdown(60);
+        try {
+          await AuthService.sendEmailVerificationCode();
+          setSuccessMsg(`Verify your email with the 6-digit code sent to ${firebaseUser.email}.`);
+        } catch (verificationError) {
+          setErrorMsg(verificationError instanceof Error ? verificationError.message : 'NEXORA could not send your verification code.');
+        }
+        setIsPending(false);
+        return;
+      }
+      await applyBetaInvite();
       setIsPending(false);
       onLoginSuccess(user);
     } catch (error: any) {
@@ -382,22 +401,60 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
 
     try {
       // Use production-ready registration
-      const res = await AuthService.registerUserWithEmail(
-        cleanEmail,
-        signupPassword,
-        signupName.trim(),
-        defaultUsername
-      );
-      await applyBetaInvite();
-
-      // Onboarding transition
+      const res = await AuthService.registerUserWithEmail(cleanEmail, signupPassword, signupName.trim(), defaultUsername);
+      setPendingEmailSignupUser(res.user);
+      setEmailOtpPending(true);
+      setOtpCountdown(60);
+      await AuthService.sendEmailVerificationCode();
+      setSuccessMsg(`We sent a 6-digit verification code to ${cleanEmail}. It expires in 10 minutes.`);
       setIsPending(false);
-      setOnboardingUser(res.user);
-      setOnboardingUsername(res.user.username);
-      setOnboardingStep(1);
     } catch (firebaseErr: any) {
       setIsPending(false);
-      setErrorMsg(AuthService.mapFirebaseError(firebaseErr));
+      setErrorMsg(firebaseErr instanceof Error ? firebaseErr.message : AuthService.mapFirebaseError(firebaseErr));
+    }
+  };
+
+  const handleEmailOtpVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    if (!/^\d{6}$/.test(emailVerificationCode.trim())) {
+      setErrorMsg('Enter the complete 6-digit code sent to your email.');
+      return;
+    }
+    if (!pendingEmailSignupUser) {
+      setErrorMsg('Your signup session could not be restored. Sign in and request a new verification code.');
+      return;
+    }
+    setIsPending(true);
+    setStatusMessage('Verifying your email address…');
+    try {
+      await AuthService.verifyEmailVerificationCode(emailVerificationCode.trim());
+      await applyBetaInvite();
+      setEmailOtpPending(false);
+      setEmailVerificationCode('');
+      const verifiedUser = { ...pendingEmailSignupUser, isVerified: true };
+      setOnboardingUser(verifiedUser);
+      setOnboardingUsername(verifiedUser.username);
+      setOnboardingStep(1);
+      setIsPending(false);
+      setSuccessMsg('');
+    } catch (error) {
+      setIsPending(false);
+      setErrorMsg(error instanceof Error ? error.message : 'NEXORA could not verify that code. Please try again.');
+    }
+  };
+
+  const handleEmailOtpResend = async () => {
+    setErrorMsg('');
+    setIsPending(true);
+    try {
+      setOtpCountdown(60);
+      await AuthService.sendEmailVerificationCode();
+      setSuccessMsg('A new verification code has been sent to your email.');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'NEXORA could not resend your code.');
+    } finally {
+      setIsPending(false);
     }
   };
 
@@ -1109,7 +1166,7 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
               )}
 
               {/* Email Signup Form */}
-              {signupMethod === 'email' && (
+              {signupMethod === 'email' && !emailOtpPending && (
                 <form onSubmit={handleEmailSignupSubmit} className="space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-zinc-300">Full Name</label>
@@ -1208,6 +1265,31 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
                     >
                       Create Account
                     </button>
+                  </div>
+                </form>
+              )}
+
+              {signupMethod === 'email' && emailOtpPending && (
+                <form onSubmit={handleEmailOtpVerify} className="space-y-4">
+                  <div className="space-y-2">
+                    <h2 className="text-lg font-black text-white">Verify your email</h2>
+                    <p className="text-sm leading-relaxed text-zinc-400">Enter the 6-digit code we sent to <span className="font-semibold text-white">{signupEmail}</span>. The code expires in 10 minutes.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-zinc-300">Verification code</label>
+                    <input type="text" inputMode="numeric" autoComplete="one-time-code" value={emailVerificationCode}
+                      onChange={(event) => setEmailVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000" maxLength={6} required
+                      className="w-full px-4 py-4 bg-black/40 border border-white/10 rounded-2xl text-center text-2xl font-black tracking-[0.45em] text-white placeholder-zinc-700 focus:outline-none focus:border-violet-500 transition-all" />
+                  </div>
+                  <button type="submit" disabled={isPending || emailVerificationCode.length !== 6} className="w-full py-3.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition-all disabled:opacity-50">
+                    {isPending ? 'Verifying…' : 'Verify email and continue'}
+                  </button>
+                  <div className="flex items-center justify-between text-xs">
+                    <button type="button" onClick={handleEmailOtpResend} disabled={isPending || otpCountdown > 0} className="text-violet-300 font-bold disabled:text-zinc-500">
+                      {otpCountdown > 0 ? `Resend code in ${otpCountdown}s` : 'Resend code'}
+                    </button>
+                    <button type="button" onClick={() => { setEmailOtpPending(false); setEmailVerificationCode(''); setSignupMethod('choose'); }} className="text-zinc-400 hover:text-white">Back</button>
                   </div>
                 </form>
               )}
