@@ -251,3 +251,18 @@ test('offline recovery uses one concise banner and cleans reconnect timers', asy
   assert.match(banner, /<span>Offline<\/span>/);
   assert.match(banner, /<span>Back online<\/span>/);
 });
+
+
+test('privacy center does not present device-only previews as active server safeguards', async () => {
+  const privacy = await read('../src/components/PrivacySettingsModal.tsx');
+  assert.match(privacy, /Privacy control availability/);
+  assert.match(privacy, /not every control here is an active privacy safeguard/);
+  assert.match(privacy, /not currently enforced by NEXORA's messaging servers/);
+  assert.match(privacy, /do not currently change your server-side search or recommendation visibility/);
+  assert.match(privacy, /This does not lock or encrypt chats/);
+  assert.match(privacy, /PREVIEW MODE IS ON — Your account remains visible in NEXORA search and suggestions/);
+  assert.doesNotMatch(privacy, /Your account will not appear in search or suggestions|Hidden Active|badge: 'Locked'/);
+  assert.match(privacy, /nx_privacy_presence/);
+  assert.match(privacy, /nx_privacy_messaging/);
+  assert.match(privacy, /nx_privacy_discoverability/);
+});
