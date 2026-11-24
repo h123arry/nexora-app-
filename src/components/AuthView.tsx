@@ -424,7 +424,7 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
   const handleEmailOtpVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    if (!/^\\d{6}$/.test(emailVerificationCode.trim())) {
+    if (!/^\d{6}$/.test(emailVerificationCode.trim())) {
       setErrorMsg('Enter the complete 6-digit code sent to your email.');
       return;
     }
@@ -1291,7 +1291,7 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
                       inputMode="numeric"
                       autoComplete="one-time-code"
                       value={emailVerificationCode}
-                      onChange={(event) => setEmailVerificationCode(event.target.value.replace(/\\D/g, '').slice(0, 6))}
+                      onChange={(event) => setEmailVerificationCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="000000"
                       maxLength={6}
                       required
