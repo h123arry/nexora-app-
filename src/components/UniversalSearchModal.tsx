@@ -499,7 +499,7 @@ export default function UniversalSearchModal({
                   )}
                   {serverSearchLoading && <p className="text-xs text-violet-200/70">Searching the live NEXORA directory…</p>}
                   {serverSearchError && <p role="status" className="text-xs text-amber-200/80">{serverSearchError}</p>}
-                  {!universalSearchResults?.results.length && serverResults && (
+                  {serverResults && (
                     <section className="space-y-4 rounded-2xl border border-violet-400/20 bg-violet-500/[0.04] p-4" aria-label="Live directory results">
                       <h4 className="text-xs font-mono uppercase tracking-widest text-violet-300">Live NEXORA directory</h4>
                       {serverResults.people.length > 0 && <div className="space-y-2">
