@@ -288,3 +288,11 @@ The three-file patch itself needs review:
 ### Superseded PR cleanup
 - PR #573 was closed as superseded by clean-main PR #583, which contains the same video callable allowlist/path-filter correction plus a regression guard.
 - PR #564 contains the same public-profile privacy changes now separated into #582 and #585, plus offline/Spark/Follow reliability changes reconstructed in #586. Close #564 only after #586's checks pass, so no unique behavior is discarded.
+
+
+## Authentication and anonymous-session audit
+
+- The current client auth service imports email/password, phone, Google, and sign-out methods; it does not import or call Firebase `signInAnonymously` for new sessions.
+- Anonymous-session references remain in the account-linking and migration paths so legacy anonymous UIDs can be upgraded to permanent credentials or handled safely.
+- This supports the distinction between legacy anonymous-account compatibility and automatically creating new anonymous users.
+- The Firebase Console's Anonymous provider toggle cannot be verified from repository source. The code audit alone cannot prove whether the provider is enabled in the live project.
