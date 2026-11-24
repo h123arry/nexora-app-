@@ -107,7 +107,7 @@ import PwaUpdatePrompt from './components/PwaUpdatePrompt';
 import IncomingDirectCallListener from './components/IncomingDirectCallListener';
 
 export default function App() {
-  const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, retryProfileLoad, logout } = useFirebase();
+  const { firebaseUser, user: firebaseProfile, initializing: authInitializing, retryProfileLoad, logout } = useFirebase();
   useEffect(() => {
     const connection = (navigator as Navigator & {
       connection?: EventTarget & { saveData?: boolean };
@@ -130,6 +130,16 @@ export default function App() {
     };
   }, []);
   const isLoggedIn = !!firebaseUser && firebaseProfile?.id === firebaseUser.uid;
+  useEffect(() => {
+    if (!firebaseUser || firebaseProfile?.id === firebaseUser.uid || authInitializing) return;
+    // Recover quietly in the background. Keep the Firebase identity intact and
+    // avoid presenting a manual retry/sign-out gate during transient Firestore errors.
+    const retry = window.setTimeout(() => {
+      void retryProfileLoad().catch(() => undefined);
+    }, 15000);
+    return () => window.clearTimeout(retry);
+  }, [firebaseUser?.uid, firebaseProfile?.id, authInitializing, retryProfileLoad]);
+
   // Anonymous Firebase identities can browse, but incomplete account profiles
   // must open the signup/profile flow before attempting follow or post writes.
   const requiresPublicAccountSetup = isLoggedIn && firebaseUser?.isAnonymous === true && !!firebaseProfile
@@ -3618,15 +3628,9 @@ export default function App() {
   // A Firebase identity without its profile is still a signed-in account,
   // never a guest. Keep the account state explicit and offer safe recovery.
   if (firebaseUser && !firebaseProfile) {
-    return (
-      <div className="min-h-screen bg-[#050914] text-white flex items-center justify-center p-6">
-        <div className="w-full max-w-md space-y-4 text-center">
-          <h1 className="text-xl font-bold">Restoring your NEXORA account</h1>
-          <p className="text-sm text-slate-300">{authError || "Your sign-in is active. NEXORA is reconnecting your account profile."}</p>
-          <button type="button" onClick={() => void retryProfileLoad().catch(() => undefined)} className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white hover:bg-violet-500">Retry account sync</button>
-        </div>
-      </div>
-    );
+    // Never turn a recoverable profile-read delay into an account-action screen.
+    // The provider retries automatically while preserving Firebase auth state.
+    return <NexoraLoader />;
   }
 
   return (
