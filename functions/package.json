@@ -10,7 +10,8 @@
     "build": "tsc",
     "lint": "tsc --noEmit",
     "migrate:public-post-audience": "node lib/migrations/backfillPublicPostAudience.js",
-    "migrate:legacy-worldweave-media": "node lib/migrations/revokeLegacyWorldWeaveDownloadTokens.js"
+    "migrate:legacy-worldweave-media": "node lib/migrations/revokeLegacyWorldWeaveDownloadTokens.js",
+    "migrate:public-profile-private-fields": "node lib/migrations/scrubPublicProfilePrivateFields.js"
   },
   "dependencies": {
     "firebase-admin": "^14.5.1",
