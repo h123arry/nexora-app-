@@ -167,3 +167,24 @@ The divergence counts are a coordination warning, not proof that every commit is
 - Draft audit PR: #581, based on current main.
 - The report branch is isolated; no application source, Firebase rules, production data, secrets, or deployment settings were modified.
 - CodeQL and Nexora CI for the documentation PR were still running at the latest check. Do not merge or claim validation complete until both checks finish successfully.
+
+
+## Existing-feature integration gaps explicitly documented in README
+
+The current README is unusually candid about several existing experiences that must be included in the functionality audit. These are repository-documented limitations and should be revalidated against the current live project before being treated as current production facts:
+
+- World Pulse controls exist, but live aggregation, map data, measured trends, and alert delivery are described as not connected.
+- Circle timed-mute enforcement and the secure Circle media upload/download pipeline are described as incomplete.
+- Messaging has local sending/sent/failed states and a read-receipt writer, but reliable end-to-end delivered receipts are not established; non-voice chat attachments are not available in the described UI.
+- Feed preference filtering is described as client-side over currently loaded posts, with cross-device production behavior unverified and a known empty-feed fallback inconsistency for not-interested tags.
+- Creator analytics are described as not yet verified as a creator-level analytics/revenue product; some observations are client-originated and scheduled aggregation is unverified.
+- Live NEX withdrawals are gated on finance approval, provider verification, funded settlement, compliance approval, verified webhooks, and a successful live transfer.
+- Business booking reminders require deployment of a scheduled function and index; checkout, payment collection, external calendar sync, email, and SMS reminders are not described as connected.
+- VOH chat history and optional memory are browser-local; cloud memory sync and model-context attachment are not implemented in the described state.
+- Push code may obtain browser tokens and handle foreground messages, but backend token registration/sending and reliable background/closed-tab delivery are not established.
+
+The README also records production infrastructure questions that require a fresh owner-side console check: named Firestore database API preview status, App Check setup, authorized custom host, Storage provisioning/billing, published rules/indexes, scheduled backups, and live authentication. Some of these statements may be historical snapshots. They must be verified before changing architecture or declaring a blocker resolved.
+
+## Dependency and release hygiene
+
+The open backlog includes major-version dependency proposals (including Firebase, Vite, TypeScript, and Firebase Rules test tooling) as well as GitHub Actions runtime updates. These should not be bulk-merged. Review changelogs, Node 22 compatibility, Firebase behavior, build outputs, emulator behavior, native builds, and production dependency audits on isolated branches. Keep the currently passing main dependency set intact until replacements pass the complete relevant test matrix.
