@@ -255,3 +255,14 @@ The current `TODO.md` contains 15 unchecked release-quality items, not new featu
 - Consistency of browser/PWA/route metadata with the NEXORA identity.
 
 These items should be verified against the current app and either completed, superseded with an explicit reason, or removed only when evidence shows the requirement no longer applies. They should not be treated as invitations to add new surfaces.
+
+
+## Additional audit PRs and validation state
+
+- PR #584 centralizes existing top-level route transitions through the app's navigation helper and fixes the Creator Studio sidebar shortcut. Nexora CI, CodeQL, Android debug build/tests, iOS simulator build, and container build passed on its latest revision.
+- PR #585 adds the owner-controlled public-profile privacy scrub migration and runbook. CodeQL passed; its migration emulator step passed, and the full Nexora/native CI workflows were still running at the latest status check.
+- PR #583 now also adds a deployment-metadata regression guard so the three public video analytics callables cannot silently disappear from the production allowlist or path filters. Its earlier CI and CodeQL passed before that validator addition; the latest revision is being revalidated.
+- PR #582 has passed Nexora CI, CodeQL, and native/container CI. It remains unmerged until the public-profile scrub dry-run and owner-approved production migration are completed.
+- PR #581 remains a draft audit-report PR; its latest recorded Nexora CI and CodeQL checks passed before the most recent report update and must rerun before merge.
+
+The repository had 73 open PRs at the beginning of this audit. Five audit PRs (#581–#585) have since been opened, so the open backlog has grown to 78 while these focused changes remain isolated. No pull request has been merged and no production deployment has been claimed as complete in this audit session.
