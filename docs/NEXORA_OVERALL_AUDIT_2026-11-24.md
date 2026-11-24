@@ -240,3 +240,18 @@ The current `src/index.css` is 91,889 bytes and 2,879 lines. Source inspection f
 - There are repeated selectors and theme-specific overrides across the long stylesheet, making visual changes harder to reason about and increasing regression risk.
 
 This should be handled as a dedicated design-system consolidation: define one authoritative palette/token layer, map existing components to semantic tokens, then remove obsolete overrides in small verified groups. Do not mass-replace colors across the whole application without screenshot comparison at mobile, tablet, and desktop widths.
+
+
+## Existing product TODO inventory
+
+The current `TODO.md` contains 15 unchecked release-quality items, not new feature requests. They cluster around:
+- Mobile feed safe areas, horizontal overflow, and nested scrolling.
+- The existing Create flow's completeness and publishing controls.
+- Discovery relevance and hierarchy.
+- Consistent naming and reachability across Home, Explore, Communities, Reels, Messages, Activity, Profile, Create, Creator Studio, and Settings.
+- Report entry points and discoverability of privacy, block, mute, hidden-chat, deletion, and session controls.
+- Clear privacy and authentication explanations.
+- Shared token adoption, touch targets, focus/pressed states, and reduced motion.
+- Consistency of browser/PWA/route metadata with the NEXORA identity.
+
+These items should be verified against the current app and either completed, superseded with an explicit reason, or removed only when evidence shows the requirement no longer applies. They should not be treated as invitations to add new surfaces.
