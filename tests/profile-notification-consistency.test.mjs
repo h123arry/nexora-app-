@@ -235,3 +235,19 @@ test('auth profile hydration avoids redundant public-projection reads and writes
   assert.doesNotMatch(hydration, /setDoc\(doc\(db, 'publicProfiles'/);
   assert.match(hydration, /Projection writes belong to profile creation and/);
 });
+
+
+test('offline recovery uses one concise banner and cleans reconnect timers', async () => {
+  const [app, banner] = await Promise.all([
+    read('../src/App.tsx'),
+    read('../src/components/OfflineBanner.tsx'),
+  ]);
+  assert.doesNotMatch(app, /Dynamic sync restored! Back online|New posts will be queued/);
+  assert.match(app, /if \(prev\.some\(toast => toast\.message === message\)\) return prev/);
+  assert.match(app, /\.slice\(-2\)/);
+  assert.match(banner, /reconnectTimerRef = useRef/);
+  assert.match(banner, /if \(reconnectTimerRef\.current\) clearTimeout\(reconnectTimerRef\.current\)/);
+  assert.match(banner, /reconnectTimerRef\.current = null/);
+  assert.match(banner, /<span>Offline<\/span>/);
+  assert.match(banner, /<span>Back online<\/span>/);
+});
