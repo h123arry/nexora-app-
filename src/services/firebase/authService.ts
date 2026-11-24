@@ -2,7 +2,6 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   browserLocalPersistence,
-  sendEmailVerification, 
   sendPasswordResetEmail, 
   updatePassword,
   RecaptchaVerifier, 
