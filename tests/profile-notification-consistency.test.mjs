@@ -266,3 +266,16 @@ test('privacy center does not present device-only previews as active server safe
   assert.match(privacy, /nx_privacy_messaging/);
   assert.match(privacy, /nx_privacy_discoverability/);
 });
+
+
+test('unimplemented hidden-chat PIN controls cannot collect or store a real secret', async () => {
+  const privacy = await read('../src/components/PrivacySettingsModal.tsx');
+  const hiddenChats = privacy.match(/\{activeTab === 'hidden_chats'[\s\S]*?(?=\{activeTab === 'safety')/)?.[0] || '';
+  assert.ok(hiddenChats, 'hidden-chat settings panel should be present');
+  assert.match(hiddenChats, /Chat locking is not available yet/);
+  assert.match(hiddenChats, /disabled[\s\S]*?aria-disabled="true"/);
+  assert.match(hiddenChats, /placeholder="Unavailable"[\s\S]*?value=""/);
+  assert.match(hiddenChats, /PIN storage/);
+  assert.match(hiddenChats, /Unavailable/);
+  assert.doesNotMatch(hiddenChats, /setTempPIN|Your chat lock PIN has been changed|New 4-digit PIN/);
+});
