@@ -109,7 +109,9 @@ test('signup uses email/password and Google without a username credential path',
   assert.match(authService, /signInWithPopup\(auth, provider\)/);
   assert.doesNotMatch(authService, /loginWithUsername|completeUsernameRegistration|USERNAME_LOGIN_DOMAIN/);
   assert.match(profileService, /email: firebaseUser\.email/);
-  assert.match(authService, /sendEmailVerification\(fbUser\)/);
+  assert.doesNotMatch(authService, /sendEmailVerification\(fbUser\)/);
+  assert.match(authService, /sendEmailVerificationCode/);
+  assert.match(authView, /Verify email and continue/);
 });
 
 test('profile edits persist non-identity fields while identity changes use the server endpoint', async () => {
