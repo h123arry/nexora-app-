@@ -29,7 +29,6 @@ export const RANKING_WEIGHTS = Object.freeze({
   interest: 8,
   recency: 1.6,
   meaningfulConversation: 3,
-  verifiedTrust: 2,
   popularity: 4,
   unseen: 10,
 });
@@ -165,7 +164,6 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
             : interestScore + explorationScore + freshness + followBoost + unseenBoost
               + creatorOpportunityScore(post)
               + engagementScore(post) * RANKING_WEIGHTS.popularity * freshnessMultiplier(age, 36)
-              + (post.isVerified ? RANKING_WEIGHTS.verifiedTrust : 0)
               + feedbackScore * 0.5;
       const reasons: string[] = [];
       if (followBoost) reasons.push('from an account you follow');
@@ -324,7 +322,7 @@ export function recommendCreators<T extends User>(
       .slice(0, 3);
     const overlap = sharedTopics.reduce((sum, tag) =>
       sum + Math.min(interests[tag] || 0, Math.max(0, Math.min(100, Number(creator.interestDNA[tag] || creator.interestDNA[`#${tag}`] || 0)))), 0);
-    const score = Math.round(overlap + (creator.isVerified ? 3 : 0) + Math.min(5, Math.log1p(Math.max(0, creator.followers || 0))));
+    const score = Math.round(overlap + Math.min(5, Math.log1p(Math.max(0, creator.followers || 0))));
     return { creator, score, sharedTopics, reason: sharedTopics.length ? `Shares your interest in ${sharedTopics.map(tag => `#${tag}`).join(', ')}` : 'A creator to discover', index };
   })
     .filter(item => item.score > 0 && (Object.keys(interests).length === 0 || item.sharedTopics.length > 0))
