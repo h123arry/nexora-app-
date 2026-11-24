@@ -1362,14 +1362,9 @@ export default function App() {
   useEffect(() => {
     const handleOnline = () => {
       setIsOffline(false);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📶 Dynamic sync restored! Back online.' }));
-      
       setIsSyncPending(prev => {
         if (prev) {
-          setTimeout(() => {
-            setIsSyncPending(false);
-            window.dispatchEvent(new CustomEvent('toast', { detail: '✨ All pending data packets successfully updated!' }));
-          }, 2000);
+          window.setTimeout(() => setIsSyncPending(false), 2000);
           return true;
         }
         return false;
@@ -1378,7 +1373,6 @@ export default function App() {
 
     const handleOffline = () => {
       setIsOffline(true);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ You are currently offline. New posts will be queued.' }));
     };
 
     const handleToast = (e: Event) => {
@@ -1387,11 +1381,13 @@ export default function App() {
       if (!message) return;
       
       const id = crypto.randomUUID();
-      setToasts(prev => [...prev, { id, message }]);
-      
-      setTimeout(() => {
+      setToasts(prev => {
+        if (prev.some(toast => toast.message === message)) return prev;
+        return [...prev, { id, message }].slice(-2);
+      });
+      window.setTimeout(() => {
         setToasts(prev => prev.filter(t => t.id !== id));
-      }, 3500);
+      }, 2500);
     };
 
     window.addEventListener('online', handleOnline);
@@ -1681,10 +1677,12 @@ export default function App() {
   // 5. Shared Post Interact Controllers
   const handleLikePost = (postId: string) => {
     requireAuth(() => {
-      if (!firebaseUser || !likeStateReadyRef.current) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your liked-post state is still syncing. Please try again.' }));
+      if (!firebaseUser) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Please sign in again to send a Spark.' }));
         return;
       }
+      // The authenticated server transaction is authoritative and idempotent;
+      // reconcile stale local Spark state rather than blocking the user's action.
       if (pendingLikeRequestsRef.current.has(postId)) return;
       const desiredLiked = !userSparks.includes(postId);
       pendingLikeRequestsRef.current.add(postId);
@@ -2019,9 +2017,11 @@ export default function App() {
   const handleToggleFollow = (creatorId: string) => {
     requireAuth(() => {
       const followerId = firebaseUser?.uid;
-      if (!followerId || currentUser.id !== followerId) {
+      // Firebase UID is the canonical actor. The authenticated server endpoint
+      // independently verifies the token and derives the actor UID itself.
+      if (!followerId) {
         window.dispatchEvent(new CustomEvent('toast', {
-          detail: 'Your account is still syncing. Please try following again.',
+          detail: 'Please sign in again to follow this account.',
         }));
         return;
       }
