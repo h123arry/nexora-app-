@@ -1944,7 +1944,41 @@ app.post('/api/auth/send-email-otp', requireFirebaseUser, async (_req, res) => {
       });
     }
 
-    const html = `<!doctype html><html><body style="margin:0;background:#070914;padding:32px 12px;font-family:Arial,sans-serif;color:#f5f7ff"><div style="max-width:480px;margin:auto;background:#111329;border:1px solid #29234b;border-radius:18px;padding:32px"><div style="font-size:12px;letter-spacing:3px;color:#a78bfa;font-weight:700">NEXORA</div><h1 style="font-size:24px;margin:24px 0 12px">Verify your email</h1><p style="color:#c4c4d4;line-height:1.6">Enter this six-digit code in NEXORA to verify your email address.</p><div style="margin:28px 0;padding:20px;text-align:center;background:#1c1740;border:1px solid #5941a5;border-radius:12px;font:800 34px monospace;letter-spacing:9px;color:#fff">${code}</div><p style="color:#a4a4b5;font-size:13px">This code expires in 10 minutes. Never share it with anyone. If you did not request it, you can ignore this message.</p><p style="margin-top:28px;color:#a78bfa;font-size:13px">The NEXORA Security Team</p></div></body></html>`;
+    const html = `<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"></head>
+  <body style="margin:0;background:#050914;padding:36px 14px;font-family:Arial,Helvetica,sans-serif;color:#f5f7ff">
+    <div style="max-width:520px;margin:0 auto">
+      <div style="overflow:hidden;background:#0b1020;border:1px solid #282044;border-radius:22px">
+        <div style="padding:30px 30px 24px;text-align:center;background:linear-gradient(145deg,#17102f 0%,#0b1020 75%)">
+          <a href="https://nexoraapp.com.ng" style="display:inline-block;text-decoration:none" aria-label="NEXORA home">
+            <img src="https://nexoraapp.com.ng/nexora-mark.png" width="64" height="64" alt="NEXORA" style="display:block;width:64px;height:64px;object-fit:contain;margin:0 auto 14px;border:0">
+          </a>
+          <div style="font-size:17px;letter-spacing:4px;font-weight:800;color:#fff">NEXORA</div>
+          <div style="margin-top:7px;font-size:11px;letter-spacing:1.5px;color:#b7a5ee">THE WORLD'S LIVING SOCIAL NETWORK</div>
+        </div>
+        <div style="padding:30px">
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#a78bfa;font-weight:700">Account security</div>
+          <h1 style="font-size:25px;line-height:1.25;margin:12px 0;color:#fff">Verify your email</h1>
+          <p style="margin:0;color:#c4c4d4;font-size:14px;line-height:1.75">Enter this six-digit code in NEXORA to verify your email address and finish securing your account.</p>
+          <div style="margin:28px 0;padding:22px 14px;text-align:center;background:#171333;border:1px solid #6546bd;border-radius:14px">
+            <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#b9a7f4;font-weight:700">Your verification code</div>
+            <div style="font-size:35px;font-weight:800;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:9px;color:#fff;margin-top:12px">${code}</div>
+            <div style="margin-top:12px;font-size:12px;color:#b9b4cb">Expires in <strong style="color:#fff">10 minutes</strong></div>
+          </div>
+          <div style="padding:14px 16px;background:#17101a;border:1px solid #493044;border-radius:12px">
+            <p style="margin:0;color:#e6cbd7;font-size:12px;line-height:1.65"><strong>Security notice:</strong> Never share this code with anyone, including someone claiming to be from NEXORA. If you did not request it, you can ignore this email.</p>
+          </div>
+          <p style="margin:25px 0 0;color:#b7a5ee;font-size:13px;font-weight:700">The NEXORA Security Team</p>
+        </div>
+      </div>
+      <div style="padding:20px 12px;text-align:center">
+        <a href="https://nexoraapp.com.ng" style="color:#b7a5ee;font-size:12px;text-decoration:none">nexoraapp.com.ng</a>
+        <p style="margin:9px 0 0;color:#77758c;font-size:11px;line-height:1.6">One network. Real connections. Endless possibilities.<br>© ${new Date().getFullYear()} NEXORA</p>
+      </div>
+    </div>
+  </body>
+</html>`;
     const delivery = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -1953,7 +1987,7 @@ app.post('/api/auth/send-email-otp', requireFirebaseUser, async (_req, res) => {
         to: [email],
         subject: 'Your NEXORA verification code',
         html,
-        text: `Your NEXORA email verification code is ${code}. It expires in 10 minutes. Never share this code.`,
+        text: `NEXORA — The World's Living Social Network\n\nVerify your email\n\nYour six-digit verification code is ${code}. It expires in 10 minutes. Never share this code.\n\nIf you did not request this email, you can ignore it.\n\nhttps://nexoraapp.com.ng\nThe NEXORA Security Team`,
       }),
     });
     if (!delivery.ok) {

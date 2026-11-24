@@ -440,11 +440,13 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
       setEmailOtpPending(false);
       setEmailVerificationCode('');
       const verifiedUser = { ...pendingEmailSignupUser, isVerified: true };
-      setOnboardingUser(verifiedUser);
-      setOnboardingUsername(verifiedUser.username);
-      setOnboardingStep(1);
+      setPendingEmailSignupUser(null);
       setIsPending(false);
       setSuccessMsg('');
+      // Email verification completes authentication. The profile was provisioned
+      // during registration, so take the member straight into NEXORA rather
+      // than showing another onboarding step that can look like a cancel gate.
+      onLoginSuccess(verifiedUser);
     } catch (error) {
       setIsPending(false);
       setErrorMsg(error instanceof Error ? error.message : 'NEXORA could not verify that code. Please try again.');

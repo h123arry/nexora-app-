@@ -130,6 +130,17 @@ export default function App() {
     };
   }, []);
   const isLoggedIn = !!firebaseUser && firebaseProfile?.id === firebaseUser.uid;
+  useEffect(() => {
+    if (!firebaseUser || !authError || authInitializing) return;
+    // Recover quietly in the background. Keep the Firebase identity intact and
+    // retry with a short delay after each failed attempt until the canonical
+    // profile is hydrated or the Firebase session changes.
+    const retry = window.setTimeout(() => {
+      void retryProfileLoad().catch(() => undefined);
+    }, 15000);
+    return () => window.clearTimeout(retry);
+  }, [firebaseUser?.uid, authError, authInitializing]);
+
   // Anonymous Firebase identities can browse, but incomplete account profiles
   // must open the signup/profile flow before attempting follow or post writes.
   const requiresPublicAccountSetup = isLoggedIn && firebaseUser?.isAnonymous === true && !!firebaseProfile
@@ -2368,13 +2379,9 @@ export default function App() {
     return <div className="min-h-screen flex items-center justify-center bg-[#07060b]"><NexoraLoader center label="Restoring your NEXORA profile…" /></div>;
   }
   if (firebaseUser && !firebaseUser.isAnonymous && !firebaseProfile) {
-    return <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#07060b] p-6 text-center text-white">
-      <p role="alert" className="max-w-md text-sm text-rose-200">{authError || 'Your account profile could not be loaded. Private screens remain locked.'}</p>
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => retryProfileLoad().catch(() => undefined)}>Retry profile sync</button>
-        <button className="rounded-xl border border-white/15 px-4 py-2 text-sm" onClick={() => logout().catch(() => window.location.reload())}>Sign out</button>
-      </div>
-    </div>;
+    // Keep the member in a calm branded restoration state; profile recovery
+    // retries automatically and never offers an unnecessary sign-out action.
+    return <NexoraLoader center label="Restoring your NEXORA account…" />;
   }
 
   // Render Core layout
@@ -3618,15 +3625,9 @@ export default function App() {
   // A Firebase identity without its profile is still a signed-in account,
   // never a guest. Keep the account state explicit and offer safe recovery.
   if (firebaseUser && !firebaseProfile) {
-    return (
-      <div className="min-h-screen bg-[#050914] text-white flex items-center justify-center p-6">
-        <div className="w-full max-w-md space-y-4 text-center">
-          <h1 className="text-xl font-bold">Restoring your NEXORA account</h1>
-          <p className="text-sm text-slate-300">{authError || "Your sign-in is active. NEXORA is reconnecting your account profile."}</p>
-          <button type="button" onClick={() => void retryProfileLoad().catch(() => undefined)} className="rounded-xl bg-violet-600 px-5 py-3 text-sm font-bold text-white hover:bg-violet-500">Retry account sync</button>
-        </div>
-      </div>
-    );
+    // Never turn a recoverable profile-read delay into an account-action screen.
+    // The provider retries automatically while preserving Firebase auth state.
+    return <NexoraLoader />;
   }
 
   return (
