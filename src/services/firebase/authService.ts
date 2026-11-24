@@ -658,7 +658,7 @@ export class AuthService {
     await this.requireRecentAccountAuthentication(currentUser);
     try {
       const result = await linkWithCredential(currentUser, EmailAuthProvider.credential(cleanEmail, password));
-      await sendEmailVerification(result.user);
+      await this.sendEmailVerificationCode();
       await result.user.getIdToken(true);
     } catch (error) {
       const code = (error as { code?: string })?.code;
