@@ -40,21 +40,27 @@ import {
 } from '../data/database';
 
 
-/** Retry a transient public media gateway failure once without changing profile layout. */
+/** Retry transient public media failures without ever hiding the profile image element. */
 function retryProfileMediaLoad(event: React.SyntheticEvent<HTMLImageElement>) {
   const image = event.currentTarget;
   if (!image.src.includes('/api/media/')) return;
-  if (image.dataset.nexoraRetry === '1') {
-    image.style.opacity = '0';
+  const attempts = Number(image.dataset.nexoraRetry || '0');
+  if (attempts >= 3) {
+    image.dataset.nexoraMediaState = 'unavailable';
+    image.style.opacity = '1';
+    image.dispatchEvent(new CustomEvent('nexora:media-unavailable', { bubbles: true }));
     return;
   }
   try {
     const retryUrl = new URL(image.src);
-    retryUrl.searchParams.set('_nx_retry', String(Date.now()));
-    image.dataset.nexoraRetry = '1';
+    retryUrl.searchParams.set('_nx_retry', `${Date.now()}-${attempts + 1}`);
+    image.dataset.nexoraRetry = String(attempts + 1);
+    image.dataset.nexoraMediaState = 'retrying';
+    image.style.opacity = '1';
     image.src = retryUrl.toString();
   } catch {
-    image.style.opacity = '0';
+    image.dataset.nexoraMediaState = 'unavailable';
+    image.style.opacity = '1';
   }
 }
 
@@ -298,7 +304,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
                 <Mic className="h-4 w-4 shrink-0 text-violet-300" />
                 <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-violet-200">Voice</span>
               </div>
-              {thumbnail && <img src={thumbnail} alt="" loading="lazy" decoding="async" className="h-10 w-10 rounded-lg object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />}
+              {thumbnail && <img src={thumbnail} alt="" loading="lazy" decoding="async" className="h-10 w-10 rounded-lg object-cover" onError={retryProfileMediaLoad} />}
               <div className="min-w-0 space-y-1.5">
                 {voiceAudioUrl ? (
                   <audio controls preload="none" src={voiceAudioUrl} className="h-8 w-full max-w-full" aria-label="Play voice post" />
