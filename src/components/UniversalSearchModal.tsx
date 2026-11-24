@@ -424,19 +424,27 @@ export default function UniversalSearchModal({
                     {recentSearches.map((term) => (
                       <div
                         key={term}
-                        onClick={() => {
-                          setQuery(term);
-                          handleSaveSearch(term);
-                        }}
-                        className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-white/10 text-zinc-200 hover:text-white transition-all cursor-pointer text-sm font-sans"
+                        className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 text-sm font-sans text-zinc-200 transition-all hover:border-white/10 hover:bg-violet-500/20 hover:text-white"
                       >
-                        <Clock className="w-4 h-4 text-zinc-400 group-hover:text-violet-400" />
-                        <span>{term}</span>
                         <button
-                          onClick={(e) => handleRemoveRecent(term, e)}
-                          className="p-1 rounded-full hover:bg-white/20 text-zinc-400 hover:text-red-400 transition-colors"
+                          type="button"
+                          onClick={() => {
+                            setQuery(term);
+                            handleSaveSearch(term);
+                          }}
+                          aria-label={`Search for ${term}`}
+                          className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <Clock className="h-4 w-4 shrink-0 text-zinc-400 group-hover:text-violet-400" />
+                          <span className="truncate">{term}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleRemoveRecent(term, e)}
+                          aria-label={`Remove ${term} from recent searches`}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-white/20 hover:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
+                        >
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       </div>
                     ))}
