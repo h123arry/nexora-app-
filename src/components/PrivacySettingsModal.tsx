@@ -472,7 +472,7 @@ export default function PrivacySettingsModal({
             <div className="bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-indigo-500/20 px-6 py-2 border-b border-emerald-500/20 flex items-center justify-between text-xs text-emerald-400 font-mono">
               <span className="flex items-center gap-2">
                 <EyeOff className="w-4 h-4 animate-pulse text-emerald-400" />
-                <span>💎 HIDE MODE IS ON — Your account will not appear in search or suggestions.</span>
+                <span>💎 PREVIEW MODE IS ON — Your account remains visible in NEXORA search and suggestions.</span>
               </span>
               <button 
                 onClick={() => setDiscoverability(prev => ({ ...prev, hiddenAccountMode: false }))}
