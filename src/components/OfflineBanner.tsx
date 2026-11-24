@@ -20,6 +20,10 @@ export default function OfflineBanner() {
     const handleOffline = () => {
       setIsOnline(false);
       setShowReconnected(false);
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
     };
 
     window.addEventListener('online', handleOnline);
