@@ -245,7 +245,6 @@ export default function PrivacySettingsModal({
   });
   const [enteredPIN, setEnteredPIN] = useState('');
   const [pinChangeState, setPinChangeState] = useState<'idle' | 'verify' | 'new' | 'confirm'>('idle');
-  const [tempPIN, setTempPIN] = useState('');
 
   // 12. Safety Center (Mutes, Reports, Device Log)
   const [mutedUsers, setMutedUsers] = useState<any[]>([]);
