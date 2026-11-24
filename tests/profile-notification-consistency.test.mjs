@@ -251,3 +251,16 @@ test('offline recovery uses one concise banner and cleans reconnect timers', asy
   assert.match(banner, /<span>Offline<\/span>/);
   assert.match(banner, /<span>Back online<\/span>/);
 });
+
+
+test('recent search actions use separate accessible keyboard-operable buttons', async () => {
+  const search = await read('../src/components/UniversalSearchModal.tsx');
+  const recentSearches = search.match(/\{recentSearches\.map\(\(term\) => \([\s\S]*?\n\s*\)\)\}/)?.[0] || '';
+  assert.ok(recentSearches, 'recent search list should be present');
+  assert.match(recentSearches, /<button[\s\S]*?type="button"[\s\S]*?aria-label=/);
+  assert.match(recentSearches, /Search for \$\{term\}/);
+  assert.match(recentSearches, /Remove \$\{term\} from recent searches/);
+  assert.match(recentSearches, /min-h-10/);
+  assert.match(recentSearches, /h-10 w-10/);
+  assert.doesNotMatch(recentSearches, /<div[\s\S]*?onClick=\{\(\) => \{[\s\S]*?<button/);
+});
