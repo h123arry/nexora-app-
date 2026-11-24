@@ -107,7 +107,7 @@ import PwaUpdatePrompt from './components/PwaUpdatePrompt';
 import IncomingDirectCallListener from './components/IncomingDirectCallListener';
 
 export default function App() {
-  const { firebaseUser, user: firebaseProfile, initializing: authInitializing, retryProfileLoad, logout } = useFirebase();
+  const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, retryProfileLoad, logout } = useFirebase();
   useEffect(() => {
     const connection = (navigator as Navigator & {
       connection?: EventTarget & { saveData?: boolean };
@@ -131,14 +131,15 @@ export default function App() {
   }, []);
   const isLoggedIn = !!firebaseUser && firebaseProfile?.id === firebaseUser.uid;
   useEffect(() => {
-    if (!firebaseUser || firebaseProfile?.id === firebaseUser.uid || authInitializing) return;
+    if (!firebaseUser || !authError || authInitializing) return;
     // Recover quietly in the background. Keep the Firebase identity intact and
-    // avoid presenting a manual retry/sign-out gate during transient Firestore errors.
+    // retry with a short delay after each failed attempt until the canonical
+    // profile is hydrated or the Firebase session changes.
     const retry = window.setTimeout(() => {
       void retryProfileLoad().catch(() => undefined);
     }, 15000);
     return () => window.clearTimeout(retry);
-  }, [firebaseUser?.uid, firebaseProfile?.id, authInitializing]);
+  }, [firebaseUser?.uid, authError, authInitializing, retryProfileLoad]);
 
   // Anonymous Firebase identities can browse, but incomplete account profiles
   // must open the signup/profile flow before attempting follow or post writes.
