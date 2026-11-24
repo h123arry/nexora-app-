@@ -2378,13 +2378,9 @@ export default function App() {
     return <div className="min-h-screen flex items-center justify-center bg-[#07060b]"><NexoraLoader center label="Restoring your NEXORA profile…" /></div>;
   }
   if (firebaseUser && !firebaseUser.isAnonymous && !firebaseProfile) {
-    return <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#07060b] p-6 text-center text-white">
-      <p role="alert" className="max-w-md text-sm text-rose-200">{authError || 'Your account profile could not be loaded. Private screens remain locked.'}</p>
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => retryProfileLoad().catch(() => undefined)}>Retry profile sync</button>
-        <button className="rounded-xl border border-white/15 px-4 py-2 text-sm" onClick={() => logout().catch(() => window.location.reload())}>Sign out</button>
-      </div>
-    </div>;
+    // Keep the member in a calm branded restoration state; profile recovery
+    // retries automatically and never offers an unnecessary sign-out action.
+    return <NexoraLoader center label="Restoring your NEXORA account…" />;
   }
 
   // Render Core layout
