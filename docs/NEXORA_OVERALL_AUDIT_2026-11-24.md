@@ -273,3 +273,18 @@ The repository had 73 open PRs at the beginning of this audit. Five audit PRs (#
 A current Dependabot attempt to upgrade the web Firebase SDK to 13.4.0 fails before tests start. npm reports an `ERESOLVE` peer conflict because the repository's `@firebase/rules-unit-testing@5.0.2` declares peer support for `firebase ^12.0.0`. The CI log explicitly recommends resolving the upstream compatibility mismatch rather than forcing installation.
 
 This confirms the earlier recommendation not to bulk-merge major dependency PRs or bypass peer resolution with `--force` / `--legacy-peer-deps`. Keep Firebase 12 in the production baseline until the rules test tooling and all web/native/Functions dependencies support the same major version.
+
+
+## Additional backlog triage
+
+### PR #580 is not safe to retarget or merge as-is
+PR #580 targets `fix/auth-email-google-phone-only`. The selected-base patch changes only three files, but a direct comparison with current `main` shows 32 commits ahead, one behind, and 19 changed files because the base branch contains a large authentication history. Retargeting the PR directly to main could reintroduce or duplicate authentication work.
+
+The three-file patch itself needs review:
+- Image retry changes are aimed at keeping profile media visible after gateway failures, but the final-failure state does not yet provide a consistent, tested placeholder across profile media types.
+- The universal-search change removes the fallback-only condition around server directory results. Because the existing "Across NEXORA" result set already includes people, always rendering the second directory section can duplicate person results.
+- Therefore, do not merge or retarget #580 wholesale. Reconstruct only independently verified media fixes on a clean main-based branch, and keep the search behavior unchanged until deduplication is tested.
+
+### Superseded PR cleanup
+- PR #573 was closed as superseded by clean-main PR #583, which contains the same video callable allowlist/path-filter correction plus a regression guard.
+- PR #564 contains the same public-profile privacy changes now separated into #582 and #585, plus offline/Spark/Follow reliability changes reconstructed in #586. Close #564 only after #586's checks pass, so no unique behavior is discarded.
