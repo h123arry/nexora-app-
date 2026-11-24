@@ -1402,7 +1402,7 @@ export default function NexoraVideoPlayer({
 
                {/* Creators can see the current view total on their own Reel. */}
                {isOwnPost && (
-                 <div className="mb-0.5 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md" aria-label={formatPostViews(post.views) + ' views'}>
+                 <div className="mb-0.5 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md" aria-label={formatPostViews(displayedViews) + ' views'}>
                    <Eye className="h-3.5 w-3.5 text-violet-200" />
                    <span>{formatPostViews(displayedViews)} views</span>
                  </div>
