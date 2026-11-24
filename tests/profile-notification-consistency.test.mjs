@@ -264,3 +264,17 @@ test('recent search actions use separate accessible keyboard-operable buttons', 
   assert.match(recentSearches, /h-10 w-10/);
   assert.doesNotMatch(recentSearches, /<div[\s\S]*?onClick=\{\(\) => \{[\s\S]*?<button/);
 });
+
+
+test('universal search dialog traps and restores keyboard focus', async () => {
+  const search = await read('../src/components/UniversalSearchModal.tsx');
+  assert.match(search, /const modalRef = useRef<HTMLDivElement>\(null\)/);
+  assert.match(search, /previousFocusRef\.current = document\.activeElement/);
+  assert.match(search, /querySelectorAll<HTMLElement>\(/);
+  assert.match(search, /if \(e\.key !== 'Tab'\) return/);
+  assert.match(search, /last\.focus\(\)/);
+  assert.match(search, /first\.focus\(\)/);
+  assert.match(search, /previousFocusRef\.current\?\.isConnected\) previousFocusRef\.current\.focus\(\)/);
+  assert.match(search, /window\.clearTimeout\(focusTimerRef\.current\)/);
+  assert.match(search, /ref=\{modalRef\} id="universal-search-modal" role="dialog" aria-modal="true"/);
+});
