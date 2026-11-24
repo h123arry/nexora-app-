@@ -103,6 +103,11 @@ export default function NexoraVideoPlayer({
   onViewSound,
   hideTopRightSoundControl = false
 }: NexoraVideoPlayerProps) {
+  const [displayedViews, setDisplayedViews] = useState(() => Math.max(0, Number(post.views) || 0));
+  useEffect(() => {
+    setDisplayedViews(Math.max(0, Number(post.views) || 0));
+  }, [post.id, post.views]);
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoImpressionRecordedRef = useRef(false);
@@ -633,7 +638,12 @@ export default function NexoraVideoPlayer({
       // The server stores only a per-viewer/post/day marker and aggregate count.
       if (currentUser?.id) {
         const recordPublicView = httpsCallable(getFunctions(app), 'recordPublicVideoView');
-        void recordPublicView({ postId: post.id }).catch(() => {
+        void recordPublicView({ postId: post.id }).then(result => {
+          const payload = result.data as { counted?: boolean; views?: number };
+          if (Number.isSafeInteger(payload?.views) && (payload.views as number) >= 0) {
+            setDisplayedViews(payload.views as number);
+          }
+        }).catch(() => {
           // Allow a later playback tick to retry if the network/function is unavailable.
           viewLoggedRef.current = false;
         });
@@ -1394,7 +1404,7 @@ export default function NexoraVideoPlayer({
                {isOwnPost && (
                  <div className="mb-0.5 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-md" aria-label={formatPostViews(post.views) + ' views'}>
                    <Eye className="h-3.5 w-3.5 text-violet-200" />
-                   <span>{formatPostViews(post.views)} views</span>
+                   <span>{formatPostViews(displayedViews)} views</span>
                  </div>
                )}
 
