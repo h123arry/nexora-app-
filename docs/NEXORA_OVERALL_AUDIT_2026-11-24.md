@@ -229,3 +229,14 @@ The current App defines a central `navigateTo` function that maintains scroll po
 
 ### Test suite interpretation
 The current repository has 114 root test/spec files and 71 Functions test/spec files. The latest main CI runs the unit suite, auth/rules emulators, migration/engagement/API security suites, dependency audits, and production build. Some tests assert source text or markup structure; the next QA pass should prioritize behavior tests for critical workflows, not merely increase test count.
+
+
+## Design-system audit findings
+
+The current `src/index.css` is 91,889 bytes and 2,879 lines. Source inspection found:
+- Three separate `:root` token blocks, with a later midnight override layered over earlier visual-system declarations.
+- The declared `--nx-violet` is currently blue (`#315BFF`), `--nx-violet-bright` is cyan (`#55C9F2`), and the shared gradient includes magenta (`#E94BFF`) and cyan (`#00D8F0`), despite comments describing the system as violet.
+- The stylesheet contains 151 `!important` declarations, including multiple competing brand, focus, navigation, and card overrides.
+- There are repeated selectors and theme-specific overrides across the long stylesheet, making visual changes harder to reason about and increasing regression risk.
+
+This should be handled as a dedicated design-system consolidation: define one authoritative palette/token layer, map existing components to semantic tokens, then remove obsolete overrides in small verified groups. Do not mass-replace colors across the whole application without screenshot comparison at mobile, tablet, and desktop widths.
