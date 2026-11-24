@@ -394,8 +394,8 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
       // Keep the created UID/profile and require a real email code before onboarding.
       setPendingEmailSignupUser(res.user);
       setEmailOtpPending(true);
-      await AuthService.sendEmailVerificationCode();
       setOtpCountdown(60);
+      await AuthService.sendEmailVerificationCode();
       setSuccessMsg(`We sent a 6-digit verification code to ${cleanEmail}. It expires in 10 minutes.`);
       setIsPending(false);
     } catch (firebaseErr: any) {
@@ -438,8 +438,8 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
     setErrorMsg('');
     setIsPending(true);
     try {
-      await AuthService.sendEmailVerificationCode();
       setOtpCountdown(60);
+      await AuthService.sendEmailVerificationCode();
       setSuccessMsg('A new verification code has been sent to your email.');
     } catch (error) {
       setErrorMsg(error instanceof Error ? error.message : 'NEXORA could not resend your code.');
