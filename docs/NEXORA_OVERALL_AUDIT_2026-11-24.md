@@ -20,7 +20,7 @@ The most urgent cross-cutting risk is release coordination: the open pull-reques
 - Latest main Nexora CI: passed.
 - Latest main native and container CI: passed, including Android debug build/tests, iOS simulator build, and Cloud Run container build.
 - Latest main CodeQL: passed.
-- Latest production Functions workflow: failed at Functions deployment. The workflow successfully released Firestore rules, skipped unchanged indexes, then failed because the deploy identity could not enable the required Cloud Build API. Therefore, this run is not a completed Functions deployment.
+- Latest production Functions workflow: failed at Functions deployment. The workflow successfully released Firestore rules, skipped unchanged indexes, then failed because the deployment identity lacked permission to enable both `cloudbuild.googleapis.com` and `artifactregistry.googleapis.com` for `nexora-prod-voiceharrison`. Therefore, this run is not a completed Functions deployment.
 - Latest scheduled R2 restoration workflow: failed its preflight because `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, and `R2_SECRET_ACCESS_KEY` were absent. It did not attempt restoration.
 - `tsconfig.json` does not enable TypeScript `strict`, `noImplicitAny`, or `noUnusedLocals` / `noUnusedParameters`. This is an audit target, not an instruction to enable all flags blindly.
 - `TODO.md` still has unchecked product-quality items across mobile feed behavior, Create, navigation, trust/privacy, design-system consistency, and release hygiene.
