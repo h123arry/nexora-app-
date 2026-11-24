@@ -8,7 +8,7 @@ import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
-import { createHash, randomInt, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { setPostLike } from './server/postEngagement';
@@ -1879,7 +1879,7 @@ const EMAIL_OTP_MAX_SENDS_PER_HOUR = 5;
 const EMAIL_OTP_MAX_ATTEMPTS = 5;
 
 function hashEmailOtp(uid: string, email: string, code: string, secret: string): Buffer {
-  return createHash('sha256').update(`${uid}:${email.toLowerCase()}:${code}:${secret}`).digest();
+  return createHmac('sha256', secret).update(`${uid}:${email.toLowerCase()}:${code}`).digest();
 }
 
 app.post('/api/auth/send-email-otp', requireFirebaseUser, async (_req, res) => {
