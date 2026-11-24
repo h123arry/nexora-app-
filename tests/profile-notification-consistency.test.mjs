@@ -251,3 +251,32 @@ test('offline recovery uses one concise banner and cleans reconnect timers', asy
   assert.match(banner, /<span>Offline<\/span>/);
   assert.match(banner, /<span>Back online<\/span>/);
 });
+
+
+test('recent search actions use separate accessible keyboard-operable buttons', async () => {
+  const search = await read('../src/components/UniversalSearchModal.tsx');
+  const recentSearches = search.match(/\{recentSearches\.map\(\(term\) => \([\s\S]*?\n\s*\)\)\}/)?.[0] || '';
+  assert.ok(recentSearches, 'recent search list should be present');
+  assert.match(recentSearches, /<button[\s\S]*?type="button"[\s\S]*?aria-label=/);
+  assert.match(recentSearches, /Search for \$\{term\}/);
+  assert.match(recentSearches, /Remove \$\{term\} from recent searches/);
+  assert.match(recentSearches, /min-h-10/);
+  assert.match(recentSearches, /h-10 w-10/);
+  const wrapper = recentSearches.match(/<div\b[^>]*>/)?.[0] || '';
+  assert.doesNotMatch(wrapper, /onClick=/);
+  assert.equal((recentSearches.match(/<button/g) || []).length, 2);
+});
+
+
+test('universal search dialog traps and restores keyboard focus', async () => {
+  const search = await read('../src/components/UniversalSearchModal.tsx');
+  assert.match(search, /const modalRef = useRef<HTMLDivElement>\(null\)/);
+  assert.match(search, /previousFocusRef\.current = document\.activeElement/);
+  assert.match(search, /querySelectorAll<HTMLElement>\(/);
+  assert.match(search, /if \(e\.key !== 'Tab'\) return/);
+  assert.match(search, /last\.focus\(\)/);
+  assert.match(search, /first\.focus\(\)/);
+  assert.match(search, /previousFocusRef\.current\?\.isConnected\) previousFocusRef\.current\.focus\(\)/);
+  assert.match(search, /window\.clearTimeout\(focusTimerRef\.current\)/);
+  assert.match(search, /ref=\{modalRef\} id="universal-search-modal" role="dialog" aria-modal="true"/);
+});

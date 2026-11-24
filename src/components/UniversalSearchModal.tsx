@@ -147,31 +147,65 @@ export default function UniversalSearchModal({
   };
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const focusTimerRef = useRef<number | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 50);
+    if (!isOpen) return;
 
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          onClose();
-        }
-      };
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    focusTimerRef.current = window.setTimeout(() => {
+      inputRef.current?.focus();
+      focusTimerRef.current = null;
+    }, 50);
 
-      const handleEscape = (e: Event) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
-      };
+        return;
+      }
 
-      window.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('nexora-escape', handleEscape);
-      return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('nexora-escape', handleEscape);
-      };
-    }
+      if (e.key !== 'Tab') return;
+      const focusable = modalRef.current?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) {
+        e.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && (document.activeElement === first || !modalRef.current?.contains(document.activeElement))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !modalRef.current?.contains(document.activeElement))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    const handleEscape = (e: Event) => {
+      e.preventDefault();
+      onClose();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('nexora-escape', handleEscape);
+    return () => {
+      if (focusTimerRef.current !== null) {
+        window.clearTimeout(focusTimerRef.current);
+        focusTimerRef.current = null;
+      }
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('nexora-escape', handleEscape);
+      if (previousFocusRef.current?.isConnected) previousFocusRef.current.focus();
+      previousFocusRef.current = null;
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -302,7 +336,7 @@ export default function UniversalSearchModal({
     (serverResults !== null && (serverResults.people.length > 0 || serverResults.pages.length > 0 || serverResults.circles.length > 0)) || serverSearchLoading || Boolean(serverSearchError) || Boolean(universalSearchResults?.results.length) || universalSearchLoading || Boolean(universalSearchError);
 
   return (
-    <div id="universal-search-modal" role="dialog" aria-modal="true" aria-label="NEXORA universal search" className="fixed inset-0 z-100 bg-[#060412]/98 backdrop-blur-2xl flex flex-col overflow-hidden text-white animate-fade-in select-none">
+    <div ref={modalRef} id="universal-search-modal" role="dialog" aria-modal="true" aria-label="NEXORA universal search" className="fixed inset-0 z-100 bg-[#060412]/98 backdrop-blur-2xl flex flex-col overflow-hidden text-white animate-fade-in select-none">
       
       {/* Top Header & Search Input Bar */}
       <div className="shrink-0 border-b border-white/10 bg-[#0c091d]/90 px-4 sm:px-8 py-4 sm:py-5 flex flex-col gap-3">
@@ -424,19 +458,27 @@ export default function UniversalSearchModal({
                     {recentSearches.map((term) => (
                       <div
                         key={term}
-                        onClick={() => {
-                          setQuery(term);
-                          handleSaveSearch(term);
-                        }}
-                        className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-white/10 text-zinc-200 hover:text-white transition-all cursor-pointer text-sm font-sans"
+                        className="group flex min-w-0 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-2 py-1.5 text-sm font-sans text-zinc-200 transition-all hover:border-white/10 hover:bg-violet-500/20 hover:text-white"
                       >
-                        <Clock className="w-4 h-4 text-zinc-400 group-hover:text-violet-400" />
-                        <span>{term}</span>
                         <button
-                          onClick={(e) => handleRemoveRecent(term, e)}
-                          className="p-1 rounded-full hover:bg-white/20 text-zinc-400 hover:text-red-400 transition-colors"
+                          type="button"
+                          onClick={() => {
+                            setQuery(term);
+                            handleSaveSearch(term);
+                          }}
+                          aria-label={`Search for ${term}`}
+                          className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
                         >
-                          <X className="w-3.5 h-3.5" />
+                          <Clock className="h-4 w-4 shrink-0 text-zinc-400 group-hover:text-violet-400" />
+                          <span className="truncate">{term}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleRemoveRecent(term, e)}
+                          aria-label={`Remove ${term} from recent searches`}
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-zinc-400 transition-colors hover:bg-white/20 hover:text-red-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-300"
+                        >
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
                         </button>
                       </div>
                     ))}
