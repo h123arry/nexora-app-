@@ -240,14 +240,31 @@ export default function AuthView({ onLoginSuccess, promptReason, initialMode }: 
     setStatusMessage('Checking your sign-in details…');
 
     try {
-      const { user } = await AuthService.loginWithEmail(query, passwordInput, rememberMe);
-      await applyBetaInvite();
+      const { firebaseUser, user } = await AuthService.loginWithEmail(query, passwordInput, rememberMe);
       AuthService.clearFailedAttempts(query);
       if (rememberMe) {
         localStorage.setItem('nexora_remembered_identifier', query);
       } else {
         localStorage.removeItem('nexora_remembered_identifier');
       }
+      if (firebaseUser.email && !firebaseUser.emailVerified) {
+        // Existing unverified email accounts are guided into the same code flow.
+        setPendingEmailSignupUser(user);
+        setSignupEmail(firebaseUser.email);
+        setSignupMethod('email');
+        setEmailOtpPending(true);
+        setAuthMode('signup');
+        setOtpCountdown(60);
+        try {
+          await AuthService.sendEmailVerificationCode();
+          setSuccessMsg(`Verify your email with the 6-digit code sent to ${firebaseUser.email}.`);
+        } catch (verificationError) {
+          setErrorMsg(verificationError instanceof Error ? verificationError.message : 'NEXORA could not send your verification code.');
+        }
+        setIsPending(false);
+        return;
+      }
+      await applyBetaInvite();
       setIsPending(false);
       onLoginSuccess(user);
     } catch (error: any) {
