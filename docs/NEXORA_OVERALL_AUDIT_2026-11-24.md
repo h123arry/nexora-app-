@@ -142,3 +142,28 @@ These figures identify review candidates, not proof that splitting a file is aut
 - PR #580 targets `fix/auth-email-google-phone-only` instead of `main`.
 - Its changes are limited to three files and appear to be media retry and directory-search rendering changes. Do not retarget or merge it until comparing the feature branch against current `main` and verifying that no required authentication changes would be lost or duplicated.
 - PR #573 is dirty/non-mergeable and its production deployment change is still outstanding. PR #564 is also dirty/non-mergeable. Other current PRs need a similar base, overlap, check, and supersession review before the backlog is reduced.
+
+
+## Branch divergence check (main versus selected active fix branches)
+
+A direct Git commit comparison against current `main` shows that several high-priority fixes have diverged rather than simply being one or two commits behind. These branches must be reconciled carefully; GitHub's PR-level file patch can understate the complete commit ancestry when a PR targets another feature branch.
+
+| PR | Branch | Ahead of main | Behind main | Compare status |
+|---|---|---:|---:|---|
+| #580 | `fix/media-reliability-discovery-v2` | 32 | 1 | diverged |
+| #564 | `fix/security-privacy-social-reliability-v3` | 5 | 9 | diverged |
+| #565 | `fix/account-deletion-comment-erasure` | 7 | 9 | diverged |
+| #573 | `deploy-video-watch-functions` | 1 | 4 | diverged |
+| #574 | `throttle-video-view-retries` | 3 | 4 | diverged |
+| #572 | `respect-notification-category-preferences` | 4 | 4 | diverged |
+| #571 | `improve-new-creator-discovery` | 6 | 5 | diverged |
+
+**Critical interpretation for PR #580:** the PR's immediate patch against its selected base shows only three changed files, but that base is `fix/auth-email-google-phone-only`. Comparing its head directly with current `main` reveals 32 commits ahead, one behind, and 19 changed files. Retargeting it to main as-is could reintroduce or duplicate a large authentication change set. Preserve the branch and reconstruct only the intended media/search changes on a clean branch from current main after verifying the exact patch.
+
+The divergence counts are a coordination warning, not proof that every commit is unique or should be merged. Some changes may already be represented in main through squash merges. Each branch needs patch-level comparison, duplicate/supersession checks, current-main rebase/cherry-pick, and fresh CI before merge.
+
+## Current audit report validation
+
+- Draft audit PR: #581, based on current main.
+- The report branch is isolated; no application source, Firebase rules, production data, secrets, or deployment settings were modified.
+- CodeQL and Nexora CI for the documentation PR were still running at the latest check. Do not merge or claim validation complete until both checks finish successfully.
