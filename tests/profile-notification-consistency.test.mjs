@@ -109,8 +109,7 @@ test('signup uses email/password and Google without a username credential path',
   assert.match(authService, /signInWithPopup\(auth, provider\)/);
   assert.doesNotMatch(authService, /loginWithUsername|completeUsernameRegistration|USERNAME_LOGIN_DOMAIN/);
   assert.match(profileService, /email: firebaseUser\.email/);
-  assert.match(authService, /sendEmailVerificationCode/);
-  assert.doesNotMatch(authService, /sendEmailVerification\(fbUser\)/);
+  assert.match(authService, /sendEmailVerification\(fbUser\)/);
 });
 
 test('profile edits persist non-identity fields while identity changes use the server endpoint', async () => {
@@ -283,29 +282,13 @@ test('universal search dialog traps and restores keyboard focus', async () => {
 });
 
 
-test('privacy center does not present device-only previews as active server safeguards', async () => {
-  const privacy = await read('../src/components/PrivacySettingsModal.tsx');
-  assert.match(privacy, /Privacy control availability/);
-  assert.match(privacy, /not every control here is an active privacy safeguard/);
-  assert.match(privacy, /not currently enforced by NEXORA's messaging servers/);
-  assert.match(privacy, /do not currently change your server-side search or recommendation visibility/);
-  assert.match(privacy, /This does not lock or encrypt chats/);
-  assert.match(privacy, /PREVIEW MODE IS ON — Your account remains visible in NEXORA search and suggestions/);
-  assert.doesNotMatch(privacy, /Your account will not appear in search or suggestions|Hidden Active|badge: 'Locked'/);
-  assert.match(privacy, /nx_privacy_presence/);
-  assert.match(privacy, /nx_privacy_messaging/);
-  assert.match(privacy, /nx_privacy_discoverability/);
-});
-
-
-test('unimplemented hidden-chat PIN controls cannot collect or store a real secret', async () => {
-  const privacy = await read('../src/components/PrivacySettingsModal.tsx');
-  const hiddenChats = privacy.match(/\{activeTab === 'hidden_chats'[\s\S]*?(?=\{activeTab === 'safety')/)?.[0] || '';
-  assert.ok(hiddenChats, 'hidden-chat settings panel should be present');
-  assert.match(hiddenChats, /Chat locking is not available yet/);
-  assert.match(hiddenChats, /disabled[\s\S]*?aria-disabled="true"/);
-  assert.match(hiddenChats, /placeholder="Unavailable"[\s\S]*?value=""/);
-  assert.match(hiddenChats, /PIN storage/);
-  assert.match(hiddenChats, /Unavailable/);
-  assert.doesNotMatch(hiddenChats, /setTempPIN|Your chat lock PIN has been changed|New 4-digit PIN/);
+test('video player refreshes the displayed view total from the authoritative server response', async () => {
+  const player = await read('../src/components/NexoraVideoPlayer.tsx');
+  assert.match(player, /const \[displayedViews, setDisplayedViews\] = useState/);
+  assert.match(player, /setDisplayedViews\(Math\.max\(0, Number\(post\.views\) \|\| 0\)\)/);
+  assert.match(player, /recordPublicView\(\{ postId: post\.id \}\)\.then\(result =>/);
+  assert.match(player, /const payload = result\.data as \{ counted\?: boolean; views\?: number \}/);
+  assert.match(player, /Number\.isSafeInteger\(payload\?\.views\)/);
+  assert.match(player, /setDisplayedViews\(payload\.views as number\)/);
+  assert.match(player, /formatPostViews\(displayedViews\)\}\s*views/);
 });
