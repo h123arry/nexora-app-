@@ -1883,9 +1883,10 @@ function hashEmailOtp(uid: string, email: string, code: string, secret: string):
 }
 
 function escapeEmailHtml(value: string): string {
-  return value.replace(/[&<>"']/g, character => ({
+  const entities: Record<string, string> = {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[character] || character);
+  };
+  return value.replace(/[&<>"']/g, character => entities[character] || character);
 }
 
 const emailOtpSendIpLimiter = rateLimit({
