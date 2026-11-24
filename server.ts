@@ -1889,22 +1889,7 @@ function escapeEmailHtml(value: string): string {
   return value.replace(/[&<>"']/g, character => entities[character] || character);
 }
 
-const emailOtpSendIpLimiter = rateLimit({
-  windowMs: 60 * 60_000,
-  max: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { code: 'email_otp_ip_rate_limited', error: 'Too many verification requests from this connection. Please try again later.' },
-});
-const emailOtpVerifyIpLimiter = rateLimit({
-  windowMs: 60 * 60_000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { code: 'email_otp_verify_ip_rate_limited', error: 'Too many verification attempts from this connection. Please try again later.' },
-});
-
-app.post('/api/auth/send-email-otp', emailOtpSendIpLimiter, requireFirebaseUser, async (_req, res) => {
+app.post('/api/auth/send-email-otp', requireFirebaseUser, async (_req, res) => {
   const uid = res.locals.userId as string;
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const fromEmail = process.env.RESEND_FROM_EMAIL?.trim();
@@ -1996,7 +1981,7 @@ app.post('/api/auth/send-email-otp', emailOtpSendIpLimiter, requireFirebaseUser,
   }
 });
 
-app.post('/api/auth/verify-email-otp', emailOtpVerifyIpLimiter, requireFirebaseUser, async (req, res) => {
+app.post('/api/auth/verify-email-otp', requireFirebaseUser, async (req, res) => {
   const uid = res.locals.userId as string;
   const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
   if (!/^\d{6}$/.test(code)) {
