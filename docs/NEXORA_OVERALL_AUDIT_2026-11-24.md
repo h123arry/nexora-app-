@@ -208,3 +208,24 @@ The existing `functions/src/index.ts` exports `recordPublicVideoView`, `recordVi
 - PR #581 contains the audit report only and is based on current main.
 - CodeQL and Nexora CI passed for the report's latest recorded source revision at the time of the last successful check; later report edits should be revalidated before merge.
 - PR #582 and #583 are isolated, current-main-based fixes. Neither has been merged or deployed.
+
+
+## Measured build and route findings
+
+### Production bundle snapshot
+The latest successful main-branch CI production build (2026-11-23) reported:
+- Main entry: 479.98 kB raw / 142.57 kB gzip.
+- Firebase Firestore chunk: 668.71 kB raw / 173.21 kB gzip; this is the only listed JavaScript chunk above the default 500 kB warning threshold.
+- ProfileView chunk: 235.31 kB raw / 54.84 kB gzip.
+- CreatorDashboardView chunk: 221.07 kB raw / 57.34 kB gzip.
+- MediaCreationEngine chunk: 171.28 kB raw / 44.63 kB gzip.
+- NewInboxView chunk: 160.85 kB raw / 42.19 kB gzip.
+- CSS entry: 380.58 kB raw / 51.03 kB gzip.
+
+This is a measured CI build snapshot, not a current-device performance benchmark. The highest-value next step is to investigate why the modular Firestore SDK chunk is 668.71 kB and whether any non-critical Firestore consumers can be deferred without changing startup/auth behavior. Do not hide the warning by raising the threshold.
+
+### Navigation state consistency
+The current App defines a central `navigateTo` function that maintains scroll position, viewed-profile history, and the URL tab parameter. Source inspection found multiple existing top-level transitions that still call `setActiveTab` directly, including some FeedView actions, the Sidebar Creator Studio action, and some system/quick-action transitions. This means navigation history, URL state, and scroll restoration are not guaranteed to behave identically on every path. A focused follow-up should centralize only true top-level destination changes while preserving intentional back-stack and overlay behavior.
+
+### Test suite interpretation
+The current repository has 114 root test/spec files and 71 Functions test/spec files. The latest main CI runs the unit suite, auth/rules emulators, migration/engagement/API security suites, dependency audits, and production build. Some tests assert source text or markup structure; the next QA pass should prioritize behavior tests for critical workflows, not merely increase test count.
