@@ -1,5 +1,5 @@
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
-import { FieldPath, FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { FieldPath, FieldValue, getFirestore, type Firestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { writeFile } from 'node:fs/promises';
 import { resolveFirebaseProjectId } from '../runtimeConfig.js';
 
@@ -28,7 +28,7 @@ export async function runPublicProfilePrivateFieldScrub(
     pages: 0,
   };
 
-  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  let cursor: QueryDocumentSnapshot | undefined;
   while (true) {
     let query = db.collection('publicProfiles')
       .orderBy(FieldPath.documentId())
