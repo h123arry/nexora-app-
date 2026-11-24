@@ -529,9 +529,9 @@ export default function PrivacySettingsModal({
                 { id: 'messaging', label: 'Messaging Settings', icon: Radio, count: Object.keys(messaging).length },
                 { id: 'calls', label: 'Call settings', icon: Phone, count: Object.keys(calls).length },
                 { id: 'groups', label: 'Group permissions', icon: Lock, count: Object.keys(groups).length },
-                { id: 'discover', label: 'Who can find you', icon: EyeOff, badge: discoverability.hiddenAccountMode ? 'Hidden' : '' },
+                { id: 'discover', label: 'Who can find you', icon: EyeOff, badge: discoverability.hiddenAccountMode ? 'Preview' : 'Device only' },
                 { id: 'blocked', label: 'Blocked & Restricted', icon: ShieldBan, count: blockedUsers.length + restrictedUsers.length },
-                { id: 'hidden_chats', label: 'Hidden PIN Chats', icon: Key, badge: 'Locked' },
+                { id: 'hidden_chats', label: 'Hidden PIN Chats', icon: Key, badge: 'Device only' },
                 { id: 'safety', label: 'Safety and sign-ins', icon: ShieldAlert, badge: 'Alerts' }
               ].map(cat => {
                 const Icon = cat.icon;
@@ -565,6 +565,12 @@ export default function PrivacySettingsModal({
 
             {/* Right Pane Area */}
             <div className="flex-1 flex flex-col bg-[#05030d] overflow-y-auto p-6 relative">
+              <div role="note" aria-label="Privacy control availability" className="mb-5 rounded-xl border border-amber-400/25 bg-amber-400/[0.06] p-3 text-left">
+                <p className="text-xs font-semibold text-amber-200">Important: not every control here is an active privacy safeguard.</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-zinc-300">
+                  Profile visibility preferences and your blocked-account list are saved to your NEXORA account, but enforcement still varies by app surface. Presence, message/call/group/broadcast permissions, discoverability, hidden-chat PIN, restrictions, mute/report logs, and sign-in history are device-only previews or are not connected to server enforcement. Do not rely on those controls to hide your account or prevent contact across devices.
+                </p>
+              </div>
               
               {/* Presence Tab */}
               {activeTab === 'presence' && (
@@ -635,7 +641,7 @@ export default function PrivacySettingsModal({
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <User className="w-4 h-4 text-violet-400" /> Profile visibility preferences
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Choose who should be able to see each profile field. These preferences are saved to your account; each profile and discovery surface must also enforce them.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1">These profile visibility preferences are saved to your account. Enforcement still needs verification on every profile and discovery surface.</p>
                   </div>
 
                   {/* Dual Column: Settings (Left) vs Real-Time Simulator (Right) */}
@@ -796,7 +802,7 @@ export default function PrivacySettingsModal({
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <Radio className="w-4 h-4 text-violet-400" /> Messages and read receipts
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Enforce messaging filters and select who has permission to write data chunks or generate notifications on your device.</p>
+                    <p className="text-[11px] text-amber-200/80 mt-1">Device-only preview. These choices are not currently enforced by NEXORA's messaging servers or synced across devices.</p>
                   </div>
 
                   {/* Messaging Options */}
@@ -966,7 +972,7 @@ export default function PrivacySettingsModal({
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <Lock className="w-4 h-4 text-violet-400" /> Groups and creator updates
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Choose who can add you to groups and send you updates.</p>
+                    <p className="text-[11px] text-amber-200/80 mt-1">Device-only preview. These choices do not currently block group invitations or broadcast delivery on the server.</p>
                   </div>
 
                   <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-4">
@@ -1038,7 +1044,7 @@ export default function PrivacySettingsModal({
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <EyeOff className="w-4 h-4 text-violet-400" /> Find your account
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Choose whether people can find your account in search and suggestions.</p>
+                    <p className="text-[11px] text-amber-200/80 mt-1">Device-only preview. These choices do not currently change your server-side search or recommendation visibility.</p>
                   </div>
 
                   {/* MASTER GHOST MODE CARD */}
@@ -1054,7 +1060,7 @@ export default function PrivacySettingsModal({
                           Hide your account from search
                         </h5>
                         <p className="text-[10.5px] text-zinc-400 mt-1 leading-relaxed">
-                          When enabled, your profile entirely vanishes from search indices, suggestion reels, nearby logs, and follower counts. You become a total ghost node, while still maintaining full active chat capability with previously approved connections.
+                          This is a local preview only. It does not remove your profile from NEXORA search, recommendations, nearby discovery, or follower counts.
                         </p>
                       </div>
 
@@ -1066,7 +1072,7 @@ export default function PrivacySettingsModal({
                             : 'bg-[#080516] text-zinc-400 border-white/10 hover:border-emerald-500/30 hover:text-white'
                         }`}
                       >
-                        {discoverability.hiddenAccountMode ? '🔒 Hidden Active' : '🔓 Initiate Hidden'}
+                        {discoverability.hiddenAccountMode ? 'Preview active' : 'Enable preview'}
                       </button>
                     </div>
                   </div>
@@ -1223,7 +1229,7 @@ export default function PrivacySettingsModal({
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <Key className="w-4 h-4 text-violet-400" /> Hidden chat settings
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Lock private chats with a PIN so only you can open them.</p>
+                    <p className="text-[11px] text-amber-200/80 mt-1">PIN preview only. This does not lock or encrypt chats. Do not enter a real or reused PIN here.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1309,7 +1315,7 @@ export default function PrivacySettingsModal({
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <ShieldAlert className="w-4 h-4 text-violet-400" /> Decentralized Safety Center & Device Sessions
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Check recent sign-ins, security alerts and account activity.</p>
+                    <p className="text-[11px] text-amber-200/80 mt-1">Sign-in history and unusual-activity records are not connected to this panel yet. Use Settings → Security to revoke sessions.</p>
                   </div>
 
                   <div className="p-4 bg-slate-950/70 border border-violet-500/15 rounded-2xl flex items-start justify-between gap-4">
