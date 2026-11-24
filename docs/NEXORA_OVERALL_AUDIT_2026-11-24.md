@@ -188,3 +188,23 @@ The README also records production infrastructure questions that require a fresh
 ## Dependency and release hygiene
 
 The open backlog includes major-version dependency proposals (including Firebase, Vite, TypeScript, and Firebase Rules test tooling) as well as GitHub Actions runtime updates. These should not be bulk-merged. Review changelogs, Node 22 compatibility, Firebase behavior, build outputs, emulator behavior, native builds, and production dependency audits on isolated branches. Keep the currently passing main dependency set intact until replacements pass the complete relevant test matrix.
+
+
+## Follow-up fixes opened from the audit
+
+### PR #582 — public profile private-field exposure
+A clean, current-main-based security PR was opened with only three changed files: Firestore rules, the public profile projection writer, and Firestore rules regression tests. It denies public reads of legacy public profile records containing `interestDNA` or `dateOfBirth`, removes both fields from new/updated projections, and tests that a sanitized profile remains available through the existing public username query. The old PR #564 also contains unrelated social changes and is not being merged wholesale. PR #582 CI is pending.
+
+### PR #583 — missing production video analytics deployment
+The existing `functions/src/index.ts` exports `recordPublicVideoView`, `recordVideoWatchHeartbeat`, and `getCreatorVideoRetention`. Current production workflow source does not include these in its explicit `--only functions:...` allowlist and its path filters omit the video analytics source files. A clean-main PR adds the existing exports and path filters. This fixes the checked-in deployment manifest only; production Functions deployment remains blocked by the Cloud Build API permission issue. PR #583 CI is pending.
+
+### Profile hydration and quota failure review
+- The current profile provisioning path already uses bounded retries for `resource-exhausted`, `unavailable`, `deadline-exceeded`, and `aborted` (400 ms, 1,200 ms, and 2,800 ms delays).
+- It de-duplicates concurrent profile provisioning per UID, writes the private profile before best-effort public projection, and the auth context keeps a valid Firebase identity with a non-persisted fallback profile if Firestore hydration fails.
+- The auth context exposes an explicit profile retry action and subscribes to the private profile document after hydration.
+- These safeguards do not explain why a live project returns `resource-exhausted`. Root cause still requires owner-authorized inspection of current Firestore usage/quotas, billing, database health, and production logs. No production user documents or private records were read during this audit.
+
+### Audit report delivery
+- PR #581 contains the audit report only and is based on current main.
+- CodeQL and Nexora CI passed for the report's latest recorded source revision at the time of the last successful check; later report edits should be revalidated before merge.
+- PR #582 and #583 are isolated, current-main-based fixes. Neither has been merged or deployed.
