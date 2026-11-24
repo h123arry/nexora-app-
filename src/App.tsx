@@ -1620,7 +1620,7 @@ export default function App() {
     const handleChangeTab = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail && customEvent.detail.tab) {
-        setActiveTab(customEvent.detail.tab);
+        navigateTo(customEvent.detail.tab as typeof activeTab);
         if (customEvent.detail.subTab) {
           setMatrixSubTabRedirect(customEvent.detail.subTab);
         }
@@ -2203,7 +2203,7 @@ export default function App() {
 
     // Redirect to matrix under messages sub tab!
     setMatrixSubTabRedirect('messages');
-    setActiveTab('matrix');
+    navigateTo('matrix');
   };
 
   // 8. Studio profile settings update
@@ -2502,8 +2502,8 @@ export default function App() {
                 onQuotePost={handleRepostPost}
                 activeTab={activeTab}
                 unreadMessagesCount={unreadMessagesCount}
-                onOpenMessages={() => { setActiveTab('inbox'); setViewedUser(null); }}
-                onOpenVohAi={() => { setMatrixSubTabRedirect('ai'); setActiveTab('matrix'); setViewedUser(null); }}
+                onOpenMessages={() => navigateTo('inbox')}
+                onOpenVohAi={() => { setMatrixSubTabRedirect('ai'); navigateTo('matrix'); }}
                 onRequireAuth={requestProfileSetup}
                 onLoadMorePosts={loadMoreFeedPosts}
                 hasMorePosts={hasMoreFeedPosts}
@@ -2572,7 +2572,7 @@ export default function App() {
                       }}
                       creators={Object.values(globalUsersMap) as User[]}
                       initialSubTab={matrixSubTabRedirect}
-                      onClose={() => navigateTo('feed')}
+                      onClose={() => setActiveTab('feed')}
                     />
                   )}
 
@@ -2619,7 +2619,7 @@ export default function App() {
                   {activeTab === 'live' && (
                     <LiveView
                       currentUser={getRichUser(currentUser)}
-                      onClose={() => setActiveTab('feed')}
+                      onClose={() => navigateTo('feed')}
                     />
                   )}
 
@@ -3346,7 +3346,7 @@ export default function App() {
                     type="button"
                     onClick={() => {
                       setIsAiCommandCenterOpen(false);
-                      setActiveTab('matrix');
+                      navigateTo('matrix');
                       setMatrixSubTabRedirect('ai');
                       setTimeout(() => {
                         window.dispatchEvent(new CustomEvent('voh-ai-trigger-prompt', {
@@ -3364,7 +3364,7 @@ export default function App() {
                     type="button"
                     onClick={() => {
                       setIsAiCommandCenterOpen(false);
-                      setActiveTab('matrix');
+                      navigateTo('matrix');
                       setMatrixSubTabRedirect('ai');
                       setTimeout(() => {
                         window.dispatchEvent(new CustomEvent('voh-ai-trigger-prompt', {
@@ -3390,7 +3390,7 @@ export default function App() {
                   setIsAiCommandCenterOpen(false);
                   
                   // Redirect to AI matrix view
-                  setActiveTab('matrix');
+                  navigateTo('matrix');
                   setMatrixSubTabRedirect('ai');
                   
                   // Dispatch custom event to trigger prompt in VohAiView
@@ -3428,7 +3428,7 @@ export default function App() {
                     type="button"
                     onClick={() => {
                       setIsAiCommandCenterOpen(false);
-                      setActiveTab('matrix');
+                      navigateTo('matrix');
                       setMatrixSubTabRedirect('ai');
                     }}
                     className="text-[10px] text-violet-400 hover:underline font-bold font-sans cursor-pointer"
@@ -3727,7 +3727,7 @@ export default function App() {
               <p className="text-sm font-bold text-white">Secure your NEXORA account</p>
               <p className="mt-1 text-xs leading-relaxed text-violet-100/75">Your account is ready to use. Connect email and password, Google, or a verified phone number to recover this same account on another device.</p>
               <div className="mt-3 flex items-center gap-2">
-                <button type="button" onClick={() => setActiveTab('settings')} className="rounded-xl bg-violet-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-violet-500">Secure account</button>
+                <button type="button" onClick={() => navigateTo('settings')} className="rounded-xl bg-violet-600 px-3 py-2 text-[11px] font-bold text-white hover:bg-violet-500">Secure account</button>
                 <button type="button" onClick={() => {
                   const key = `nexora_beta_security_reminder_${firebaseUser.uid}`;
                   const stored = localStorage.getItem(key);

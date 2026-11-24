@@ -128,7 +128,7 @@ export default function Sidebar({
           <span className="nx-create-action-icon flex h-9 w-9 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] text-white shadow-[0_8px_20px_rgba(113,56,255,0.32)]"><PlusCircle className="h-[18px] w-[18px]" /></span>
           <span><span className="block text-sm font-bold text-white">{copy.navCreate}</span><span className="block text-[10px] text-violet-200/70">{copy.navShareMoment}</span></span>
         </button>
-        <button onClick={() => setActiveTab('creator')} className="group flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-3 text-left transition-all hover:border-white/10 hover:bg-white/[0.04]">
+        <button onClick={() => { if (onNavigate) onNavigate('creator'); else setActiveTab('creator'); }} className="group flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-3 text-left transition-all hover:border-white/10 hover:bg-white/[0.04]">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-200"><BarChart2 className="h-[18px] w-[18px]" /></span>
           <span><span className="block text-sm font-semibold text-slate-300 group-hover:text-white">{copy.navCreatorStudio}</span><span className="block text-[10px] text-slate-500">{copy.navGrowSignal}</span></span>
         </button>
