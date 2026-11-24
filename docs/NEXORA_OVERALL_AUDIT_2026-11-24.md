@@ -265,7 +265,7 @@ These items should be verified against the current app and either completed, sup
 - PR #582 has passed Nexora CI, CodeQL, and native/container CI. It remains unmerged until the public-profile scrub dry-run and owner-approved production migration are completed.
 - PR #581 remains a draft audit-report PR; its latest recorded Nexora CI and CodeQL checks passed before the most recent report update and must rerun before merge.
 
-The repository had 73 open PRs at the beginning of this audit. Six audit PRs (#581–#586) were opened. Three have been merged into main: #584 (navigation consistency), #585 (privacy scrub migration tooling), and #586 (offline recovery and social interaction reliability). Two older PRs were closed as superseded: #573 by #583 and #564 by #582/#585/#586. Four audit-related PRs remain open: #581 (draft audit report), #582 (privacy rule fix, awaiting production scrub dry-run/owner approval), #583 (video analytics deployment allowlist, awaiting Cloud Build deployment permission), and the pre-existing #580 remains misbased and under review. The current repository open backlog is 74 PRs. No production deployment has been claimed as complete in this audit session. Main is now at c2832ed1f681eb0d68ed5f208b119f11ca2776a4, with its post-merge CI, CodeQL, and native/container checks running.
+The repository had 73 open PRs at the beginning of this audit. Six audit PRs (#581–#586) were opened. Three have been merged into main: #584 (navigation consistency), #585 (privacy scrub migration tooling), and #586 (offline recovery and social interaction reliability). Two older PRs were closed as superseded: #573 by #583 and #564 by #582/#585/#586. Three audit PRs remain open: #581 (draft audit report), #582 (privacy rule fix, awaiting production scrub dry-run/owner approval), and #583 (video analytics deployment allowlist, awaiting Cloud Build deployment permission). The pre-existing #580 remains separately open, misbased, and under review. The current repository open backlog is 74 PRs. No production deployment has been claimed as complete in this audit session. Main is now at c2832ed1f681eb0d68ed5f208b119f11ca2776a4, with its post-merge CI, CodeQL, and native/container checks running.
 
 
 ## Dependency audit: verified major-upgrade incompatibility
@@ -287,7 +287,7 @@ The three-file patch itself needs review:
 
 ### Superseded PR cleanup
 - PR #573 was closed as superseded by clean-main PR #583, which contains the same video callable allowlist/path-filter correction plus a regression guard.
-- PR #564 contains the same public-profile privacy changes now separated into #582 and #585, plus offline/Spark/Follow reliability changes reconstructed in #586. Close #564 only after #586's checks pass, so no unique behavior is discarded.
+- PR #564 contained the same public-profile privacy changes now separated into #582 and #585, plus offline/Spark/Follow reliability changes reconstructed in #586. It was closed after #586's checks passed; no unique behavior was discarded.
 
 
 ## Authentication and anonymous-session audit
