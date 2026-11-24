@@ -8,7 +8,7 @@ import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
-import { createHash } from 'node:crypto';
+import { createHash, randomInt, timingSafeEqual } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { setPostLike } from './server/postEngagement';
@@ -1870,16 +1870,182 @@ vohRouter.post('/summarize-post', async (req, res) => {
   }
 });
 
-// Firebase Auth owns email verification, password reset, and phone OTP flows.
-// These legacy custom endpoints are intentionally unavailable: a process-local
-// OTP store cannot provide safe delivery, replay protection, or multi-instance
-// consistency in production.
-app.post('/api/auth/send-email-otp', (_req, res) => {
-  return res.status(410).json({ error: 'Use the supported Firebase Auth verification flow.' });
+// Email verification uses a Firestore-backed challenge and Resend delivery.
+// Codes are never stored in plaintext; all verification and rate-limit decisions
+// are enforced server-side so multiple Render instances share one security state.
+const EMAIL_OTP_TTL_MS = 10 * 60_000;
+const EMAIL_OTP_RESEND_COOLDOWN_MS = 60_000;
+const EMAIL_OTP_MAX_SENDS_PER_HOUR = 5;
+const EMAIL_OTP_MAX_ATTEMPTS = 5;
+
+function hashEmailOtp(uid: string, email: string, code: string, secret: string): Buffer {
+  return createHash('sha256').update(`${uid}:${email.toLowerCase()}:${code}:${secret}`).digest();
+}
+
+function escapeEmailHtml(value: string): string {
+  const entities: Record<string, string> = {
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  };
+  return value.replace(/[&<>"']/g, character => entities[character] || character);
+}
+
+app.post('/api/auth/send-email-otp', requireFirebaseUser, async (_req, res) => {
+  const uid = res.locals.userId as string;
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const fromEmail = process.env.RESEND_FROM_EMAIL?.trim();
+  if (!apiKey || !fromEmail) {
+    return res.status(503).json({ code: 'email_delivery_not_configured', error: 'NEXORA email verification is temporarily unavailable. Please try again shortly.' });
+  }
+
+  try {
+    const adminAuth = getAuth(firebaseAdminApp);
+    const account = await adminAuth.getUser(uid);
+    const email = account.email?.trim().toLowerCase();
+    if (!email || account.emailVerified) {
+      return res.status(account.emailVerified ? 200 : 400).json({
+        verified: Boolean(account.emailVerified),
+        ...(account.emailVerified ? {} : { code: 'email_unavailable', error: 'A valid email address is required for verification.' }),
+      });
+    }
+
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    const secret = apiKey;
+    const codeHash = hashEmailOtp(uid, email, code, secret).toString('hex');
+    const challengeRef = serverDb.collection('emailVerificationChallenges').doc(uid);
+    const now = Date.now();
+
+    const reservation = await serverDb.runTransaction(async transaction => {
+      const snapshot = await transaction.get(challengeRef);
+      const previous = snapshot.data() || {};
+      const windowStart = typeof previous.windowStartMs === 'number' ? previous.windowStartMs : 0;
+      const withinWindow = now - windowStart < 60 * 60_000;
+      const sendCount = withinWindow ? Number(previous.sendCount) || 0 : 0;
+      const lastSentAtMs = Number(previous.lastSentAtMs) || 0;
+      if (lastSentAtMs && now - lastSentAtMs < EMAIL_OTP_RESEND_COOLDOWN_MS) {
+        return { allowed: false as const, reason: 'cooldown' as const };
+      }
+      if (sendCount >= EMAIL_OTP_MAX_SENDS_PER_HOUR) {
+        return { allowed: false as const, reason: 'limit' as const };
+      }
+      transaction.set(challengeRef, {
+        codeHash,
+        email,
+        expiresAtMs: now + EMAIL_OTP_TTL_MS,
+        attempts: 0,
+        consumed: false,
+        windowStartMs: withinWindow ? windowStart : now,
+        sendCount: sendCount + 1,
+        lastSentAtMs: now,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return { allowed: true as const };
+    });
+
+    if (!reservation.allowed) {
+      res.setHeader('Retry-After', reservation.reason === 'cooldown' ? '60' : '3600');
+      return res.status(429).json({
+        code: 'email_otp_rate_limited',
+        error: reservation.reason === 'cooldown'
+          ? 'Please wait a minute before requesting another code.'
+          : 'You have reached the email verification limit. Please try again later.',
+      });
+    }
+
+    const profile = await serverDb.collection('users').doc(uid).get();
+    const rawName = profile.data()?.name;
+    const userName = typeof rawName === 'string' && rawName.trim() ? rawName.trim() : account.displayName || 'there';
+    const safeName = escapeEmailHtml(userName);
+    const html = `<!doctype html><html><body style="margin:0;background:#070914;padding:32px 12px;font-family:Arial,sans-serif;color:#f5f7ff"><div style="max-width:480px;margin:auto;background:#111329;border:1px solid #29234b;border-radius:18px;padding:32px"><div style="font-size:12px;letter-spacing:3px;color:#a78bfa;font-weight:700">NEXORA</div><h1 style="font-size:24px;margin:24px 0 12px">Verify your email</h1><p style="color:#c4c4d4;line-height:1.6">Hi ${safeName}, enter this six-digit code in NEXORA to verify your email address.</p><div style="margin:28px 0;padding:20px;text-align:center;background:#1c1740;border:1px solid #5941a5;border-radius:12px;font:800 34px monospace;letter-spacing:9px;color:#fff">${code}</div><p style="color:#a4a4b5;font-size:13px">This code expires in 10 minutes. Never share it with anyone. If you did not request it, you can ignore this message.</p><p style="margin-top:28px;color:#a78bfa;font-size:13px">The NEXORA Security Team</p></div></body></html>`;
+    const delivery = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [email],
+        subject: 'Your NEXORA verification code',
+        html,
+        text: `Hi ${userName}, your NEXORA email verification code is ${code}. It expires in 10 minutes. Never share this code.`,
+      }),
+    });
+    if (!delivery.ok) {
+      const errorText = await delivery.text().catch(() => '');
+      console.error('[EmailOTP] Resend delivery failed.', { status: delivery.status, response: errorText.slice(0, 300) });
+      await challengeRef.set({ codeHash: FieldValue.delete(), expiresAtMs: 0, consumed: true, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      return res.status(502).json({ code: 'email_delivery_failed', error: 'NEXORA could not deliver your verification code. Please try again later.' });
+    }
+    return res.status(200).json({ sent: true, expiresInSeconds: EMAIL_OTP_TTL_MS / 1000, resendAfterSeconds: EMAIL_OTP_RESEND_COOLDOWN_MS / 1000 });
+  } catch (error) {
+    const code = (error as { code?: unknown } | null)?.code;
+    console.error('[EmailOTP] Code delivery could not be completed.', { uid, code: typeof code === 'string' ? code : 'unknown' });
+    return res.status(503).json({ code: 'email_otp_unavailable', error: 'NEXORA could not send a verification code right now. Please try again.' });
+  }
 });
 
-app.post('/api/auth/verify-email-otp', (_req, res) => {
-  return res.status(410).json({ error: 'Use the supported Firebase Auth verification flow.' });
+app.post('/api/auth/verify-email-otp', requireFirebaseUser, async (req, res) => {
+  const uid = res.locals.userId as string;
+  const code = typeof req.body?.code === 'string' ? req.body.code.trim() : '';
+  if (!/^\d{6}$/.test(code)) {
+    return res.status(400).json({ code: 'invalid_email_otp', error: 'Enter the complete six-digit verification code.' });
+  }
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return res.status(503).json({ code: 'email_delivery_not_configured', error: 'Email verification is temporarily unavailable.' });
+
+  try {
+    const adminAuth = getAuth(firebaseAdminApp);
+    const account = await adminAuth.getUser(uid);
+    if (account.emailVerified) return res.status(200).json({ verified: true });
+    const email = account.email?.trim().toLowerCase();
+    if (!email) return res.status(400).json({ code: 'email_unavailable', error: 'This account has no email address to verify.' });
+
+    const challengeRef = serverDb.collection('emailVerificationChallenges').doc(uid);
+    const now = Date.now();
+    const verification = await serverDb.runTransaction(async transaction => {
+      const snapshot = await transaction.get(challengeRef);
+      const challenge = snapshot.data();
+      if (!snapshot.exists || !challenge || challenge.email !== email || challenge.consumed === true || typeof challenge.codeHash !== 'string') {
+        return { ok: false as const, reason: 'missing' as const };
+      }
+      if (typeof challenge.expiresAtMs !== 'number' || challenge.expiresAtMs <= now) {
+        transaction.delete(challengeRef);
+        return { ok: false as const, reason: 'expired' as const };
+      }
+      const attempts = Number(challenge.attempts) || 0;
+      if (attempts >= EMAIL_OTP_MAX_ATTEMPTS) {
+        transaction.delete(challengeRef);
+        return { ok: false as const, reason: 'locked' as const };
+      }
+      const expected = Buffer.from(challenge.codeHash, 'hex');
+      const actual = hashEmailOtp(uid, email, code, apiKey);
+      const matches = expected.length === actual.length && timingSafeEqual(expected, actual);
+      if (!matches) {
+        transaction.update(challengeRef, { attempts: attempts + 1, updatedAt: FieldValue.serverTimestamp() });
+        return { ok: false as const, reason: attempts + 1 >= EMAIL_OTP_MAX_ATTEMPTS ? 'locked' as const : 'invalid' as const };
+      }
+      transaction.update(challengeRef, { consumed: true, updatedAt: FieldValue.serverTimestamp() });
+      return { ok: true as const };
+    });
+
+    if (!verification.ok) {
+      const messages = {
+        missing: 'Request a new verification code to continue.',
+        expired: 'Your verification code has expired. Request a new one.',
+        locked: 'Too many incorrect attempts. Request a new verification code.',
+        invalid: 'That verification code is incorrect. Please try again.',
+      };
+      return res.status(verification.reason === 'invalid' ? 400 : 410).json({
+        code: `email_otp_${verification.reason}`,
+        error: messages[verification.reason],
+      });
+    }
+
+    await adminAuth.updateUser(uid, { emailVerified: true });
+    await challengeRef.delete();
+    return res.status(200).json({ verified: true });
+  } catch (error) {
+    const code = (error as { code?: unknown } | null)?.code;
+    console.error('[EmailOTP] Code verification failed.', { uid, code: typeof code === 'string' ? code : 'unknown' });
+    return res.status(503).json({ code: 'email_otp_verification_unavailable', error: 'NEXORA could not verify this code right now. Please try again.' });
+  }
 });
 
 
