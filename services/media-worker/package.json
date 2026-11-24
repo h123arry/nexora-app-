@@ -14,6 +14,6 @@
     "@google-cloud/storage": "^7.16.0",
     "firebase-admin": "^13.0.0",
     "sharp": "^0.34.5",
-    "@contentauth/c2pa-node": "0.12.0"
+    "@contentauth/c2pa-node": "0.9.10"
   }
 }
