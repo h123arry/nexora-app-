@@ -2,7 +2,6 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   browserLocalPersistence,
-  sendEmailVerification, 
   sendPasswordResetEmail, 
   updatePassword,
   RecaptchaVerifier, 
@@ -29,6 +28,7 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from './config';
 import { canUpgradeAnonymousBetaSession, hasLinkedProvider, isRecentAuthentication } from './accountLinkingPolicy';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
+import { apiRequestUrl } from '../../lib/apiBaseUrl';
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_TIME_MS = 5 * 60 * 1000; // 5 minutes
@@ -268,6 +268,34 @@ export class AuthService {
     }
   }
 
+  /** Request a server-generated, single-use email verification code. */
+  static async sendEmailVerificationCode(): Promise<void> {
+    this.requireConfigured();
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Sign in to request an email verification code.');
+    const token = await currentUser.getIdToken();
+    const response = await fetch(apiRequestUrl('/api/auth/send-email-otp'), {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'NEXORA could not send your verification code.');
+  }
+
+  /** Verify the email code on the server, then refresh Firebase's verified claim. */
+  static async verifyEmailVerificationCode(code: string): Promise<void> {
+    this.requireConfigured();
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Your sign-in session expired. Please sign in and request a new code.');
+    const token = await currentUser.getIdToken();
+    const response = await fetch(apiRequestUrl('/api/auth/verify-email-otp'), {
+      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ code }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(typeof payload.error === 'string' ? payload.error : 'That verification code could not be confirmed.');
+    await reload(currentUser);
+    await currentUser.getIdToken(true);
+  }
+
   /**
    * Register with Email & Password
    */
@@ -303,12 +331,6 @@ export class AuthService {
     }
 
     try {
-      try {
-        await sendEmailVerification(fbUser);
-      } catch {
-        console.warn('Email verification could not be sent; check Firebase email action configuration.');
-      }
-
       // Share the exact UID-keyed single-flight provisioning path used by
       // onIdTokenChanged. Signup and auth-state hydration can fire together;
       // they must never race two different default/registration profile writes.
@@ -475,15 +497,13 @@ export class AuthService {
   static async sendVerificationEmail(user?: FirebaseUser): Promise<boolean> {
     this.requireConfigured();
     const targetUser = user || auth.currentUser;
-    if (!targetUser) throw new Error('No user currently authenticated.');
+    if (!targetUser || auth.currentUser?.uid !== targetUser.uid) {
+      throw new Error('Sign in to request an email verification code.');
+    }
     try {
-      await sendEmailVerification(targetUser);
-      if (targetUser.email) {
-        await EmailService.sendTransactionalEmail('VERIFY_EMAIL', {
-          toEmail: targetUser.email,
-          userName: targetUser.displayName || 'Nexora User'
-        });
-      }
+      await reload(targetUser);
+      if (targetUser.emailVerified) return true;
+      await this.sendEmailVerificationCode();
       return true;
     } catch (err: any) {
       throw this.publicAuthError(err);
@@ -638,7 +658,7 @@ export class AuthService {
     await this.requireRecentAccountAuthentication(currentUser);
     try {
       const result = await linkWithCredential(currentUser, EmailAuthProvider.credential(cleanEmail, password));
-      await sendEmailVerification(result.user);
+      await this.sendEmailVerificationCode();
       await result.user.getIdToken(true);
     } catch (error) {
       const code = (error as { code?: string })?.code;
