@@ -1236,7 +1236,7 @@ export default function PrivacySettingsModal({
                     
                     {/* Security credentials form */}
                     <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-4">
-                      <span className="text-xs font-black text-violet-400 font-mono uppercase block">Choose how to lock your chats</span>
+                      <span className="text-xs font-black text-zinc-400 font-mono uppercase block">Chat locking is not available yet</span>
                       
                       <div className="space-y-2">
                         {[
@@ -1247,7 +1247,9 @@ export default function PrivacySettingsModal({
                         ].map(type => (
                           <button
                             key={type.id}
-                            onClick={() => setHiddenChats((prev: any) => ({ ...prev, protectionType: type.id }))}
+                            type="button"
+                            disabled
+                            aria-disabled="true"
                             className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                               hiddenChats.protectionType === type.id 
                                 ? 'bg-violet-600/10 border-white/10 text-white' 
@@ -1274,32 +1276,27 @@ export default function PrivacySettingsModal({
                       </div>
 
                       <div className="my-4 bg-black/40 border border-white/5 rounded-xl p-3 text-center">
-                        <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Current chat PIN</span>
-                        <span className="text-lg font-mono font-black tracking-widest text-violet-300">••••</span>
+                        <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">PIN storage</span>
+                        <span className="text-xs font-semibold text-zinc-400">Disabled until secure chat locking is implemented</span>
                       </div>
 
                       <div className="flex gap-2">
                         <input 
-                          type="password" 
+                          type="password"
+                          disabled
                           maxLength={4}
-                          placeholder="New 4-digit PIN"
-                          value={tempPIN}
-                          onChange={(e) => setTempPIN(e.target.value.replace(/\D/g, ''))}
+                          placeholder="Unavailable"
+                          value=""
+                          aria-label="Chat lock PIN unavailable"
                           className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-center outline-none text-white focus:border-violet-500"
                         />
                         <button
-                          onClick={() => {
-                            if (tempPIN.length === 4) {
-                              setHiddenChats((prev: any) => ({ ...prev, pinCode: tempPIN }));
-                              setTempPIN('');
-                              window.dispatchEvent(new CustomEvent('toast', { detail: "🔑 Your chat lock PIN has been changed." }));
-                            } else {
-                              window.dispatchEvent(new CustomEvent('toast', { detail: "⚠️ PIN must be exactly 4 digits long." }));
-                            }
-                          }}
-                          className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-mono uppercase font-black cursor-pointer"
+                          type="button"
+                          disabled
+                          aria-disabled="true"
+                          className="px-4 py-2 bg-zinc-800 text-zinc-500 rounded-xl text-xs font-mono uppercase font-black cursor-not-allowed"
                         >
-                          Update
+                          Unavailable
                         </button>
                       </div>
                     </div>
