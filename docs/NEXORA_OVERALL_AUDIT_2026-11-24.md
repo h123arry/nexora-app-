@@ -266,3 +266,10 @@ These items should be verified against the current app and either completed, sup
 - PR #581 remains a draft audit-report PR; its latest recorded Nexora CI and CodeQL checks passed before the most recent report update and must rerun before merge.
 
 The repository had 73 open PRs at the beginning of this audit. Five audit PRs (#581–#585) were opened; #584 (navigation consistency) and #585 (privacy scrub migration tooling) have since been merged into main. Three audit PRs remain open: #581 (draft audit report), #582 (privacy rule fix, awaiting a production scrub dry-run/approval), and #583 (video analytics deployment allowlist, awaiting final CI and the Cloud Build deployment permission). The current open backlog is 76 PRs. No production deployment has been claimed as complete in this audit session. Main is now at 97d849da8d873c7babc3894b106cdba8af60ca43, with its post-merge CI, CodeQL, and native/container checks running.
+
+
+## Dependency audit: verified major-upgrade incompatibility
+
+A current Dependabot attempt to upgrade the web Firebase SDK to 13.4.0 fails before tests start. npm reports an `ERESOLVE` peer conflict because the repository's `@firebase/rules-unit-testing@5.0.2` declares peer support for `firebase ^12.0.0`. The CI log explicitly recommends resolving the upstream compatibility mismatch rather than forcing installation.
+
+This confirms the earlier recommendation not to bulk-merge major dependency PRs or bypass peer resolution with `--force` / `--legacy-peer-deps`. Keep Firebase 12 in the production baseline until the rules test tooling and all web/native/Functions dependencies support the same major version.
