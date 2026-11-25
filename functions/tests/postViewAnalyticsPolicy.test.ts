@@ -20,6 +20,9 @@ test('qualifies only public text posts viewed by another account', () => {
   assert.equal(isEligiblePublicTextPostView({ ...base, images: ['image.jpg'] }), false);
   assert.equal(isEligiblePublicTextPostView({ ...base, videoUrl: 'video.mp4' }), false);
   assert.equal(isEligiblePublicTextPostView({ ...base, mediaType: 'video' }), false);
+  assert.equal(isEligiblePublicTextPostView({ ...base, mediaType: 'audio' }), false);
+  assert.equal(isEligiblePublicTextPostView({ ...base, isVoice: true }), false);
+  assert.equal(isEligiblePublicTextPostView({ ...base, opportunityType: 'Job' }), false);
   assert.equal(isEligiblePublicTextPostView({ ...base, isArchived: true }), false);
   assert.equal(isEligiblePublicTextPostView({ ...base, isDraft: true }), false);
 });
