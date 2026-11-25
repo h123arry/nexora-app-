@@ -16,7 +16,7 @@ import NexoraLoader from './NexoraLoader';
 import { deleteDraft, getDrafts, saveDraft } from '../services/dataService';
 import { db } from '../lib/firebase';
 import { collection, endAt, getDocs, limit, orderBy, query, startAt, where } from 'firebase/firestore';
-import { isNativeGalleryAvailable, requestNativeGalleryAccess, loadNativeGalleryPage, importNativeGalleryItem, type NexoraGalleryItem } from '../services/nativeGalleryService';
+import { isNativeGalleryAvailable, requestNativeGalleryAccess, loadNativeGalleryPage, importNativeGalleryItem, setNativeCreateExperienceActive, type NexoraGalleryItem } from '../services/nativeGalleryService';
 
 type PhotoExportOptions = {
   rotation: number;
@@ -1814,6 +1814,44 @@ export default function MediaCreationEngine({
       onClose();
     }
   };
+
+  useEffect(() => {
+    void setNativeCreateExperienceActive(true).catch(() => undefined);
+    return () => { void setNativeCreateExperienceActive(false).catch(() => undefined); };
+  }, []);
+
+  useEffect(() => {
+    const handleAndroidBack = () => {
+      if (showExitConfirm) { setShowExitConfirm(false); return; }
+      if (permissionTarget) {
+        setPermissionTarget(null);
+        pendingPermissionActionRef.current = null;
+        return;
+      }
+      if (isMediaPreviewExpanded) { setIsMediaPreviewExpanded(false); return; }
+      if (activeMode === 'carousel') {
+        setGalleryPreviewIndex(null);
+        if (galleryReturnToCamera) {
+          setActiveMode('photo');
+          setCurrentStep(2);
+          setGalleryReturnToCamera(false);
+        } else {
+          setCurrentStep(1);
+        }
+        return;
+      }
+      if (activeMode === 'video' && currentStep === 2) {
+        if (videoFileUrl || recordedVideoUrl) setCurrentStep(1);
+        else { setActiveMode('carousel'); setGalleryTab('videos'); }
+        return;
+      }
+      if (currentStep > 1) { prevStep(); return; }
+      handleExitClick();
+    };
+    window.addEventListener('nexora:android-back', handleAndroidBack);
+    return () => window.removeEventListener('nexora:android-back', handleAndroidBack);
+  }, [activeMode, currentStep, galleryReturnToCamera, isMediaPreviewExpanded, permissionTarget, recordedVideoUrl, showExitConfirm, videoFileUrl, voiceFileUrl, caption, selectedImages, onClose]);
+
 
   // Accessibility Checks
   const isAltTextMissing = selectedImages.length > 0 && !imageAltText.trim();
