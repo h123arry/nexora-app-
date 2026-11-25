@@ -157,6 +157,29 @@ test('registers, restores, and signs in an email account through Firebase Auth',
   assert.equal(loggedIn.user.id, registered.firebaseUser.uid);
 });
 
+test('keeps a successful Firebase login successful when Firestore profile hydration is temporarily unavailable', async () => {
+  await cleanUp();
+  const recoveryEmail = `nexora-profile-recovery-${Date.now()}@example.test`;
+  const created = await AuthService.registerWithEmail(recoveryEmail, password, 'Recovery Member', `recovery_${Date.now().toString().slice(-8)}`);
+  const uid = created.firebaseUser.uid;
+  await signOut(auth);
+
+  const originalGetOrCreateProfile = ProfileService.getOrCreateProfile;
+  ProfileService.getOrCreateProfile = async () => {
+    throw Object.assign(new Error('temporary Firestore quota pressure'), { code: 'resource-exhausted' });
+  };
+  try {
+    const restored = await AuthService.loginWithEmail(recoveryEmail, password);
+    assert.equal(restored.firebaseUser.uid, uid);
+    assert.equal(restored.user.id, uid);
+    assert.equal(auth.currentUser?.uid, uid);
+    assert.equal(restored.user.email, recoveryEmail);
+  } finally {
+    ProfileService.getOrCreateProfile = originalGetOrCreateProfile;
+    await cleanUp();
+  }
+});
+
 test('email signup upgrades an anonymous account without changing its Firebase UID or losing its profile', async () => {
   await signOut(auth);
   const anonymous = await signInAnonymously(auth);
