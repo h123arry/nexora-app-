@@ -219,16 +219,38 @@ export class ProfileService {
       };
     }
     if (!profile) {
-      // Approved anonymous beta members receive a complete, durable profile
-      // immediately. Reserve the deterministic handle first so overlapping
-      // auth-state hydration and invite-claim flows converge on the same UID.
+      // Reserve every new account's canonical handle before writing either
+      // profile document. The username claim is the cross-device uniqueness
+      // boundary; a profile must never be provisioned first and claimed later.
       const anonymousUsername = getAnonymousMemberUsername(firebaseUser.uid);
-      if (firebaseUser.isAnonymous) {
-        await this.reserveUsername(firebaseUser.uid, anonymousUsername);
+      const requestedUsername = typeof additionalData?.username === 'string'
+        ? normalizeUsername(additionalData.username)
+        : firebaseUser.isAnonymous
+          ? anonymousUsername
+          : normalizeUsername(
+              (firebaseUser.email?.split('@')[0] || `member_${firebaseUser.uid.slice(0, 10)}`)
+                .toLowerCase()
+                .replace(/[^a-z0-9_.]/g, '')
+                .slice(0, 20)
+            );
+
+      if (db) {
+        const claimRef = doc(db, 'usernames', requestedUsername);
+        const existingClaim = await getDoc(claimRef);
+        if (existingClaim.exists() && existingClaim.data().userId !== firebaseUser.uid) {
+          throw new Error('This username is already connected to another NEXORA account. Sign in to that account or choose a different username.');
+        }
+        // Older accounts may have a public profile without a reservation
+        // document. Check that legacy index before creating the atomic claim.
+        if (!existingClaim.exists() && await this.checkUsernameExists(requestedUsername)) {
+          throw new Error('This username is already in use by an existing NEXORA account. Please sign in to that account or choose another username.');
+        }
+        await this.reserveUsername(firebaseUser.uid, requestedUsername);
       }
+
       profile = await this.createProfile(firebaseUser.uid, {
         name: firebaseUser.isAnonymous ? 'NEXORA Member' : (firebaseUser.displayName || 'Nexora User'),
-        username: firebaseUser.isAnonymous ? anonymousUsername : undefined,
+        username: requestedUsername,
         avatar: firebaseUser.photoURL || '',
         isVerified: firebaseUser.emailVerified,
         ...additionalData
