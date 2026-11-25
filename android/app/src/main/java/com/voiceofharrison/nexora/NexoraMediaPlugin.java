@@ -17,7 +17,10 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.OutputStream;
 
-@CapacitorPlugin(name = "NexoraMedia", permissions = {\n    @Permission(alias = "gallery", strings = { Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED }),\n    @Permission(alias = "legacyGallery", strings = { Manifest.permission.READ_EXTERNAL_STORAGE })\n})
+@CapacitorPlugin(name = "NexoraMedia", permissions = {
+    @Permission(alias = "gallery", strings = { Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED }),
+    @Permission(alias = "legacyGallery", strings = { Manifest.permission.READ_EXTERNAL_STORAGE })
+})
 public class NexoraMediaPlugin extends Plugin {
 
     @PluginMethod
