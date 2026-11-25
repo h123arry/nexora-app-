@@ -42,9 +42,13 @@ test('comment actions use persisted comment, reply and reaction flows', async ()
     readFile(new URL('../functions/src/pushDelivery.ts', import.meta.url), 'utf8'),
   ]);
   assert.match(feed, /await onAddComment\(postId, content\)/);
-  assert.match(feed, /nexora-add-reply/);
+  assert.match(feed, /await onAddReply\(postId, commentId, content, replyId\)/);
+  assert.match(feed, /setReplyInputs\(previous => \(\{ \.\.\.previous, \[commentId\]: '' \}\)\)/);
+  assert.match(feed, /submittingReplies\[commentId\]/);
   assert.match(feed, /handleSparkComment\(post\.id, c\.id\)/);
-  assert.match(app, /addPostCommentReply\(postId, commentId, replyContent, replyId\)/);
+  assert.match(app, /addPostCommentReply\(postId, commentId, content, replyId\)/);
+  assert.match(app, /const handleAddReply = async/);
+  assert.match(app, /if \(isOffline \|\| !navigator\.onLine\)/);
   assert.match(push, /if \(type === 'comment'\)/);
   assert.match(push, /if \(type === 'comment_reply'\)/);
   assert.match(push, /users\/\{userId\}\/notifications\/\{notificationId\}/);
