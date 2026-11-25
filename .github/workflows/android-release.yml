@@ -83,9 +83,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Install Firebase Functions dependencies
+        run: npm --prefix functions ci --no-audit --no-fund
+
       - name: Run production release checks
         run: |
           npm run lint
+          npm --prefix functions run build
           npm run test:unit
 
       - name: Decode permanent Android signing key
