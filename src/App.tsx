@@ -2505,7 +2505,7 @@ export default function App() {
                 onLikePost={handleLikePost}
                 onBookmarkPost={handleBookmarkPost}
                 onAddComment={handleAddComment}
-                 onAddReply={handleAddReply}
+                onAddReply={handleAddReply}
                 onAddPost={handleAddPost}
                 onOpenCreate={(initialMode = null, initialCaption = '') => {
                   setCreationInitialMode(initialMode);
@@ -2624,7 +2624,7 @@ export default function App() {
                       onUpdateProfile={handleUpdateProfile}
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
-                                       onAddPost={handleAddPost}
+                      onAddPost={handleAddPost}
                       isOwnProfile={!viewedUser || viewedUser.id === currentUser.id}
                       onCloseProfile={viewedUser ? () => setViewedUser(null) : undefined}
                       onToggleFollow={handleToggleFollow}
@@ -2678,7 +2678,7 @@ export default function App() {
                       }}
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
-                                       theme={theme}
+                      theme={theme}
                       locale={resolveLocale(currentUser.preferredLanguage)}
                       onViewProfile={handleViewProfile}
                     />
