@@ -1686,38 +1686,37 @@ export default function App() {
   };
 
   // 5. Shared Post Interact Controllers
-  const handleLikePost = (postId: string) => {
-    requireAuth(() => {
-      if (!firebaseUser) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Please sign in again to send a Spark.' }));
-        return;
+  const handleLikePost = async (postId: string): Promise<boolean> => {
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+      requireAuth(() => { void handleLikePost(postId); }, 'Join Nexora to like posts, spark conversations, and interact with creators.');
+      return false;
+    }
+    if (pendingLikeRequestsRef.current.has(postId)) return false;
+    const desiredLiked = !userSparks.includes(postId);
+    pendingLikeRequestsRef.current.add(postId);
+    try {
+      const data = await setPostSparkState(firebaseUser.uid, postId, desiredLiked);
+      if (typeof data.liked !== 'boolean' || !Number.isSafeInteger(data.likes) || data.likes < 0) {
+        throw new Error('The server returned an invalid interaction result.');
       }
-      // The authenticated server transaction is authoritative and idempotent;
-      // reconcile stale local Spark state rather than blocking the user's action.
-      if (pendingLikeRequestsRef.current.has(postId)) return;
-      const desiredLiked = !userSparks.includes(postId);
-      pendingLikeRequestsRef.current.add(postId);
-      void setPostSparkState(firebaseUser.uid, postId, desiredLiked).then(data => {
-        if (typeof data.liked !== 'boolean' || !Number.isSafeInteger(data.likes) || data.likes < 0) {
-          throw new Error('The server returned an invalid interaction result.');
-        }
-        setUserSparks(previous => {
-          const next = data.liked
-            ? [...new Set([...previous, postId])]
-            : previous.filter(id => id !== postId);
-          localStorage.setItem(`nexora_sparks_${firebaseUser.uid}`, JSON.stringify(next));
-          return next;
-        });
-        setPosts(previous => previous.map(post => post.id === postId ? { ...post, likes: data.likes } : post));
-      }).catch(error => {
-        const message = error instanceof Error && error.message.trim()
-          ? error.message
-          : 'NEXORA could not save this Spark right now. Please try again.';
-        window.dispatchEvent(new CustomEvent('toast', { detail: message }));
-      }).finally(() => {
-        pendingLikeRequestsRef.current.delete(postId);
+      setUserSparks(previous => {
+        const next = data.liked
+          ? [...new Set([...previous, postId])]
+          : previous.filter(id => id !== postId);
+        localStorage.setItem(`nexora_sparks_${firebaseUser.uid}`, JSON.stringify(next));
+        return next;
       });
-    }, 'Join Nexora to like posts, spark conversations, and interact with creators.');
+      setPosts(previous => previous.map(post => post.id === postId ? { ...post, likes: data.likes } : post));
+      return true;
+    } catch (error) {
+      const message = error instanceof Error && error.message.trim()
+        ? error.message
+        : 'NEXORA could not save this Spark right now. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+      return false;
+    } finally {
+      pendingLikeRequestsRef.current.delete(postId);
+    }
   };
 
   const handleBookmarkPost = (postId: string) => {
