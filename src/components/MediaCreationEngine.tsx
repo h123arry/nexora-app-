@@ -993,9 +993,9 @@ export default function MediaCreationEngine({
   const toggleNativeGalleryItem = (item: NexoraGalleryItem) => {
     setNativeGallerySelectedIds(previous => {
       if (previous.includes(item.id)) return previous.filter(id => id !== item.id);
-      const maximum = galleryTab === 'photos' ? 20 : 1;
+      const maximum = galleryTab === 'photos' ? 20 : (onOpenStudio ? 12 : 1);
       if (previous.length >= maximum) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: `You can select up to ${maximum} ${galleryTab === 'photos' ? 'photos' : 'video'} at once.` }));
+        window.dispatchEvent(new CustomEvent('toast', { detail: `You can select up to ${maximum} ${galleryTab === 'photos' ? 'photos' : 'video clips'} at once.` }));
         return previous;
       }
       return [...previous, item.id];
@@ -1006,7 +1006,7 @@ export default function MediaCreationEngine({
     const chosen = nativeGallerySelectedIds
       .map(id => nativeGalleryItems.find(item => item.id === id))
       .filter((item): item is NexoraGalleryItem => Boolean(item))
-      .slice(0, galleryTab === 'videos' ? 1 : 20);
+      .slice(0, galleryTab === 'videos' ? (onOpenStudio ? 12 : 1) : 20);
     if (!chosen.length) return;
     setNativeGalleryLoading(true);
     try {
