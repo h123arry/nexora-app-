@@ -144,7 +144,12 @@ export default function CreatorDashboardView({
       try {
         const callable = httpsCallable(getFunctions(app), 'getPostViewAnalytics');
         const response = await callable({ postId: selectedPostForAnalytics.id, days: 7 });
-        if (!cancelled) setSelectedPostViewSeries(response.data as typeof selectedPostViewSeries);
+        const data = response.data as NonNullable<typeof selectedPostViewSeries>;
+        if (!cancelled) {
+          setSelectedPostViewSeries(data);
+          setSelectedPostForAnalytics(previous => previous?.id === selectedPostForAnalytics.id ? { ...previous, views: data.totalViews } : previous);
+          setLocalPosts(previous => previous.map(post => post.id === selectedPostForAnalytics.id ? { ...post, views: data.totalViews } : post));
+        }
       } catch {
         if (!cancelled) setSelectedPostViewSeriesError(true);
       } finally {
