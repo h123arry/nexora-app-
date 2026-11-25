@@ -767,7 +767,7 @@ export default function MediaCreationEngine({
     setNativeGallerySelectedIds([]);
     void (async () => {
       try {
-        const granted = await requestNativeGalleryAccess();
+        const granted = await requestNativeGalleryAccess(galleryTab);
         if (cancelled) return;
         if (!granted) {
           setNativeGalleryError('Allow NEXORA to access selected photos and videos to browse your gallery.');
