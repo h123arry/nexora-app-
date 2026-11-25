@@ -221,7 +221,7 @@ export default function NexoraVideoPlayer({
       if (readinessRetry) clearTimeout(readinessRetry);
     };
   }, [post.id, post.mediaAssetId, videoUrl, isR2GatewayMedia, isActive, shouldPreload, playbackRefreshKey]);
-  const posterUrl = post.image || post.images?.[0];
+  const posterUrl = (post as any).videoThumbnailUrl || (post as any).posterUrl || post.image || post.images?.[0];
 
   // Connection & Speed playback status states
   const [isPlaying, setIsPlaying] = useState(false);
@@ -1261,7 +1261,7 @@ export default function NexoraVideoPlayer({
             <video
               ref={videoRef}
               src={isReleased ? undefined : ((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)}
-              poster={shouldLoadVideoPoster({ isActive, isNearby, shouldPreload, isReleased }) ? (post?.image || undefined) : undefined}
+              poster={shouldLoadVideoPoster({ isActive, isNearby, shouldPreload, isReleased }) ? (posterUrl || undefined) : undefined}
               playsInline
               preload={isReleased ? "none" : (preloadMode || ((isNearby || shouldPreload) ? "auto" : "none"))}
               muted={isMuted}

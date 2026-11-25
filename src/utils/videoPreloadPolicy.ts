@@ -33,13 +33,16 @@ export function getVideoPreloadPlan(input: VideoPreloadPlanInput): VideoPreloadP
   }
 
   const hasActiveVideo = input.activeVideoIndex >= 0;
-  // Warm two video stops in either scroll direction before they enter view.
+  // Warm nearby videos even before the first video becomes active (for example,
+  // when the feed opens on a text or image post). Once a video is active, use
+  // video order so image/text posts do not consume the preload window.
   const isWithinPreloadWindow = hasActiveVideo
-    && Math.abs(input.postVideoIndex - input.activeVideoIndex) <= 2
-    && input.postVideoIndex !== input.activeVideoIndex;
-  const isReleased = hasActiveVideo
-    ? !isWithinPreloadWindow
-    : input.activePostIndex < 0 || Math.abs(input.postIndex - input.activePostIndex) > 2;
+    ? Math.abs(input.postVideoIndex - input.activeVideoIndex) <= 2
+      && input.postVideoIndex !== input.activeVideoIndex
+    : input.activePostIndex >= 0
+      && Math.abs(input.postIndex - input.activePostIndex) <= 2;
+  const isReleased = input.activePostIndex < 0
+    || !isWithinPreloadWindow;
 
   if (input.isOffline) {
     // Offline mode suppresses speculative requests, but distant players must

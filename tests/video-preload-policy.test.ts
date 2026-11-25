@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
 import { getVideoPreloadPlan } from '../src/utils/videoPreloadPolicy';
 
 const base = {
@@ -10,6 +11,34 @@ const base = {
   activeVideoIndex: 1,
   isSlowConnection: false,
 };
+
+test('preloads nearby videos while the feed is open on a non-video post', () => {
+  assert.deepEqual(getVideoPreloadPlan({
+    ...base,
+    isActive: false,
+    postIndex: 2,
+    activePostIndex: 1,
+    postVideoIndex: 0,
+    activeVideoIndex: -1,
+  }), {
+    shouldPreload: true,
+    isReleased: false,
+    preloadMode: 'auto',
+  });
+});
+
+test('does not preload feed videos until a visible feed position is known', () => {
+  assert.deepEqual(getVideoPreloadPlan({
+    ...base,
+    isActive: false,
+    activePostIndex: -1,
+    activeVideoIndex: -1,
+  }), {
+    shouldPreload: false,
+    isReleased: true,
+    preloadMode: 'none',
+  });
+});
 
 test('keeps the active video playing and does not mark it released', () => {
   assert.deepEqual(getVideoPreloadPlan({ ...base, isActive: true }), {
@@ -111,4 +140,21 @@ test('defers posters for offscreen players and releases poster requests', () => 
   assert.equal(shouldLoadVideoPoster({ isActive: false, isNearby: false, shouldPreload: false }), false);
   assert.equal(shouldLoadVideoPoster({ isActive: true, isNearby: true, shouldPreload: true, isReleased: true }), false);
   assert.equal(shouldLoadVideoPoster({ isNearby: false, shouldPreload: false }), true);
+});
+
+
+test('profile video posters persist in post fields and are not revoked on effect refresh', async () => {
+  const profile = await readFile(new URL('../src/components/ProfileView.tsx', import.meta.url), 'utf8');
+  assert.ok(profile.includes('temporaryPosterUrls = useRef<string[]>([])'));
+  assert.ok(profile.includes('temporaryPosterUrls.current.forEach(url => URL.revokeObjectURL(url))'));
+  assert.ok(profile.includes('const savedPoster = (post as any).videoThumbnailUrl || (post as any).posterUrl'));
+  assert.ok(profile.includes('videoThumbnailUrl: uploaded.downloadUrl,'));
+  assert.ok(profile.includes('posterUrl: uploaded.downloadUrl,'));
+  assert.ok(!profile.includes('objectUrls.forEach(url => URL.revokeObjectURL(url))'));
+});
+
+test('feed player prefers the persisted video poster fields', async () => {
+  const player = await readFile(new URL('../src/components/NexoraVideoPlayer.tsx', import.meta.url), 'utf8');
+  assert.ok(player.includes('const posterUrl = (post as any).videoThumbnailUrl || (post as any).posterUrl'));
+  assert.ok(player.includes('poster={shouldLoadVideoPoster({ isActive, isNearby, shouldPreload, isReleased }) ? (posterUrl || undefined) : undefined}'));
 });
