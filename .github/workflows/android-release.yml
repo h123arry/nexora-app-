@@ -86,6 +86,9 @@ jobs:
       - name: Install Firebase Functions dependencies
         run: npm --prefix functions ci --no-audit --no-fund
 
+      - name: Install media worker dependencies
+        run: npm --prefix services/media-worker install --no-audit --no-fund
+
       - name: Run production release checks
         run: |
           npm run lint
