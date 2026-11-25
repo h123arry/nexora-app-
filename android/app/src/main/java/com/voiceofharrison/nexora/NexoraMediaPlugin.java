@@ -20,14 +20,17 @@ import java.io.OutputStream;
 
 @CapacitorPlugin(name = "NexoraMedia", permissions = {
     @Permission(alias = "gallery", strings = { Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED }),
+    @Permission(alias = "galleryTiramisu", strings = { Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO }),
     @Permission(alias = "legacyGallery", strings = { Manifest.permission.READ_EXTERNAL_STORAGE })
 })
 public class NexoraMediaPlugin extends Plugin {
 
     @PluginMethod
     public void requestGalleryAccess(PluginCall call) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= 34) {
             requestPermissionForAlias("gallery", call, "galleryPermissionCallback");
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionForAlias("galleryTiramisu", call, "galleryPermissionCallback");
         } else {
             requestPermissionForAlias("legacyGallery", call, "galleryPermissionCallback");
         }
