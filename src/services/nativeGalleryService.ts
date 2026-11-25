@@ -30,6 +30,7 @@ interface NexoraMediaPlugin {
   requestGalleryAccess(options: { kind: 'photos' | 'videos' }): Promise<{ granted: boolean }>;
   listGalleryMedia(options: { kind: 'photos' | 'videos'; offset: number; limit: number }): Promise<GalleryPage>;
   importGalleryMedia(options: { uri: string; name: string }): Promise<ImportedMedia>;
+  deleteGalleryImport(options: { filePath: string }): Promise<void>;
 }
 
 const NativeMedia = registerPlugin<NexoraMediaPlugin>('NexoraMedia');
@@ -55,10 +56,14 @@ export async function loadNativeGalleryPage(
 export async function importNativeGalleryItem(item: NexoraGalleryItem): Promise<File> {
   if (!isNativeGalleryAvailable()) throw new Error('Native media import is unavailable.');
   const imported = await NativeMedia.importGalleryMedia({ uri: item.uri, name: item.name });
-  const localUrl = Capacitor.convertFileSrc(imported.filePath);
-  const response = await fetch(localUrl);
-  if (!response.ok) throw new Error('The selected media could not be opened. Please try again.');
-  const blob = await response.blob();
-  const type = imported.mimeType || item.mimeType || blob.type || 'application/octet-stream';
-  return new File([blob], imported.name || item.name, { type, lastModified: item.dateAdded || Date.now() });
+  try {
+    const localUrl = Capacitor.convertFileSrc(imported.filePath);
+    const response = await fetch(localUrl);
+    if (!response.ok) throw new Error('The selected media could not be opened. Please try again.');
+    const blob = await response.blob();
+    const type = imported.mimeType || item.mimeType || blob.type || 'application/octet-stream';
+    return new File([blob], imported.name || item.name, { type, lastModified: item.dateAdded || Date.now() });
+  } finally {
+    await NativeMedia.deleteGalleryImport({ filePath: imported.filePath }).catch(() => undefined);
+  }
 }
