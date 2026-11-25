@@ -1,5 +1,11 @@
 apply plugin: 'com.android.application'
 
+def releaseStoreFile = System.getenv('NEXORA_ANDROID_KEYSTORE_FILE')
+def releaseStorePassword = System.getenv('NEXORA_ANDROID_KEYSTORE_PASSWORD')
+def releaseKeyAlias = System.getenv('NEXORA_ANDROID_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('NEXORA_ANDROID_KEY_PASSWORD')
+def releaseSigningConfigured = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+
 android {
     namespace = "com.voiceofharrison.nexora"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,25 +13,42 @@ android {
         applicationId "com.voiceofharrison.nexora"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode = (System.getenv('NEXORA_VERSION_CODE') ?: '1').toInteger()
+        versionName = System.getenv('NEXORA_VERSION_NAME') ?: "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
-             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
-             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (releaseSigningConfigured) {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
+        debug {
+            // Debug builds retain the standard Android debug signing identity.
+        }
         release {
             minifyEnabled false
+            if (releaseSigningConfigured) {
+                signingConfig signingConfigs.release
+            } else {
+                // Never silently produce a distributable unsigned release APK.
+                signingConfig null
+            }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 }
 
 repositories {
-    flatDir{
+    flatDir {
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
     }
 }
