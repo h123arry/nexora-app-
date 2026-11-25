@@ -3295,6 +3295,7 @@ export default function FeedView({
                 ))}
               </div>
 
+              {!analyticsPost.videoUrl && !analyticsPost.image && !(analyticsPost.images && analyticsPost.images.length > 0) && !analyticsPost.isVoice && !analyticsPost.voiceAudioUrl && !analyticsPost.opportunityType && (
               <div className="mt-4 p-4 rounded-2xl bg-[#0d0a26] border border-white/5 space-y-3 relative z-10">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono font-black uppercase tracking-widest text-violet-300">Views over time</span>
@@ -3323,6 +3324,7 @@ export default function FeedView({
                 )}
                 <p className="text-[9px] text-zinc-500">A view is counted after at least 3 continuous seconds with half the text post visible. Repeat views from the same account count once per day.</p>
               </div>
+              )}
 
               <div className="mt-4 p-3.5 bg-violet-600/10 border border-white/10 rounded-2xl space-y-2 relative z-10">
                 <span className="text-[9px] font-mono text-violet-300 font-black uppercase tracking-widest block">
