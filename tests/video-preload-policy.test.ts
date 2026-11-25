@@ -12,6 +12,34 @@ const base = {
   isSlowConnection: false,
 };
 
+test('preloads nearby videos while the feed is open on a non-video post', () => {
+  assert.deepEqual(getVideoPreloadPlan({
+    ...base,
+    isActive: false,
+    postIndex: 2,
+    activePostIndex: 1,
+    postVideoIndex: 0,
+    activeVideoIndex: -1,
+  }), {
+    shouldPreload: true,
+    isReleased: false,
+    preloadMode: 'auto',
+  });
+});
+
+test('does not preload feed videos until a visible feed position is known', () => {
+  assert.deepEqual(getVideoPreloadPlan({
+    ...base,
+    isActive: false,
+    activePostIndex: -1,
+    activeVideoIndex: -1,
+  }), {
+    shouldPreload: false,
+    isReleased: true,
+    preloadMode: 'none',
+  });
+});
+
 test('keeps the active video playing and does not mark it released', () => {
   assert.deepEqual(getVideoPreloadPlan({ ...base, isActive: true }), {
     shouldPreload: false,
