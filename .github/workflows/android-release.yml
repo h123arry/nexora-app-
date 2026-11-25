@@ -43,9 +43,10 @@ jobs:
           KEY_PASSWORD: ${{ secrets.NEXORA_ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          for name in KEYSTORE STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
-            if [ -z "${!name:-}" ]; then echo "Missing required GitHub secret: NEXORA_ANDROID_$name"; exit 1; fi
-          done
+          [ -n "$KEYSTORE" ] || { echo "Missing NEXORA_ANDROID_KEYSTORE_BASE64"; exit 1; }
+          [ -n "$STORE_PASSWORD" ] || { echo "Missing NEXORA_ANDROID_KEYSTORE_PASSWORD"; exit 1; }
+          [ -n "$KEY_ALIAS" ] || { echo "Missing NEXORA_ANDROID_KEY_ALIAS"; exit 1; }
+          [ -n "$KEY_PASSWORD" ] || { echo "Missing NEXORA_ANDROID_KEY_PASSWORD"; exit 1; }
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
           const config = JSON.parse(fs.readFileSync('firebase-applet-config.json', 'utf8'));
