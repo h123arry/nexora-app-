@@ -54,3 +54,7 @@ export function validTextPostViewRequest(postId: unknown, visibleSeconds: unknow
     && visibleSeconds >= 3
     && visibleSeconds <= 60;
 }
+
+export function canReadPostViewAnalytics(viewerId: string, ownerId: unknown, authorId: unknown): boolean {
+  return Boolean(viewerId) && (ownerId === viewerId || authorId === viewerId);
+}
