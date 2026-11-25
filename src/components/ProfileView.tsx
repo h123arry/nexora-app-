@@ -4028,8 +4028,8 @@ export default function ProfileView({
                     <Shield className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-sans font-extrabold text-white">How your feed works</h3>
-                    <p className="text-[10px] font-mono text-zinc-400">How your account score works</p>
+                    <h3 className="text-sm font-sans font-extrabold text-white">How Reputation works</h3>
+                    <p className="text-[10px] font-mono text-zinc-400">Your community standing and contribution score</p>
                   </div>
                 </div>
                 <button 
