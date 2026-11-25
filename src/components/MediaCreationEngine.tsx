@@ -16,6 +16,7 @@ import NexoraLoader from './NexoraLoader';
 import { deleteDraft, getDrafts, saveDraft } from '../services/dataService';
 import { db } from '../lib/firebase';
 import { collection, endAt, getDocs, limit, orderBy, query, startAt, where } from 'firebase/firestore';
+import { isNativeGalleryAvailable, requestNativeGalleryAccess, loadNativeGalleryPage, importNativeGalleryItem, setNativeCreateExperienceActive, openNativeAppSettings, type NexoraGalleryItem } from '../services/nativeGalleryService';
 
 type PhotoExportOptions = {
   rotation: number;
@@ -380,6 +381,16 @@ export default function MediaCreationEngine({
   const [galleryReturnToCamera, setGalleryReturnToCamera] = useState(false);
   const [galleryPreviewIndex, setGalleryPreviewIndex] = useState<number | null>(null);
   const [isMediaPreviewExpanded, setIsMediaPreviewExpanded] = useState(false);
+  const nativeGalleryEnabled = isNativeGalleryAvailable();
+  const [nativeGalleryItems, setNativeGalleryItems] = useState<NexoraGalleryItem[]>([]);
+  const [nativeGallerySelectedIds, setNativeGallerySelectedIds] = useState<string[]>([]);
+  const [nativeGalleryAlbum, setNativeGalleryAlbum] = useState('Recent');
+  const [nativeGalleryLoading, setNativeGalleryLoading] = useState(false);
+  const [nativeGalleryHasMore, setNativeGalleryHasMore] = useState(false);
+  const [nativeGalleryOffset, setNativeGalleryOffset] = useState(0);
+  const [nativeGalleryReloadToken, setNativeGalleryReloadToken] = useState(0);
+  const [nativeGalleryError, setNativeGalleryError] = useState('');
+
   const [editorToolTab, setEditorToolTab] = useState<'looks' | 'adjust' | 'crop' | 'text'>('looks');
   const [creativeToolTab, setCreativeToolTab] = useState<'looks' | 'effects' | 'text' | 'stickers' | 'audio' | 'presets'>('looks');
   const [isComparingOriginal, setIsComparingOriginal] = useState(false);
@@ -744,6 +755,49 @@ export default function MediaCreationEngine({
     };
   }, [activeMode, permissionState, cameraFacing, currentStep, isLensStudioOpen]);
 
+
+  // Android's native gallery reads MediaStore only after the user grants access.
+  useEffect(() => {
+    if (!nativeGalleryEnabled || activeMode !== 'carousel') return;
+    let cancelled = false;
+    setNativeGalleryLoading(true);
+    setNativeGalleryError('');
+    setNativeGalleryItems([]);
+    setNativeGalleryOffset(0);
+    setNativeGalleryHasMore(false);
+    setNativeGallerySelectedIds([]);
+    void (async () => {
+      try {
+        const granted = await requestNativeGalleryAccess(galleryTab);
+        if (cancelled) return;
+        if (!granted) {
+          setNativeGalleryError('Allow NEXORA to access selected photos and videos to browse your gallery.');
+          return;
+        }
+        const page = await loadNativeGalleryPage(galleryTab, 0, 60);
+        if (cancelled) return;
+        setNativeGalleryItems(page.items);
+        setNativeGalleryOffset(page.nextOffset);
+        setNativeGalleryHasMore(page.hasMore);
+      } catch (error) {
+        if (!cancelled) setNativeGalleryError(error instanceof Error ? error.message : 'Your device gallery could not be opened.');
+      } finally {
+        if (!cancelled) setNativeGalleryLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeMode, galleryTab, nativeGalleryEnabled, nativeGalleryReloadToken]);
+
+  useEffect(() => {
+    const retryGalleryOnReturn = () => {
+      if (nativeGalleryError && activeMode === 'carousel') {
+        setNativeGalleryReloadToken(value => value + 1);
+      }
+    };
+    window.addEventListener('focus', retryGalleryOnReturn);
+    return () => window.removeEventListener('focus', retryGalleryOnReturn);
+  }, [activeMode, nativeGalleryError]);
+
   // Reels Record timing loop
   useEffect(() => {
     if (isRecording && !isRecordingPaused) {
@@ -867,39 +921,124 @@ export default function MediaCreationEngine({
     e.target.value = '';
     if (!files.length) return;
 
-    requestPermission('gallery', () => {
-      void (async () => {
-        const remaining = Math.max(0, 20 - selectedImages.length);
-        if (remaining === 0) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: 'You can add up to 20 photos to one NEXORA post.' }));
-          return;
+    const remaining = Math.max(0, 20 - selectedImages.length);
+    if (remaining === 0) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'You can add up to 20 photos to one NEXORA post.' }));
+      return;
+    }
+    const chosen = files.slice(0, remaining);
+    if (files.length > remaining) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: `Only ${remaining} more photo${remaining === 1 ? '' : 's'} can be added to this post.` }));
+    }
+    const imported: Array<SelectedImage | null> = await Promise.all(chosen.map(async (file): Promise<SelectedImage | null> => {
+      try {
+        await validateMediaFile(file, 'image');
+        const url = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Photo could not be read.'));
+          reader.onerror = () => reject(new Error('Photo could not be read from your device.'));
+          reader.readAsDataURL(file);
+        });
+        return { url, fileName: file.name, capturedAt: file.lastModified || Date.now(), rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } } satisfies SelectedImage;
+      } catch (error) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'This photo could not be imported.' }));
+        return null;
+      }
+    }));
+    const valid = imported.filter((item): item is SelectedImage => item !== null);
+    if (valid.length) {
+      setSelectedImages(previous => [...previous, ...valid].slice(0, 20));
+      setActiveEditIndex(previous => previous === null ? 0 : previous);
+    }
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).filter(file => file.type.startsWith('video/'));
+    e.target.value = '';
+    if (!files.length) return;
+    if (files.length > 1 && onOpenStudio) {
+      const validFiles: File[] = [];
+      if (files.length > 12) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'NEXORA Studio can import up to 12 clips at once. The first 12 selected clips will be used.' }));
+      }
+      for (const file of files.slice(0, 12)) {
+        try {
+          await validateMediaFile(file, 'video');
+          validFiles.push(file);
+        } catch (error) {
+          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${file.name}: ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
         }
-        const chosen = files.slice(0, remaining);
-        if (files.length > remaining) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `Only ${remaining} more photo${remaining === 1 ? '' : 's'} can be added to this post.` }));
-        }
-        const imported: Array<SelectedImage | null> = await Promise.all(chosen.map(async (file): Promise<SelectedImage | null> => {
-          try {
-            await validateMediaFile(file, 'image');
-            const url = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Photo could not be read.'));
-              reader.onerror = () => reject(new Error('Photo could not be read from your device.'));
-              reader.readAsDataURL(file);
-            });
-            return { url, fileName: file.name, capturedAt: file.lastModified || Date.now(), rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } } satisfies SelectedImage;
-          } catch (error) {
-            window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'This photo could not be imported.' }));
-            return null;
-          }
-        }));
-        const valid = imported.filter((item): item is SelectedImage => item !== null);
-        if (valid.length) {
-          setSelectedImages(previous => [...previous, ...valid].slice(0, 20));
-          setActiveEditIndex(previous => previous === null ? 0 : previous);
-        }
-      })();
+      }
+      if (validFiles.length) onOpenStudio(validFiles);
+      return;
+    }
+    const file = files[0];
+    try {
+      const metadata = await validateMediaFile(file, 'video');
+      setVideoFileUrl(previous => {
+        revokeTrackedObjectUrl(previous);
+        return trackObjectUrl(URL.createObjectURL(file));
+      });
+      setVideoRawBlob(file);
+      setVideoCoverBlob(null);
+      setVideoCoverTime(0);
+      setVideoTrimStart(0);
+      setVideoTrimEnd(Math.min(15, Math.max(1, Math.round(metadata.duration || 15))));
+      setVideoDuration(metadata.duration || 15);
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
+    }
+  };
+
+  const toggleNativeGalleryItem = (item: NexoraGalleryItem) => {
+    setNativeGallerySelectedIds(previous => {
+      if (previous.includes(item.id)) return previous.filter(id => id !== item.id);
+      const maximum = galleryTab === 'photos' ? 20 : (onOpenStudio ? 12 : 1);
+      if (previous.length >= maximum) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: `You can select up to ${maximum} ${galleryTab === 'photos' ? 'photos' : 'video clips'} at once.` }));
+        return previous;
+      }
+      return [...previous, item.id];
     });
+  };
+
+  const importSelectedNativeGalleryItems = async () => {
+    const chosen = nativeGallerySelectedIds
+      .map(id => nativeGalleryItems.find(item => item.id === id))
+      .filter((item): item is NexoraGalleryItem => Boolean(item))
+      .slice(0, galleryTab === 'videos' ? (onOpenStudio ? 12 : 1) : 20);
+    if (!chosen.length) return;
+    setNativeGalleryLoading(true);
+    try {
+      const files: File[] = [];
+      for (const item of chosen) files.push(await importNativeGalleryItem(item));
+      setNativeGallerySelectedIds([]);
+      const event = { target: { files, value: '' } } as unknown as React.ChangeEvent<HTMLInputElement>;
+      if (galleryTab === 'photos') await handleImageUpload(event);
+      else {
+        setActiveMode('video');
+        await handleVideoUpload(event);
+      }
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Some selected media could not be imported.' }));
+    } finally {
+      setNativeGalleryLoading(false);
+    }
+  };
+
+  const loadMoreNativeGalleryItems = async () => {
+    if (nativeGalleryLoading || !nativeGalleryHasMore) return;
+    setNativeGalleryLoading(true);
+    try {
+      const page = await loadNativeGalleryPage(galleryTab, nativeGalleryOffset, 60);
+      setNativeGalleryItems(previous => [...previous, ...page.items]);
+      setNativeGalleryOffset(page.nextOffset);
+      setNativeGalleryHasMore(page.hasMore);
+    } catch (error) {
+      setNativeGalleryError(error instanceof Error ? error.message : 'More media could not be loaded.');
+    } finally {
+      setNativeGalleryLoading(false);
+    }
   };
 
   const openVideoInStudio = () => {
@@ -949,51 +1088,6 @@ export default function MediaCreationEngine({
       const snapUrl = canvas.toDataURL('image/jpeg', 0.92);
       setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
       window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Photo captured.' }));
-    });
-  };
-
-  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).filter(file => file.type.startsWith('video/'));
-    e.target.value = '';
-    if (!files.length) return;
-    requestPermission('gallery', () => {
-      void (async () => {
-        if (files.length > 1 && onOpenStudio) {
-          const validFiles: File[] = [];
-          if (files.length > 12) {
-            window.dispatchEvent(new CustomEvent('toast', { detail: 'NEXORA Studio can import up to 12 clips at once. The first 12 selected clips will be used.' }));
-          }
-          for (const file of files.slice(0, 12)) {
-            try {
-              await validateMediaFile(file, 'video');
-              validFiles.push(file);
-            } catch (error) {
-              window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${file.name}: ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
-            }
-          }
-          if (validFiles.length) {
-            onOpenStudio(validFiles);
-            return;
-          }
-          return;
-        }
-        const file = files[0];
-        try {
-          const metadata = await validateMediaFile(file, 'video');
-          setVideoFileUrl(previous => {
-            revokeTrackedObjectUrl(previous);
-            return trackObjectUrl(URL.createObjectURL(file));
-          });
-          setVideoRawBlob(file);
-          setVideoCoverBlob(null);
-          setVideoCoverTime(0);
-          setVideoTrimStart(0);
-          setVideoTrimEnd(Math.min(15, Math.max(1, Math.round(metadata.duration || 15))));
-          setVideoDuration(metadata.duration || 15);
-        } catch (error) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
-        }
-      })();
     });
   };
 
@@ -1712,12 +1806,50 @@ export default function MediaCreationEngine({
 
   // Exit trigger guard
   const handleExitClick = () => {
-    if (caption || selectedImages.length > 0 || videoFileUrl || voiceFileUrl) {
+    if (caption || selectedImages.length > 0 || videoFileUrl || recordedVideoUrl || voiceFileUrl || pollQuestion.trim()) {
       setShowExitConfirm(true);
     } else {
       onClose();
     }
   };
+
+  useEffect(() => {
+    void setNativeCreateExperienceActive(true).catch(() => undefined);
+    return () => { void setNativeCreateExperienceActive(false).catch(() => undefined); };
+  }, []);
+
+  useEffect(() => {
+    const handleAndroidBack = () => {
+      if (showExitConfirm) { setShowExitConfirm(false); return; }
+      if (permissionTarget) {
+        setPermissionTarget(null);
+        pendingPermissionActionRef.current = null;
+        return;
+      }
+      if (isMediaPreviewExpanded) { setIsMediaPreviewExpanded(false); return; }
+      if (activeMode === 'carousel') {
+        setGalleryPreviewIndex(null);
+        if (galleryReturnToCamera) {
+          setActiveMode('photo');
+          setCurrentStep(2);
+          setGalleryReturnToCamera(false);
+        } else {
+          setCurrentStep(1);
+        }
+        return;
+      }
+      if (activeMode === 'video' && currentStep === 2) {
+        if (videoFileUrl || recordedVideoUrl) setCurrentStep(1);
+        else { setActiveMode('carousel'); setGalleryTab('videos'); }
+        return;
+      }
+      if (currentStep > 1) { prevStep(); return; }
+      handleExitClick();
+    };
+    window.addEventListener('nexora:android-back', handleAndroidBack);
+    return () => window.removeEventListener('nexora:android-back', handleAndroidBack);
+  }, [activeMode, currentStep, galleryReturnToCamera, isMediaPreviewExpanded, permissionTarget, recordedVideoUrl, showExitConfirm, videoFileUrl, recordedVideoUrl, voiceFileUrl, caption, selectedImages, pollQuestion, onClose, prevStep, handleExitClick]);
+
 
   // Accessibility Checks
   const isAltTextMissing = selectedImages.length > 0 && !imageAltText.trim();
@@ -2081,7 +2213,7 @@ export default function MediaCreationEngine({
 
                   {activeMode === 'carousel' && (
                     <section className="nx-gallery flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-white/[0.09] bg-[#080A12]" aria-label="Media gallery">
-                      <header className="nx-gallery-header shrink-0 border-b border-white/[0.08] px-4 pb-3 pt-4">
+                      <header className="nx-gallery-header shrink-0 border-b border-white/[0.08] px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#A99BCE]">NEXORA · CREATE</p>
@@ -2092,18 +2224,60 @@ export default function MediaCreationEngine({
                         </div>
                         <div className="nx-gallery-tabs mt-4 grid grid-cols-2 rounded-xl border border-white/[0.08] bg-black/25 p-1" role="group" aria-label="Media type">
                           <button type="button" onClick={() => setGalleryTab('photos')} aria-pressed={galleryTab === 'photos'} className={`rounded-lg px-3 py-2.5 text-xs font-semibold transition-colors ${galleryTab === 'photos' ? 'bg-[#252033] text-white shadow-sm' : 'text-[#8E8B98] hover:text-white'}`}>Photos</button>
-                          <button type="button" disabled={selectedImages.length > 0} onClick={() => setGalleryTab('videos')} aria-pressed={galleryTab === 'videos'} className={`rounded-lg px-3 py-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${galleryTab === 'videos' ? 'bg-[#252033] text-white shadow-sm' : 'text-[#8E8B98] hover:text-white'}`}>Videos</button>
+                          <button type="button" disabled={selectedImages.length > 0 || nativeGallerySelectedIds.length > 0} onClick={() => setGalleryTab('videos')} aria-pressed={galleryTab === 'videos'} className={`rounded-lg px-3 py-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${galleryTab === 'videos' ? 'bg-[#252033] text-white shadow-sm' : 'text-[#8E8B98] hover:text-white'}`}>Videos</button>
                         </div>
                         {galleryTab === 'photos' && (
                           <div className="mt-3 flex items-center justify-between gap-2">
                             <span className="text-[10px] text-[#8E8B98]">{selectedImages.length ? 'Selected for your post' : 'Nothing selected yet'}</span>
-                            <span className="rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-[#C9C5D2]">{selectedImages.length} of 20</span>
+                            <span className="rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-[#C9C5D2]">{selectedImages.length + nativeGallerySelectedIds.length} of 20</span>
                           </div>
                         )}
                       </header>
 
                       <div className="nx-gallery-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
                         {galleryTab === 'videos' ? (
+                          nativeGalleryEnabled ? (
+                            <div className="space-y-3">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="text-[10px] font-semibold text-[#C9C4D2]">Videos on this device</p>
+                                <span className="text-[10px] tabular-nums text-[#898692]">{nativeGalleryItems.length} loaded</span>
+                              </div>
+                              {nativeGalleryError && <div role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] text-amber-100"><p>{nativeGalleryError}</p><div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={() => setNativeGalleryReloadToken(value => value + 1)} className="rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">Try again</button><button type="button" onClick={() => { void openNativeAppSettings().catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Open NEXORA in Android Settings and allow Photos or Videos access.' }))); }} className="rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">App settings</button></div></div>}
+                              {nativeGalleryLoading && nativeGalleryItems.length === 0 ? <div className="py-16 text-center text-xs text-[#A8A3B1]">Opening your gallery…</div> : nativeGalleryItems.length === 0 ? <div className="py-16 text-center text-xs text-[#A8A3B1]">No videos found in this library.</div> : (
+                                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                                  {nativeGalleryItems.map((item, index) => {
+                                    const selectedIndex = nativeGallerySelectedIds.indexOf(item.id);
+                                    const day = new Date(item.dateAdded).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                                    const previousDay = index > 0 ? new Date(nativeGalleryItems[index - 1].dateAdded).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                                    return <React.Fragment key={item.id}>
+                                      {day !== previousDay && <div className="col-span-full pt-2 text-[10px] font-semibold text-[#A9A2B6]">{day}</div>}
+                                      <button type="button" onClick={() => toggleNativeGalleryItem(item)} aria-pressed={selectedIndex >= 0} className={`relative aspect-square overflow-hidden rounded-xl border bg-[#11121A] ${selectedIndex >= 0 ? 'border-[#B7A5E8] ring-1 ring-[#B7A5E8]/60' : 'border-white/10'}`}>
+                                        {item.thumbnail ? <img src={item.thumbnail} alt={item.name} loading="lazy" className="h-full w-full object-cover"/> : <span className="flex h-full items-center justify-center text-[#A9A2B6]"><Video size={22}/></span>}
+                                        <span className="absolute bottom-1 left-1 rounded bg-black/75 px-1.5 py-1 text-[9px] font-semibold tabular-nums text-white">{Math.floor((item.durationMs || 0) / 60000)}:{String(Math.floor((item.durationMs || 0) / 1000) % 60).padStart(2, '0')}</span>
+                                        <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-1 text-[8px] text-white/90">{Math.max(1, Math.round((item.size || 0) / 1048576))} MB</span>
+                                        <span className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full border border-white/60 bg-black/65 text-[10px] font-bold text-white">{selectedIndex >= 0 ? selectedIndex + 1 : <Play size={11}/>}</span>
+                                      </button>
+                                    </React.Fragment>;
+                                  })}
+                                </div>
+                              )}
+                              {nativeGallerySelectedIds.length > 0 && (
+                                <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-white/[0.08] bg-black/20 p-2">
+                                  {nativeGallerySelectedIds.map((id, index) => {
+                                    const item = nativeGalleryItems.find(candidate => candidate.id === id);
+                                    return item ? <button key={id} type="button" onClick={() => toggleNativeGalleryItem(item)} aria-label={`Remove selected clip ${index + 1}`} className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-[#B7A5E8]/50">
+                                      {item.thumbnail && <img src={item.thumbnail} alt="" className="h-full w-full object-cover"/>}
+                                      <span className="absolute left-1 top-1 rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold text-white">{index + 1}</span>
+                                      <span className="absolute bottom-1 right-1 rounded bg-black/75 p-0.5 text-white"><X size={10}/></span>
+                                    </button> : null;
+                                  })}
+                                  <span className="shrink-0 text-[9px] text-[#A8A3B1]">Tap a clip to remove it</span>
+                                </div>
+                              )}
+                              {nativeGalleryHasMore && <button type="button" disabled={nativeGalleryLoading} onClick={loadMoreNativeGalleryItems} className="w-full rounded-xl border border-white/10 py-2.5 text-xs font-semibold text-[#C9C4D2] disabled:opacity-50">{nativeGalleryLoading ? 'Loading…' : 'Load more videos'}</button>}
+                              {nativeGallerySelectedIds.length > 0 && <button type="button" disabled={nativeGalleryLoading} onClick={importSelectedNativeGalleryItems} className="w-full rounded-xl bg-[#6545B7] py-3 text-xs font-semibold text-white disabled:opacity-50">{nativeGalleryLoading ? 'Preparing clips…' : nativeGallerySelectedIds.length > 1 ? `Open ${nativeGallerySelectedIds.length} clips in Studio` : 'Use selected video'}</button>}
+                            </div>
+                          ) : (
                           <div className="nx-gallery-empty flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 px-6 text-center">
                             <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[#C4BED2]"><Video size={25}/></div>
                             <h4 className="mt-4 text-sm font-semibold text-white">Choose a video</h4>
@@ -2111,7 +2285,56 @@ export default function MediaCreationEngine({
                             <label className="mt-5 inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#6545B7] px-5 py-3 text-xs font-semibold text-white transition-colors hover:bg-[#7555C8] active:scale-[0.98]"><Plus size={16}/> Browse videos<input type="file" accept="video/*" multiple className="hidden" onChange={event => { setActiveMode('video'); handleVideoUpload(event); }}/></label>
                             <p className="mt-3 text-[9px] text-[#777481]">Your device’s media picker controls file access.</p>
                           </div>
-                        ) : selectedImages.length === 0 ? (
+                          )
+                        ) : (
+                          <>
+                            {nativeGalleryEnabled && (
+                              <div className="mb-4 space-y-3">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-[10px] font-semibold text-[#C9C4D2]">Browse photos on this device</p>
+                                  <span className="text-[10px] tabular-nums text-[#898692]">{nativeGalleryItems.length} loaded</span>
+                                </div>
+                                <div className="flex gap-2 overflow-x-auto pb-1">
+                                  {['Recent', ...Array.from(new Set(nativeGalleryItems.map(item => item.album).filter(Boolean)))].map(album => (
+                                    <button key={album} type="button" onClick={() => setNativeGalleryAlbum(album)} aria-pressed={nativeGalleryAlbum === album} className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold ${nativeGalleryAlbum === album ? 'border-[#B7A5E8]/50 bg-[#6545B7]/25 text-white' : 'border-white/10 text-[#A8A3B1]'}`}>{album}</button>
+                                  ))}
+                                </div>
+                                {nativeGalleryError && <div role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] text-amber-100"><p>{nativeGalleryError}</p><div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={() => setNativeGalleryReloadToken(value => value + 1)} className="rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">Try again</button><button type="button" onClick={() => { void openNativeAppSettings().catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Open NEXORA in Android Settings and allow Photos or Videos access.' }))); }} className="rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">App settings</button></div></div>}
+                                {nativeGalleryLoading && nativeGalleryItems.length === 0 ? <div className="py-12 text-center text-xs text-[#A8A3B1]">Opening your gallery…</div> : nativeGalleryItems.length === 0 ? <div className="rounded-xl border border-dashed border-white/10 py-12 text-center text-xs text-[#A8A3B1]">No photos found in this library yet.</div> : (
+                                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                                    {nativeGalleryItems.filter(item => nativeGalleryAlbum === 'Recent' || item.album === nativeGalleryAlbum).map((item, index, visibleItems) => {
+                                      const selectedIndex = nativeGallerySelectedIds.indexOf(item.id);
+                                      const day = new Date(item.dateAdded).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                                      const previousDay = index > 0 ? new Date(visibleItems[index - 1].dateAdded).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+                                      return <React.Fragment key={item.id}>
+                                        {day !== previousDay && <div className="col-span-full pt-2 text-[10px] font-semibold text-[#A9A2B6]">{day}</div>}
+                                        <button type="button" onClick={() => toggleNativeGalleryItem(item)} aria-pressed={selectedIndex >= 0} className={`relative aspect-square overflow-hidden rounded-xl border bg-[#11121A] ${selectedIndex >= 0 ? 'border-[#B7A5E8] ring-1 ring-[#B7A5E8]/60' : 'border-white/10'}`}>
+                                          {item.thumbnail ? <img src={item.thumbnail} alt={item.name} loading="lazy" className="h-full w-full object-cover"/> : <span className="flex h-full items-center justify-center text-[#A9A2B6]"><FileImage size={22}/></span>}
+                                          <span className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full border border-white/60 bg-black/65 text-[10px] font-bold text-white">{selectedIndex >= 0 ? selectedIndex + 1 : <Plus size={11}/>}</span>
+                                        </button>
+                                      </React.Fragment>;
+                                    })}
+                                  </div>
+                                )}
+                                {nativeGallerySelectedIds.length > 0 && (
+                                  <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-white/[0.08] bg-black/20 p-2">
+                                    {nativeGallerySelectedIds.map((id, index) => {
+                                      const item = nativeGalleryItems.find(candidate => candidate.id === id);
+                                      return item ? <button key={id} type="button" onClick={() => toggleNativeGalleryItem(item)} aria-label={`Remove selected photo ${index + 1}`} className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-[#B7A5E8]/50">
+                                        {item.thumbnail && <img src={item.thumbnail} alt="" className="h-full w-full object-cover"/>}
+                                        <span className="absolute left-1 top-1 rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold text-white">{index + 1}</span>
+                                        <span className="absolute bottom-1 right-1 rounded bg-black/75 p-0.5 text-white"><X size={10}/></span>
+                                      </button> : null;
+                                    })}
+                                    <span className="shrink-0 text-[9px] text-[#A8A3B1]">Tap a photo to remove it</span>
+                                  </div>
+                                )}
+                                {nativeGalleryHasMore && <button type="button" disabled={nativeGalleryLoading} onClick={loadMoreNativeGalleryItems} className="w-full rounded-xl border border-white/10 py-2.5 text-xs font-semibold text-[#C9C4D2] disabled:opacity-50">{nativeGalleryLoading ? 'Loading…' : 'Load more photos'}</button>}
+                                {nativeGallerySelectedIds.length > 0 && <button type="button" disabled={nativeGalleryLoading} onClick={importSelectedNativeGalleryItems} className="w-full rounded-xl bg-[#6545B7] py-3 text-xs font-semibold text-white disabled:opacity-50">{nativeGalleryLoading ? 'Preparing photos…' : `Add ${nativeGallerySelectedIds.length} selected photo${nativeGallerySelectedIds.length === 1 ? '' : 's'}`}</button>}
+                              </div>
+                            )}
+                            {selectedImages.length === 0 && !nativeGalleryEnabled ? (
+
                           <div className="nx-gallery-empty flex min-h-[340px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 px-6 text-center">
                             <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[#C4BED2]"><FolderHeart size={26}/></div>
                             <h4 className="mt-4 text-sm font-semibold text-white">Start with a photo</h4>
@@ -2119,7 +2342,8 @@ export default function MediaCreationEngine({
                             <label className="mt-5 inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#6545B7] px-5 py-3 text-xs font-semibold text-white transition-colors hover:bg-[#7555C8] active:scale-[0.98]"><Plus size={16}/> Choose photos<input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload}/></label>
                             <p className="mt-3 text-[9px] text-[#777481]">NEXORA only receives files you choose.</p>
                           </div>
-                        ) : (
+                        ) : null}
+                        {selectedImages.length > 0 && (
                           <>
                             <div className="mb-3 flex items-center justify-between gap-2">
                               <div><p className="text-xs font-semibold text-white">Selected photos</p><p className="mt-0.5 text-[10px] text-[#898692]">Tap to preview · use arrows to arrange</p></div>
@@ -2153,6 +2377,8 @@ export default function MediaCreationEngine({
                                 <div className="flex max-h-[260px] items-center justify-center bg-black/50 p-2"><img src={selectedImages[galleryPreviewIndex].url} alt={selectedImages[galleryPreviewIndex].fileName || 'Selected photo preview'} className="max-h-[244px] max-w-full rounded-md object-contain"/></div>
                               </div>
                             )}
+                          </>
+                        )}
                           </>
                         )}
                       </div>
@@ -2261,7 +2487,7 @@ export default function MediaCreationEngine({
                               ))}
                             </div>
                             <div className="nx-camera-control-dock flex w-full items-center justify-center gap-7 rounded-[28px] px-5 py-3">
-                              <button type="button" aria-label="Choose a video from gallery" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => { setActiveMode('video'); setIsLensStudioOpen(false); }} className="nx-camera-side-control flex h-12 w-12 items-center justify-center rounded-2xl text-white disabled:opacity-40"><FileImage size={19}/></button>
+                              <button type="button" aria-label="Choose a video from gallery" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => { setActiveMode(nativeGalleryEnabled ? 'carousel' : 'video'); setGalleryTab('videos'); setIsLensStudioOpen(false); }} className="nx-camera-side-control flex h-12 w-12 items-center justify-center rounded-2xl text-white disabled:opacity-40"><FileImage size={19}/></button>
                               {isRecording ? <button onClick={handleStopReelRecord} aria-label="Stop recording" className="nx-camera-record-shutter flex h-[76px] w-[76px] items-center justify-center rounded-full border-[4px] border-white"><span className="h-7 w-7 rounded-md bg-white"/></button>  : <button onClick={startReelRecording} disabled={!videoCameraReady || isSavingRecordedVideo || countdownTimer !== null || Boolean(recordedVideoUrl)} aria-label="Start recording" className="nx-camera-record-shutter flex h-[76px] w-[76px] items-center justify-center rounded-full border-[4px] border-white disabled:opacity-45"><span className="h-[60px] w-[60px] rounded-full border border-white/70"/></button>}
                               <button type="button" aria-label="Switch camera" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null || Boolean(recordedVideoUrl)} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="nx-camera-side-control flex h-12 w-12 items-center justify-center rounded-2xl text-white disabled:opacity-40"><RefreshCw size={20}/></button>
                             </div>
