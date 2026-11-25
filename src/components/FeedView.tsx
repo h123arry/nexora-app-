@@ -529,7 +529,12 @@ export default function FeedView({
       try {
         const callable = httpsCallable(functions, 'getPostViewAnalytics');
         const response = await callable({ postId: analyticsPost.id, days: 7 });
-        if (!cancelled) setPostViewAnalytics(response.data as typeof postViewAnalytics);
+        const data = response.data as NonNullable<typeof postViewAnalytics>;
+        if (!cancelled) {
+          setPostViewAnalytics(data);
+          setAnalyticsPost(previous => previous?.id === analyticsPost.id ? { ...previous, views: data.totalViews } : previous);
+          setLocalPosts(previous => previous.map(post => post.id === analyticsPost.id ? { ...post, views: data.totalViews } : post));
+        }
       } catch {
         if (!cancelled) setPostViewAnalyticsError(true);
       } finally {
