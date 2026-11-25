@@ -1850,7 +1850,7 @@ export default function MediaCreationEngine({
     };
     window.addEventListener('nexora:android-back', handleAndroidBack);
     return () => window.removeEventListener('nexora:android-back', handleAndroidBack);
-  }, [activeMode, currentStep, galleryReturnToCamera, isMediaPreviewExpanded, permissionTarget, recordedVideoUrl, showExitConfirm, videoFileUrl, voiceFileUrl, caption, selectedImages, onClose]);
+  }, [activeMode, currentStep, galleryReturnToCamera, isMediaPreviewExpanded, permissionTarget, recordedVideoUrl, showExitConfirm, videoFileUrl, voiceFileUrl, caption, selectedImages, onClose, prevStep, handleExitClick]);
 
 
   // Accessibility Checks
