@@ -239,6 +239,9 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
         try {
           const posterBlob = await createRemoteVideoPoster(normalizeMediaDeliveryUrl(videoSource));
           if (!posterBlob || !active) continue;
+          const temporaryUrl = URL.createObjectURL(posterBlob);
+          temporaryPosterUrls.current.push(temporaryUrl);
+          setRepairedPosters(current => ({ ...current, [post.id]: temporaryUrl }));
           if (ownerId && post.userId === ownerId && auth.currentUser?.uid === ownerId) {
             const uploaded = await uploadMediaFile({
               file: new File([posterBlob], `profile-poster-${post.id}.jpg`, { type: 'image/jpeg' }),
@@ -252,10 +255,6 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
               });
               setRepairedPosters(current => ({ ...current, [post.id]: uploaded.downloadUrl }));
             }
-          } else {
-            const temporaryUrl = URL.createObjectURL(posterBlob);
-            temporaryPosterUrls.current.push(temporaryUrl);
-            setRepairedPosters(current => ({ ...current, [post.id]: temporaryUrl }));
           }
         } catch (error) {
           console.warn('[ProfileMedia] Could not generate the real video poster:', post.id, error);
