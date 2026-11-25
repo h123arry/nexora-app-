@@ -137,7 +137,11 @@ export const getPostViewAnalytics = onCall({ maxInstances: 10 }, async request =
   const start = new Date();
   start.setUTCHours(0, 0, 0, 0);
   start.setUTCDate(start.getUTCDate() - (days - 1));
-  const dailySnap = await postRef.collection('viewDaily').orderBy('day', 'asc').limit(30).get();
+  const dailySnap = await postRef.collection('viewDaily')
+    .where('day', '>=', utcDay(start))
+    .orderBy('day', 'asc')
+    .limit(days)
+    .get();
   const byDay = new Map(dailySnap.docs.map(doc => [String(doc.get('day')), {
     views: Number.isSafeInteger(doc.get('views')) ? doc.get('views') as number : 0,
     uniqueViewers: Number.isSafeInteger(doc.get('uniqueViewers')) ? doc.get('uniqueViewers') as number : 0,
