@@ -27,7 +27,7 @@ interface ImportedMedia {
 }
 
 interface NexoraMediaPlugin {
-  requestGalleryAccess(): Promise<{ granted: boolean }>;
+  requestGalleryAccess(options: { kind: 'photos' | 'videos' }): Promise<{ granted: boolean }>;
   listGalleryMedia(options: { kind: 'photos' | 'videos'; offset: number; limit: number }): Promise<GalleryPage>;
   importGalleryMedia(options: { uri: string; name: string }): Promise<ImportedMedia>;
 }
@@ -37,9 +37,9 @@ const NativeMedia = registerPlugin<NexoraMediaPlugin>('NexoraMedia');
 export const isNativeGalleryAvailable = (): boolean =>
   Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
 
-export async function requestNativeGalleryAccess(): Promise<boolean> {
+export async function requestNativeGalleryAccess(kind: 'photos' | 'videos'): Promise<boolean> {
   if (!isNativeGalleryAvailable()) return false;
-  const result = await NativeMedia.requestGalleryAccess();
+  const result = await NativeMedia.requestGalleryAccess({ kind });
   return result.granted;
 }
 
