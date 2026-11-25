@@ -38,9 +38,6 @@ android {
             minifyEnabled false
             if (releaseSigningConfigured) {
                 signingConfig signingConfigs.release
-            } else {
-                // Never silently produce a distributable unsigned release APK.
-                signingConfig null
             }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
