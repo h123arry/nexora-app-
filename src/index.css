@@ -2876,3 +2876,40 @@ body {
     padding-top: 5px;
   }
 }
+
+
+/* Profile + mobile dock spacing refinement: preserve the current visual system. */
+@media (max-width: 767px) {
+  /* Bring the profile content tabs closer to the bio/stats so media appears sooner. */
+  .nx-profile-shell .nx-profile-tabbar {
+    margin-top: 0 !important;
+  }
+  .nx-profile-shell .nx-profile-tabs-track {
+    padding-top: 0.375rem !important;
+    padding-bottom: 0.375rem !important;
+  }
+  .nx-profile-shell .nx-profile-tabs-track > button {
+    min-height: 40px !important;
+  }
+  .nx-profile-shell .nx-profile-content {
+    padding-top: 4px !important;
+  }
+
+  /* Shorten the dock slightly: its top divider moves down and its controls sit lower,
+     while the safe-area inset continues protecting the Android gesture area. */
+  #nexora-unified-bottom-nav.nx-mobile-dock {
+    padding-top: 0.25rem !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.125rem) !important;
+  }
+  #nexora-unified-bottom-nav .nx-dock-item {
+    min-height: 46px;
+  }
+  #nexora-unified-bottom-nav .nx-create-dock {
+    top: -0.625rem !important;
+  }
+
+  /* Keep every profile tile at the requested portrait proportion. */
+  .nx-profile-shell .nx-profile-media-grid > * {
+    aspect-ratio: 3 / 5 !important;
+  }
+}
