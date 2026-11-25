@@ -2177,7 +2177,7 @@ export default function MediaCreationEngine({
 
                   {activeMode === 'carousel' && (
                     <section className="nx-gallery flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-white/[0.09] bg-[#080A12]" aria-label="Media gallery">
-                      <header className="nx-gallery-header shrink-0 border-b border-white/[0.08] px-4 pb-3 pt-4">
+                      <header className="nx-gallery-header shrink-0 border-b border-white/[0.08] px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))]">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#A99BCE]">NEXORA · CREATE</p>
@@ -2217,7 +2217,8 @@ export default function MediaCreationEngine({
                                       {day !== previousDay && <div className="col-span-full pt-2 text-[10px] font-semibold text-[#A9A2B6]">{day}</div>}
                                       <button type="button" onClick={() => toggleNativeGalleryItem(item)} aria-pressed={selectedIndex >= 0} className={`relative aspect-square overflow-hidden rounded-xl border bg-[#11121A] ${selectedIndex >= 0 ? 'border-[#B7A5E8] ring-1 ring-[#B7A5E8]/60' : 'border-white/10'}`}>
                                         {item.thumbnail ? <img src={item.thumbnail} alt={item.name} loading="lazy" className="h-full w-full object-cover"/> : <span className="flex h-full items-center justify-center text-[#A9A2B6]"><Video size={22}/></span>}
-                                        <span className="absolute bottom-1 left-1 rounded bg-black/75 px-1.5 py-1 text-[9px] text-white">{Math.max(1, Math.round((item.size || 0) / 1048576))} MB</span>
+                                        <span className="absolute bottom-1 left-1 rounded bg-black/75 px-1.5 py-1 text-[9px] font-semibold tabular-nums text-white">{Math.floor((item.durationMs || 0) / 60000)}:{String(Math.floor((item.durationMs || 0) / 1000) % 60).padStart(2, '0')}</span>
+                                        <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-1 text-[8px] text-white/90">{Math.max(1, Math.round((item.size || 0) / 1048576))} MB</span>
                                         <span className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full border border-white/60 bg-black/65 text-[10px] font-bold text-white">{selectedIndex >= 0 ? selectedIndex + 1 : <Play size={11}/>}</span>
                                       </button>
                                     </React.Fragment>;
