@@ -158,7 +158,9 @@ test('registers, restores, and signs in an email account through Firebase Auth',
 });
 
 test('keeps a successful Firebase login successful when Firestore profile hydration is temporarily unavailable', async () => {
-  await cleanUp();
+  // The preceding auth test leaves its account signed out for the following
+  // duplicate-registration assertion; do not delete that fixture here.
+  await signOut(auth);
   const recoveryEmail = `nexora-profile-recovery-${Date.now()}@example.test`;
   const created = await AuthService.registerWithEmail(recoveryEmail, password, 'Recovery Member', `recovery_${Date.now().toString().slice(-8)}`);
   const uid = created.firebaseUser.uid;
