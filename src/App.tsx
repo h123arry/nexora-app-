@@ -2624,8 +2624,7 @@ export default function App() {
                       onUpdateProfile={handleUpdateProfile}
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
-                 onAddReply={handleAddReply}
-                      onAddPost={handleAddPost}
+                                       onAddPost={handleAddPost}
                       isOwnProfile={!viewedUser || viewedUser.id === currentUser.id}
                       onCloseProfile={viewedUser ? () => setViewedUser(null) : undefined}
                       onToggleFollow={handleToggleFollow}
@@ -2679,8 +2678,7 @@ export default function App() {
                       }}
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
-                 onAddReply={handleAddReply}
-                      theme={theme}
+                                       theme={theme}
                       locale={resolveLocale(currentUser.preferredLanguage)}
                       onViewProfile={handleViewProfile}
                     />
