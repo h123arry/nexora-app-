@@ -117,15 +117,16 @@ test('defers posters for offscreen players and releases poster requests', () => 
 
 test('profile video posters persist in post fields and are not revoked on effect refresh', async () => {
   const profile = await readFile(new URL('../src/components/ProfileView.tsx', import.meta.url), 'utf8');
-  assert.match(profile, /temporaryPosterUrls = useRef<string\\[\\]>\\(\\[\\]\\)/);
-  assert.match(profile, /temporaryPosterUrls\\.current\\.forEach\\(url => URL\\.revokeObjectURL\\(url\\)\\)/);
-  assert.match(profile, /const savedPoster = \\(post as any\\)\\.videoThumbnailUrl \\|\\| \\(post as any\\)\\.posterUrl/);
-  assert.match(profile, /videoThumbnailUrl: uploaded\\.downloadUrl,[\\s\\S]*?posterUrl: uploaded\\.downloadUrl/);
-  assert.doesNotMatch(profile, /objectUrls\\.forEach\\(url => URL\\.revokeObjectURL\\(url\\)\\)/);
+  assert.ok(profile.includes('temporaryPosterUrls = useRef<string[]>([])'));
+  assert.ok(profile.includes('temporaryPosterUrls.current.forEach(url => URL.revokeObjectURL(url))'));
+  assert.ok(profile.includes('const savedPoster = (post as any).videoThumbnailUrl || (post as any).posterUrl'));
+  assert.ok(profile.includes('videoThumbnailUrl: uploaded.downloadUrl,'));
+  assert.ok(profile.includes('posterUrl: uploaded.downloadUrl,'));
+  assert.ok(!profile.includes('objectUrls.forEach(url => URL.revokeObjectURL(url))'));
 });
 
 test('feed player prefers the persisted video poster fields', async () => {
   const player = await readFile(new URL('../src/components/NexoraVideoPlayer.tsx', import.meta.url), 'utf8');
-  assert.match(player, /const posterUrl = \\(post as any\\)\\.videoThumbnailUrl \\|\\| \\(post as any\\)\\.posterUrl/);
-  assert.match(player, /poster=\\{shouldLoadVideoPoster\\([\\s\\S]*?\\? \\(posterUrl \\|\\| undefined\\)/);
+  assert.ok(player.includes('const posterUrl = (post as any).videoThumbnailUrl || (post as any).posterUrl'));
+  assert.ok(player.includes('poster={shouldLoadVideoPoster({ isActive, isNearby, shouldPreload, isReleased }) ? (posterUrl || undefined) : undefined}'));
 });
