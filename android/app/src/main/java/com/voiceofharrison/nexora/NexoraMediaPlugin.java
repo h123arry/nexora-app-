@@ -19,18 +19,25 @@ import com.getcapacitor.annotation.Permission;
 import java.io.OutputStream;
 
 @CapacitorPlugin(name = "NexoraMedia", permissions = {
-    @Permission(alias = "gallery", strings = { Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED }),
-    @Permission(alias = "galleryTiramisu", strings = { Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO }),
+    @Permission(alias = "galleryPhotos", strings = { Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED }),
+    @Permission(alias = "galleryVideos", strings = { Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED }),
+    @Permission(alias = "galleryPhotosTiramisu", strings = { Manifest.permission.READ_MEDIA_IMAGES }),
+    @Permission(alias = "galleryVideosTiramisu", strings = { Manifest.permission.READ_MEDIA_VIDEO }),
     @Permission(alias = "legacyGallery", strings = { Manifest.permission.READ_EXTERNAL_STORAGE })
 })
 public class NexoraMediaPlugin extends Plugin {
 
     @PluginMethod
     public void requestGalleryAccess(PluginCall call) {
+        String kind = call.getString("kind", "photos");
+        if (!kind.equals("photos") && !kind.equals("videos")) {
+            call.reject("Choose photos or videos.");
+            return;
+        }
         if (Build.VERSION.SDK_INT >= 34) {
-            requestPermissionForAlias("gallery", call, "galleryPermissionCallback");
+            requestPermissionForAlias(kind.equals("videos") ? "galleryVideos" : "galleryPhotos", call, "galleryPermissionCallback");
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requestPermissionForAlias("galleryTiramisu", call, "galleryPermissionCallback");
+            requestPermissionForAlias(kind.equals("videos") ? "galleryVideosTiramisu" : "galleryPhotosTiramisu", call, "galleryPermissionCallback");
         } else {
             requestPermissionForAlias("legacyGallery", call, "galleryPermissionCallback");
         }
