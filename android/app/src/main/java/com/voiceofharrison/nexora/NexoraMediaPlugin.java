@@ -170,7 +170,12 @@ public class NexoraMediaPlugin extends Plugin {
                 if (input == null) throw new IllegalStateException("The selected media is no longer available.");
                 byte[] buffer = new byte[1024 * 128];
                 int count;
-                while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+                long copied = 0;
+                while ((count = input.read(buffer)) != -1) {
+                    copied += count;
+                    if (copied > maxBytes) throw new IllegalStateException("The selected media exceeds the supported file size.");
+                    output.write(buffer, 0, count);
+                }
                 output.flush();
             }
             JSObject result = new JSObject();
