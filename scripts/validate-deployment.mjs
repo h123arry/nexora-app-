@@ -21,6 +21,32 @@ const messagingWorker = existsSync('public/firebase-messaging-sw.js')
   : '';
 const rootPackage = readJson('package.json');
 const functionsPackage = readJson('functions/package.json');
+const productionWorkflowPath = '.github/workflows/deploy-production-founding-members.yml';
+const productionWorkflow = existsSync(productionWorkflowPath)
+  ? readFileSync(productionWorkflowPath, 'utf8')
+  : '';
+const requiredViewCallables = [
+  'recordPublicVideoView',
+  'recordVideoWatchHeartbeat',
+  'getCreatorVideoRetention',
+  'recordPublicTextPostView',
+  'getPostViewAnalytics',
+];
+for (const callable of requiredViewCallables) {
+  if (!productionWorkflow.includes(`functions:${callable}`)) {
+    failures.push(`${productionWorkflowPath}: production Functions allowlist is missing ${callable}`);
+  }
+}
+for (const sourcePath of [
+  'functions/src/videoWatchAnalytics.ts',
+  'functions/src/videoWatchAnalyticsPolicy.ts',
+  'functions/src/postViewAnalytics.ts',
+  'functions/src/postViewAnalyticsPolicy.ts',
+]) {
+  if (!productionWorkflow.includes(`- '${sourcePath}'`)) {
+    failures.push(`${productionWorkflowPath}: production deployment path filters must include ${sourcePath}`);
+  }
+}
 
 if (firebase) {
   if (firebase.functions?.source !== 'functions') failures.push('firebase.json: functions.source must be functions');
