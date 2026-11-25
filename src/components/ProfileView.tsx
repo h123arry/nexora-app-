@@ -7,6 +7,7 @@ import { User, Post } from '../types';
 import { recordCreatorProfileVisit } from '../services/analytics/creatorAudience';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import { ProfileService } from '../services/firebase/profileService';
+import { getReputationStanding } from '../services/reputationStanding';
 import { getCreatorCommunityAsset } from '../content/creatorCommunityAssets';
 import NexoraBranding from './NexoraBranding';
 import CreatorGiftGallery from './CreatorGiftGallery';
@@ -1630,6 +1631,7 @@ export default function ProfileView({
     }
     return formatSecondaryStat(currentUser.contributions ?? currentUser.reputationBreakdown?.contributions ?? 0);
   };
+  const reputationStanding = getReputationStanding(Number(currentUser.reputationPoints) || 0);
 
   return (
     <div className="nx-page-shell nx-profile-shell relative w-full min-h-screen text-white font-sans overflow-x-hidden pb-24">
@@ -4050,6 +4052,27 @@ export default function ProfileView({
                   <p className="text-xs font-sans text-zinc-200 font-medium">What you've shared with Nexora.</p>
                   <span className="text-[11px] font-black text-white block pt-1">{formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 0)} Value</span>
                 </div>
+              </div>
+
+              <div className="rounded-2xl border border-violet-500/20 bg-violet-950/25 p-4 space-y-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <span className="block text-[10px] font-mono font-extrabold uppercase tracking-wider text-violet-300">Community standing</span>
+                    <span className="mt-1 block text-sm font-black text-white">{reputationStanding.tier}</span>
+                  </div>
+                  <span className="rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">
+                    {reputationStanding.nextTier ? `Level ${['Newcomer', 'Active Member', 'Trusted Builder', 'Master Contributor', 'Apex Luminary'].indexOf(reputationStanding.tier) + 1} of 5` : 'Highest level'}
+                  </span>
+                </div>
+                <div role="progressbar" aria-label="Progress toward next reputation level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={reputationStanding.progress} className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-violet-500 transition-[width]" style={{ width: `${reputationStanding.progress}%` }} />
+                </div>
+                <p className="text-[11px] leading-relaxed text-zinc-300">
+                  {reputationStanding.nextTier
+                    ? `${reputationStanding.pointsRemaining} more Reputation points to reach ${reputationStanding.nextTier}.`
+                    : 'You have reached NEXORA’s highest Reputation level.'}
+                  {' '}Reputation is earned through trust and positive community impact. Nex Coins and follower counts cannot buy it.
+                </p>
               </div>
 
               {/* Algorithm Invariants & Protection Status */}
