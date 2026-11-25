@@ -55,6 +55,10 @@ export const recordPublicTextPostView = onCall({ maxInstances: 20 }, async reque
       image: post.image,
       images: post.images,
       mediaType: post.mediaType,
+      voiceAudioUrl: post.voiceAudioUrl,
+      isVoice: post.isVoice,
+      opportunityType: post.opportunityType,
+      isBroadcastPost: post.isBroadcastPost,
       isArchived: post.isArchived,
       isDraft: post.isDraft,
     });
