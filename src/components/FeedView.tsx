@@ -458,6 +458,7 @@ export default function FeedView({
   // New Comments and Replies drafting state
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [submittingComments, setSubmittingComments] = useState<Record<string, boolean>>({});
+  const [commentErrors, setCommentErrors] = useState<Record<string, string>>({});
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [activeReplyFieldId, setActiveReplyFieldId] = useState<string | null>(null);
   const [expandedCommentReplyIds, setExpandedCommentReplyIds] = useState<Record<string, boolean>>({});
@@ -1171,20 +1172,28 @@ export default function FeedView({
     const content = commentInputs[postId]?.trim();
     if (!content || submittingComments[postId]) return;
 
+    setCommentErrors(prev => ({ ...prev, [postId]: '' }));
     setSubmittingComments(prev => ({ ...prev, [postId]: true }));
     try {
       const saved = await onAddComment(postId, content);
-      if (saved === false) return;
+      if (saved === false) {
+        setCommentErrors(prev => ({
+          ...prev,
+          [postId]: "Comment wasn't sent. Your text is still here. Complete sign-in if prompted, then try again.",
+        }));
+        return;
+      }
       trackClientObservation({ eventType: 'meaningful_interaction', entityType: 'post', entityId: postId, properties: { interaction: 'comment_observed' } });
       const post = localPosts.find(p => p.id === postId);
       if (post) {
         recordAndPersistRecommendationEvent('comment', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
       }
       setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+      setCommentErrors(prev => ({ ...prev, [postId]: '' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', {
-        detail: error instanceof Error ? error.message : 'Your comment could not be sent. Please try again.',
-      }));
+      const message = error instanceof Error ? error.message : 'Your comment could not be sent. Please try again.';
+      setCommentErrors(prev => ({ ...prev, [postId]: message }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     } finally {
       setSubmittingComments(prev => ({ ...prev, [postId]: false }));
     }
@@ -2565,7 +2574,7 @@ export default function FeedView({
                           placeholder="Write your comment..."
                           aria-label={`Write a comment on @${post.username}'s post`}
                           value={commentInputs[post.id] || ''}
-                          onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
+                          onChange={(e) => { setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value })); if (commentErrors[post.id]) setCommentErrors(prev => ({ ...prev, [post.id]: '' })); }}
                           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleAddCommentSubmit(post.id); } }}
                           className="min-w-0 min-h-12 flex-1 bg-slate-950/60 border border-white/10 focus:border-violet-400/60 text-sm text-white placeholder:text-violet-300/70 py-3 px-4 rounded-xl focus:outline-hidden"
                         />
@@ -2579,6 +2588,11 @@ export default function FeedView({
                           <Send className="w-4 h-4" />
                         </button>
                       </div>
+                      {commentErrors[post.id] && (
+                        <p role="status" aria-live="polite" className="px-1 pt-1 text-xs text-amber-200">
+                          {commentErrors[post.id]}
+                        </p>
+                      )}
                     </motion.div>
                       </>
                     )}
