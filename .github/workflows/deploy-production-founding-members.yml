@@ -191,6 +191,21 @@ jobs:
             echo "deployed=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Verify deployed video and text view analytics callables
+        if: steps.functions.outputs.deployed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployed_functions="$(npx --yes firebase-tools@15.33.0 functions:list --project "$NEXORA_PRODUCTION_PROJECT_ID")"
+          printf '%s\\n' "$deployed_functions"
+          for callable in recordPublicVideoView recordVideoWatchHeartbeat getCreatorVideoRetention recordPublicTextPostView getPostViewAnalytics; do
+            if ! grep -Fq "$callable" <<< "$deployed_functions"; then
+              echo "::error::Production deployment verification could not find $callable"
+              exit 1
+            fi
+          done
+          echo "Verified all public video and text post view analytics callables in $NEXORA_PRODUCTION_PROJECT_ID."
+
       - name: Deploy Storage rules when Firebase Storage is provisioned
         id: storage
         run: |
