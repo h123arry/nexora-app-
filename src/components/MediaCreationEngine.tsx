@@ -16,7 +16,7 @@ import NexoraLoader from './NexoraLoader';
 import { deleteDraft, getDrafts, saveDraft } from '../services/dataService';
 import { db } from '../lib/firebase';
 import { collection, endAt, getDocs, limit, orderBy, query, startAt, where } from 'firebase/firestore';
-import { isNativeGalleryAvailable, requestNativeGalleryAccess, loadNativeGalleryPage, importNativeGalleryItem, setNativeCreateExperienceActive, type NexoraGalleryItem } from '../services/nativeGalleryService';
+import { isNativeGalleryAvailable, requestNativeGalleryAccess, loadNativeGalleryPage, importNativeGalleryItem, setNativeCreateExperienceActive, openNativeAppSettings, type NexoraGalleryItem } from '../services/nativeGalleryService';
 
 type PhotoExportOptions = {
   rotation: number;
@@ -2244,7 +2244,7 @@ export default function MediaCreationEngine({
                                 <p className="text-[10px] font-semibold text-[#C9C4D2]">Videos on this device</p>
                                 <span className="text-[10px] tabular-nums text-[#898692]">{nativeGalleryItems.length} loaded</span>
                               </div>
-                              {nativeGalleryError && <div role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] text-amber-100"><p>{nativeGalleryError}</p><button type="button" onClick={() => setNativeGalleryReloadToken(value => value + 1)} className="mt-2 rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">Try again</button></div>}
+                              {nativeGalleryError && <div role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] text-amber-100"><p>{nativeGalleryError}</p><div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={() => setNativeGalleryReloadToken(value => value + 1)} className="rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">Try again</button><button type="button" onClick={() => { void openNativeAppSettings().catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Open NEXORA in Android Settings and allow Photos or Videos access.' }))); }} className="rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">App settings</button></div></div>}
                               {nativeGalleryLoading && nativeGalleryItems.length === 0 ? <div className="py-16 text-center text-xs text-[#A8A3B1]">Opening your gallery…</div> : nativeGalleryItems.length === 0 ? <div className="py-16 text-center text-xs text-[#A8A3B1]">No videos found in this library.</div> : (
                                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                                   {nativeGalleryItems.map((item, index) => {
@@ -2301,7 +2301,7 @@ export default function MediaCreationEngine({
                                     <button key={album} type="button" onClick={() => setNativeGalleryAlbum(album)} aria-pressed={nativeGalleryAlbum === album} className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold ${nativeGalleryAlbum === album ? 'border-[#B7A5E8]/50 bg-[#6545B7]/25 text-white' : 'border-white/10 text-[#A8A3B1]'}`}>{album}</button>
                                   ))}
                                 </div>
-                                {nativeGalleryError && <div role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] text-amber-100"><p>{nativeGalleryError}</p><button type="button" onClick={() => setNativeGalleryReloadToken(value => value + 1)} className="mt-2 rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">Try again</button></div>}
+                                {nativeGalleryError && <div role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] text-amber-100"><p>{nativeGalleryError}</p><div className="mt-2 flex flex-wrap gap-2"><button type="button" onClick={() => setNativeGalleryReloadToken(value => value + 1)} className="rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">Try again</button><button type="button" onClick={() => { void openNativeAppSettings().catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Open NEXORA in Android Settings and allow Photos or Videos access.' }))); }} className="rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">App settings</button></div></div>}
                                 {nativeGalleryLoading && nativeGalleryItems.length === 0 ? <div className="py-12 text-center text-xs text-[#A8A3B1]">Opening your gallery…</div> : nativeGalleryItems.length === 0 ? <div className="rounded-xl border border-dashed border-white/10 py-12 text-center text-xs text-[#A8A3B1]">No photos found in this library yet.</div> : (
                                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                                     {nativeGalleryItems.filter(item => nativeGalleryAlbum === 'Recent' || item.album === nativeGalleryAlbum).map((item, index, visibleItems) => {
