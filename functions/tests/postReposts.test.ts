@@ -12,6 +12,7 @@ const sourcePostId = 'repost-test-public-source';
 const privatePostId = 'repost-test-private-source';
 const quoteSourcePostId = 'repost-test-quote-source';
 const richTextSourcePostId = 'repost-test-rich-text-source';
+const videoSourcePostId = 'repost-test-video-source';
 const createdRepostIds = new Set<string>();
 const app = initializeApp({ projectId }, 'post-repost-tests');
 const db = getFirestore(app);
@@ -28,6 +29,7 @@ before(async () => {
   await db.doc(`posts/${privatePostId}`).set({ id: privatePostId, userId: authorId, audience: 'followers', shares: 0 });
   await db.doc(`posts/${quoteSourcePostId}`).set({ id: quoteSourcePostId, userId: authorId, username: authorId, name: 'Repost Author', content: 'Original quote source', audience: 'public', tags: [], shares: 0 });
   await db.doc(`posts/${richTextSourcePostId}`).set({ id: richTextSourcePostId, userId: authorId, username: authorId, name: 'Repost Author', content: [{ type: 'paragraph', children: [{ text: 'A proper text post' }] }], audience: 'public', tags: [], shares: 0 });
+  await db.doc(`posts/${videoSourcePostId}`).set({ id: videoSourcePostId, userId: authorId, username: authorId, name: 'Repost Author', content: 'A video post', audience: 'public', tags: ['video'], shares: 0, videoUrl: 'https://media.example.test/original.mp4', videoDuration: 42, media: { type: 'video', width: 1080, height: 1920 } });
 });
 
 after(async () => {
@@ -36,6 +38,8 @@ after(async () => {
     db.doc(`posts/${privatePostId}`).delete(),
     db.doc(`posts/${quoteSourcePostId}`).delete(),
     db.doc(`posts/${richTextSourcePostId}`).delete(),
+    db.doc(`posts/${videoSourcePostId}`).delete(),
+    db.doc(`users/${actorId}/postReposts/${videoSourcePostId}`).delete(),
     db.doc(`users/${actorId}/postReposts/${quoteSourcePostId}`).delete(),
     db.doc(`publicProfiles/${actorId}`).delete(),
     db.doc(`publicProfiles/${authorId}`).delete(),
@@ -101,4 +105,17 @@ test('rejects private, missing and malformed source posts', async () => {
 
 test('requires a public profile for a valid author attribution', async () => {
   await assert.rejects(createPublicPostRepost(db, 'repost-test-unknown', sourcePostId), /public profile/);
+});
+
+
+test('one-click video repost preserves the playable video and media metadata', async () => {
+  const result = await createPublicPostRepost(db, actorId, videoSourcePostId);
+  createdRepostIds.add(result.repostPostId);
+  const repost = await db.doc(`posts/${result.repostPostId}`).get();
+  assert.equal(repost.get('isRepost'), true);
+  assert.equal(repost.get('sourcePostId'), videoSourcePostId);
+  assert.equal(repost.get('videoUrl'), 'https://media.example.test/original.mp4');
+  assert.equal(repost.get('videoDuration'), 42);
+  assert.deepEqual(repost.get('media'), { type: 'video', width: 1080, height: 1920 });
+  assert.equal(result.shares, 1);
 });
