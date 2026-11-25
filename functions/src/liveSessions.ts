@@ -55,6 +55,11 @@ export const startLiveSession = onCall({ maxInstances: 10, secrets: [liveKitApiK
     return { sessionId: ref.id, status: 'live' as const, viewerCount: 0, videoTransport: 'livekit' as const };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
+    console.error('[NEXORA Live] Callable operation failed.', {
+      uid: request.auth?.uid,
+      sessionId: request.data?.sessionId,
+      error,
+    });
     throw new HttpsError('unavailable', 'Your live room could not be started. Please retry.');
   }
 });
@@ -75,6 +80,11 @@ export const endLiveSession = onCall({ maxInstances: 10, secrets: [liveKitApiKey
     return result;
   } catch (error) {
     if (error instanceof HttpsError) throw error;
+    console.error('[NEXORA Live] Callable operation failed.', {
+      uid: request.auth?.uid,
+      sessionId: request.data?.sessionId,
+      error,
+    });
     throw new HttpsError('unavailable', 'The live room could not be ended. Please retry.');
   }
 });
@@ -96,6 +106,11 @@ export const updateLiveSessionSettings = onCall({ maxInstances: 10 }, async requ
     });
   } catch (error) {
     if (error instanceof HttpsError) throw error;
+    console.error('[NEXORA Live] Callable operation failed.', {
+      uid: request.auth?.uid,
+      sessionId: request.data?.sessionId,
+      error,
+    });
     throw new HttpsError('unavailable', 'Live room settings could not be updated. Please retry.');
   }
 });
@@ -137,6 +152,11 @@ export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
     });
   } catch (error) {
     if (error instanceof HttpsError) throw error;
+    console.error('[NEXORA Live] Callable operation failed.', {
+      uid: request.auth?.uid,
+      sessionId: request.data?.sessionId,
+      error,
+    });
     throw new HttpsError('unavailable', 'You could not join this live room. Please retry.');
   }
 });
@@ -175,6 +195,11 @@ export const requestLiveGuestAccess = onCall({ maxInstances: 20 }, async request
     });
   } catch (error) {
     if (error instanceof HttpsError) throw error;
+    console.error('[NEXORA Live] Callable operation failed.', {
+      uid: request.auth?.uid,
+      sessionId: request.data?.sessionId,
+      error,
+    });
     throw new HttpsError('unavailable', 'Your stage request could not be sent. Please retry.');
   }
 });
@@ -197,6 +222,11 @@ export const reviewLiveGuestAccess = onCall({ maxInstances: 10 }, async request 
     });
   } catch (error) {
     if (error instanceof HttpsError) throw error;
+    console.error('[NEXORA Live] Callable operation failed.', {
+      uid: request.auth?.uid,
+      sessionId: request.data?.sessionId,
+      error,
+    });
     throw new HttpsError('unavailable', 'The guest request could not be reviewed. Please retry.');
   }
 });
@@ -222,6 +252,11 @@ export const heartbeatLiveSession = onCall({ maxInstances: 20 }, async request =
     });
   } catch (error) {
     if (error instanceof HttpsError) throw error;
+    console.error('[NEXORA Live] Callable operation failed.', {
+      uid: request.auth?.uid,
+      sessionId: request.data?.sessionId,
+      error,
+    });
     throw new HttpsError('unavailable', 'Your live connection could not be refreshed.');
   }
 });
@@ -314,6 +349,11 @@ export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request =>
     });
   } catch (error) {
     if (error instanceof HttpsError) throw error;
+    console.error('[NEXORA Live] Callable operation failed.', {
+      uid: request.auth?.uid,
+      sessionId: request.data?.sessionId,
+      error,
+    });
     throw new HttpsError('unavailable', 'Your live chat message could not be sent. Please retry.');
   }
 });

@@ -68,6 +68,7 @@ import { uploadMediaFile } from './services/firebase/storageService';
 import { createMediaStory, createTextStory } from './services/firebase/storyService';
 import { setOriginRemixPolicy, type OriginRemixPolicy } from './services/originRemixPolicyService';
 import { normalizeMediaAssetId } from './utils/mediaAssetReference';
+import { getNexoraActionErrorMessage } from './utils/nexoraActionError';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -1490,7 +1491,7 @@ export default function App() {
           return next;
         });
       }).catch(error => {
-        const message = error instanceof Error ? error.message : 'Your comment reaction could not be saved. Please retry.';
+        const message = getNexoraActionErrorMessage(error, 'Your comment reaction could not be saved. Please retry.');
         window.dispatchEvent(new CustomEvent('toast', { detail: message }));
       });
     };
@@ -1511,7 +1512,7 @@ export default function App() {
           return next;
         });
       }).catch(error => {
-        const message = error instanceof Error ? error.message : 'Your reply could not be saved. Please try again.';
+        const message = getNexoraActionErrorMessage(error, 'Your reply could not be saved. Please try again.');
         window.dispatchEvent(new CustomEvent('toast', { detail: message }));
       });
     };
@@ -1974,7 +1975,7 @@ export default function App() {
       }));
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not post your comment. Please retry.';
+      const message = getNexoraActionErrorMessage(error, 'Your comment could not be sent. Please retry.');
       window.dispatchEvent(new CustomEvent('toast', { detail: message }));
       return false;
     }
@@ -2012,7 +2013,7 @@ export default function App() {
       window.dispatchEvent(new CustomEvent('toast', { detail: quoteText ? 'Quote posted to your profile and the NEXORA feed.' : 'Reposted to your profile and the NEXORA feed.' }));
       return true;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'The post could not be reposted. Please try again.';
+      const message = getNexoraActionErrorMessage(error, 'The post could not be reposted. Please try again.');
       window.dispatchEvent(new CustomEvent('toast', { detail: message }));
       return false;
     }

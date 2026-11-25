@@ -7,6 +7,7 @@ import { User, Post } from '../types';
 import { recordCreatorProfileVisit } from '../services/analytics/creatorAudience';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import { ProfileService } from '../services/firebase/profileService';
+import { getReputationStanding } from '../services/reputationStanding';
 import { getCreatorCommunityAsset } from '../content/creatorCommunityAssets';
 import NexoraBranding from './NexoraBranding';
 import CreatorGiftGallery from './CreatorGiftGallery';
@@ -216,28 +217,32 @@ function createRemoteVideoPoster(videoUrl: string): Promise<Blob | null> {
 
 const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVideoPosters = false, ownerId }: MediaGridProps) => {
   const attemptedPosterRepairs = useRef(new Set<string>());
+  const temporaryPosterUrls = useRef<string[]>([]);
   const [repairedPosters, setRepairedPosters] = useState<Record<string, string>>({});
   const posterRepairSignature = gridPosts.map(post => `${post.id}:${post.videoUrl || ''}:${post.media || ''}:${(post as any).mediaType || (post as any).type || ''}:${(post as any).videoThumbnailUrl || ''}:${(post as any).posterUrl || ''}`).join('|');
 
+  // Keep temporary frame URLs alive for the whole mounted gallery. Effect
+  // re-runs must not revoke URLs that are still being rendered by an <img>.
+  useEffect(() => () => {
+    temporaryPosterUrls.current.forEach(url => URL.revokeObjectURL(url));
+    temporaryPosterUrls.current = [];
+  }, []);
+
   useEffect(() => {
     let active = true;
-    const objectUrls: string[] = [];
     const repairVideoPosters = async () => {
       for (const post of gridPosts) {
         const mediaType = String((post as any).mediaType || (post as any).type || '').toLowerCase();
         const videoSource = post.videoUrl || (typeof post.media === 'string' && (mediaType === 'video' || /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media)) ? post.media : '');
-        if (!videoSource || attemptedPosterRepairs.current.has(post.id)) continue;
+        const savedPoster = (post as any).videoThumbnailUrl || (post as any).posterUrl;
+        if (!videoSource || savedPoster || attemptedPosterRepairs.current.has(post.id)) continue;
         attemptedPosterRepairs.current.add(post.id);
         try {
-          // Never mistake a caption image or generic post.image for the video's
-          // actual frame. Derive the profile poster from the uploaded video itself.
           const posterBlob = await createRemoteVideoPoster(normalizeMediaDeliveryUrl(videoSource));
           if (!posterBlob || !active) continue;
-          const localPoster = URL.createObjectURL(posterBlob);
-          objectUrls.push(localPoster);
-          setRepairedPosters(current => ({ ...current, [post.id]: localPoster }));
-          // Persist only for the authenticated owner; other viewers use the
-          // generated poster locally and never attempt to write another user's post.
+          const temporaryUrl = URL.createObjectURL(posterBlob);
+          temporaryPosterUrls.current.push(temporaryUrl);
+          setRepairedPosters(current => ({ ...current, [post.id]: temporaryUrl }));
           if (ownerId && post.userId === ownerId && auth.currentUser?.uid === ownerId) {
             const uploaded = await uploadMediaFile({
               file: new File([posterBlob], `profile-poster-${post.id}.jpg`, { type: 'image/jpeg' }),
@@ -245,21 +250,20 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
               fileName: `profile-poster-${post.id}.jpg`,
             });
             if (active && auth.currentUser?.uid === ownerId) {
-              await updateDoc(doc(db, 'posts', post.id), { image: uploaded.downloadUrl });
+              await updateDoc(doc(db, 'posts', post.id), {
+                videoThumbnailUrl: uploaded.downloadUrl,
+                posterUrl: uploaded.downloadUrl,
+              });
               setRepairedPosters(current => ({ ...current, [post.id]: uploaded.downloadUrl }));
             }
           }
         } catch (error) {
-          // A CORS-blocked source is handled by the live-video preview fallback.
           console.warn('[ProfileMedia] Could not generate the real video poster:', post.id, error);
         }
       }
     };
     void repairVideoPosters();
-    return () => {
-      active = false;
-      objectUrls.forEach(url => URL.revokeObjectURL(url));
-    };
+    return () => { active = false; };
   }, [posterRepairSignature, ownerId]);
   if (gridPosts.length === 0) {
     return (
@@ -285,9 +289,9 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
         const videoSource = post.videoUrl || (isVideo ? mediaUrl : '');
         // Resolve actual uploaded media and saved posters across legacy and current post schemas.
         const thumbnail = isVideo
-          ? repairedPosters[post.id]
-            || (post as any).videoThumbnailUrl
+          ? (post as any).videoThumbnailUrl
             || (post as any).posterUrl
+            || repairedPosters[post.id]
           : post.image || post.images?.find(Boolean) || (post as any).thumbnailUrl || (post as any).thumbnail || mediaUrl;
         const voiceAudioUrl = post.voiceAudioUrl || (post as any).audioUrl;
         const isMultiImage = !isVideo && (post.images?.filter(Boolean).length || 0) > 1;
@@ -1627,6 +1631,7 @@ export default function ProfileView({
     }
     return formatSecondaryStat(currentUser.contributions ?? currentUser.reputationBreakdown?.contributions ?? 0);
   };
+  const reputationStanding = getReputationStanding(Number(currentUser.reputationPoints) || 0);
 
   return (
     <div className="nx-page-shell nx-profile-shell relative w-full min-h-screen text-white font-sans overflow-x-hidden pb-24">
@@ -4023,8 +4028,8 @@ export default function ProfileView({
                     <Shield className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-sans font-extrabold text-white">How your feed works</h3>
-                    <p className="text-[10px] font-mono text-zinc-400">How your account score works</p>
+                    <h3 className="text-sm font-sans font-extrabold text-white">How Reputation works</h3>
+                    <p className="text-[10px] font-mono text-zinc-400">Your community standing and contribution score</p>
                   </div>
                 </div>
                 <button 
@@ -4047,6 +4052,27 @@ export default function ProfileView({
                   <p className="text-xs font-sans text-zinc-200 font-medium">What you've shared with Nexora.</p>
                   <span className="text-[11px] font-black text-white block pt-1">{formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 0)} Value</span>
                 </div>
+              </div>
+
+              <div className="rounded-2xl border border-violet-500/20 bg-violet-950/25 p-4 space-y-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <span className="block text-[10px] font-mono font-extrabold uppercase tracking-wider text-violet-300">Community standing</span>
+                    <span className="mt-1 block text-sm font-black text-white">{reputationStanding.tier}</span>
+                  </div>
+                  <span className="rounded-full border border-violet-400/25 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">
+                    {reputationStanding.nextTier ? `Level ${['Newcomer', 'Active Member', 'Trusted Builder', 'Master Contributor', 'Apex Luminary'].indexOf(reputationStanding.tier) + 1} of 5` : 'Highest level'}
+                  </span>
+                </div>
+                <div role="progressbar" aria-label="Progress toward next reputation level" aria-valuemin={0} aria-valuemax={100} aria-valuenow={reputationStanding.progress} className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-violet-500 transition-[width]" style={{ width: `${reputationStanding.progress}%` }} />
+                </div>
+                <p className="text-[11px] leading-relaxed text-zinc-300">
+                  {reputationStanding.nextTier
+                    ? `${reputationStanding.pointsRemaining} more Reputation points to reach ${reputationStanding.nextTier}.`
+                    : 'You have reached NEXORA’s highest Reputation level.'}
+                  {' '}Reputation is earned through trust and positive community impact. Nex Coins and follower counts cannot buy it.
+                </p>
               </div>
 
               {/* Algorithm Invariants & Protection Status */}

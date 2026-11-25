@@ -7,6 +7,7 @@ import { scoreLiveRoom } from '../services/liveDiscoveryPolicy';
 import { User } from '../types';
 import { db } from '../lib/firebase';
 import { readGiftSoundVolume, saveGiftSoundVolume } from '../services/soundExperience';
+import { getNexoraActionErrorMessage } from '../utils/nexoraActionError';
 import { endLiveSession, heartbeatLiveSession, joinLiveSession, leaveLiveSession, requestLiveGuestAccess, reviewLiveGuestAccess, sendLiveChatMessage, startLiveSession, updateLiveSessionSettings, moderateLiveParticipant, startLiveRecording, stopLiveRecording, getLiveReplayPlayback, type LiveChatMessage, type LiveSessionSummary } from '../services/liveSessionsService';
 
 interface LiveViewProps { currentUser: User; onClose: () => void; streamId?: string; }
@@ -162,7 +163,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   const startRoom=async()=>{
     setLoading(true);setError('');
     try { const result=await startLiveSession(title);setIsHost(true);setSelectedId(result.sessionId);setTitle(''); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'Couldn’t start your live. Try again.');}
+    catch(e:any){setError(getNexoraActionErrorMessage(e, 'Couldn’t start your live. Try again.'));}
     finally{setLoading(false);}
   };
   const openRoom=async(room:LiveSessionSummary)=>{
@@ -185,49 +186,49 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
     if(!selectedId||!session||!isHost||settingsSaving)return;
     setSettingsSaving(true);setError('');
     try { await updateLiveSessionSettings(selectedId,{[setting]:!session[setting]}); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'Couldn’t update this setting. Try again.');}
+    catch(e:any){setError(getNexoraActionErrorMessage(e, 'Couldn’t update this setting. Try again.'));}
     finally{setSettingsSaving(false);}
   };
   const toggleRecording=async()=>{
     if(!selectedId||!isHost||recordingBusy)return;
     setRecordingBusy(true);setError('');
     try { if(session?.recording?.status==='recording') await stopLiveRecording(selectedId); else await startLiveRecording(selectedId); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'Couldn’t update the recording. Try again.');}
+    catch(e:any){setError(getNexoraActionErrorMessage(e, 'Couldn’t update the recording. Try again.'));}
     finally{setRecordingBusy(false);}
   };
   const openReplay=async(sessionId:string)=>{
     if(replayBusy)return;
     setReplayBusy(true);setError('');
     try { const result=await getLiveReplayPlayback(sessionId);setReplayUrl(result.url); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'This replay is not ready yet.');}
+    catch(e:any){setError(getNexoraActionErrorMessage(e, 'This replay is not ready yet.'));}
     finally{setReplayBusy(false);}
   };
   const requestStageAccess=async()=>{
     if(!selectedId||guestActionBusy||isHost)return;
     setGuestActionBusy(true);setError('');
     try { await requestLiveGuestAccess(selectedId,connectionId);setGuestRequestStatus('pending'); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'Your stage request could not be sent.');}
+    catch(e:any){setError(getNexoraActionErrorMessage(e, 'Your stage request could not be sent.'));}
     finally{setGuestActionBusy(false);}
   };
   const moderateParticipant=async(participantId:string,action:'mute_chat'|'unmute_chat'|'remove'|'ban'|'unban')=>{
     if(!selectedId||!isHost||guestActionBusy)return;
     setGuestActionBusy(true);setError('');
     try { await moderateLiveParticipant(selectedId,participantId,action); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'The participant could not be moderated.');}
+    catch(e:any){setError(getNexoraActionErrorMessage(e, 'The participant could not be moderated.'));}
     finally{setGuestActionBusy(false);}
   };
   const decideGuestRequest=async(guestId:string,decision:'approved'|'denied')=>{
     if(!selectedId||!isHost||guestActionBusy)return;
     setGuestActionBusy(true);setError('');
     try { await reviewLiveGuestAccess(selectedId,guestId,decision); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'The guest request could not be reviewed.');}
+    catch(e:any){setError(getNexoraActionErrorMessage(e, 'The guest request could not be reviewed.'));}
     finally{setGuestActionBusy(false);}
   };
   const submitMessage=async()=>{
     if(!selectedId||!message.trim()||sending)return;
     setSending(true);setError('');
     try {await sendLiveChatMessage(selectedId,message,connectionId);setMessage('');}
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'Your message could not be sent.');}
+    catch(e:any){setError(getNexoraActionErrorMessage(e, 'Your message could not be sent.'));}
     finally{setSending(false);}
   };
   const selectedRoom=!!selectedId && !!session && session.status==='live';
