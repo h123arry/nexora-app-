@@ -58,6 +58,37 @@ export class AuthService {
   }
 
   /**
+   * A successful Firebase credential must remain a successful sign-in even
+   * when Firestore is temporarily unavailable. This minimal in-memory model
+   * lets the app enter the authenticated shell while canonical profile
+   * hydration retries; it is never written back to Firestore.
+   */
+  private static createSessionFallback(firebaseUser: FirebaseUser): User {
+    const email = firebaseUser.email || '';
+    const emailHandle = email.split('@')[0]?.toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 24);
+    return {
+      id: firebaseUser.uid,
+      username: emailHandle || `member_${firebaseUser.uid.slice(0, 10).toLowerCase()}`,
+      name: firebaseUser.displayName || 'NEXORA Member',
+      avatar: firebaseUser.photoURL || '',
+      bio: '',
+      location: 'Global',
+      website: '',
+      followers: 0,
+      following: 0,
+      sparks: 0,
+      isVerified: firebaseUser.emailVerified,
+      coverImage: '',
+      joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
+      email,
+      reputationPoints: 0,
+      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+      interestDNA: {},
+      skills: [],
+    };
+  }
+
+  /**
    * Centralized Firebase Error Mapper
    */
   static mapFirebaseError(error: any): string {
@@ -261,6 +292,12 @@ export class AuthService {
       const source = profileError as { code?: string } | null;
       const code = source?.code || 'profile-setup-failed';
       console.error('[NEXORA] Profile load failed after Firebase sign-in', { code });
+      if (auth.currentUser?.uid === fbUser.uid) {
+        // Do not leave the login form open after Firebase has accepted the
+        // credentials. The provider's auth observer independently retries
+        // canonical profile hydration and replaces this shell when available.
+        return { firebaseUser: fbUser, user: this.createSessionFallback(fbUser) };
+      }
       const wrapped = new Error(
         `Firebase signed you in, but NEXORA could not load your profile (${code}). Your account is safe; please retry after the database issue is resolved.`
       ) as Error & { code?: string };

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { onIdTokenChanged, User as FirebaseUser, ConfirmationResult, setPersistence, indexedDBLocalPersistence, browserLocalPersistence } from 'firebase/auth';
+import { onIdTokenChanged, User as FirebaseUser, ConfirmationResult } from 'firebase/auth';
 import { User } from '../types';
 import { ProfileService } from '../services/firebase/profileService';
 import { AuthService } from '../services/firebase/authService';
@@ -143,19 +143,12 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
-    // Restore durable identity before observing Firebase's initial auth state.
-    void (async () => {
-      try { await setPersistence(auth, indexedDBLocalPersistence); }
-      catch (primaryError) {
-        try { await setPersistence(auth, browserLocalPersistence); }
-        catch (fallbackError) {
-          const code = (fallbackError as { code?: string } | null)?.code || (primaryError as { code?: string } | null)?.code || 'auth-persistence-unavailable';
-          if (!disposed) { setError(`NEXORA could not restore sign-in persistence (${code}). Please sign in again.`); setInitializing(false); }
-          return;
-        }
-      }
-      if (!disposed) unsubscribe = onIdTokenChanged(auth, handleAuthState);
-    })();
+    // Observe Firebase immediately. Waiting for an IndexedDB persistence
+    // migration before subscribing can strand the entire app on its launch
+    // loader on browsers/devices where IndexedDB is slow or unavailable.
+    // Firebase Auth already restores its configured durable persistence; the
+    // sign-in flow explicitly selects browser-local persistence when needed.
+    unsubscribe = onIdTokenChanged(auth, handleAuthState);
     return () => { disposed = true; sequence++; unsubscribe?.(); };
   }, []);
 
@@ -290,9 +283,13 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const retryProfileLoad = async () => {
     setLoading(true);
-    setInitializing(true);
+    const currentUser = auth.currentUser;
+    const hasUsableSessionProfile = !!currentUser && user?.id === currentUser.uid;
+    // Refreshing an already authenticated account must not blank the whole
+    // application. Keep its current profile shell visible during Firestore
+    // recovery; only use the startup loader when no matching profile exists.
+    if (!hasUsableSessionProfile) setInitializing(true);
     setError(null);
-    let currentUser = auth.currentUser;
     try {
       // Signed-out visitors must explicitly sign in or register.
       if (!currentUser) throw new Error('Sign in or create a NEXORA account to continue.');
@@ -309,7 +306,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setError(getProfileSyncMessage(err));
       throw err;
     } finally {
-      setInitializing(false);
+      if (!hasUsableSessionProfile) setInitializing(false);
       setLoading(false);
     }
   };

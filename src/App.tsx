@@ -3705,7 +3705,7 @@ export default function App() {
                 setShowAuthChoice(false);
                 setShowPublicAccountSetup(false);
                 void retryProfileLoad().catch(() => {
-                  window.dispatchEvent(new CustomEvent('toast', { detail: 'Your account was created, but profile sync is still finishing. Please retry.' }));
+                  window.dispatchEvent(new CustomEvent('toast', { detail: 'Your sign-in is active, but profile sync is still finishing. Your account and saved data are safe. Please retry.' }));
                 });
               }}
             />
