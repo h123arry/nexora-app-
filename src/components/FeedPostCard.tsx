@@ -189,7 +189,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           qualifiedTextViewTimerRef.current = null;
         }
       }
-    }, { threshold: [0, 0.5] });
+    }, { threshold: [0, 0.05, 0.1, 0.25, 0.5] });
     observer.observe(target);
     return () => {
       observer.disconnect();
