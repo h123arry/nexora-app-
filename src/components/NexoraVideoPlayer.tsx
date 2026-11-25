@@ -642,6 +642,9 @@ export default function NexoraVideoPlayer({
           const payload = result.data as { counted?: boolean; views?: number };
           if (Number.isSafeInteger(payload?.views) && (payload.views as number) >= 0) {
             setDisplayedViews(payload.views as number);
+            window.dispatchEvent(new CustomEvent('nexora-post-views-updated', {
+              detail: { postId: post.id, views: payload.views },
+            }));
           }
         }).catch(() => {
           // Allow a later playback tick to retry if the network/function is unavailable.
