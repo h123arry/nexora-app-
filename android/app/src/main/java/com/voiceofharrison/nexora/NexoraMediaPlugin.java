@@ -32,7 +32,16 @@ public class NexoraMediaPlugin extends Plugin {
     @com.getcapacitor.annotation.PermissionCallback
     private void galleryPermissionCallback(PluginCall call) {
         JSObject result = new JSObject();
-        result.put("granted", getPermissionState(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ? "gallery" : "legacyGallery").toString().equals("granted"));
+        String kind = call.getString("kind", "photos");
+        boolean granted;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            String requested = kind.equals("videos") ? Manifest.permission.READ_MEDIA_VIDEO : Manifest.permission.READ_MEDIA_IMAGES;
+            granted = getContext().checkSelfPermission(requested) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                || (Build.VERSION.SDK_INT >= 34 && getContext().checkSelfPermission(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) == android.content.pm.PackageManager.PERMISSION_GRANTED);
+        } else {
+            granted = getContext().checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        }
+        result.put("granted", granted);
         call.resolve(result);
     }
 
@@ -82,6 +91,10 @@ public class NexoraMediaPlugin extends Plugin {
                         try {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                                 thumbnail = getContext().getContentResolver().loadThumbnail(itemUri, new android.util.Size(240, 240), null);
+                            } else if (kind.equals("photos")) {
+                                thumbnail = MediaStore.Images.Thumbnails.getThumbnail(getContext().getContentResolver(), id, MediaStore.Images.Thumbnails.MINI_KIND, null);
+                            } else {
+                                thumbnail = MediaStore.Video.Thumbnails.getThumbnail(getContext().getContentResolver(), id, MediaStore.Video.Thumbnails.MINI_KIND, null);
                             }
                         } catch (Exception ignored) { }
                         String thumbnailData = "";
