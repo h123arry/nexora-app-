@@ -35,6 +35,8 @@ jobs:
 
       - name: Validate production app configuration and signing secrets
         env:
+          NEXORA_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.NEXORA_FIREBASE_APPCHECK_SITE_KEY }}
+          NEXORA_FIREBASE_VAPID_KEY: ${{ vars.NEXORA_FIREBASE_VAPID_KEY }}
           KEYSTORE: ${{ secrets.NEXORA_ANDROID_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.NEXORA_ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.NEXORA_ANDROID_KEY_ALIAS }}
@@ -73,7 +75,7 @@ jobs:
             if (key !== 'VITE_FIREBASE_APPCHECK_SITE_KEY' && key !== 'VITE_FIREBASE_VAPID_KEY' && !value) {
               throw new Error(`Missing production build value: ${key}`);
             }
-            fs.appendFileSync(process.env.GITHUB_ENV, `${key}=${value.replace(/%/g, '%25').replace(/\\n/g, '%0A').replace(/\\r/g, '%0D')}\\n`);
+            fs.appendFileSync(process.env.GITHUB_ENV, `${key}=${value.replace(/%/g, '%25').replace(/\n/g, '%0A').replace(/\r/g, '%0D')}\n`);
           }
           NODE
 
