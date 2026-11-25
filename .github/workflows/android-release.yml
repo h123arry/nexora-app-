@@ -39,27 +39,43 @@ jobs:
           STORE_PASSWORD: ${{ secrets.NEXORA_ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.NEXORA_ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.NEXORA_ANDROID_KEY_PASSWORD }}
-          PROJECT_ID: ${{ vars.NEXORA_FIREBASE_PROJECT_ID }}
-          APP_ID: ${{ vars.NEXORA_FIREBASE_APP_ID }}
-          API_KEY: ${{ vars.NEXORA_FIREBASE_API_KEY }}
-          AUTH_DOMAIN: ${{ vars.NEXORA_FIREBASE_AUTH_DOMAIN }}
-          DATABASE_ID: ${{ vars.NEXORA_FIREBASE_DATABASE_ID }}
-          STORAGE_BUCKET: ${{ vars.NEXORA_FIREBASE_STORAGE_BUCKET }}
-          SENDER_ID: ${{ vars.NEXORA_FIREBASE_MESSAGING_SENDER_ID }}
         run: |
           set -euo pipefail
-          for name in KEYSTORE STORE_PASSWORD KEY_ALIAS KEY_PASSWORD PROJECT_ID APP_ID API_KEY AUTH_DOMAIN DATABASE_ID STORAGE_BUCKET SENDER_ID; do
-            if [ -z "${!name:-}" ]; then echo "Missing required GitHub secret/variable: $name"; exit 1; fi
+          for name in KEYSTORE STORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name:-}" ]; then echo "Missing required GitHub secret: NEXORA_ANDROID_$name"; exit 1; fi
           done
-          test "$PROJECT_ID" = "nexora-prod-voiceharrison"
-          test "$AUTH_DOMAIN" = "nexora-prod-voiceharrison.firebaseapp.com"
-          test "$DATABASE_ID" = "default"
-          test "$STORAGE_BUCKET" = "nexora-prod-voiceharrison.firebasestorage.app"
-          test "$SENDER_ID" = "128918144717"
-          case "$APP_ID" in
-            1:128918144717:web:*) ;;
-            *) echo "NEXORA_FIREBASE_APP_ID is not the registered NEXORA production Web App ID"; exit 1 ;;
-          esac
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const config = JSON.parse(fs.readFileSync('firebase-applet-config.json', 'utf8'));
+          const expected = {
+            projectId: 'nexora-prod-voiceharrison',
+            appId: '1:128918144717:web:1bf7a574fddb18bc3e0b84',
+            authDomain: 'nexora-prod-voiceharrison.firebaseapp.com',
+            firestoreDatabaseId: 'default',
+            storageBucket: 'nexora-prod-voiceharrison.firebasestorage.app',
+            messagingSenderId: '128918144717',
+          };
+          for (const [key, value] of Object.entries(expected)) {
+            if (config[key] !== value) throw new Error(`Production Firebase config mismatch: ${key}`);
+          }
+          const env = {
+            VITE_FIREBASE_PROJECT_ID: config.projectId,
+            VITE_FIREBASE_APP_ID: config.appId,
+            VITE_FIREBASE_API_KEY: config.apiKey,
+            VITE_FIREBASE_AUTH_DOMAIN: config.authDomain,
+            VITE_FIREBASE_DATABASE_ID: config.firestoreDatabaseId,
+            VITE_FIREBASE_STORAGE_BUCKET: config.storageBucket,
+            VITE_FIREBASE_MESSAGING_SENDER_ID: config.messagingSenderId,
+            VITE_FIREBASE_APPCHECK_SITE_KEY: process.env.NEXORA_FIREBASE_APPCHECK_SITE_KEY || '',
+            VITE_FIREBASE_VAPID_KEY: process.env.NEXORA_FIREBASE_VAPID_KEY || '',
+          };
+          for (const [key, value] of Object.entries(env)) {
+            if (key !== 'VITE_FIREBASE_APPCHECK_SITE_KEY' && key !== 'VITE_FIREBASE_VAPID_KEY' && !value) {
+              throw new Error(`Missing production build value: ${key}`);
+            }
+            fs.appendFileSync(process.env.GITHUB_ENV, `${key}=${value.replace(/%/g, '%25').replace(/\\n/g, '%0A').replace(/\\r/g, '%0D')}\\n`);
+          }
+          NODE
 
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
@@ -80,16 +96,9 @@ jobs:
         run: npm run build:web
         env:
           VITE_NEXORA_ENV: production
-          VITE_API_BASE_URL: ${{ vars.NEXORA_PRODUCTION_API_BASE_URL }}
-          VITE_FIREBASE_PROJECT_ID: ${{ vars.NEXORA_FIREBASE_PROJECT_ID }}
-          VITE_FIREBASE_APP_ID: ${{ vars.NEXORA_FIREBASE_APP_ID }}
-          VITE_FIREBASE_API_KEY: ${{ vars.NEXORA_FIREBASE_API_KEY }}
-          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.NEXORA_FIREBASE_AUTH_DOMAIN }}
-          VITE_FIREBASE_DATABASE_ID: ${{ vars.NEXORA_FIREBASE_DATABASE_ID }}
-          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.NEXORA_FIREBASE_STORAGE_BUCKET }}
-          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.NEXORA_FIREBASE_MESSAGING_SENDER_ID }}
-          VITE_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.NEXORA_FIREBASE_APPCHECK_SITE_KEY }}
-          VITE_FIREBASE_VAPID_KEY: ${{ vars.NEXORA_FIREBASE_VAPID_KEY }}
+          VITE_API_BASE_URL: https://nexoraapp.com.ng
+          NEXORA_FIREBASE_APPCHECK_SITE_KEY: ${{ vars.NEXORA_FIREBASE_APPCHECK_SITE_KEY }}
+          NEXORA_FIREBASE_VAPID_KEY: ${{ vars.NEXORA_FIREBASE_VAPID_KEY }}
 
       - name: Synchronize Capacitor Android project
         run: npx cap sync android
