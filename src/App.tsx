@@ -1980,7 +1980,24 @@ export default function App() {
     }
   };
 
-  const handleRepostPost = async (postId: string, quoteText?: string): Promise<boolean> => {
+  const handleAddReply = async (postId: string, commentId: string, content: string, replyId: string): Promise<boolean> => {
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid || requiresPublicAccountSetup) {
+      requireAuth(() => { void handleAddReply(postId, commentId, content, replyId); }, 'Join Nexora to reply to comments.');
+      return false;
+    }
+    if (isOffline || !navigator.onLine) throw new Error('You are offline. Reconnect before sending your reply.');
+    const reply = await addPostCommentReply(postId, commentId, content, replyId);
+    setPosts(previous => previous.map(post => post.id !== postId ? post : ({
+      ...post,
+      comments: (post.comments || []).map(comment => comment.id !== commentId ? comment : ({
+        ...comment,
+        replies: [...(comment.replies || []).filter(existing => existing.id !== reply.id), reply],
+      })),
+    })));
+    return true;
+  };
+
+  const handleRepostPost = async (postId: string, quoteText?: string): Promise<boolean> =>
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       requireAuth(() => { void handleRepostPost(postId, quoteText); }, 'Complete your NEXORA profile to repost posts.');
       return false;
@@ -2488,6 +2505,7 @@ export default function App() {
                 onLikePost={handleLikePost}
                 onBookmarkPost={handleBookmarkPost}
                 onAddComment={handleAddComment}
+                 onAddReply={handleAddReply}
                 onAddPost={handleAddPost}
                 onOpenCreate={(initialMode = null, initialCaption = '') => {
                   setCreationInitialMode(initialMode);
@@ -2606,6 +2624,7 @@ export default function App() {
                       onUpdateProfile={handleUpdateProfile}
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
+                 onAddReply={handleAddReply}
                       onAddPost={handleAddPost}
                       isOwnProfile={!viewedUser || viewedUser.id === currentUser.id}
                       onCloseProfile={viewedUser ? () => setViewedUser(null) : undefined}
@@ -2660,6 +2679,7 @@ export default function App() {
                       }}
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
+                 onAddReply={handleAddReply}
                       theme={theme}
                       locale={resolveLocale(currentUser.preferredLanguage)}
                       onViewProfile={handleViewProfile}
