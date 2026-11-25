@@ -949,9 +949,9 @@ export default function MediaCreationEngine({
   const toggleNativeGalleryItem = (item: NexoraGalleryItem) => {
     setNativeGallerySelectedIds(previous => {
       if (previous.includes(item.id)) return previous.filter(id => id !== item.id);
-      const maximum = galleryTab === 'photos' ? 20 : 12;
+      const maximum = galleryTab === 'photos' ? 20 : 1;
       if (previous.length >= maximum) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: `You can select up to ${maximum} ${galleryTab === 'photos' ? 'photos' : 'video clips'} at once.` }));
+        window.dispatchEvent(new CustomEvent('toast', { detail: `You can select up to ${maximum} ${galleryTab === 'photos' ? 'photos' : 'video'} at once.` }));
         return previous;
       }
       return [...previous, item.id];
@@ -961,7 +961,8 @@ export default function MediaCreationEngine({
   const importSelectedNativeGalleryItems = async () => {
     const chosen = nativeGallerySelectedIds
       .map(id => nativeGalleryItems.find(item => item.id === id))
-      .filter((item): item is NexoraGalleryItem => Boolean(item));
+      .filter((item): item is NexoraGalleryItem => Boolean(item))
+      .slice(0, galleryTab === 'videos' ? 1 : 20);
     if (!chosen.length) return;
     setNativeGalleryLoading(true);
     try {
@@ -2236,7 +2237,7 @@ export default function MediaCreationEngine({
                                 </div>
                               )}
                               {nativeGalleryHasMore && <button type="button" disabled={nativeGalleryLoading} onClick={loadMoreNativeGalleryItems} className="w-full rounded-xl border border-white/10 py-2.5 text-xs font-semibold text-[#C9C4D2] disabled:opacity-50">{nativeGalleryLoading ? 'Loading…' : 'Load more videos'}</button>}
-                              {nativeGallerySelectedIds.length > 0 && <button type="button" disabled={nativeGalleryLoading} onClick={importSelectedNativeGalleryItems} className="w-full rounded-xl bg-[#6545B7] py-3 text-xs font-semibold text-white disabled:opacity-50">{nativeGalleryLoading ? 'Preparing clips…' : `Use ${nativeGallerySelectedIds.length} selected clip${nativeGallerySelectedIds.length === 1 ? '' : 's'}`}</button>}
+                              {nativeGallerySelectedIds.length > 0 && <button type="button" disabled={nativeGalleryLoading} onClick={importSelectedNativeGalleryItems} className="w-full rounded-xl bg-[#6545B7] py-3 text-xs font-semibold text-white disabled:opacity-50">{nativeGalleryLoading ? 'Preparing clips…' : `Use selected video`}</button>}
                             </div>
                           ) : (
                           <div className="nx-gallery-empty flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 px-6 text-center">
