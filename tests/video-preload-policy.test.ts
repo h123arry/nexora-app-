@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
 import { getVideoPreloadPlan } from '../src/utils/videoPreloadPolicy';
 
 const base = {
@@ -111,4 +112,20 @@ test('defers posters for offscreen players and releases poster requests', () => 
   assert.equal(shouldLoadVideoPoster({ isActive: false, isNearby: false, shouldPreload: false }), false);
   assert.equal(shouldLoadVideoPoster({ isActive: true, isNearby: true, shouldPreload: true, isReleased: true }), false);
   assert.equal(shouldLoadVideoPoster({ isNearby: false, shouldPreload: false }), true);
+});
+
+
+test('profile video posters persist in post fields and are not revoked on effect refresh', async () => {
+  const profile = await readFile(new URL('../src/components/ProfileView.tsx', import.meta.url), 'utf8');
+  assert.match(profile, /temporaryPosterUrls = useRef<string\\[\\]>\\(\\[\\]\\)/);
+  assert.match(profile, /temporaryPosterUrls\\.current\\.forEach\\(url => URL\\.revokeObjectURL\\(url\\)\\)/);
+  assert.match(profile, /const savedPoster = \\(post as any\\)\\.videoThumbnailUrl \\|\\| \\(post as any\\)\\.posterUrl/);
+  assert.match(profile, /videoThumbnailUrl: uploaded\\.downloadUrl,[\\s\\S]*?posterUrl: uploaded\\.downloadUrl/);
+  assert.doesNotMatch(profile, /objectUrls\\.forEach\\(url => URL\\.revokeObjectURL\\(url\\)\\)/);
+});
+
+test('feed player prefers the persisted video poster fields', async () => {
+  const player = await readFile(new URL('../src/components/NexoraVideoPlayer.tsx', import.meta.url), 'utf8');
+  assert.match(player, /const posterUrl = \\(post as any\\)\\.videoThumbnailUrl \\|\\| \\(post as any\\)\\.posterUrl/);
+  assert.match(player, /poster=\\{shouldLoadVideoPoster\\([\\s\\S]*?\\? \\(posterUrl \\|\\| undefined\\)/);
 });
