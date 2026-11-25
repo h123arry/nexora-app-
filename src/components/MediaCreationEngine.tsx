@@ -2186,12 +2186,12 @@ export default function MediaCreationEngine({
                         </div>
                         <div className="nx-gallery-tabs mt-4 grid grid-cols-2 rounded-xl border border-white/[0.08] bg-black/25 p-1" role="group" aria-label="Media type">
                           <button type="button" onClick={() => setGalleryTab('photos')} aria-pressed={galleryTab === 'photos'} className={`rounded-lg px-3 py-2.5 text-xs font-semibold transition-colors ${galleryTab === 'photos' ? 'bg-[#252033] text-white shadow-sm' : 'text-[#8E8B98] hover:text-white'}`}>Photos</button>
-                          <button type="button" disabled={selectedImages.length > 0} onClick={() => setGalleryTab('videos')} aria-pressed={galleryTab === 'videos'} className={`rounded-lg px-3 py-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${galleryTab === 'videos' ? 'bg-[#252033] text-white shadow-sm' : 'text-[#8E8B98] hover:text-white'}`}>Videos</button>
+                          <button type="button" disabled={selectedImages.length > 0 || nativeGallerySelectedIds.length > 0} onClick={() => setGalleryTab('videos')} aria-pressed={galleryTab === 'videos'} className={`rounded-lg px-3 py-2.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-35 ${galleryTab === 'videos' ? 'bg-[#252033] text-white shadow-sm' : 'text-[#8E8B98] hover:text-white'}`}>Videos</button>
                         </div>
                         {galleryTab === 'photos' && (
                           <div className="mt-3 flex items-center justify-between gap-2">
                             <span className="text-[10px] text-[#8E8B98]">{selectedImages.length ? 'Selected for your post' : 'Nothing selected yet'}</span>
-                            <span className="rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-[#C9C5D2]">{selectedImages.length} of 20</span>
+                            <span className="rounded-full border border-white/10 bg-white/[0.035] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-[#C9C5D2]">{selectedImages.length + nativeGallerySelectedIds.length} of 20</span>
                           </div>
                         )}
                       </header>
@@ -2248,7 +2248,7 @@ export default function MediaCreationEngine({
                                   ))}
                                 </div>
                                 {nativeGalleryError && <p role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] text-amber-100">{nativeGalleryError}</p>}
-                                {nativeGalleryLoading && nativeGalleryItems.length === 0 ? <div className="py-12 text-center text-xs text-[#A8A3B1]">Opening your gallery…</div> : (
+                                {nativeGalleryLoading && nativeGalleryItems.length === 0 ? <div className="py-12 text-center text-xs text-[#A8A3B1]">Opening your gallery…</div> : nativeGalleryItems.length === 0 ? <div className="rounded-xl border border-dashed border-white/10 py-12 text-center text-xs text-[#A8A3B1]">No photos found in this library yet.</div> : (
                                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                                     {nativeGalleryItems.filter(item => nativeGalleryAlbum === 'Recent' || item.album === nativeGalleryAlbum).map((item, index, visibleItems) => {
                                       const selectedIndex = nativeGallerySelectedIds.indexOf(item.id);
