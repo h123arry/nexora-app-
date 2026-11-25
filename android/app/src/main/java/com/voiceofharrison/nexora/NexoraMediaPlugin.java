@@ -27,6 +27,18 @@ import java.io.OutputStream;
 })
 public class NexoraMediaPlugin extends Plugin {
 
+    private static volatile boolean createExperienceActive = false;
+
+    public static boolean isCreateExperienceActive() {
+        return createExperienceActive;
+    }
+
+    @PluginMethod
+    public void setCreateExperienceActive(PluginCall call) {
+        createExperienceActive = Boolean.TRUE.equals(call.getBoolean("active", false));
+        call.resolve();
+    }
+
     @PluginMethod
     public void requestGalleryAccess(PluginCall call) {
         String kind = call.getString("kind", "photos");
