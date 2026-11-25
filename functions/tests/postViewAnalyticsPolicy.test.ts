@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  canReadPostViewAnalytics,
   isEligiblePublicTextPostView,
   shouldCountTextPostView,
   validTextPostViewRequest,
@@ -39,4 +40,11 @@ test('rejects malformed or unreasonable view requests', () => {
   for (const [id, seconds] of [
     ['', 3], ['bad/id', 3], [42, 3], ['post-1', 2], ['post-1', 61], ['post-1', NaN],
   ] as const) assert.equal(validTextPostViewRequest(id, seconds), false);
+});
+
+test('only the authenticated post owner can read its private analytics', () => {
+  assert.equal(canReadPostViewAnalytics('creator-1', 'creator-1', undefined), true);
+  assert.equal(canReadPostViewAnalytics('creator-1', undefined, 'creator-1'), true);
+  assert.equal(canReadPostViewAnalytics('viewer-1', 'creator-1', undefined), false);
+  assert.equal(canReadPostViewAnalytics('', 'creator-1', undefined), false);
 });
