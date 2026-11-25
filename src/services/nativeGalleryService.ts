@@ -33,6 +33,7 @@ interface NexoraMediaPlugin {
   importGalleryMedia(options: { uri: string; name: string }): Promise<ImportedMedia>;
   deleteGalleryImport(options: { filePath: string }): Promise<void>;
   setCreateExperienceActive(options: { active: boolean }): Promise<void>;
+  openAppSettings(): Promise<void>;
 }
 
 const NativeMedia = registerPlugin<NexoraMediaPlugin>('NexoraMedia');
@@ -73,4 +74,9 @@ export async function importNativeGalleryItem(item: NexoraGalleryItem): Promise<
 export async function setNativeCreateExperienceActive(active: boolean): Promise<void> {
   if (!isNativeGalleryAvailable()) return;
   await NativeMedia.setCreateExperienceActive({ active });
+}
+
+export async function openNativeAppSettings(): Promise<void> {
+  if (!isNativeGalleryAvailable()) return;
+  await NativeMedia.openAppSettings();
 }
