@@ -232,7 +232,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
     const repairVideoPosters = async () => {
       for (const post of gridPosts) {
         const mediaType = String((post as any).mediaType || (post as any).type || '').toLowerCase();
-        const videoSource = post.videoUrl || (typeof post.media === 'string' && (mediaType === 'video' || /\\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media)) ? post.media : '');
+        const videoSource = post.videoUrl || (typeof post.media === 'string' && (mediaType === 'video' || /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media)) ? post.media : '');
         const savedPoster = (post as any).videoThumbnailUrl || (post as any).posterUrl;
         if (!videoSource || savedPoster || attemptedPosterRepairs.current.has(post.id)) continue;
         attemptedPosterRepairs.current.add(post.id);
