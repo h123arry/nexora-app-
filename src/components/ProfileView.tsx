@@ -3784,7 +3784,7 @@ export default function ProfileView({
                       <option value="Digital Creator">Digital creator</option><option value="Founder Mindset">Founder</option><option value="Community Leader">Community leader</option><option value="Technical Support">Technical support</option>
                     </select>
                   </label>
-                  <div className="col-span-2 min-w-0 text-xs text-zinc-300">
+                  <div className="col-span-full min-w-0 text-xs text-zinc-300">
                     <div className="mb-1 flex items-center justify-between gap-2">
                       <label htmlFor="nexora-edit-bio">Bio</label>
                       {profileFieldSaveAction('bio', () => saveProfileField({ bio: editBio }), editBio !== (currentUser.bio || ''))}
@@ -3809,11 +3809,12 @@ export default function ProfileView({
                     <input value={editSocialTwitter} onChange={e => setEditSocialTwitter(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('socialTwitter') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
                   </label>
-                  <label className="col-span-2 min-w-0 text-xs text-zinc-300">Instagram
+                  <label className="col-span-full min-w-0 text-xs text-zinc-300">Instagram
                     <input value={editSocialInsta} onChange={e => setEditSocialInsta(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('socialInstagram') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-3 text-sm text-white outline-none focus:border-violet-500" placeholder="@username or link" />
                   </label>
                 </div>
+                </section>
               </div>
               <div className="shrink-0 flex items-center justify-between gap-3 border-t border-white/10 pt-3 pb-1">
                 <p className="min-w-0 text-[10px] text-zinc-500">Save your profile details when you're finished. Photos have their own Save actions.</p>
