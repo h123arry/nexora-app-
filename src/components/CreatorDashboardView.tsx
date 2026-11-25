@@ -120,7 +120,10 @@ export default function CreatorDashboardView({
   const isSelectedTextPost = Boolean(selectedPostForAnalytics
     && !selectedPostForAnalytics.videoUrl
     && !selectedPostForAnalytics.image
-    && !(selectedPostForAnalytics.images && selectedPostForAnalytics.images.length > 0));
+    && !(selectedPostForAnalytics.images && selectedPostForAnalytics.images.length > 0)
+    && !selectedPostForAnalytics.isVoice
+    && !selectedPostForAnalytics.voiceAudioUrl
+    && !selectedPostForAnalytics.opportunityType);
 
   const [selectedPostViewSeries, setSelectedPostViewSeries] = useState<{
     points: Array<{ day: string; views: number; uniqueViewers: number }>;
