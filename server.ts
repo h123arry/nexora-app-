@@ -577,9 +577,20 @@ async function requireFirebaseUser(req: express.Request, res: express.Response, 
   try {
     accountStatus = (await serverDb.collection('accountStatus').doc(decoded.uid).get()).data() || {};
   } catch (error) {
-    const code = (error as { code?: unknown } | null)?.code;
+    const failure = error as { code?: unknown; name?: unknown; message?: unknown } | null;
+    const rawCode = failure?.code;
+    const safeCode = typeof rawCode === 'string' || typeof rawCode === 'number'
+      ? String(rawCode).slice(0, 48)
+      : 'unknown';
+    const safeMessage = typeof failure?.message === 'string'
+      ? failure.message.replace(/[\r\n\t]+/g, ' ').slice(0, 240)
+      : 'No provider error message was supplied.';
     console.error('[NEXORA] Account session status lookup failed', {
-      code: typeof code === 'string' ? code : 'unknown',
+      code: safeCode,
+      errorName: typeof failure?.name === 'string' ? failure.name.slice(0, 80) : 'unknown',
+      message: safeMessage,
+      projectId: firebaseProjectId,
+      firestoreDatabaseId,
     });
     // Do not misreport a database outage as an invalid Firebase sign-in.
     return res.status(503).json({ error: 'NEXORA could not verify your account security status. Please retry shortly.' });
@@ -1023,7 +1034,14 @@ app.get('/api/media/:mediaId', async (req, res) => {
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     return res.redirect(302, url);
   } catch (error) {
-    console.error('[R2Media] Public media resolution failed.', error instanceof Error ? error.name : 'unknown');
+    const failure = error as { code?: unknown; name?: unknown; message?: unknown } | null;
+    console.error('[R2Media] Public media resolution failed.', {
+      code: typeof failure?.code === 'string' || typeof failure?.code === 'number' ? String(failure.code).slice(0, 48) : 'unknown',
+      errorName: typeof failure?.name === 'string' ? failure.name.slice(0, 80) : 'unknown',
+      message: typeof failure?.message === 'string' ? failure.message.replace(/[\r\n\t]+/g, ' ').slice(0, 240) : 'No provider error message was supplied.',
+      projectId: firebaseProjectId,
+      firestoreDatabaseId,
+    });
     // Preserve 404 for confirmed missing/private assets above; transient
     // Firestore, signing, and upstream failures must remain retryable.
     if (!res.headersSent) return res.status(503).json({ code: 'media_resolution_unavailable', retryable: true });
