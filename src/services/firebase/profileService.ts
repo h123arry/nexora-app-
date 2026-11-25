@@ -223,16 +223,15 @@ export class ProfileService {
       // profile document. The username claim is the cross-device uniqueness
       // boundary; a profile must never be provisioned first and claimed later.
       const anonymousUsername = getAnonymousMemberUsername(firebaseUser.uid);
+      const emailHandle = (firebaseUser.email?.split('@')[0] || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9_.]/g, '')
+        .slice(0, 20);
       const requestedUsername = typeof additionalData?.username === 'string'
         ? normalizeUsername(additionalData.username)
         : firebaseUser.isAnonymous
           ? anonymousUsername
-          : normalizeUsername(
-              (firebaseUser.email?.split('@')[0] || `member_${firebaseUser.uid.slice(0, 10)}`)
-                .toLowerCase()
-                .replace(/[^a-z0-9_.]/g, '')
-                .slice(0, 20)
-            );
+          : (emailHandle || `member_${firebaseUser.uid.slice(0, 10).toLowerCase()}`);
 
       if (db) {
         const claimRef = doc(db, 'usernames', requestedUsername);
