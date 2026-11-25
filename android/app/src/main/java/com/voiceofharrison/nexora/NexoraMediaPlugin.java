@@ -150,6 +150,18 @@ public class NexoraMediaPlugin extends Plugin {
         java.io.File destination = null;
         try {
             Uri source = Uri.parse(uriValue);
+            String mimeType = getContext().getContentResolver().getType(source);
+            long sourceSize = -1;
+            try (android.database.Cursor metadata = getContext().getContentResolver().query(source, new String[] { android.provider.OpenableColumns.SIZE }, null, null, null)) {
+                if (metadata != null && metadata.moveToFirst()) sourceSize = metadata.getLong(0);
+            }
+            long maxBytes = mimeType != null && mimeType.startsWith("video/") ? 250L * 1024L * 1024L : 12L * 1024L * 1024L;
+            if (sourceSize > maxBytes) {
+                call.reject(mimeType != null && mimeType.startsWith("video/")
+                    ? "Videos must be 250 MB or smaller."
+                    : "Photos must be 12 MB or smaller.");
+                return;
+            }
             String safeName = name.replaceAll("[^A-Za-z0-9._-]", "_");
             String extension = safeName.contains(".") ? safeName.substring(safeName.lastIndexOf('.')) : ".media";
             destination = java.io.File.createTempFile("nx-", extension, directory);
@@ -164,12 +176,30 @@ public class NexoraMediaPlugin extends Plugin {
             JSObject result = new JSObject();
             result.put("filePath", destination.getAbsolutePath());
             result.put("name", safeName);
-            result.put("mimeType", getContext().getContentResolver().getType(source));
+            result.put("mimeType", mimeType);
             result.put("size", destination.length());
             call.resolve(result);
         } catch (Exception error) {
             if (destination != null) destination.delete();
             call.reject("Could not import the selected media.", error);
+        }
+    }
+
+
+    @PluginMethod
+    public void deleteGalleryImport(PluginCall call) {
+        String path = call.getString("filePath");
+        if (path == null || path.isEmpty()) {
+            call.resolve();
+            return;
+        }
+        try {
+            java.io.File root = new java.io.File(getContext().getCacheDir(), "nexora-gallery").getCanonicalFile();
+            java.io.File candidate = new java.io.File(path).getCanonicalFile();
+            if (candidate.getPath().startsWith(root.getPath() + java.io.File.separator)) candidate.delete();
+            call.resolve();
+        } catch (Exception error) {
+            call.reject("Could not clean up temporary gallery media.", error);
         }
     }
 
