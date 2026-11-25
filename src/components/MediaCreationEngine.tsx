@@ -388,6 +388,7 @@ export default function MediaCreationEngine({
   const [nativeGalleryLoading, setNativeGalleryLoading] = useState(false);
   const [nativeGalleryHasMore, setNativeGalleryHasMore] = useState(false);
   const [nativeGalleryOffset, setNativeGalleryOffset] = useState(0);
+  const [nativeGalleryReloadToken, setNativeGalleryReloadToken] = useState(0);
   const [nativeGalleryError, setNativeGalleryError] = useState('');
 
   const [editorToolTab, setEditorToolTab] = useState<'looks' | 'adjust' | 'crop' | 'text'>('looks');
@@ -773,7 +774,7 @@ export default function MediaCreationEngine({
           setNativeGalleryError('Allow NEXORA to access selected photos and videos to browse your gallery.');
           return;
         }
-        const page = await loadNativeGalleryPage(galleryTab, 0, 120);
+        const page = await loadNativeGalleryPage(galleryTab, 0, 60);
         if (cancelled) return;
         setNativeGalleryItems(page.items);
         setNativeGalleryOffset(page.nextOffset);
@@ -785,7 +786,7 @@ export default function MediaCreationEngine({
       }
     })();
     return () => { cancelled = true; };
-  }, [activeMode, galleryTab, nativeGalleryEnabled]);
+  }, [activeMode, galleryTab, nativeGalleryEnabled, nativeGalleryReloadToken]);
 
   // Reels Record timing loop
   useEffect(() => {
@@ -986,7 +987,7 @@ export default function MediaCreationEngine({
     if (nativeGalleryLoading || !nativeGalleryHasMore) return;
     setNativeGalleryLoading(true);
     try {
-      const page = await loadNativeGalleryPage(galleryTab, nativeGalleryOffset, 120);
+      const page = await loadNativeGalleryPage(galleryTab, nativeGalleryOffset, 60);
       setNativeGalleryItems(previous => [...previous, ...page.items]);
       setNativeGalleryOffset(page.nextOffset);
       setNativeGalleryHasMore(page.hasMore);
@@ -2205,7 +2206,7 @@ export default function MediaCreationEngine({
                                 <p className="text-[10px] font-semibold text-[#C9C4D2]">Videos on this device</p>
                                 <span className="text-[10px] tabular-nums text-[#898692]">{nativeGalleryItems.length} loaded</span>
                               </div>
-                              {nativeGalleryError && <p role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] text-amber-100">{nativeGalleryError}</p>}
+                              {nativeGalleryError && <div role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] text-amber-100"><p>{nativeGalleryError}</p><button type="button" onClick={() => setNativeGalleryReloadToken(value => value + 1)} className="mt-2 rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">Try again</button></div>}
                               {nativeGalleryLoading && nativeGalleryItems.length === 0 ? <div className="py-16 text-center text-xs text-[#A8A3B1]">Opening your gallery…</div> : nativeGalleryItems.length === 0 ? <div className="py-16 text-center text-xs text-[#A8A3B1]">No videos found in this library.</div> : (
                                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                                   {nativeGalleryItems.map((item, index) => {
@@ -2261,7 +2262,7 @@ export default function MediaCreationEngine({
                                     <button key={album} type="button" onClick={() => setNativeGalleryAlbum(album)} aria-pressed={nativeGalleryAlbum === album} className={`shrink-0 rounded-full border px-3 py-1.5 text-[10px] font-semibold ${nativeGalleryAlbum === album ? 'border-[#B7A5E8]/50 bg-[#6545B7]/25 text-white' : 'border-white/10 text-[#A8A3B1]'}`}>{album}</button>
                                   ))}
                                 </div>
-                                {nativeGalleryError && <p role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] text-amber-100">{nativeGalleryError}</p>}
+                                {nativeGalleryError && <div role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] p-3 text-[11px] text-amber-100"><p>{nativeGalleryError}</p><button type="button" onClick={() => setNativeGalleryReloadToken(value => value + 1)} className="mt-2 rounded-lg border border-amber-100/20 px-3 py-1.5 font-semibold text-amber-50">Try again</button></div>}
                                 {nativeGalleryLoading && nativeGalleryItems.length === 0 ? <div className="py-12 text-center text-xs text-[#A8A3B1]">Opening your gallery…</div> : nativeGalleryItems.length === 0 ? <div className="rounded-xl border border-dashed border-white/10 py-12 text-center text-xs text-[#A8A3B1]">No photos found in this library yet.</div> : (
                                   <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                                     {nativeGalleryItems.filter(item => nativeGalleryAlbum === 'Recent' || item.album === nativeGalleryAlbum).map((item, index, visibleItems) => {
