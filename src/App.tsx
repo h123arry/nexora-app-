@@ -1997,7 +1997,7 @@ export default function App() {
     return true;
   };
 
-  const handleRepostPost = async (postId: string, quoteText?: string): Promise<boolean> =>
+  const handleRepostPost = async (postId: string, quoteText?: string): Promise<boolean> => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       requireAuth(() => { void handleRepostPost(postId, quoteText); }, 'Complete your NEXORA profile to repost posts.');
       return false;
