@@ -177,6 +177,7 @@ interface FeedViewProps {
   onLikePost: (postId: string) => Promise<boolean> | boolean | void;
   onBookmarkPost: (postId: string) => void;
   onAddComment: (postId: string, content: string) => Promise<boolean> | boolean | void;
+  onAddReply: (postId: string, commentId: string, content: string, replyId: string) => Promise<boolean>;
   onAddPost: (content: string, imageUrl?: string, tagsString?: string) => string;
   onOpenCreate?: (initialMode?: 'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null, initialCaption?: string) => void;
   selectedTag: string | null;
@@ -210,6 +211,7 @@ export default function FeedView({
   onLikePost,
   onBookmarkPost,
   onAddComment,
+  onAddReply,
   onAddPost,
   onOpenCreate,
   selectedTag,
@@ -459,6 +461,7 @@ export default function FeedView({
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [submittingComments, setSubmittingComments] = useState<Record<string, boolean>>({});
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+  const [submittingReplies, setSubmittingReplies] = useState<Record<string, boolean>>({});
   const [activeReplyFieldId, setActiveReplyFieldId] = useState<string | null>(null);
   const [expandedCommentReplyIds, setExpandedCommentReplyIds] = useState<Record<string, boolean>>({});
   const [replySparkStates, setReplySparkStates] = useState<Record<string, { liked: boolean; likes: number; pending: boolean }>>({});
@@ -1190,27 +1193,27 @@ export default function FeedView({
     }
   };
 
-  // Thread reply submission
-  const handleAddReplySubmit = (postId: string, commentId: string) => {
+  // Thread replies are acknowledged by the server before the draft is cleared.
+  const handleAddReplySubmit = async (postId: string, commentId: string) => {
     const content = replyInputs[commentId]?.trim();
-    if (!content) return;
-
-    const newReply: ThreadReply = {
-      id: `reply-new-${Date.now()}`,
-      userId: currentUser.id,
-      username: currentUser.username,
-      name: currentUser.name,
-      avatar: currentUser.avatar,
-      content,
-      timestamp: "Just now"
-    };
-
-    window.dispatchEvent(new CustomEvent('nexora-add-reply', {
-      detail: { postId, commentId, replyContent: content, replyId: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `reply-${Date.now()}-${Math.random().toString(36).slice(2)}` }
-    }));
-
-    setReplyInputs(prev => ({ ...prev, [commentId]: '' }));
-    setActiveReplyFieldId(null);
+    if (!content || submittingReplies[commentId]) return;
+    setSubmittingReplies(previous => ({ ...previous, [commentId]: true }));
+    try {
+      const replyId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `reply-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const saved = await onAddReply(postId, commentId, content, replyId);
+      if (saved) {
+        setReplyInputs(previous => ({ ...previous, [commentId]: '' }));
+        setActiveReplyFieldId(null);
+      }
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: error instanceof Error ? error.message : 'Your reply could not be sent. Please try again.',
+      }));
+    } finally {
+      setSubmittingReplies(previous => ({ ...previous, [commentId]: false }));
+    }
   };
 
   // Float post compose action
@@ -2523,13 +2526,14 @@ export default function FeedView({
                                     aria-label={`Reply to ${c.username}'s comment`}
                                     value={replyInputs[c.id] || ''}
                                     onChange={(e) => setReplyInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddReplySubmit(post.id, c.id); } }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleAddReplySubmit(post.id, c.id); } }}
                                     className="flex-1 bg-slate-900 border border-white/10 rounded-xl py-1 px-3 text-xs text-white focus:outline-hidden"
                                   />
                                   <button 
                                     type="button"
-                                    onClick={() => handleAddReplySubmit(post.id, c.id)}
+                                    onClick={() => { void handleAddReplySubmit(post.id, c.id); }}
                                     aria-label={`Send reply to ${c.username}'s comment`}
+                                    disabled={Boolean(submittingReplies[c.id]) || !replyInputs[c.id]?.trim()}
                                     className="bg-violet-600 hover:bg-violet-550 p-1.5 rounded-xl text-white cursor-pointer"
                                   >
                                     <Send className="w-3.5 h-3.5" />
@@ -2573,8 +2577,8 @@ export default function FeedView({
                           type="button"
                           onClick={() => { void handleAddCommentSubmit(post.id); }}
                           aria-label={`Send comment on @${post.username}'s post`}
-                          disabled={Boolean(submittingComments[post.id]) || !commentInputs[post.id]?.trim()}
-                          className="min-h-12 min-w-12 flex shrink-0 items-center justify-center p-3 bg-violet-600 hover:bg-violet-550 rounded-full text-white transition-colors cursor-pointer disabled:opacity-45"
+                          disabled={Boolean(submittingComments[post.id]) || !commentInputs[post.id]?.trim() || Boolean(post.commentsDisabled)}
+                          className="min-h-12 min-w-12 flex shrink-0 items-center justify-center p-3 bg-violet-600 hover:bg-violet-550 rounded-full text-white transition-colors cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed"
                         >
                           <Send className="w-4 h-4" />
                         </button>
