@@ -26,6 +26,7 @@ import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { getVideoPreloadPlan } from '../utils/videoPreloadPolicy';
 import { getDevicePerformanceProfile } from '../utils/devicePerformance';
 import { getFeedLoadMoreDecision } from '../utils/feedPaginationPolicy';
+import { getNexoraActionErrorMessage } from '../utils/nexoraActionError';
 import { TERMINOLOGY } from '../services/voh';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StoryRail from './StoryRail';
@@ -366,7 +367,7 @@ export default function FeedView({
         : post));
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', {
-        detail: error instanceof Error ? error.message : 'Your vote could not be recorded. Please retry.',
+        detail: getNexoraActionErrorMessage(error, 'Your vote could not be recorded. Please retry.'),
       }));
     }
   };
@@ -1148,7 +1149,7 @@ export default function FeedView({
     } catch (error) {
       setReplySparkStates(previous => ({ ...previous, [key]: { ...current, pending: false } }));
       window.dispatchEvent(new CustomEvent('toast', {
-        detail: error instanceof Error ? error.message : 'Your Spark could not be saved. Please retry.',
+        detail: getNexoraActionErrorMessage(error, 'Your Spark could not be saved. Please retry.'),
       }));
     }
   };
@@ -1186,7 +1187,7 @@ export default function FeedView({
       setCommentInputs(prev => ({ ...prev, [postId]: '' }));
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', {
-        detail: error instanceof Error ? error.message : 'Your comment could not be sent. Please try again.',
+        detail: getNexoraActionErrorMessage(error, 'Your comment could not be sent. Please try again.'),
       }));
     } finally {
       setSubmittingComments(prev => ({ ...prev, [postId]: false }));
@@ -1209,7 +1210,7 @@ export default function FeedView({
       }
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', {
-        detail: error instanceof Error ? error.message : 'Your reply could not be sent. Please try again.',
+        detail: getNexoraActionErrorMessage(error, 'Your reply could not be sent. Please try again.'),
       }));
     } finally {
       setSubmittingReplies(previous => ({ ...previous, [commentId]: false }));
