@@ -32,6 +32,7 @@ interface NexoraMediaPlugin {
   listGalleryMedia(options: { kind: 'photos' | 'videos'; offset: number; limit: number }): Promise<GalleryPage>;
   importGalleryMedia(options: { uri: string; name: string }): Promise<ImportedMedia>;
   deleteGalleryImport(options: { filePath: string }): Promise<void>;
+  setCreateExperienceActive(options: { active: boolean }): Promise<void>;
 }
 
 const NativeMedia = registerPlugin<NexoraMediaPlugin>('NexoraMedia');
@@ -67,4 +68,9 @@ export async function importNativeGalleryItem(item: NexoraGalleryItem): Promise<
   } finally {
     await NativeMedia.deleteGalleryImport({ filePath: imported.filePath }).catch(() => undefined);
   }
+}
+
+export async function setNativeCreateExperienceActive(active: boolean): Promise<void> {
+  if (!isNativeGalleryAvailable()) return;
+  await NativeMedia.setCreateExperienceActive({ active });
 }
