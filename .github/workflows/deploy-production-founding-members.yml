@@ -33,6 +33,12 @@ on:
       - 'functions/src/postEngagement.ts'
       - 'functions/src/postReplies.ts'
       - 'functions/src/postReposts.ts'
+      - 'functions/src/liveSessions.ts'
+      - 'functions/src/liveSessionsPolicy.ts'
+      - 'functions/src/liveKitTransport.ts'
+      - 'functions/src/liveKitTokenPolicy.ts'
+      - 'functions/src/liveModeration.ts'
+      - 'functions/src/liveReplays.ts'
 
 permissions:
   contents: read
@@ -162,7 +168,7 @@ jobs:
           set -euo pipefail
           deploy_functions() {
             npx --yes firebase-tools@15.33.0 deploy \
-              --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,functions:grantEarlyCommunityRecognition \
+              --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,functions:grantEarlyCommunityRecognition,functions:startLiveSession,functions:endLiveSession,functions:joinLiveSession,functions:leaveLiveSession,functions:heartbeatLiveSession,functions:sendLiveChatMessage,functions:updateLiveSessionSettings,functions:requestLiveGuestAccess,functions:reviewLiveGuestAccess,functions:reconcileLiveSessionViewers,functions:getLiveKitToken,functions:moderateLiveParticipant \
               --config firebase.json \
               --project "$NEXORA_PRODUCTION_PROJECT_ID" \
               --non-interactive
@@ -174,7 +180,7 @@ jobs:
           elif [[ ! "$BASE_SHA" =~ ^[0-9a-f]{40}$ ]] || [[ "$BASE_SHA" =~ ^0+$ ]]; then
             echo "::notice::No usable previous commit was supplied; deploying Functions conservatively."
             deploy_functions
-          elif ! git diff --quiet "$BASE_SHA" "$GITHUB_SHA" -- functions/ firebase.json; then
+          elif ! git diff --quiet "$BASE_SHA" "$GITHUB_SHA" -- .github/workflows/deploy-production-founding-members.yml functions/ firebase.json; then
             deploy_functions
           else
             echo "No Firebase Functions source or firebase.json changes detected; skipping unchanged Functions."
@@ -206,7 +212,7 @@ jobs:
           echo "- Project: $NEXORA_PRODUCTION_PROJECT_ID" >> "$GITHUB_STEP_SUMMARY"
           echo "- Firestore database: $FIRESTORE_DATABASE_ID" >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ steps.functions.outputs.deployed }}" = "true" ]; then
-            echo "- Firebase Functions: deployed (Founding 300, GiftVerse, notifications, creator follows, comments, Sparks, replies, reposts and early-community recognition)" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Firebase Functions: deployed (Founding 300, GiftVerse, notifications, creator follows, comments, replies, reposts, early-community recognition and NEXORA LiveKit transport/session/moderation)" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "- Firebase Functions: unchanged; deployment correctly skipped" >> "$GITHUB_STEP_SUMMARY"
           fi
