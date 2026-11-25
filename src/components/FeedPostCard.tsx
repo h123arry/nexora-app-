@@ -30,6 +30,7 @@ interface FeedPostCardProps {
   activeDotsMenuPostId: string | null;
   setActiveDotsMenuPostId: (id: string | null) => void;
   onImpression?: (postId: string) => void;
+  onQualifiedTextView?: (postId: string, visibleSeconds: number) => void;
   onSpark: (postId: string) => void;
   onSave: (postId: string) => void;
   onSharePost?: (postId: string) => void;
@@ -82,6 +83,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   activeDotsMenuPostId,
   setActiveDotsMenuPostId,
   onImpression,
+  onQualifiedTextView,
   onSpark,
   onSave,
   onSharePost,
@@ -124,6 +126,8 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   const cardRef = useRef<HTMLDivElement | null>(null);
   const impressionTimerRef = useRef<number | null>(null);
   const impressionRecordedRef = useRef(false);
+  const qualifiedTextViewTimerRef = useRef<number | null>(null);
+  const qualifiedTextViewRecordedRef = useRef(false);
   const [originPreviewAssetId, setOriginPreviewAssetId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -155,6 +159,37 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       impressionTimerRef.current = null;
     };
   }, [post.id, onImpression]);
+
+  useEffect(() => {
+    const target = cardRef.current;
+    const isTextPost = !post.videoUrl && !post.image && !(post.images && post.images.length > 0)
+      && !post.opportunityType && !post.isBroadcastPost;
+    if (!onQualifiedTextView || !target || !isTextPost || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (entry.target !== target) continue;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          if (qualifiedTextViewTimerRef.current === null && !qualifiedTextViewRecordedRef.current) {
+            qualifiedTextViewTimerRef.current = window.setTimeout(() => {
+              qualifiedTextViewTimerRef.current = null;
+              if (qualifiedTextViewRecordedRef.current) return;
+              qualifiedTextViewRecordedRef.current = true;
+              onQualifiedTextView(post.id, 3);
+            }, 3000);
+          }
+        } else if (qualifiedTextViewTimerRef.current !== null) {
+          window.clearTimeout(qualifiedTextViewTimerRef.current);
+          qualifiedTextViewTimerRef.current = null;
+        }
+      }
+    }, { threshold: [0, 0.5] });
+    observer.observe(target);
+    return () => {
+      observer.disconnect();
+      if (qualifiedTextViewTimerRef.current !== null) window.clearTimeout(qualifiedTextViewTimerRef.current);
+      qualifiedTextViewTimerRef.current = null;
+    };
+  }, [post.id, post.videoUrl, post.image, post.images, post.opportunityType, post.isBroadcastPost, onQualifiedTextView]);
 
   return (
     <div
@@ -750,6 +785,13 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               <span className="text-[10px] font-mono font-bold">{post.comments?.length || 0}</span>
             </button>
 
+            {/* Qualified text-post views. Media counters remain in their existing players. */}
+            <div className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 text-violet-200" aria-label={`${(post.views || 0).toLocaleString()} views`}>
+              <Eye className="w-5 h-5" />
+              <span className="text-[10px] font-mono font-bold">{(post.views || 0).toLocaleString()}</span>
+              <span className="text-[8px] font-mono text-zinc-400">Views</span>
+            </div>
+
             {/* Repost */}
             <button
               type="button"
@@ -812,6 +854,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 export const FeedPostCard = React.memo(FeedPostCardImpl, (prev, next) => {
   if (prev.post.id !== next.post.id) return false;
   if (prev.onImpression !== next.onImpression) return false;
+  if (prev.onQualifiedTextView !== next.onQualifiedTextView) return false;
   if (prev.isActive !== next.isActive) return false;
   if (prev.shouldPreload !== next.shouldPreload) return false;
   if (prev.shouldPreloadImage !== next.shouldPreloadImage) return false;
