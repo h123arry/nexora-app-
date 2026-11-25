@@ -463,12 +463,17 @@ export const addPublicPostCommentEntry = onCall({ maxInstances: 20 }, async requ
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     if (message.includes('unavailable')) throw new HttpsError('not-found', 'This public post is unavailable.');
-    if (message.includes('disabled') || message.includes('Complete your public profile')) {
+    if (message.includes('disabled') || message.includes('Complete your public profile')
+      || message.includes('comment ID is already in use')) {
       throw new HttpsError('failed-precondition', message);
+    }
+    if (message.includes('reached its comment limit')) {
+      throw new HttpsError('resource-exhausted', message);
     }
     if (message.includes('valid') || message.includes('between 1 and 500')) {
       throw new HttpsError('invalid-argument', message);
     }
+    console.error('[Post comment] Comment transaction failed.', { uid: request.auth.uid, postId, commentId, error });
     throw new HttpsError('internal', 'The comment could not be saved. Please retry.');
   }
 });
@@ -554,6 +559,7 @@ export const replyToPublicPostComment = onCall({ maxInstances: 10 }, async reque
     if (message.includes('valid post') || message.includes('between 1 and 500')) throw new HttpsError('invalid-argument', message);
     if (message.includes('unavailable') || message.includes('no longer available')) throw new HttpsError('not-found', message);
     if (message.includes('public profile')) throw new HttpsError('failed-precondition', message);
+    console.error('[Post comment reply] Reply transaction failed.', { uid: request.auth.uid, postId: request.data?.postId, commentId: request.data?.commentId, error });
     throw new HttpsError('internal', 'Your reply could not be saved. Please retry.');
   }
 });
