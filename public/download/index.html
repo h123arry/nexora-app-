@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090714">
+  <meta name="description" content="Download the official NEXORA Android app and get the latest release.">
+  <title>Download NEXORA</title>
+  <link rel="icon" href="/icons/icon-48.png" type="image/png">
+  <style>
+    :root{color-scheme:dark;font-family:Inter,"Plus Jakarta Sans",system-ui,sans-serif;background:#090714;color:#f5f3ff}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,rgba(113,56,255,.2),transparent 48%),#090714}
+    a{color:inherit}.wrap{width:min(100% - 36px,760px);margin:auto;padding:56px 0 36px}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:56px}.brand img{width:48px;height:48px;object-fit:contain}.brand strong{letter-spacing:.2em;font-size:14px}
+    .eyebrow{color:#b49bff;font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase}
+    h1{font-size:clamp(38px,8vw,64px);line-height:1.04;letter-spacing:-.055em;margin:14px 0}
+    .lead{color:#aaa4c0;line-height:1.75;font-size:16px;max-width:560px}
+    .panel{margin-top:34px;padding:26px;border:1px solid #292044;border-radius:24px;background:linear-gradient(145deg,rgba(27,19,53,.92),rgba(14,11,29,.96));box-shadow:0 24px 80px #0005}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:16px}.version{color:#a9a1bd;font-size:13px}.status{font-size:12px;color:#bca9ff}
+    .download{display:flex;justify-content:center;align-items:center;min-height:54px;margin-top:22px;border-radius:14px;background:linear-gradient(110deg,#7138ff,#4b10c8);font-weight:800;text-decoration:none;box-shadow:0 12px 32px #7138ff35}
+    .download[aria-disabled=true]{opacity:.48;pointer-events:none;filter:saturate(.4)}
+    .fine{font-size:12px;color:#88819f;line-height:1.7;margin:16px 0 0}
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}.step{padding:16px;border:1px solid #211b35;border-radius:16px;background:#100d20}.step b{display:block;font-size:13px;margin-bottom:7px}.step span{font-size:12px;color:#918aa8;line-height:1.55}
+    footer{margin-top:48px;color:#77718d;font-size:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .error{color:#ffbd9d}.hidden{display:none}
+    @media(max-width:560px){.wrap{padding-top:32px}.brand{margin-bottom:44px}.panel{padding:20px}.steps{grid-template-columns:1fr}.row{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="brand"><img src="/nexora-mark.png" alt=""><strong>NEXORA</strong></div>
+    <p class="eyebrow">The world's living social network</p>
+    <h1>Your world.<br>One network.</h1>
+    <p class="lead">Get the official NEXORA Android app. Connect with people, communities and creators in one place.</p>
+    <section class="panel" aria-live="polite">
+      <div class="row"><strong id="release-title">Checking the latest release…</strong><span class="status" id="release-status">Connecting</span></div>
+      <p class="version" id="release-version">Official Android distribution</p>
+      <a class="download" id="download-link" href="#" aria-disabled="true">Checking availability…</a>
+      <p class="fine" id="release-notes">Only install NEXORA packages published through this official download centre. Your existing account remains stored with NEXORA, not in the APK.</p>
+      <p class="fine error hidden" id="release-error"></p>
+    </section>
+    <div class="steps">
+      <div class="step"><b>1. Download</b><span>Get the latest signed APK from the official release.</span></div>
+      <div class="step"><b>2. Install</b><span>Open the file and approve Android's installation prompt.</span></div>
+      <div class="step"><b>3. Keep updated</b><span>Return here whenever a new Android release is announced.</span></div>
+    </div>
+    <footer><span>© <span id="year"></span> NEXORA · VOICEOFHARRISON</span><a href="/">Open NEXORA Web</a></footer>
+  </main>
+<script>
+  const owner='h123arry',repo='nexora-app-';
+  const title=document.getElementById('release-title'),status=document.getElementById('release-status'),version=document.getElementById('release-version'),link=document.getElementById('download-link'),notes=document.getElementById('release-notes'),error=document.getElementById('release-error');
+  document.getElementById('year').textContent=new Date().getFullYear();
+  const safeText=value=>String(value||'').replace(/[<>]/g,'').slice(0,4000);
+  async function loadRelease(){
+    try{
+      const response=await fetch('https://api.github.com/repos/'+owner+'/'+repo+'/releases/latest',{headers:{Accept:'application/vnd.github+json'}});
+      if(response.status===404)throw new Error('The first official Android release has not been published yet.');
+      if(!response.ok)throw new Error('The release service is temporarily unavailable. Please try again shortly.');
+      const release=await response.json();
+      const apk=(release.assets||[]).find(asset=>asset.name.toLowerCase().endsWith('.apk'));
+      if(!apk)throw new Error('The latest release does not contain an Android APK yet.');
+      title.textContent=safeText(release.name||'NEXORA for Android');
+      status.textContent='Official release';
+      version.textContent='Version '+safeText(release.tag_name)+' · '+(apk.size/1048576).toFixed(1)+' MB';
+      notes.textContent=safeText(release.body||'The latest official NEXORA Android release.');
+      link.href=apk.browser_download_url;link.removeAttribute('aria-disabled');link.textContent='Download NEXORA for Android';
+      link.setAttribute('download',apk.name);
+    }catch(e){
+      title.textContent='Android release coming soon';
+      status.textContent='Not published';
+      version.textContent='Official NEXORA distribution';
+      link.textContent='No APK available yet';
+      error.textContent=e instanceof Error?e.message:'Unable to check for updates.';
+      error.classList.remove('hidden');
+    }
+  }
+  loadRelease();
+</script>
+</body>
+</html>
