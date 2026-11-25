@@ -510,7 +510,14 @@ export default function FeedView({
   const qualifiedTextViewsInFlightRef = useRef(new Set<string>());
 
   useEffect(() => {
-    if (!analyticsPost) {
+    const isTextAnalyticsPost = Boolean(analyticsPost
+      && !analyticsPost.videoUrl
+      && !analyticsPost.image
+      && !(analyticsPost.images && analyticsPost.images.length > 0)
+      && !analyticsPost.isVoice
+      && !analyticsPost.voiceAudioUrl
+      && !analyticsPost.opportunityType);
+    if (!analyticsPost || !isTextAnalyticsPost) {
       setPostViewAnalytics(null);
       setPostViewAnalyticsError(false);
       return;
