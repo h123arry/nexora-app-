@@ -2222,6 +2222,19 @@ export default function MediaCreationEngine({
                                   })}
                                 </div>
                               )}
+                              {nativeGallerySelectedIds.length > 0 && (
+                                <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-white/[0.08] bg-black/20 p-2">
+                                  {nativeGallerySelectedIds.map((id, index) => {
+                                    const item = nativeGalleryItems.find(candidate => candidate.id === id);
+                                    return item ? <button key={id} type="button" onClick={() => toggleNativeGalleryItem(item)} aria-label={`Remove selected clip ${index + 1}`} className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-[#B7A5E8]/50">
+                                      {item.thumbnail && <img src={item.thumbnail} alt="" className="h-full w-full object-cover"/>}
+                                      <span className="absolute left-1 top-1 rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold text-white">{index + 1}</span>
+                                      <span className="absolute bottom-1 right-1 rounded bg-black/75 p-0.5 text-white"><X size={10}/></span>
+                                    </button> : null;
+                                  })}
+                                  <span className="shrink-0 text-[9px] text-[#A8A3B1]">Tap a clip to remove it</span>
+                                </div>
+                              )}
                               {nativeGalleryHasMore && <button type="button" disabled={nativeGalleryLoading} onClick={loadMoreNativeGalleryItems} className="w-full rounded-xl border border-white/10 py-2.5 text-xs font-semibold text-[#C9C4D2] disabled:opacity-50">{nativeGalleryLoading ? 'Loading…' : 'Load more videos'}</button>}
                               {nativeGallerySelectedIds.length > 0 && <button type="button" disabled={nativeGalleryLoading} onClick={importSelectedNativeGalleryItems} className="w-full rounded-xl bg-[#6545B7] py-3 text-xs font-semibold text-white disabled:opacity-50">{nativeGalleryLoading ? 'Preparing clips…' : `Use ${nativeGallerySelectedIds.length} selected clip${nativeGallerySelectedIds.length === 1 ? '' : 's'}`}</button>}
                             </div>
@@ -2262,6 +2275,19 @@ export default function MediaCreationEngine({
                                         </button>
                                       </React.Fragment>;
                                     })}
+                                  </div>
+                                )}
+                                {nativeGallerySelectedIds.length > 0 && (
+                                  <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-white/[0.08] bg-black/20 p-2">
+                                    {nativeGallerySelectedIds.map((id, index) => {
+                                      const item = nativeGalleryItems.find(candidate => candidate.id === id);
+                                      return item ? <button key={id} type="button" onClick={() => toggleNativeGalleryItem(item)} aria-label={`Remove selected photo ${index + 1}`} className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-[#B7A5E8]/50">
+                                        {item.thumbnail && <img src={item.thumbnail} alt="" className="h-full w-full object-cover"/>}
+                                        <span className="absolute left-1 top-1 rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold text-white">{index + 1}</span>
+                                        <span className="absolute bottom-1 right-1 rounded bg-black/75 p-0.5 text-white"><X size={10}/></span>
+                                      </button> : null;
+                                    })}
+                                    <span className="shrink-0 text-[9px] text-[#A8A3B1]">Tap a photo to remove it</span>
                                   </div>
                                 )}
                                 {nativeGalleryHasMore && <button type="button" disabled={nativeGalleryLoading} onClick={loadMoreNativeGalleryItems} className="w-full rounded-xl border border-white/10 py-2.5 text-xs font-semibold text-[#C9C4D2] disabled:opacity-50">{nativeGalleryLoading ? 'Loading…' : 'Load more photos'}</button>}
