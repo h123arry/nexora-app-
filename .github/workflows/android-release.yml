@@ -127,8 +127,6 @@ jobs:
           test -s "$APK"
           BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK"
-          PACKAGE_ID="$(apkanalyzer manifest application-id "$APK")"
-          test "$PACKAGE_ID" = "com.voiceofharrison.nexora" || (echo "Unexpected APK package ID: $PACKAGE_ID" && exit 1)
           "$BUILD_TOOLS/aapt" dump badging "$APK" | grep -F "package: name='com.voiceofharrison.nexora'"
           sha256sum "$APK" > "$RUNNER_TEMP/SHA256SUMS.txt"
 
@@ -138,5 +136,5 @@ jobs:
           name: NEXORA Android ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            ${{ runner.temp }}/NEXORA-${{ github.ref_name }}.apk
+            ${{ runner.temp }}/NEXORA-*.apk
             ${{ runner.temp }}/SHA256SUMS.txt
