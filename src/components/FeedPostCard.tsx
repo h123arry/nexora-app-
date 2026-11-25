@@ -574,9 +574,14 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             onCommentToggle={() => onCommentToggle(post.id)}
             isCommentsOpen={isCommentsOpen}
             onNotInterested={() => {
-              if (post.userId) setMutedUserIds((prev) => [...prev, post.userId!]);
-              window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Not interested. Creator muted.' }));
+              if (post.userId) setMutedUserIds((prev) => [...new Set([...prev, post.userId!])]);
+              window.dispatchEvent(new CustomEvent('toast', { detail: 'Not interested. Creator muted.' }));
             }}
+            onHidePost={() => {
+              setHiddenPostIds(previous => previous.includes(post.id) ? previous : [...previous, post.id]);
+              window.dispatchEvent(new CustomEvent('toast', { detail: 'Post hidden from your feed.' }));
+            }}
+            onReportPost={() => setReportingPost(post)}
             onViewProfile={(userId) => onViewProfile?.(userId)}
           />
           {!isOwnPost && typeof post.views === 'number' && Number.isFinite(post.views) && post.views >= 0 && (
