@@ -60,6 +60,7 @@ export { discoverPublicWorldWeaves } from './worldWeaveDiscovery.js';
 export { resolveWorldWeaveMomentMediaUrl } from './worldWeaveMediaAccess.js';
 export { auditWorldWeaveMembershipV2 } from './worldWeaveMembershipAudit.js';
 export { recordVideoWatchHeartbeat, recordPublicVideoView, getCreatorVideoRetention } from './videoWatchAnalytics.js';
+export { recordPublicTextPostView, getPostViewAnalytics } from './postViewAnalytics.js';
 export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAnalytics } from './creatorAudienceAnalytics.js';
 export { createCommunityPost } from './communityPosts.js';
 export { getCommunityInsights } from './communityAnalytics.js';
