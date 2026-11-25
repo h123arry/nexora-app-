@@ -3699,11 +3699,11 @@ export default function ProfileView({
 
               <div className="flex min-h-0 flex-1 flex-col justify-start gap-3 overflow-y-auto overscroll-contain py-3">
                 <section aria-labelledby="profile-media-heading" className="overflow-hidden rounded-3xl border border-violet-300/15 bg-[#100C25]">
-                  <div className="relative h-36 overflow-hidden bg-[#211B49] sm:h-44">
+                  <div className="relative h-36 bg-[#211B49] sm:h-44">
                     {(pendingCoverPreview || editCover) ? (
-                      <img src={pendingCoverPreview || editCover} alt="Profile cover preview" className="h-full w-full object-cover" />
+                      <img src={pendingCoverPreview || editCover} alt="Profile cover preview" className="absolute inset-0 h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-full items-center justify-center bg-[radial-gradient(ellipse_at_top_right,_#4822A8_0%,_#21134C_42%,_#0B1020_100%)]">
+                      <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_top_right,_#4822A8_0%,_#21134C_42%,_#0B1020_100%)]">
                         <div className="text-center"><Sparkles className="mx-auto h-7 w-7 text-violet-200/70" /><p className="mt-2 text-[11px] font-medium tracking-wide text-violet-100/70">Your space on NEXORA</p></div>
                       </div>
                     )}
@@ -3715,7 +3715,7 @@ export default function ProfileView({
                         <ImageIcon className="h-3.5 w-3.5" /> {pendingCoverFile ? 'Change selection' : editCover ? 'Change cover' : 'Add cover'}
                       </button>
                     </div>
-                    <div className="absolute -bottom-1 left-4 flex translate-y-1/2 items-end gap-3">
+                    <div className="absolute bottom-0 left-4 flex translate-y-1/2 items-end gap-3">
                       <img src={editAvatar} alt="Profile photo preview" className="h-[76px] w-[76px] rounded-full border-[3px] border-[#100C25] bg-[#211B49] object-cover shadow-xl sm:h-20 sm:w-20" />
                     </div>
                   </div>
