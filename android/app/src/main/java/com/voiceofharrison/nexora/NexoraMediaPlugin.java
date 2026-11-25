@@ -72,7 +72,7 @@ public class NexoraMediaPlugin extends Plugin {
             Uri collection = kind.equals("photos")
                 ? MediaStore.Images.Media.EXTERNAL_CONTENT_URI
                 : MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
-            String[] projection = {
+            String[] projection = kind.equals("photos") ? new String[] {
                 MediaStore.MediaColumns._ID,
                 MediaStore.MediaColumns.DISPLAY_NAME,
                 MediaStore.MediaColumns.MIME_TYPE,
@@ -81,6 +81,16 @@ public class NexoraMediaPlugin extends Plugin {
                 MediaStore.MediaColumns.WIDTH,
                 MediaStore.MediaColumns.HEIGHT,
                 MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME
+            } : new String[] {
+                MediaStore.MediaColumns._ID,
+                MediaStore.MediaColumns.DISPLAY_NAME,
+                MediaStore.MediaColumns.MIME_TYPE,
+                MediaStore.MediaColumns.DATE_ADDED,
+                MediaStore.MediaColumns.SIZE,
+                MediaStore.MediaColumns.WIDTH,
+                MediaStore.MediaColumns.HEIGHT,
+                MediaStore.Video.VideoColumns.DURATION,
+                MediaStore.Video.VideoColumns.BUCKET_DISPLAY_NAME
             };
             String sort = MediaStore.MediaColumns.DATE_ADDED + " DESC";
             try (android.database.Cursor cursor = getContext().getContentResolver().query(collection, projection, null, null, sort)) {
@@ -94,6 +104,7 @@ public class NexoraMediaPlugin extends Plugin {
                     int widthColumn = cursor.getColumnIndex(MediaStore.MediaColumns.WIDTH);
                     int heightColumn = cursor.getColumnIndex(MediaStore.MediaColumns.HEIGHT);
                     int albumColumn = cursor.getColumnIndex(MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME);
+                    int durationColumn = cursor.getColumnIndex(MediaStore.Video.VideoColumns.DURATION);
                     int skipped = 0;
                     int added = 0;
                     while (cursor.moveToNext() && added < requestedLimit) {
@@ -127,6 +138,7 @@ public class NexoraMediaPlugin extends Plugin {
                         item.put("size", cursor.getLong(sizeColumn));
                         item.put("width", widthColumn >= 0 ? cursor.getInt(widthColumn) : 0);
                         item.put("height", heightColumn >= 0 ? cursor.getInt(heightColumn) : 0);
+                        item.put("durationMs", durationColumn >= 0 ? cursor.getLong(durationColumn) : 0L);
                         item.put("album", albumColumn >= 0 ? cursor.getString(albumColumn) : "Recent");
                         item.put("thumbnail", thumbnailData);
                         items.put(item);
