@@ -30,7 +30,7 @@ interface FeedPostCardProps {
   activeDotsMenuPostId: string | null;
   setActiveDotsMenuPostId: (id: string | null) => void;
   onImpression?: (postId: string) => void;
-  onQualifiedTextView?: (postId: string, visibleSeconds: number) => void;
+  onQualifiedTextView?: (postId: string, visibleSeconds: number) => void | Promise<boolean>;
   onSpark: (postId: string) => void;
   onSave: (postId: string) => void;
   onSharePost?: (postId: string) => void;
@@ -163,7 +163,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   useEffect(() => {
     const target = cardRef.current;
     const isTextPost = !post.videoUrl && !post.image && !(post.images && post.images.length > 0)
-      && !post.opportunityType && !post.isBroadcastPost;
+      && !post.isVoice && !post.voiceAudioUrl && !post.opportunityType && !post.isBroadcastPost;
     if (!onQualifiedTextView || !target || !isTextPost || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(entries => {
       for (const entry of entries) {
@@ -174,7 +174,13 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               qualifiedTextViewTimerRef.current = null;
               if (qualifiedTextViewRecordedRef.current) return;
               qualifiedTextViewRecordedRef.current = true;
-              onQualifiedTextView(post.id, 3);
+              if (document.visibilityState !== 'visible') {
+                qualifiedTextViewRecordedRef.current = false;
+                return;
+              }
+              void Promise.resolve(onQualifiedTextView(post.id, 3)).then(accepted => {
+                if (accepted === false) qualifiedTextViewRecordedRef.current = false;
+              });
             }, 3000);
           }
         } else if (qualifiedTextViewTimerRef.current !== null) {
@@ -189,7 +195,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       if (qualifiedTextViewTimerRef.current !== null) window.clearTimeout(qualifiedTextViewTimerRef.current);
       qualifiedTextViewTimerRef.current = null;
     };
-  }, [post.id, post.videoUrl, post.image, post.images, post.opportunityType, post.isBroadcastPost, onQualifiedTextView]);
+  }, [post.id, post.videoUrl, post.image, post.images, post.isVoice, post.voiceAudioUrl, post.opportunityType, post.isBroadcastPost, onQualifiedTextView]);
 
   return (
     <div
