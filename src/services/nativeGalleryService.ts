@@ -9,6 +9,7 @@ export interface NexoraGalleryItem {
   size: number;
   width: number;
   height: number;
+  durationMs: number;
   album: string;
   thumbnail: string;
 }
