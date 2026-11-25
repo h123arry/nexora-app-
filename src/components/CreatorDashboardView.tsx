@@ -117,6 +117,41 @@ export default function CreatorDashboardView({
     setLocalPosts(posts.filter(post => post.userId === currentUser.id));
   }, [posts, currentUser.id]);
 
+  const isSelectedTextPost = Boolean(selectedPostForAnalytics
+    && !selectedPostForAnalytics.videoUrl
+    && !selectedPostForAnalytics.image
+    && !(selectedPostForAnalytics.images && selectedPostForAnalytics.images.length > 0));
+
+  const [selectedPostViewSeries, setSelectedPostViewSeries] = useState<{
+    points: Array<{ day: string; views: number; uniqueViewers: number }>;
+    totalViews: number;
+  } | null>(null);
+  const [selectedPostViewSeriesLoading, setSelectedPostViewSeriesLoading] = useState(false);
+  const [selectedPostViewSeriesError, setSelectedPostViewSeriesError] = useState(false);
+
+  useEffect(() => {
+    if (!selectedPostForAnalytics || !isSelectedTextPost) {
+      setSelectedPostViewSeries(null);
+      return;
+    }
+    let cancelled = false;
+    setSelectedPostViewSeriesLoading(true);
+    setSelectedPostViewSeriesError(false);
+    const load = async () => {
+      try {
+        const callable = httpsCallable(getFunctions(app), 'getPostViewAnalytics');
+        const response = await callable({ postId: selectedPostForAnalytics.id, days: 7 });
+        if (!cancelled) setSelectedPostViewSeries(response.data as typeof selectedPostViewSeries);
+      } catch {
+        if (!cancelled) setSelectedPostViewSeriesError(true);
+      } finally {
+        if (!cancelled) setSelectedPostViewSeriesLoading(false);
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [selectedPostForAnalytics?.id, isSelectedTextPost]);
+
   useEffect(() => {
     if (activeTab !== 'analytics') return;
     let cancelled = false;
@@ -1501,6 +1536,37 @@ export default function CreatorDashboardView({
                   </div>
                 ))}
               </div>
+
+              {isSelectedTextPost && (
+                <div className="rounded-2xl border border-white/10 bg-[#120a3a]/30 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-violet-300">Views over time</h4>
+                    <span className="text-[10px] text-zinc-500">Last 7 days</span>
+                  </div>
+                  {selectedPostViewSeriesLoading ? (
+                    <p className="text-xs text-zinc-400">Loading daily view activity…</p>
+                  ) : selectedPostViewSeriesError ? (
+                    <p className="text-xs text-zinc-400">Daily view activity is temporarily unavailable.</p>
+                  ) : selectedPostViewSeries?.points?.length ? (
+                    <div className="flex h-28 items-end gap-2 border-b border-white/10 pb-1">
+                      {selectedPostViewSeries.points.map(point => {
+                        const peak = Math.max(1, ...selectedPostViewSeries.points.map(item => item.views));
+                        const height = point.views > 0 ? Math.max(6, point.views / peak * 100) : 2;
+                        return (
+                          <div key={point.day} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1" title={`${point.day}: ${point.views} views`}>
+                            <span className="text-[9px] font-mono text-zinc-300">{point.views || ''}</span>
+                            <div className="w-full max-w-8 rounded-t-md bg-violet-500/80" style={{ height: `${height}%` }} />
+                            <span className="text-[8px] text-zinc-500">{new Date(point.day + 'T00:00:00Z').toLocaleDateString(undefined, { weekday: 'short' })}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-zinc-400">Daily view activity will appear here as readers spend time on your post.</p>
+                  )}
+                  <p className="text-[9px] text-zinc-500">A view is counted after three continuous seconds with at least half the text post visible. Repeat views count once per account each day.</p>
+                </div>
+              )}
 
               {/* Metrics that require an analytics event source */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
