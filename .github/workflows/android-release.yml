@@ -82,6 +82,11 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Run production release checks
+        run: |
+          npm run lint
+          npm run test:unit
+
       - name: Decode permanent Android signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.NEXORA_ANDROID_KEYSTORE_BASE64 }}
