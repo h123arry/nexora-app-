@@ -104,7 +104,7 @@ public class NexoraMediaPlugin extends Plugin {
                         Bitmap thumbnail = null;
                         try {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                                thumbnail = getContext().getContentResolver().loadThumbnail(itemUri, new android.util.Size(240, 240), null);
+                                thumbnail = getContext().getContentResolver().loadThumbnail(itemUri, new android.util.Size(180, 180), null);
                             } else if (kind.equals("photos")) {
                                 thumbnail = MediaStore.Images.Thumbnails.getThumbnail(getContext().getContentResolver(), id, MediaStore.Images.Thumbnails.MINI_KIND, null);
                             } else {
@@ -114,7 +114,7 @@ public class NexoraMediaPlugin extends Plugin {
                         String thumbnailData = "";
                         if (thumbnail != null) {
                             java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
-                            thumbnail.compress(Bitmap.CompressFormat.JPEG, 76, bytes);
+                            thumbnail.compress(Bitmap.CompressFormat.JPEG, 68, bytes);
                             thumbnailData = "data:image/jpeg;base64," + Base64.encodeToString(bytes.toByteArray(), Base64.NO_WRAP);
                             thumbnail.recycle();
                         }
@@ -159,6 +159,14 @@ public class NexoraMediaPlugin extends Plugin {
         }
         java.io.File destination = null;
         try {
+            // Remove abandoned gallery imports left by a process interruption.
+            java.io.File[] staleImports = directory.listFiles();
+            if (staleImports != null) {
+                long staleBefore = System.currentTimeMillis() - 24L * 60L * 60L * 1000L;
+                for (java.io.File stale : staleImports) {
+                    if (stale.isFile() && stale.lastModified() < staleBefore) stale.delete();
+                }
+            }
             Uri source = Uri.parse(uriValue);
             String mimeType = getContext().getContentResolver().getType(source);
             long sourceSize = -1;
