@@ -16,6 +16,10 @@ on:
       - 'firestore.indexes.json'
       - 'firebase.json'
       - 'functions/src/index.ts'
+      - 'functions/src/videoWatchAnalytics.ts'
+      - 'functions/src/videoWatchAnalyticsPolicy.ts'
+      - 'functions/src/postViewAnalytics.ts'
+      - 'functions/src/postViewAnalyticsPolicy.ts'
       - 'functions/src/betaAccess.ts'
       - 'functions/src/giftCatalog.ts'
       - 'functions/src/giftCatalogPolicy.ts'
@@ -168,7 +172,7 @@ jobs:
           set -euo pipefail
           deploy_functions() {
             npx --yes firebase-tools@15.33.0 deploy \
-              --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,functions:grantEarlyCommunityRecognition,functions:startLiveSession,functions:endLiveSession,functions:joinLiveSession,functions:leaveLiveSession,functions:heartbeatLiveSession,functions:sendLiveChatMessage,functions:updateLiveSessionSettings,functions:requestLiveGuestAccess,functions:reviewLiveGuestAccess,functions:reconcileLiveSessionViewers,functions:getLiveKitToken,functions:moderateLiveParticipant \
+              --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,functions:grantEarlyCommunityRecognition,functions:startLiveSession,functions:endLiveSession,functions:joinLiveSession,functions:leaveLiveSession,functions:heartbeatLiveSession,functions:sendLiveChatMessage,functions:updateLiveSessionSettings,functions:requestLiveGuestAccess,functions:reviewLiveGuestAccess,functions:reconcileLiveSessionViewers,functions:getLiveKitToken,functions:moderateLiveParticipant,functions:recordPublicVideoView,functions:recordVideoWatchHeartbeat,functions:getCreatorVideoRetention,functions:recordPublicTextPostView,functions:getPostViewAnalytics \
               --config firebase.json \
               --project "$NEXORA_PRODUCTION_PROJECT_ID" \
               --non-interactive
@@ -186,6 +190,21 @@ jobs:
             echo "No Firebase Functions source or firebase.json changes detected; skipping unchanged Functions."
             echo "deployed=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Verify deployed video and text view analytics callables
+        if: steps.functions.outputs.deployed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployed_functions="$(npx --yes firebase-tools@15.33.0 functions:list --project "$NEXORA_PRODUCTION_PROJECT_ID")"
+          printf '%s\\n' "$deployed_functions"
+          for callable in recordPublicVideoView recordVideoWatchHeartbeat getCreatorVideoRetention recordPublicTextPostView getPostViewAnalytics; do
+            if ! grep -Fq "$callable" <<< "$deployed_functions"; then
+              echo "::error::Production deployment verification could not find $callable"
+              exit 1
+            fi
+          done
+          echo "Verified all public video and text post view analytics callables in $NEXORA_PRODUCTION_PROJECT_ID."
 
       - name: Deploy Storage rules when Firebase Storage is provisioned
         id: storage

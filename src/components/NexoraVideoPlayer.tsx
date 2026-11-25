@@ -297,6 +297,8 @@ export default function NexoraVideoPlayer({
 
   // Watch duration log trigger state
   const viewLoggedRef = useRef(false);
+  const publicViewRequestInFlightRef = useRef(false);
+  const lastPublicViewAttemptAtRef = useRef(0);
   const watchCompletedRef = useRef(false);
   const playStartedTimeRef = useRef<number>(0);
   const lastObservedMediaTimeRef = useRef<number | null>(null);
@@ -477,6 +479,8 @@ export default function NexoraVideoPlayer({
     creditedWatchSecondsRef.current = 0;
     lastWatchSignalWriteRef.current = 0;
     viewLoggedRef.current = false;
+    publicViewRequestInFlightRef.current = false;
+    lastPublicViewAttemptAtRef.current = 0;
     watchCompletedRef.current = false;
   }, [finalVideoUrl, post.id]);
 
@@ -630,23 +634,34 @@ export default function NexoraVideoPlayer({
     }
 
     // Watch History: Log view when watched for more than 3 seconds (Meaningful watch duration)
-    if (creditedWatchSecondsRef.current >= 3 && !viewLoggedRef.current) {
-      viewLoggedRef.current = true;
+    if (creditedWatchSecondsRef.current >= 3
+      && !viewLoggedRef.current
+      && !publicViewRequestInFlightRef.current
+      && Date.now() - lastPublicViewAttemptAtRef.current >= 10_000) {
       logToWatchHistory();
       recordReelSignal(post.id, { watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
       // Public view totals are essential product metrics, not optional analytics.
       // The server stores only a per-viewer/post/day marker and aggregate count.
       if (currentUser?.id) {
+        publicViewRequestInFlightRef.current = true;
+        lastPublicViewAttemptAtRef.current = Date.now();
         const recordPublicView = httpsCallable(getFunctions(app), 'recordPublicVideoView');
         void recordPublicView({ postId: post.id }).then(result => {
           const payload = result.data as { counted?: boolean; views?: number };
+          viewLoggedRef.current = true;
           if (Number.isSafeInteger(payload?.views) && (payload.views as number) >= 0) {
             setDisplayedViews(payload.views as number);
+            window.dispatchEvent(new CustomEvent('nexora-post-views-updated', {
+              detail: { postId: post.id, views: payload.views },
+            }));
           }
         }).catch(() => {
-          // Allow a later playback tick to retry if the network/function is unavailable.
-          viewLoggedRef.current = false;
+          // Retry on a later playback tick, with a ten-second backoff to avoid request storms.
+        }).finally(() => {
+          publicViewRequestInFlightRef.current = false;
         });
+      } else {
+        viewLoggedRef.current = true;
       }
 
 
