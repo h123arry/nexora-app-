@@ -49,3 +49,14 @@ test('comment actions use persisted comment, reply and reaction flows', async ()
   assert.match(push, /if \(type === 'comment_reply'\)/);
   assert.match(push, /users\/\{userId\}\/notifications\/\{notificationId\}/);
 });
+
+
+test('comment composer explains failed submissions and preserves the draft for retry', async () => {
+  const feed = await readFile(new URL('../src/components/FeedView.tsx', import.meta.url), 'utf8');
+  assert.match(feed, /const \[commentErrors, setCommentErrors\] = useState/);
+  assert.match(feed, /if \(saved === false\) \{[\s\S]*?Comment wasn't sent/);
+  assert.match(feed, /Your text is still here/);
+  assert.match(feed, /setCommentInputs\(prev => \(\{ \.\.\.prev, \[postId\]: '' \}\)\)/);
+  assert.match(feed, /role="status" aria-live="polite"/);
+  assert.match(feed, /if \(commentErrors\[post\.id\]\) setCommentErrors/);
+});
