@@ -6,6 +6,10 @@ export interface TextPostViewEligibilityInput {
   image?: unknown;
   images?: unknown;
   mediaType?: unknown;
+  voiceAudioUrl?: unknown;
+  isVoice?: unknown;
+  opportunityType?: unknown;
+  isBroadcastPost?: unknown;
   isArchived?: unknown;
   isDraft?: unknown;
 }
@@ -20,6 +24,11 @@ export function isEligiblePublicTextPostView(input: TextPostViewEligibilityInput
     && !hasImage
     && !hasVideo
     && input.mediaType !== 'image'
+    && input.mediaType !== 'audio'
+    && !(typeof input.voiceAudioUrl === 'string' && input.voiceAudioUrl.length > 0)
+    && input.isVoice !== true
+    && !input.opportunityType
+    && input.isBroadcastPost !== true
     && input.isArchived !== true
     && input.isDraft !== true;
 }
