@@ -583,7 +583,7 @@ async function requireFirebaseUser(req: express.Request, res: express.Response, 
       ? String(rawCode).slice(0, 48)
       : 'unknown';
     const safeMessage = typeof failure?.message === 'string'
-      ? failure.message.replace(/[\\r\\n\\t]+/g, ' ').slice(0, 240)
+      ? failure.message.replace(/[\r\n\t]+/g, ' ').slice(0, 240)
       : 'No provider error message was supplied.';
     console.error('[NEXORA] Account session status lookup failed', {
       code: safeCode,
@@ -1038,7 +1038,7 @@ app.get('/api/media/:mediaId', async (req, res) => {
     console.error('[R2Media] Public media resolution failed.', {
       code: typeof failure?.code === 'string' || typeof failure?.code === 'number' ? String(failure.code).slice(0, 48) : 'unknown',
       errorName: typeof failure?.name === 'string' ? failure.name.slice(0, 80) : 'unknown',
-      message: typeof failure?.message === 'string' ? failure.message.replace(/[\\r\\n\\t]+/g, ' ').slice(0, 240) : 'No provider error message was supplied.',
+      message: typeof failure?.message === 'string' ? failure.message.replace(/[\r\n\t]+/g, ' ').slice(0, 240) : 'No provider error message was supplied.',
       projectId: firebaseProjectId,
       firestoreDatabaseId,
     });
