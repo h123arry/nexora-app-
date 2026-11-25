@@ -40,7 +40,7 @@ test('native video selection supports Studio multi-clip handoff while photos sup
   assert.match(composer, /slice\(0, galleryTab === 'videos' \? \(onOpenStudio \? 12 : 1\) : 20\)/);
   assert.match(composer, /setActiveMode\('video'\)/);
   assert.match(composer, /handleVideoUpload\(event\)/);
-  assert.match(composer, /Open \\$\\{nativeGallerySelectedIds\\.length\\} clips in Studio/);
+  assert.match(composer, /Open \$\{nativeGallerySelectedIds\.length\} clips in Studio/);
 });
 
 test('Android hardware back is routed into the active Create navigation stack', () => {
