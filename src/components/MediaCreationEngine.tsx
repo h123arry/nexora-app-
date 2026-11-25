@@ -1806,7 +1806,7 @@ export default function MediaCreationEngine({
 
   // Exit trigger guard
   const handleExitClick = () => {
-    if (caption || selectedImages.length > 0 || videoFileUrl || voiceFileUrl) {
+    if (caption || selectedImages.length > 0 || videoFileUrl || recordedVideoUrl || voiceFileUrl || pollQuestion.trim()) {
       setShowExitConfirm(true);
     } else {
       onClose();
@@ -1848,7 +1848,7 @@ export default function MediaCreationEngine({
     };
     window.addEventListener('nexora:android-back', handleAndroidBack);
     return () => window.removeEventListener('nexora:android-back', handleAndroidBack);
-  }, [activeMode, currentStep, galleryReturnToCamera, isMediaPreviewExpanded, permissionTarget, recordedVideoUrl, showExitConfirm, videoFileUrl, voiceFileUrl, caption, selectedImages, onClose, prevStep, handleExitClick]);
+  }, [activeMode, currentStep, galleryReturnToCamera, isMediaPreviewExpanded, permissionTarget, recordedVideoUrl, showExitConfirm, videoFileUrl, recordedVideoUrl, voiceFileUrl, caption, selectedImages, pollQuestion, onClose, prevStep, handleExitClick]);
 
 
   // Accessibility Checks
