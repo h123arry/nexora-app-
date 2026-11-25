@@ -35,7 +35,7 @@ test('gallery browsing is paginated and preserves media metadata for previews', 
   assert.match(composer, /nativeGalleryAlbum/);
 });
 
-test('native video selection matches the single-clip composer while photos support multi-select', () => {
+test('native video selection supports Studio multi-clip handoff while photos support multi-select', () => {
   assert.match(composer, /galleryTab === 'photos' \? 20 : 1/);
   assert.match(composer, /slice\(0, galleryTab === 'videos' \? 1 : 20\)/);
   assert.match(composer, /setActiveMode\('video'\)/);
