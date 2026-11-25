@@ -16,6 +16,10 @@ on:
       - 'firestore.indexes.json'
       - 'firebase.json'
       - 'functions/src/index.ts'
+      - 'functions/src/videoWatchAnalytics.ts'
+      - 'functions/src/videoWatchAnalyticsPolicy.ts'
+      - 'functions/src/postViewAnalytics.ts'
+      - 'functions/src/postViewAnalyticsPolicy.ts'
       - 'functions/src/betaAccess.ts'
       - 'functions/src/giftCatalog.ts'
       - 'functions/src/giftCatalogPolicy.ts'
@@ -168,7 +172,7 @@ jobs:
           set -euo pipefail
           deploy_functions() {
             npx --yes firebase-tools@15.33.0 deploy \
-              --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,functions:grantEarlyCommunityRecognition,functions:startLiveSession,functions:endLiveSession,functions:joinLiveSession,functions:leaveLiveSession,functions:heartbeatLiveSession,functions:sendLiveChatMessage,functions:updateLiveSessionSettings,functions:requestLiveGuestAccess,functions:reviewLiveGuestAccess,functions:reconcileLiveSessionViewers,functions:getLiveKitToken,functions:moderateLiveParticipant \
+              --only functions:createFoundingMemberAccount,functions:createBetaInviteLink,functions:claimBetaInvite,functions:getGiftCatalog,functions:quoteNexGift,functions:purchaseNexGift,functions:getMyGiftInventory,functions:sendNexGift,functions:transferOwnedNexGift,functions:buyNexGiftForFriend,functions:deliverNotificationPush,functions:deliverFollowInboxNotification,functions:deliverLiveStartNotifications,functions:deliverDirectMessageNotifications,functions:setCreatorFollowState,functions:addPublicPostCommentEntry,functions:setPublicPostLike,functions:deletePublicPostCommentEntry,functions:setPublicPostCommentLikeState,functions:replyToPublicPostComment,functions:repostPublicPost,functions:grantEarlyCommunityRecognition,functions:startLiveSession,functions:endLiveSession,functions:joinLiveSession,functions:leaveLiveSession,functions:heartbeatLiveSession,functions:sendLiveChatMessage,functions:updateLiveSessionSettings,functions:requestLiveGuestAccess,functions:reviewLiveGuestAccess,functions:reconcileLiveSessionViewers,functions:getLiveKitToken,functions:moderateLiveParticipant,functions:recordPublicVideoView,functions:recordVideoWatchHeartbeat,functions:getCreatorVideoRetention,functions:recordPublicTextPostView,functions:getPostViewAnalytics \
               --config firebase.json \
               --project "$NEXORA_PRODUCTION_PROJECT_ID" \
               --non-interactive
