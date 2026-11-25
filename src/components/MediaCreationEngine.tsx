@@ -1091,51 +1091,6 @@ export default function MediaCreationEngine({
     });
   };
 
-  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []).filter(file => file.type.startsWith('video/'));
-    e.target.value = '';
-    if (!files.length) return;
-    requestPermission('gallery', () => {
-      void (async () => {
-        if (files.length > 1 && onOpenStudio) {
-          const validFiles: File[] = [];
-          if (files.length > 12) {
-            window.dispatchEvent(new CustomEvent('toast', { detail: 'NEXORA Studio can import up to 12 clips at once. The first 12 selected clips will be used.' }));
-          }
-          for (const file of files.slice(0, 12)) {
-            try {
-              await validateMediaFile(file, 'video');
-              validFiles.push(file);
-            } catch (error) {
-              window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${file.name}: ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
-            }
-          }
-          if (validFiles.length) {
-            onOpenStudio(validFiles);
-            return;
-          }
-          return;
-        }
-        const file = files[0];
-        try {
-          const metadata = await validateMediaFile(file, 'video');
-          setVideoFileUrl(previous => {
-            revokeTrackedObjectUrl(previous);
-            return trackObjectUrl(URL.createObjectURL(file));
-          });
-          setVideoRawBlob(file);
-          setVideoCoverBlob(null);
-          setVideoCoverTime(0);
-          setVideoTrimStart(0);
-          setVideoTrimEnd(Math.min(15, Math.max(1, Math.round(metadata.duration || 15))));
-          setVideoDuration(metadata.duration || 15);
-        } catch (error) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'This video could not be checked.'}` }));
-        }
-      })();
-    });
-  };
-
   const applyVideoTrim = async () => {
     const video = trimVideoRef.current;
     if (!video || videoTrimEnd <= videoTrimStart) { setErrorMessage('Choose a valid video section before trimming.'); return; }
