@@ -4,6 +4,7 @@ import { HttpsError } from 'firebase-functions/v2/https';
 import { onCallWithSession as onCall } from './callableSession.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import {
+  canReadPostViewAnalytics,
   isEligiblePublicTextPostView,
   shouldCountTextPostView,
   validTextPostViewRequest,
@@ -130,7 +131,7 @@ export const getPostViewAnalytics = onCall({ maxInstances: 10 }, async request =
   const postRef = db.collection('posts').doc(postId);
   const postSnap = await postRef.get();
   if (!postSnap.exists) throw new HttpsError('not-found', 'This post is unavailable.');
-  if (postSnap.get('userId') !== uid && postSnap.get('authorId') !== uid) {
+  if (!canReadPostViewAnalytics(uid, postSnap.get('userId'), postSnap.get('authorId'))) {
     throw new HttpsError('permission-denied', 'Only the post owner can view its analytics.');
   }
 
