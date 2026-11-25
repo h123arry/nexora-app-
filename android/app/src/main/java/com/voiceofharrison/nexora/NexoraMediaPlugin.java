@@ -2,9 +2,11 @@ package com.voiceofharrison.nexora;
 
 import android.Manifest;
 import android.content.ContentValues;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Base64;
 import android.graphics.Bitmap;
 
@@ -37,6 +39,19 @@ public class NexoraMediaPlugin extends Plugin {
     public void setCreateExperienceActive(PluginCall call) {
         createExperienceActive = Boolean.TRUE.equals(call.getBoolean("active", false));
         call.resolve();
+    }
+
+    @PluginMethod
+    public void openAppSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.fromParts("package", getContext().getPackageName(), null));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (Exception error) {
+            call.reject("Could not open Android app settings.", error);
+        }
     }
 
     @PluginMethod
