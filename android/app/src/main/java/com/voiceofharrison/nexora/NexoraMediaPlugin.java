@@ -1,11 +1,14 @@
 package com.voiceofharrison.nexora;
 
+import android.Manifest;
 import android.content.ContentValues;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.graphics.Bitmap;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -14,7 +17,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.OutputStream;
 
-@CapacitorPlugin(name = "NexoraMedia")
+@CapacitorPlugin(name = "NexoraMedia", permissions = {\n    @Permission(alias = "gallery", strings = { Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED }),\n    @Permission(alias = "legacyGallery", strings = { Manifest.permission.READ_EXTERNAL_STORAGE })\n})
 public class NexoraMediaPlugin extends Plugin {
 
     @PluginMethod
