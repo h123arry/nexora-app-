@@ -2275,7 +2275,7 @@ export default function MediaCreationEngine({
                                 </div>
                               )}
                               {nativeGalleryHasMore && <button type="button" disabled={nativeGalleryLoading} onClick={loadMoreNativeGalleryItems} className="w-full rounded-xl border border-white/10 py-2.5 text-xs font-semibold text-[#C9C4D2] disabled:opacity-50">{nativeGalleryLoading ? 'Loading…' : 'Load more videos'}</button>}
-                              {nativeGallerySelectedIds.length > 0 && <button type="button" disabled={nativeGalleryLoading} onClick={importSelectedNativeGalleryItems} className="w-full rounded-xl bg-[#6545B7] py-3 text-xs font-semibold text-white disabled:opacity-50">{nativeGalleryLoading ? 'Preparing clips…' : `Use selected video`}</button>}
+                              {nativeGallerySelectedIds.length > 0 && <button type="button" disabled={nativeGalleryLoading} onClick={importSelectedNativeGalleryItems} className="w-full rounded-xl bg-[#6545B7] py-3 text-xs font-semibold text-white disabled:opacity-50">{nativeGalleryLoading ? 'Preparing clips…' : nativeGallerySelectedIds.length > 1 ? `Open ${nativeGallerySelectedIds.length} clips in Studio` : 'Use selected video'}</button>}
                             </div>
                           ) : (
                           <div className="nx-gallery-empty flex min-h-[300px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 px-6 text-center">
