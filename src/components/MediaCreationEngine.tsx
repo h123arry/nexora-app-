@@ -788,6 +788,16 @@ export default function MediaCreationEngine({
     return () => { cancelled = true; };
   }, [activeMode, galleryTab, nativeGalleryEnabled, nativeGalleryReloadToken]);
 
+  useEffect(() => {
+    const retryGalleryOnReturn = () => {
+      if (nativeGalleryError && activeMode === 'carousel') {
+        setNativeGalleryReloadToken(value => value + 1);
+      }
+    };
+    window.addEventListener('focus', retryGalleryOnReturn);
+    return () => window.removeEventListener('focus', retryGalleryOnReturn);
+  }, [activeMode, nativeGalleryError]);
+
   // Reels Record timing loop
   useEffect(() => {
     if (isRecording && !isRecordingPaused) {
