@@ -504,6 +504,34 @@ export default function FeedView({
   };
   const [analyticsPost, setAnalyticsPost] = useState<RefactoredPost | null>(null);
   const analyticsSnapshot = analyticsPost ? buildPostAnalytics(analyticsPost) : null;
+  const [postViewAnalytics, setPostViewAnalytics] = useState<{ points: Array<{ day: string; views: number; uniqueViewers: number }>; totalViews: number } | null>(null);
+  const [postViewAnalyticsLoading, setPostViewAnalyticsLoading] = useState(false);
+  const [postViewAnalyticsError, setPostViewAnalyticsError] = useState(false);
+  const qualifiedTextViewsInFlightRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!analyticsPost) {
+      setPostViewAnalytics(null);
+      setPostViewAnalyticsError(false);
+      return;
+    }
+    let cancelled = false;
+    setPostViewAnalyticsLoading(true);
+    setPostViewAnalyticsError(false);
+    const load = async () => {
+      try {
+        const callable = httpsCallable(functions, 'getPostViewAnalytics');
+        const response = await callable({ postId: analyticsPost.id, days: 7 });
+        if (!cancelled) setPostViewAnalytics(response.data as typeof postViewAnalytics);
+      } catch {
+        if (!cancelled) setPostViewAnalyticsError(true);
+      } finally {
+        if (!cancelled) setPostViewAnalyticsLoading(false);
+      }
+    };
+    void load();
+    return () => { cancelled = true; };
+  }, [analyticsPost?.id]);
 
 
   // Floating Composer Box
@@ -538,6 +566,35 @@ export default function FeedView({
       entityId: postId,
       properties: { surface: 'feed_card', qualification: '50_percent_for_1_second' },
     });
+  }, []);
+
+  const handleQualifiedTextView = useCallback(async (postId: string, visibleSeconds: number) => {
+    const user = auth.currentUser;
+    if (!postId || !user || user.uid !== currentUser.id || qualifiedTextViewsInFlightRef.current.has(postId)) return;
+    qualifiedTextViewsInFlightRef.current.add(postId);
+    try {
+      const callable = httpsCallable(functions, 'recordPublicTextPostView');
+      const response = await callable({ postId, visibleSeconds });
+      const result = response.data as { counted?: boolean; views?: number };
+      if (typeof result.views === 'number') {
+        setLocalPosts(previous => previous.map(post => post.id === postId ? { ...post, views: result.views } : post));
+        setAnalyticsPost(previous => previous?.id === postId ? { ...previous, views: result.views! } : previous);
+      }
+    } catch {
+      // Release the local guard so a later qualified visibility can retry.
+      qualifiedTextViewsInFlightRef.current.delete(postId);
+    }
+  }, [currentUser.id]);
+
+  useEffect(() => {
+    const handleVideoViewsUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<{ postId?: string; views?: number }>).detail;
+      if (!detail?.postId || typeof detail.views !== 'number') return;
+      setLocalPosts(previous => previous.map(post => post.id === detail.postId ? { ...post, views: detail.views! } : post));
+      setAnalyticsPost(previous => previous?.id === detail.postId ? { ...previous, views: detail.views! } : previous);
+    };
+    window.addEventListener('nexora-post-views-updated', handleVideoViewsUpdated);
+    return () => window.removeEventListener('nexora-post-views-updated', handleVideoViewsUpdated);
   }, []);
 
   // Local storage is an offline fallback only. Signed-in users hydrate the
@@ -2356,6 +2413,7 @@ export default function FeedView({
                 activeDotsMenuPostId={activeDotsMenuPostId}
                 setActiveDotsMenuPostId={setActiveDotsMenuPostId}
                 onImpression={handlePostImpression}
+                onQualifiedTextView={handleQualifiedTextView}
                 onSpark={handleSpark}
                 onSave={handleSave}
                 onSharePost={onSharePost}
@@ -3233,6 +3291,35 @@ export default function FeedView({
                     <div className="text-lg font-black text-white font-sans">{metric.value}</div>
                   </div>
                 ))}
+              </div>
+
+              <div className="mt-4 p-4 rounded-2xl bg-[#0d0a26] border border-white/5 space-y-3 relative z-10">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-black uppercase tracking-widest text-violet-300">Views over time</span>
+                  <span className="text-[10px] text-zinc-500">Last 7 days</span>
+                </div>
+                {postViewAnalyticsLoading ? (
+                  <p className="text-xs text-zinc-400">Loading verified view activity…</p>
+                ) : postViewAnalyticsError ? (
+                  <p className="text-xs text-zinc-400">Daily view chart is temporarily unavailable. The stored total remains shown above.</p>
+                ) : postViewAnalytics?.points?.length ? (
+                  <div className="flex h-28 items-end gap-2 border-b border-white/10 pb-1">
+                    {postViewAnalytics.points.map(point => {
+                      const peak = Math.max(1, ...postViewAnalytics.points.map(item => item.views));
+                      const height = point.views > 0 ? Math.max(6, point.views / peak * 100) : 2;
+                      return (
+                        <div key={point.day} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1" title={`${point.day}: ${point.views} views`}>
+                          <span className="text-[9px] font-mono text-zinc-300">{point.views || ''}</span>
+                          <div className="w-full max-w-7 rounded-t-md bg-violet-500/80" style={{ height: `${height}%` }} />
+                          <span className="text-[8px] text-zinc-500">{new Date(point.day + 'T00:00:00Z').toLocaleDateString(undefined, { weekday: 'short' })}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-zinc-400">Daily view activity will appear here as people spend time reading this post.</p>
+                )}
+                <p className="text-[9px] text-zinc-500">A view is counted after at least 3 continuous seconds with half the text post visible. Repeat views from the same account count once per day.</p>
               </div>
 
               <div className="mt-4 p-3.5 bg-violet-600/10 border border-white/10 rounded-2xl space-y-2 relative z-10">
