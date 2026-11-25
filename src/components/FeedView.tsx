@@ -568,9 +568,9 @@ export default function FeedView({
     });
   }, []);
 
-  const handleQualifiedTextView = useCallback(async (postId: string, visibleSeconds: number) => {
+  const handleQualifiedTextView = useCallback(async (postId: string, visibleSeconds: number): Promise<boolean> => {
     const user = auth.currentUser;
-    if (!postId || !user || user.uid !== currentUser.id || qualifiedTextViewsInFlightRef.current.has(postId)) return;
+    if (!postId || !user || user.uid !== currentUser.id || qualifiedTextViewsInFlightRef.current.has(postId)) return false;
     qualifiedTextViewsInFlightRef.current.add(postId);
     try {
       const callable = httpsCallable(functions, 'recordPublicTextPostView');
@@ -580,9 +580,11 @@ export default function FeedView({
         setLocalPosts(previous => previous.map(post => post.id === postId ? { ...post, views: result.views } : post));
         setAnalyticsPost(previous => previous?.id === postId ? { ...previous, views: result.views! } : previous);
       }
+      return true;
     } catch {
       // Release the local guard so a later qualified visibility can retry.
       qualifiedTextViewsInFlightRef.current.delete(postId);
+      return false;
     }
   }, [currentUser.id]);
 
