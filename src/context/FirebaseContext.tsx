@@ -283,9 +283,13 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const retryProfileLoad = async () => {
     setLoading(true);
-    setInitializing(true);
+    const currentUser = auth.currentUser;
+    const hasUsableSessionProfile = !!currentUser && user?.id === currentUser.uid;
+    // Refreshing an already authenticated account must not blank the whole
+    // application. Keep its current profile shell visible during Firestore
+    // recovery; only use the startup loader when no matching profile exists.
+    if (!hasUsableSessionProfile) setInitializing(true);
     setError(null);
-    let currentUser = auth.currentUser;
     try {
       // Signed-out visitors must explicitly sign in or register.
       if (!currentUser) throw new Error('Sign in or create a NEXORA account to continue.');
@@ -302,7 +306,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setError(getProfileSyncMessage(err));
       throw err;
     } finally {
-      setInitializing(false);
+      if (!hasUsableSessionProfile) setInitializing(false);
       setLoading(false);
     }
   };
