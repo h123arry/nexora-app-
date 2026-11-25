@@ -1686,6 +1686,7 @@ export default function NexoraVideoPlayer({
         onAction={handleQuickAction}
         isOwnPost={isOwnPost}
         isArchived={post.isArchived}
+        compact
       />
 
       {/* Floating Bottom custom simplified controls block */}

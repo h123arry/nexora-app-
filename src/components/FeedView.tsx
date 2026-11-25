@@ -174,7 +174,7 @@ interface FeedViewProps {
   posts: Post[];
   followingIds: string[];
   friendIds?: string[];
-  onLikePost: (postId: string) => void;
+  onLikePost: (postId: string) => Promise<boolean> | boolean | void;
   onBookmarkPost: (postId: string) => void;
   onAddComment: (postId: string, content: string) => Promise<boolean> | boolean | void;
   onAddPost: (content: string, imageUrl?: string, tagsString?: string) => string;
@@ -1045,23 +1045,19 @@ export default function FeedView({
   };
 
   // Sparks trigger handler
-  const handleSpark = (postId: string) => {
-    onLikePost(postId);
-    trackClientObservation({ eventType: 'meaningful_interaction', entityType: 'post', entityId: postId, properties: { interaction: 'spark_observed' } });
+  const handleSpark = async (postId: string) => {
     const post = localPosts.find(p => p.id === postId);
-    if (post) {
-      recordAndPersistRecommendationEvent('spark', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
-    }
+    if (!post) return;
+    const saved = await onLikePost(postId);
+    // Reflect the Spark only after the server confirms it. Failed requests keep
+    // the previous state and count instead of leaving a false local Spark.
+    if (saved === false) return;
+    trackClientObservation({ eventType: 'meaningful_interaction', entityType: 'post', entityId: postId, properties: { interaction: 'spark_observed' } });
+    recordAndPersistRecommendationEvent('spark', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
     setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        const isLiked = !p.isLikedByUser;
-        return {
-          ...p,
-          isLikedByUser: isLiked,
-          likes: isLiked ? p.likes + 1 : p.likes - 1
-        };
-      }
-      return p;
+      if (p.id !== postId) return p;
+      const isLiked = !p.isLikedByUser;
+      return { ...p, isLikedByUser: isLiked, likes: Math.max(0, isLiked ? p.likes + 1 : p.likes - 1) };
     }));
   };
 
