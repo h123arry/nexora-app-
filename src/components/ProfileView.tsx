@@ -3698,39 +3698,61 @@ export default function ProfileView({
               </header>
 
               <div className="flex min-h-0 flex-1 flex-col justify-start gap-3 overflow-y-auto overscroll-contain py-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#120E2B] p-2.5">
-                    <img src={editAvatar} alt="Profile photo" className="h-20 w-20 shrink-0 rounded-full border border-white/10 object-cover" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-white">Profile photo</p><p className="mt-1 text-[10px] text-zinc-500">Choose or take a photo, crop it, then tap Upload &amp; Save Photo.</p>
-                      <button type="button" disabled={isSavingProfile || showSavedFeedback}
-                        onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
-                        className="mt-1 text-xs font-semibold text-violet-300 hover:text-violet-200">Change photo</button>
-                    </div>
-                  </div>
-                  <div className="flex min-w-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-[#120E2B] p-2.5">
-                    <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#211B49]">
-                      {(pendingCoverPreview || editCover) ? <img src={pendingCoverPreview || editCover} alt="Cover photo preview" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><ImageIcon className="h-5 w-5 text-violet-300" /></div>}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-white">Cover photo</p>
-                      <p className="mt-0.5 text-[10px] text-zinc-400">Choose a photo, preview it, then tap Save cover photo.</p>
+                <section aria-labelledby="profile-media-heading" className="overflow-hidden rounded-3xl border border-violet-300/15 bg-[#100C25]">
+                  <div className="relative h-36 overflow-hidden bg-[#211B49] sm:h-44">
+                    {(pendingCoverPreview || editCover) ? (
+                      <img src={pendingCoverPreview || editCover} alt="Profile cover preview" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center bg-[radial-gradient(ellipse_at_top_right,_#4822A8_0%,_#21134C_42%,_#0B1020_100%)]">
+                        <div className="text-center"><Sparkles className="mx-auto h-7 w-7 text-violet-200/70" /><p className="mt-2 text-[11px] font-medium tracking-wide text-violet-100/70">Your space on NEXORA</p></div>
+                      </div>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#100C25]/95 to-transparent" />
+                    <div className="absolute right-3 top-3 flex items-center gap-2">
                       <button type="button" disabled={isSavingCoverPhoto || savingProfileFields.has('coverImage') || showSavedFeedback}
                         onClick={() => coverInputRef.current?.click()}
-                        className="mt-1 text-xs font-semibold text-violet-300">{pendingCoverFile ? 'Choose another' : editCover ? 'Change photo' : 'Add photo'}</button>
-                      {pendingCoverFile && <div className="mt-1 flex items-center gap-2">
-                        {isSavingCoverPhoto && <span className="text-[10px] text-violet-300" aria-live="polite">Preparing and uploading…</span>}
-                        <button type="button" aria-label="Save cover photo" disabled={isSavingCoverPhoto} onClick={() => void handleSaveCoverPhoto()} className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-violet-600 px-3 text-[11px] font-bold text-white hover:bg-violet-500 disabled:opacity-50"><Check className="h-3.5 w-3.5" /> {isSavingCoverPhoto ? "Uploading…" : "Save cover photo"}</button>
-                        <button type="button" aria-label="Cancel cover photo" disabled={isSavingCoverPhoto} onClick={() => { setPendingCoverFile(null); setPendingCoverPreview(null); }} className="rounded-full border border-white/15 p-1.5 text-zinc-300"><X className="h-3.5 w-3.5" /></button>
-                      </div>}
-                      {!pendingCoverFile && editCover && <button type="button" disabled={isSavingCoverPhoto || savingProfileFields.has('coverImage') || showSavedFeedback} onClick={async () => { if (await saveProfileField({ coverImage: '' })) setEditCover(''); }}
-                        className="ml-2 text-xs text-zinc-400">Remove</button>}
+                        className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-white/20 bg-black/55 px-3 text-[11px] font-semibold text-white backdrop-blur-md transition hover:bg-black/70 disabled:opacity-50">
+                        <ImageIcon className="h-3.5 w-3.5" /> {pendingCoverFile ? 'Change selection' : editCover ? 'Change cover' : 'Add cover'}
+                      </button>
                     </div>
-                    <input ref={coverInputRef} type="file" accept="image/*,.heic,.heif,.avif" className="hidden" disabled={isSavingCoverPhoto || savingProfileFields.has('coverImage')} onChange={handleCoverPhotoSelection} />
+                    <div className="absolute -bottom-1 left-4 flex translate-y-1/2 items-end gap-3">
+                      <img src={editAvatar} alt="Profile photo preview" className="h-[76px] w-[76px] rounded-full border-[3px] border-[#100C25] bg-[#211B49] object-cover shadow-xl sm:h-20 sm:w-20" />
+                    </div>
                   </div>
-                </div>
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-3 pt-11">
+                    <div className="min-w-0">
+                      <h3 id="profile-media-heading" className="text-sm font-semibold text-white">Profile identity</h3>
+                      <p className="mt-0.5 text-[11px] text-zinc-400">Make your first impression yours.</p>
+                    </div>
+                    <button type="button" disabled={isSavingProfile || showSavedFeedback}
+                      onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-violet-300/20 bg-violet-500/10 px-3 text-[11px] font-semibold text-violet-200 transition hover:bg-violet-500/20 disabled:opacity-50">
+                      <Camera className="h-3.5 w-3.5" /> Change photo
+                    </button>
+                  </div>
+                  {pendingCoverFile && <div className="flex flex-wrap items-center gap-2 border-t border-white/10 px-4 py-3">
+                    <span className="mr-auto text-[11px] text-violet-200" aria-live="polite">{isSavingCoverPhoto ? 'Preparing and uploading cover…' : 'Cover preview ready'}</span>
+                    <button type="button" disabled={isSavingCoverPhoto} onClick={() => void handleSaveCoverPhoto()}
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-violet-600 px-3 text-[11px] font-bold text-white transition hover:bg-violet-500 disabled:opacity-50">
+                      <Check className="h-3.5 w-3.5" /> {isSavingCoverPhoto ? 'Uploading…' : 'Save cover'}
+                    </button>
+                    <button type="button" aria-label="Cancel cover photo" disabled={isSavingCoverPhoto} onClick={() => { setPendingCoverFile(null); setPendingCoverPreview(null); }}
+                      className="min-h-9 rounded-xl border border-white/10 px-3 text-[11px] font-semibold text-zinc-300 disabled:opacity-50">Cancel</button>
+                  </div>}
+                  {!pendingCoverFile && editCover && <div className="border-t border-white/10 px-4 py-2">
+                    <button type="button" disabled={isSavingCoverPhoto || savingProfileFields.has('coverImage') || showSavedFeedback}
+                      onClick={async () => { if (await saveProfileField({ coverImage: '' })) setEditCover(''); }}
+                      className="text-[11px] font-medium text-zinc-400 transition hover:text-red-300 disabled:opacity-50">Remove cover photo</button>
+                  </div>}
+                  <input ref={coverInputRef} type="file" accept="image/*,.heic,.heif,.avif" className="hidden" disabled={isSavingCoverPhoto || savingProfileFields.has('coverImage')} onChange={handleCoverPhotoSelection} />
+                </section>
 
-                <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
+                <section aria-labelledby="profile-details-heading" className="space-y-3 rounded-3xl border border-white/10 bg-[#0D1020] p-4">
+                  <div>
+                    <h3 id="profile-details-heading" className="text-sm font-semibold text-white">Profile details</h3>
+                    <p className="mt-0.5 text-[11px] text-zinc-400">The details people see across NEXORA.</p>
+                  </div>
+                <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
                   <label className="min-w-0 text-xs text-zinc-300">Name
                     <span className="mt-0.5 block text-[10px] text-zinc-500">{ProfileService.isIdentityChangeGraceAvailable('displayName', currentUser) ? 'One-time update available today. After saving, locked for 7 days.' : 'After changing, display name is locked for 7 days.'}</span>
                     <input value={editName} onChange={e => setEditName(e.target.value)} maxLength={50} disabled={isSavingProfile || savingProfileFields.has('name') || showSavedFeedback}
@@ -3776,7 +3798,7 @@ export default function ProfileView({
                     </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <label className="min-w-0 text-xs text-zinc-300">Creator type
                     <select value={editCreatorType} onChange={e => setEditCreatorType(e.target.value)} disabled={isSavingProfile || savingProfileFields.has('creatorType') || showSavedFeedback}
                       className="mt-1 h-10 w-full rounded-xl border border-white/10 bg-[#120E2B] px-2 text-sm text-white outline-none focus:border-violet-500">
