@@ -16,6 +16,143 @@ import java.io.OutputStream;
 
 @CapacitorPlugin(name = "NexoraMedia")
 public class NexoraMediaPlugin extends Plugin {
+
+    @PluginMethod
+    public void requestGalleryAccess(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionForAlias("gallery", call, "galleryPermissionCallback");
+        } else {
+            requestPermissionForAlias("legacyGallery", call, "galleryPermissionCallback");
+        }
+    }
+
+    @com.getcapacitor.annotation.PermissionCallback
+    private void galleryPermissionCallback(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("granted", getPermissionState(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ? "gallery" : "legacyGallery").toString().equals("granted"));
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void listGalleryMedia(PluginCall call) {
+        String kind = call.getString("kind", "photos");
+        int offset = Math.max(0, call.getInt("offset", 0));
+        int requestedLimit = Math.max(1, Math.min(200, call.getInt("limit", 100)));
+        if (!kind.equals("photos") && !kind.equals("videos")) {
+            call.reject("Choose photos or videos.");
+            return;
+        }
+        try {
+            Uri collection = kind.equals("photos")
+                ? MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+                : MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
+            String[] projection = {
+                MediaStore.MediaColumns._ID,
+                MediaStore.MediaColumns.DISPLAY_NAME,
+                MediaStore.MediaColumns.MIME_TYPE,
+                MediaStore.MediaColumns.DATE_ADDED,
+                MediaStore.MediaColumns.SIZE,
+                MediaStore.MediaColumns.WIDTH,
+                MediaStore.MediaColumns.HEIGHT,
+                MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME
+            };
+            String sort = MediaStore.MediaColumns.DATE_ADDED + " DESC";
+            try (android.database.Cursor cursor = getContext().getContentResolver().query(collection, projection, null, null, sort)) {
+                JSArray items = new JSArray();
+                if (cursor != null) {
+                    int idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID);
+                    int nameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME);
+                    int mimeColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE);
+                    int dateColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED);
+                    int sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE);
+                    int widthColumn = cursor.getColumnIndex(MediaStore.MediaColumns.WIDTH);
+                    int heightColumn = cursor.getColumnIndex(MediaStore.MediaColumns.HEIGHT);
+                    int albumColumn = cursor.getColumnIndex(MediaStore.Images.ImageColumns.BUCKET_DISPLAY_NAME);
+                    int skipped = 0;
+                    int added = 0;
+                    while (cursor.moveToNext() && added < requestedLimit) {
+                        if (skipped++ < offset) continue;
+                        long id = cursor.getLong(idColumn);
+                        Uri itemUri = Uri.withAppendedPath(collection, String.valueOf(id));
+                        String mime = cursor.getString(mimeColumn);
+                        Bitmap thumbnail = null;
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                thumbnail = getContext().getContentResolver().loadThumbnail(itemUri, new android.util.Size(240, 240), null);
+                            }
+                        } catch (Exception ignored) { }
+                        String thumbnailData = "";
+                        if (thumbnail != null) {
+                            java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+                            thumbnail.compress(Bitmap.CompressFormat.JPEG, 76, bytes);
+                            thumbnailData = "data:image/jpeg;base64," + Base64.encodeToString(bytes.toByteArray(), Base64.NO_WRAP);
+                            thumbnail.recycle();
+                        }
+                        JSObject item = new JSObject();
+                        item.put("id", String.valueOf(id));
+                        item.put("uri", itemUri.toString());
+                        item.put("name", cursor.getString(nameColumn));
+                        item.put("mimeType", mime == null ? (kind.equals("photos") ? "image/*" : "video/*") : mime);
+                        item.put("dateAdded", cursor.getLong(dateColumn) * 1000L);
+                        item.put("size", cursor.getLong(sizeColumn));
+                        item.put("width", widthColumn >= 0 ? cursor.getInt(widthColumn) : 0);
+                        item.put("height", heightColumn >= 0 ? cursor.getInt(heightColumn) : 0);
+                        item.put("album", albumColumn >= 0 ? cursor.getString(albumColumn) : "Recent");
+                        item.put("thumbnail", thumbnailData);
+                        items.put(item);
+                        added++;
+                    }
+                }
+                JSObject result = new JSObject();
+                result.put("items", items);
+                result.put("nextOffset", offset + items.length());
+                result.put("hasMore", items.length() == requestedLimit);
+                call.resolve(result);
+            }
+        } catch (Exception error) {
+            call.reject("Could not read the device gallery.", error);
+        }
+    }
+
+    @PluginMethod
+    public void importGalleryMedia(PluginCall call) {
+        String uriValue = call.getString("uri");
+        String name = call.getString("name", "nexora-media");
+        if (uriValue == null || uriValue.isEmpty()) {
+            call.reject("Choose a media item first.");
+            return;
+        }
+        java.io.File directory = new java.io.File(getContext().getCacheDir(), "nexora-gallery");
+        if (!directory.exists() && !directory.mkdirs()) {
+            call.reject("Could not prepare temporary media storage.");
+            return;
+        }
+        java.io.File destination = null;
+        try {
+            Uri source = Uri.parse(uriValue);
+            String safeName = name.replaceAll("[^A-Za-z0-9._-]", "_");
+            String extension = safeName.contains(".") ? safeName.substring(safeName.lastIndexOf('.')) : ".media";
+            destination = java.io.File.createTempFile("nx-", extension, directory);
+            try (java.io.InputStream input = getContext().getContentResolver().openInputStream(source);
+                 java.io.OutputStream output = new java.io.FileOutputStream(destination)) {
+                if (input == null) throw new IllegalStateException("The selected media is no longer available.");
+                byte[] buffer = new byte[1024 * 128];
+                int count;
+                while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+                output.flush();
+            }
+            JSObject result = new JSObject();
+            result.put("filePath", destination.getAbsolutePath());
+            result.put("name", safeName);
+            result.put("mimeType", getContext().getContentResolver().getType(source));
+            result.put("size", destination.length());
+            call.resolve(result);
+        } catch (Exception error) {
+            if (destination != null) destination.delete();
+            call.reject("Could not import the selected media.", error);
+        }
+    }
+
     @PluginMethod
     public void saveVideo(PluginCall call) {
         String filename = call.getString("filename");
