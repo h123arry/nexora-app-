@@ -578,6 +578,7 @@ export const repostPublicPost = onCall({ maxInstances: 10 }, async (request) => 
     if (message.includes('unavailable')) throw new HttpsError('not-found', 'This public post is unavailable.');
     if (message.includes('Invalid') || message.includes('Quote text')) throw new HttpsError('invalid-argument', message);
     if (message.includes('public profile')) throw new HttpsError('failed-precondition', message);
+    console.error('[Post repost/quote] Repost transaction failed.', { uid: request.auth.uid, postId, error });
     throw new HttpsError('internal', 'The post could not be reposted. Please retry.');
   }
 });
