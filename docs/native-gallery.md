@@ -32,3 +32,17 @@ Before release, test on physical devices:
 7. Verify camera capture, editor preview, Studio handoff, and publishing after gallery import.
 
 Broad media permissions and partial-access behavior must be reviewed against current Google Play policy before public distribution.
+
+## Android Create finalization
+
+- The native Create flow registers its active state with the Android media plugin. Hardware Back is routed to the web composer while Create is open, so it closes the topmost permission/gallery/preview surface, steps back through the composer, or shows the existing save/discard confirmation rather than immediately exiting.
+- Gallery permission failures offer a retry and a direct Android App Settings shortcut. Returning to NEXORA retries the gallery query.
+- The gallery header and camera/editor surfaces respect Android safe-area insets. Video thumbnails include duration and file-size context.
+- The existing publishing flow reports upload progress, supports cancellation, and retains the selected local media/draft after a failed upload so the user can retry. Offline publishing is blocked before local-only media is sent.
+
+## Remaining release gates
+
+- Verify hardware Back and Android predictive Back on physical Android 13, 14, and 15 devices, including nested editor, gallery, permission, and unsaved-draft states.
+- Verify camera and microphone permission prompts, front/rear camera switching, interrupted recording, and media upload after process recreation.
+- Android App Links require a Digital Asset Links file at `https://nexoraapp.com.ng/.well-known/assetlinks.json` containing the SHA-256 fingerprint of the permanent release signing certificate. Add the verified fingerprint after the release keystore is configured; do not enable verified app links with a guessed certificate.
+- A production signed APK still requires the permanent signing secrets and production client variables described in `docs/android-releases.md`.
