@@ -168,7 +168,8 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
     const observer = new IntersectionObserver(entries => {
       for (const entry of entries) {
         if (entry.target !== target) continue;
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+        const visibleEnough = entry.intersectionRect.height >= Math.min(entry.boundingClientRect.height, window.innerHeight) * 0.5;
+        if (entry.isIntersecting && visibleEnough) {
           if (qualifiedTextViewTimerRef.current === null && !qualifiedTextViewRecordedRef.current) {
             qualifiedTextViewTimerRef.current = window.setTimeout(() => {
               qualifiedTextViewTimerRef.current = null;
