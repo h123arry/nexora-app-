@@ -170,14 +170,14 @@ test('feed uploader uses the shared verified badge and honors verified creator s
   const feedCard = await readFile(new URL('../src/components/FeedPostCard.tsx', import.meta.url), 'utf8');
   assert.ok(feedCard.includes("import PurpleVerifiedBadge from './VohVerifiedBadge';"));
   assert.ok(feedCard.includes('post.isVerified || post.username ==='));
-  assert.ok(feedCard.includes('<PurpleVerifiedBadge className="h-4 w-4 shrink-0"'));
+  assert.ok(feedCard.includes('<PurpleVerifiedBadge className="h-3.5 w-3.5 shrink-0"'));
 });
 
 test('video creator avatar resolves delivery URLs and has a deterministic fallback', async () => {
   const player = await readFile(new URL('../src/components/NexoraVideoPlayer.tsx', import.meta.url), 'utf8');
   assert.ok(player.includes('normalizeMediaDeliveryUrl(post.avatar)'));
   assert.ok(player.includes("(post.name || post.username || 'N').trim().charAt(0).toUpperCase()"));
-  assert.ok(player.includes('<PurpleVerifiedBadge className="h-4 w-4 shrink-0"'));
+  assert.ok(player.includes('<PurpleVerifiedBadge className="h-3.5 w-3.5 shrink-0"'));
 });
 
 test('profile video grid fallback is a clean frame preview without player controls', async () => {
