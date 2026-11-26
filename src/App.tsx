@@ -1024,6 +1024,16 @@ export default function App() {
   });
 
   const handleBackNavigation = () => {
+    // 0. Dismiss the software keyboard before navigating away from the current surface.
+    const focusedElement = document.activeElement;
+    if (focusedElement instanceof HTMLElement) {
+      const isTextEntry = focusedElement.matches('input, textarea, select, [contenteditable="true"], [role="textbox"]');
+      if (isTextEntry) {
+        focusedElement.blur();
+        return true;
+      }
+    }
+
     // 1. Dropdown / Menu FIRST
     if (isNavMenuOpen) {
       setIsNavMenuOpen(false);
@@ -1088,8 +1098,13 @@ export default function App() {
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        handleBackNavigation();
+        if (handleBackNavigation()) e.preventDefault();
       }
+    };
+    // Capacitor's native Android activity forwards system Back here. Keep the
+    // same ordered navigation policy for Android, browser Escape and web Back.
+    const onNativeBack = (event: Event) => {
+      if (handleBackNavigation()) event.preventDefault();
     };
 
     const handleToggleNav = () => {
@@ -1105,6 +1120,7 @@ export default function App() {
     };
     window.addEventListener('popstate', onPopState);
     window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('nexora:android-back', onNativeBack);
     window.addEventListener('toggleNavMenu', handleToggleNav);
     window.addEventListener('changeTab', handleChangeTab);
     const handleOpenSettingsSection = (event: Event) => {
@@ -1157,13 +1173,14 @@ export default function App() {
       navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerPushOpen);
       window.removeEventListener('popstate', onPopState);
       window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('nexora:android-back', onNativeBack);
       window.removeEventListener('toggleNavMenu', handleToggleNav);
       window.removeEventListener('changeTab', handleChangeTab);
       window.removeEventListener('nexora-open-settings', handleOpenSettingsSection);
       window.removeEventListener('openUniversalSearch', handleOpenUniversalSearch);
       window.removeEventListener('nexora-view-profile', handleViewProfileEvent);
     };
-  }, [isCreatePostModalOpen, isCreateMenuOpen, isSystemHubOpen, isUniversalSearchOpen, isNavMenuOpen, viewedUser, historyStack, activeTab]);
+  }, [isCreatePostModalOpen, isCreateMenuOpen, isSystemHubOpen, isUniversalSearchOpen, isNavMenuOpen, isLogoutConfirming, verificationModalDetail, showPublicAccountSetup, isAiCommandCenterOpen, viewedUser, historyStack, activeTab]);
 
   // Sync System Hub options to local storage and browser document settings
   useEffect(() => {
