@@ -69,4 +69,7 @@ test('temporary navigation menu and report dialog support outside dismissal', as
   assert.match(report, /aria-modal="true"/);
   assert.match(report, /aria-labelledby="report-modal-title"/);
   assert.match(report, /id="report-modal-title"/);
+  const app = await read('../src/App.tsx');
+  assert.match(app, /onClick=\{\(\) => \{ setShowAuthChoice\(false\); setPendingAuthAction\(null\); \}\}/);
+  assert.match(app, /aria-labelledby="nexora-auth-choice-title"/);
 });
