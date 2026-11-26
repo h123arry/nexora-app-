@@ -7,7 +7,7 @@ test('Android app declares a verified relationship with the canonical NEXORA web
   const strings = await readFile(new URL('../android/app/src/main/res/values/strings.xml', import.meta.url), 'utf8');
   assert.ok(manifest.includes('android:name="asset_statements"'));
   assert.ok(strings.includes('delegate_permission/common.handle_all_urls'));
-  const encodedStatement = strings.match(/<string name="asset_statements"[^>]*>([\\s\\S]*?)<\\/string>/)?.[1];
+  const encodedStatement = strings.match(/<string name="asset_statements"[^>]*>([\s\S]*?)<\/string>/)?.[1];
   assert.ok(encodedStatement);
   const assetStatements = JSON.parse(encodedStatement.replace(/&quot;/g, '"'));
   assert.equal(assetStatements[0]?.target?.site, 'https://nexoraapp.com.ng');
