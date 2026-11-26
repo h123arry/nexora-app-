@@ -4,7 +4,7 @@ import QuickActionsSheet from './QuickActionsSheet';
 import ShareSheet from './ShareSheet';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { useResolvedUrl } from '../utils/indexedDbStorage';
-import { normalizeMediaDeliveryUrl } from '../lib/apiBaseUrl';
+import { normalizeMediaDeliveryUrl, safeMediaDeliveryUrl } from '../lib/apiBaseUrl';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import VideoBottomSheet from './VideoBottomSheet';
@@ -183,7 +183,7 @@ export default function NexoraVideoPlayer({
   const playbackRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playbackRetryAttemptRef = useRef(0);
   const wasPlayingBeforeFailureRef = useRef(false);
-  const finalVideoUrl = processedPlaybackUrl || originalResolvedUrl;
+  const finalVideoUrl = safeMediaDeliveryUrl(normalizeMediaDeliveryUrl(processedPlaybackUrl || originalResolvedUrl));
 
   // Resolve a short-lived, server-signed rendition only for visible/nearby public posts.
   // The callable verifies current post audience, media ID and owner before signing.
@@ -217,7 +217,7 @@ export default function NexoraVideoPlayer({
       if (readinessRetry) clearTimeout(readinessRetry);
     };
   }, [post.id, post.mediaAssetId, videoUrl, isR2GatewayMedia, isActive, shouldPreload, playbackRefreshKey]);
-  const posterUrl = (post as any).videoThumbnailUrl || (post as any).posterUrl || post.image || post.images?.[0];
+  const posterUrl = safeMediaDeliveryUrl(normalizeMediaDeliveryUrl((post as any).videoThumbnailUrl || (post as any).posterUrl || post.image || post.images?.[0]));
 
   // Connection & Speed playback status states
   const [isPlaying, setIsPlaying] = useState(false);
@@ -1394,7 +1394,7 @@ export default function NexoraVideoPlayer({
                    className="flex min-w-0 items-center gap-2 text-left">
                    <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/50 bg-[#211447] shadow-lg">
                      <img
-                       src={normalizeMediaDeliveryUrl(post.avatar)}
+                       src={safeMediaDeliveryUrl(normalizeMediaDeliveryUrl(post.avatar))}
                        alt=""
                        className="relative z-10 h-full w-full object-cover"
                        loading="lazy"
