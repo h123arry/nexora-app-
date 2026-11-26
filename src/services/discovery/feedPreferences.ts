@@ -95,3 +95,25 @@ export function mergeFeedPreferencePatch(
 export function buildFeedSettingsPatch(feed: FeedPreferences, updatedAt: unknown) {
   return { feed, updatedAt };
 }
+
+
+export interface FeedPreferencePost {
+  id: string;
+  userId: string;
+  tags?: string[] | null;
+  isArchived?: boolean;
+}
+
+/** Shared exclusion policy for the normal feed and empty-feed recovery path. */
+export function isFeedPostAllowedByPreferences(
+  post: FeedPreferencePost,
+  preferences: Pick<FeedPreferences, 'hiddenPostIds' | 'blockedCreatorIds' | 'mutedCreatorIds' | 'notInterestedTags'>,
+): boolean {
+  if (post.isArchived) return false;
+  if (preferences.hiddenPostIds.includes(post.id)) return false;
+  if (preferences.blockedCreatorIds.includes(post.userId)) return false;
+  if (preferences.mutedCreatorIds.includes(post.userId)) return false;
+  const excludedTags = new Set(preferences.notInterestedTags.map(tag => tag.trim().replace(/^#/, '').toLowerCase()));
+  if ((post.tags || []).some(tag => excludedTags.has(tag.trim().replace(/^#/, '').toLowerCase()))) return false;
+  return true;
+}
