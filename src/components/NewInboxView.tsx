@@ -131,6 +131,24 @@ export default function NewInboxView({
   const [activeContextMessageId, setActiveContextMessageId] = useState<string | null>(null);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   useEffect(() => { setSelectedMessageIds([]); setActiveContextMessageId(null); setMessageSearchQuery(''); setShowMessageSearch(false); }, [activeChatId]);
+
+  // Android/system Back should unwind the active chat before leaving the inbox route.
+  useEffect(() => {
+    const handleInboxEscape = (event: Event) => {
+      if (event.defaultPrevented) return;
+      if (showMediaGallery) { setShowMediaGallery(false); event.preventDefault(); return; }
+      if (showVoiceRecorder) { setShowVoiceRecorder(false); event.preventDefault(); return; }
+      if (showEmojiPicker) { setShowEmojiPicker(false); event.preventDefault(); return; }
+      if (showAttachmentMenu) { setShowAttachmentMenu(false); event.preventDefault(); return; }
+      if (showMessageSearch) { setShowMessageSearch(false); setMessageSearchQuery(''); event.preventDefault(); return; }
+      const messageEscape = new CustomEvent('nexora-message-escape', { cancelable: true });
+      window.dispatchEvent(messageEscape);
+      if (messageEscape.defaultPrevented) { event.preventDefault(); return; }
+      if (activeChatId) { setActiveChatId(null); event.preventDefault(); }
+    };
+    window.addEventListener('nexora-escape', handleInboxEscape);
+    return () => window.removeEventListener('nexora-escape', handleInboxEscape);
+  }, [activeChatId, showMediaGallery, showVoiceRecorder, showEmojiPicker, showAttachmentMenu, showMessageSearch]);
   const [replyQuoteText, setReplyQuoteText] = useState<string | null>(null);
   const [replyMessageId, setReplyMessageId] = useState<string | null>(null);
 
@@ -744,7 +762,7 @@ export default function NewInboxView({
   };
 
   return (
-    <div className="nx-page-shell nx-inbox-shell flex flex-col md:flex-row h-full w-full text-white font-sans overflow-hidden relative">
+    <div data-chat-open={activeChatId ? 'true' : 'false'} className="nx-page-shell nx-inbox-shell flex flex-col md:flex-row h-full w-full text-white font-sans overflow-hidden relative">
       
       {/* LEFT COLUMN: Conversation List */}
       <div className={`nx-inbox-sidebar w-full md:w-96 border-r border-[var(--nx-edge)] flex flex-col h-full bg-[var(--nx-surface)] ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
@@ -1011,6 +1029,10 @@ export default function NewInboxView({
               onScroll={(event) => {
                 if (event.currentTarget.scrollTop < 120) void loadOlderMessages();
               }}
+              onClick={(event) => {
+                const target = event.target as HTMLElement;
+                if (!target.closest('[role="menu"], [role="dialog"]')) setActiveContextMessageId(null);
+              }}
               className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-950/15 via-black to-black"
             >
               {isLoadingOlderMessages && (
@@ -1057,11 +1079,11 @@ export default function NewInboxView({
                       onPin={handlePinMessage}
                       onTranslate={() => {}}
                       searchQuery={messageSearchQuery}
-                      onToggleContextMenu={(messageId) => setActiveContextMessageId(previous => previous === messageId ? null : messageId)}
+                      onToggleContextMenu={(messageId) => setActiveContextMessageId(messageId)}
                       activeContextMessageId={activeContextMessageId}
                       onTogglePlayVoice={() => {}}
                       onResolveVoiceMedia={resolvePrivateChatMedia}
-                      onLongPress={() => {}}
+                      onLongPress={(messageId) => setActiveContextMessageId(messageId)}
                       playingVoiceId={null}
                       voiceProgress={0}
                       voicePlaybackSpeed={1}
