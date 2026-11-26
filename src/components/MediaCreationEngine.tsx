@@ -1838,7 +1838,7 @@ export default function MediaCreationEngine({
       if (isMediaPreviewExpanded) { setIsMediaPreviewExpanded(false); return; }
       if (galleryPreviewIndex !== null) { setGalleryPreviewIndex(null); return; }
       if (activeEditIndex !== null) { setActiveEditIndex(null); return; }
-      if (isTrimmingVideo) { setIsTrimmingVideo(false); return; }
+      if (isTrimmingVideo) return;
       if (activeMode === 'carousel') {
         setGalleryPreviewIndex(null);
         if (galleryReturnToCamera) {
