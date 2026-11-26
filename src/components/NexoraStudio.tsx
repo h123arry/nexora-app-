@@ -157,6 +157,18 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
   const [templateSearch, setTemplateSearch] = useState('');
   const [templateCategory, setTemplateCategory] = useState('All');
   const [autoCutting, setAutoCutting] = useState(false);
+
+  // The template library is a nested Studio surface. Let the shared Back
+  // policy close it before the Studio workspace itself is dismissed.
+  useEffect(() => {
+    const handleEscape = (event: Event) => {
+      if (!templateLibraryOpen) return;
+      setTemplateLibraryOpen(false);
+      event.preventDefault();
+    };
+    window.addEventListener('nexora-escape', handleEscape);
+    return () => window.removeEventListener('nexora-escape', handleEscape);
+  }, [templateLibraryOpen]);
   const videoRef = useRef<HTMLVideoElement>(null);
   const nextPreviewRef = useRef<HTMLVideoElement>(null);
   const soundtrackPreviewRef = useRef<HTMLAudioElement>(null);
