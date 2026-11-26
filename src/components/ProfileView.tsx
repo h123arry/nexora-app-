@@ -229,12 +229,13 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
   }, []);
 
   useEffect(() => {
+    if (!repairVideoPosters) return;
     let active = true;
     const repairVideoPosters = async () => {
       for (const post of gridPosts) {
         const mediaType = String((post as any).mediaType || (post as any).type || '').toLowerCase();
         const videoSource = post.videoUrl || (typeof post.media === 'string' && (mediaType === 'video' || /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media)) ? post.media : '');
-        const savedPoster = (post as any).videoThumbnailUrl || (post as any).posterUrl;
+        const savedPoster = (post as any).videoThumbnailUrl || (post as any).posterUrl || post.image || post.images?.find(Boolean);
         if (!videoSource || savedPoster || attemptedPosterRepairs.current.has(post.id)) continue;
         attemptedPosterRepairs.current.add(post.id);
         try {
@@ -264,7 +265,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
     };
     void repairVideoPosters();
     return () => { active = false; };
-  }, [posterRepairSignature, ownerId]);
+  }, [posterRepairSignature, ownerId, repairVideoPosters]);
   if (gridPosts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-20 px-6 w-full col-span-full">
@@ -292,6 +293,8 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
           ? (post as any).videoThumbnailUrl
             || (post as any).posterUrl
             || repairedPosters[post.id]
+            || post.image
+            || post.images?.find(Boolean)
           : post.image || post.images?.find(Boolean) || (post as any).thumbnailUrl || (post as any).thumbnail || mediaUrl;
         const voiceAudioUrl = post.voiceAudioUrl || (post as any).audioUrl;
         const isMultiImage = !isVideo && (post.images?.filter(Boolean).length || 0) > 1;
