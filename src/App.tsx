@@ -1115,6 +1115,10 @@ export default function App() {
     // Capacitor's native Android activity forwards system Back here. Keep the
     // same ordered navigation policy for Android, browser Escape and web Back.
     const onNativeBack = (event: Event) => {
+      if (event.defaultPrevented) return;
+      // MediaCreationEngine owns its own multi-step camera/editor history and
+      // handles this event directly; do not collapse the entire composer here.
+      if (isCreatePostModalOpen) return;
       if (handleBackNavigation()) event.preventDefault();
     };
 
