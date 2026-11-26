@@ -1122,9 +1122,17 @@ export default function App() {
     // same ordered navigation policy for Android, browser Escape and web Back.
     const onNativeBack = (event: Event) => {
       if (event.defaultPrevented) return;
-      // MediaCreationEngine owns its own multi-step camera/editor history and
-      // handles this event directly; do not collapse the entire composer here.
-      if (isCreatePostModalOpen) return;
+      // MediaCreationEngine owns its multi-step camera/editor history. Give
+      // its shared Escape handler first refusal, with a safe shell fallback if
+      // the lazy-loaded composer has not mounted its listener yet.
+      if (isCreatePostModalOpen) {
+        const createEscape = new CustomEvent('nexora-escape', { cancelable: true });
+        window.dispatchEvent(createEscape);
+        if (createEscape.defaultPrevented) {
+          event.preventDefault();
+          return;
+        }
+      }
       if (handleBackNavigation()) event.preventDefault();
     };
 
