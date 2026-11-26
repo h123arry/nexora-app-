@@ -1054,6 +1054,10 @@ export default function MediaCreationEngine({
       return;
     }
     requestPermission('camera', () => {
+      if (selectedImages.length >= 20) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'You can add up to 20 photos to one NEXORA post.' }));
+        return;
+      }
       const video = photoPreviewRef.current;
       if (!photoCameraReady || !video || video.videoWidth === 0 || video.videoHeight === 0) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera is not ready yet. Wait for the preview, then try again.' }));
@@ -1086,7 +1090,10 @@ export default function MediaCreationEngine({
       }
       context.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
       const snapUrl = canvas.toDataURL('image/jpeg', 0.92);
-      setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+      setSelectedImages(prev => prev.length >= 20
+        ? prev
+        : [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+      setActiveEditIndex(selectedImages.length);
       window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Photo captured.' }));
     });
   };
