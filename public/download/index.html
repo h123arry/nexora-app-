@@ -7,6 +7,7 @@
   <meta name="description" content="Download the official NEXORA Android app and get the latest release.">
   <title>Download NEXORA</title>
   <link rel="icon" href="/icons/icon-48.png" type="image/png">
+  <link rel="manifest" href="/manifest.json">
   <style>
     :root{color-scheme:dark;font-family:Inter,"Plus Jakarta Sans",system-ui,sans-serif;background:#090714;color:#f5f3ff}
     *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,rgba(113,56,255,.2),transparent 48%),#090714}
@@ -115,7 +116,7 @@
     // Capacitor exposes app metadata only when this page is opened inside the installed app's WebView.
     try{const app=window.Capacitor?.Plugins?.App;if(app?.getInfo){const info=await app.getInfo();if(info?.version&&parseVersion(info.version))return info.version;}}catch{}
     // Some browsers expose installed related apps. Sideloaded APK detection is not universally supported.
-    try{if(navigator.getInstalledRelatedApps){const apps=await navigator.getInstalledRelatedApps();const match=apps.find(item=>item.id==='com.voiceofharrison.nexora');if(match?.versionName&&parseVersion(match.versionName))return match.versionName;}}catch{}
+    try{if(navigator.getInstalledRelatedApps){const apps=await navigator.getInstalledRelatedApps();const match=apps.find(item=>item.id==='com.voiceofharrison.nexora');if(match?.version&&parseVersion(match.version))return match.version;}}catch{}
     return '';
   }
   async function loadRelease(){
