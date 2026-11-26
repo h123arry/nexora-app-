@@ -4,7 +4,8 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
 import { replaceTerminology } from './src/data/copyDictionary';
-import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app';
+import { applicationDefault, cert, getApps, initializeApp } from 'firebase-admin/app';
+import { parseFirebaseServiceAccountJson } from './server/firebaseAdminCredentials';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
@@ -143,10 +144,18 @@ const VOH_MAX_HISTORY_ITEMS = 24;
 const VOH_MAX_CONTEXT_POSTS = 10;
 const VOH_RATE_WINDOW_MS = 60_000;
 const VOH_RATE_LIMIT = 20;
+function getFirebaseAdminCredential() {
+  const serviceAccount = parseFirebaseServiceAccountJson(
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+    firebaseProjectId,
+  );
+  return serviceAccount ? cert(serviceAccount) : applicationDefault();
+}
+
 const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-api')
   || (firebaseRuntime.useEmulators
     ? initializeApp({ projectId: firebaseProjectId }, 'nexora-api')
-    : initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api'));
+    : initializeApp({ credential: getFirebaseAdminCredential(), projectId: firebaseProjectId }, 'nexora-api'));
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
 const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(firebaseStorageBucket) : null;
 
