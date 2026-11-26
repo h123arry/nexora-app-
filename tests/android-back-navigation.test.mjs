@@ -15,6 +15,7 @@ test('Android system Back is routed through the app navigation policy', async ()
   assert.match(activity, /moveTaskToBack\(true\)/);
   assert.match(app, /window\.addEventListener\('nexora:android-back', onNativeBack\)/);
   assert.match(app, /window\.removeEventListener\('nexora:android-back', onNativeBack\)/);
+  assert.match(app, /if \(isCreatePostModalOpen\) return/);
 });
 
 test('Back dismisses focused text entry before overlays and nested routes', async () => {
@@ -43,6 +44,16 @@ test('Back dismisses focused text entry before overlays and nested routes', asyn
   ]) {
     assert.match(app, new RegExp(`if \\(${state}\\)`), `Back should account for ${state}`);
   }
+});
+
+test('Create and Studio nested surfaces consume Back before their parent screens', async () => {
+  const create = await read('../src/components/MediaCreationEngine.tsx');
+  const studio = await read('../src/components/NexoraStudio.tsx');
+
+  assert.match(create, /window\.addEventListener\('nexora:android-back', handleAndroidBack\)/);
+  assert.match(create, /window\.addEventListener\('nexora-escape', handleAndroidBack\)/);
+  assert.match(create, /event\.preventDefault\(\)/);
+  assert.match(studio, /window\.addEventListener\('nexora-escape', handleEscape\)/);
 });
 
 test('temporary navigation menu and report dialog support outside dismissal', async () => {
