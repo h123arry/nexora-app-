@@ -54,6 +54,7 @@ async function cleanupOriginFixtures(): Promise<void> {
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Account deletion policy tests require the Firestore Emulator.');
   await cleanupOriginFixtures();
+  await db.collection('posts').doc('delete-comment-host-post').delete().catch(() => undefined);
   await cleanupIdentityFixtures();
   await cleanupPayoutFixtures();
   for (const collection of ['mediaAssets', 'academyProgress', 'academyLessonNotes', 'posts']) {
@@ -65,6 +66,7 @@ before(async () => {
 });
 after(async () => {
   await cleanupOriginFixtures();
+  await db.collection('posts').doc('delete-comment-host-post').delete().catch(() => undefined);
   await cleanupIdentityFixtures();
   await cleanupPayoutFixtures();
   for (const collection of ['mediaAssets', 'academyProgress', 'academyLessonNotes', 'posts']) {
@@ -84,6 +86,20 @@ describe('account deletion data and storage scope', () => {
     await db.collection('academyProgress').doc('delete-progress').set({ userId: 'account-delete-test' });
     await db.collection('academyLessonNotes').doc('delete-note').set({ userId: 'account-delete-test' });
     await db.collection('posts').doc('delete-post').set({ userId: 'account-delete-test' });
+    await db.collection('posts').doc('delete-comment-host-post').set({
+      userId: 'account-delete-other',
+      commentsCount: 3,
+      comments: [
+        { id: 'deleted-parent-with-replies', userId: 'account-delete-test', username: 'old-user', name: 'Old User', content: 'Private comment content', replies: [
+          { id: 'deleted-reply', userId: 'account-delete-test', content: 'Private reply' },
+          { id: 'other-reply', userId: 'account-delete-other', content: 'Keep this reply' },
+        ] },
+        { id: 'other-parent', userId: 'account-delete-other', content: 'Keep this comment', replies: [
+          { id: 'deleted-child-reply', userId: 'account-delete-test', content: 'Remove this reply' },
+        ] },
+        { id: 'deleted-parent-no-replies', userId: 'account-delete-test', content: 'Remove this entirely', replies: [] },
+      ],
+    });
     const origin = db.collection('mediaOrigins').doc('delete-origin');
     await origin.set({ assetId: 'delete-origin', ownerUid: 'account-delete-test' });
     await origin.collection('events').doc('upload-event').set({ eventType: 'uploaded_to_nexora' });
@@ -97,6 +113,16 @@ describe('account deletion data and storage scope', () => {
     assert.equal((await db.collection('academyProgress').doc('delete-progress').get()).exists, false);
     assert.equal((await db.collection('academyLessonNotes').doc('delete-note').get()).exists, false);
     assert.equal((await db.collection('posts').doc('delete-post').get()).exists, false);
+    const hostPost = await db.collection('posts').doc('delete-comment-host-post').get();
+    const remainingComments = hostPost.get('comments');
+    assert.equal(hostPost.get('commentsCount'), 2);
+    assert.equal(remainingComments.length, 2);
+    assert.equal(remainingComments[0].content, 'Comment removed');
+    assert.equal(remainingComments[0].userId, '');
+    assert.equal(remainingComments[0].username, 'deleted_account');
+    assert.deepEqual(remainingComments[0].replies.map((reply: { id: string }) => reply.id), ['other-reply']);
+    assert.equal(remainingComments[1].content, 'Keep this comment');
+    assert.deepEqual(remainingComments[1].replies, []);
     assert.equal((await db.collection('mediaOrigins').doc('delete-origin').get()).exists, false);
     assert.equal((await db.collection('mediaOrigins').doc('delete-origin').collection('events').get()).size, 0);
     assert.equal((await db.collection('mediaAssets').doc('keep-media').get()).exists, true);
