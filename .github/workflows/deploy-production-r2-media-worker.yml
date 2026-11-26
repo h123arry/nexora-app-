@@ -59,7 +59,7 @@ jobs:
           project_id: nexora-prod-voiceharrison
 
       - name: Set up Google Cloud CLI
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: nexora-prod-voiceharrison
 
