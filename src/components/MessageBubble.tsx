@@ -578,9 +578,13 @@ export default function MessageBubble({
       )}
       {activeContextMessageId === message.id && (
         <div className={`absolute z-30 ${isMe ? 'right-3' : 'left-12'} top-full mt-2 w-[min(310px,calc(100vw-5rem))] rounded-2xl border border-violet-300/15 bg-[#0b0920] p-2 shadow-2xl`} role="menu" aria-label="Message actions">
+          <div className="mb-1 flex items-center justify-between px-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-violet-200">Message actions</span>
+            <button type="button" onClick={() => onToggleContextMenu(null)} aria-label="Close message actions" className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></button>
+          </div>
           <div className="grid grid-cols-4 gap-1">
-            <button type="button" role="menuitem" onClick={() => onReply(message)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Quote className="h-4 w-4"/><span className="text-[10px]">Reply</span></button>
-            <button type="button" role="menuitem" onClick={() => void copyMessage()} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Copy className="h-4 w-4"/><span className="text-[10px]">Copy</span></button>
+            <button type="button" role="menuitem" onClick={() => { onReply(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Quote className="h-4 w-4"/><span className="text-[10px]">Reply</span></button>
+            <button type="button" role="menuitem" onClick={() => { void copyMessage(); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Copy className="h-4 w-4"/><span className="text-[10px]">Copy</span></button>
             <button type="button" role="menuitem" onClick={() => { setShowReactionPicker(true); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><span className="text-lg">😊</span><span className="text-[10px]">React</span></button>
             <button type="button" role="menuitem" onClick={() => { onStar?.(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Star className="h-4 w-4"/><span className="text-[10px]">{message.isStarred ? 'Unstar' : 'Star'}</span></button>
             {isMe && !message.mediaStoragePath && message.customMediaType !== 'sticker' && <button type="button" role="menuitem" onClick={() => { onEdit(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Edit className="h-4 w-4"/><span className="text-[10px]">Edit</span></button>}
