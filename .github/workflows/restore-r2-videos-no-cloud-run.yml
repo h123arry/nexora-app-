@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Check out the reviewed NEXORA release
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Require existing production identity and R2 credentials
         shell: bash
