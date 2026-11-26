@@ -1195,7 +1195,7 @@ export default function App() {
       window.removeEventListener('openUniversalSearch', handleOpenUniversalSearch);
       window.removeEventListener('nexora-view-profile', handleViewProfileEvent);
     };
-  }, [isCreatePostModalOpen, isCreateMenuOpen, isNexoraStudioOpen, isSystemHubOpen, isUniversalSearchOpen, isNavMenuOpen, isLogoutConfirming, verificationModalDetail, showPublicAccountSetup, showAuthChoice, showEmailAuth, isAiCommandCenterOpen, showPWAInstallPrompt, showOnboarding, showDiagnosticsOverlay, viewedUser, historyStack, activeTab]);
+  }, [isCreatePostModalOpen, isCreateMenuOpen, isNexoraStudioOpen, isSystemHubOpen, isUniversalSearchOpen, isNavMenuOpen, isLogoutConfirming, verificationModalDetail, showPublicAccountSetup, showAuthChoice, showEmailAuth, isAiCommandCenterOpen, showPWAInstallPrompt, showOnboarding, showDiagnosticsOverlay, requiresPublicAccountSetup, viewedUser, historyStack, activeTab]);
 
   // Sync System Hub options to local storage and browser document settings
   useEffect(() => {
