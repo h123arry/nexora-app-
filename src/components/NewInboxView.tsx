@@ -1031,7 +1031,10 @@ export default function NewInboxView({
               }}
               onClick={(event) => {
                 const target = event.target as HTMLElement;
-                if (!target.closest('[role="menu"], [role="dialog"]')) setActiveContextMessageId(null);
+                if (!target.closest('[role="menu"], [role="dialog"]')) {
+                  setActiveContextMessageId(null);
+                  window.dispatchEvent(new CustomEvent('nexora-message-escape', { cancelable: true }));
+                }
               }}
               className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-950/15 via-black to-black"
             >
