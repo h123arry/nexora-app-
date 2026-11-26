@@ -1057,7 +1057,7 @@ export default function NewInboxView({
                       onPin={handlePinMessage}
                       onTranslate={() => {}}
                       searchQuery={messageSearchQuery}
-                      onToggleContextMenu={(messageId) => setActiveContextMessageId(previous => previous === messageId ? null : messageId)}
+                      onToggleContextMenu={(messageId) => setActiveContextMessageId(messageId)}
                       activeContextMessageId={activeContextMessageId}
                       onTogglePlayVoice={() => {}}
                       onResolveVoiceMedia={resolvePrivateChatMedia}
