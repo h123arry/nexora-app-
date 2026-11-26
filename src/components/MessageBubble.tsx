@@ -4,6 +4,8 @@ import { Play, Pause, Check, CheckCheck, Pin, Trash2, Edit, Globe, Quote, MapPin
 import { ExtendedMessage } from '../types';
 import RelativeTime from './RelativeTime';
 
+const MESSAGE_REACTION_OPTIONS = ['❤️', '😂', '🥹', '😊', '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😇', '🙂', '🐶', '🐱', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒'] as const;
+
 interface MessageBubbleProps {
   key?: React.Key;
   message: ExtendedMessage;
@@ -83,9 +85,28 @@ export default function MessageBubble({
   const [loadingPrivateMedia, setLoadingPrivateMedia] = useState(false);
   const [privateMediaError, setPrivateMediaError] = useState('');
   const [showMessageInfo, setShowMessageInfo] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
+  const lastTapAtRef = useRef(0);
   const clearLongPress = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); longPressTimer.current = null; };
   useEffect(() => () => clearLongPress(), []);
+  useEffect(() => {
+    const handleMessageEscape = (event: Event) => {
+      if (event.defaultPrevented) return;
+      if (showReactionPicker) {
+        setShowReactionPicker(false);
+        event.preventDefault();
+        return;
+      }
+      if (activeContextMessageId === message.id) {
+        onToggleContextMenu(null);
+        event.preventDefault();
+      }
+    };
+    window.addEventListener('nexora-message-escape', handleMessageEscape);
+    return () => window.removeEventListener('nexora-message-escape', handleMessageEscape);
+  }, [showReactionPicker, activeContextMessageId, message.id, onToggleContextMenu]);
   const copyMessage = async () => {
     try { await navigator.clipboard.writeText(message.customMediaData?.emoji || message.content || message.fileName || ''); window.dispatchEvent(new CustomEvent('toast', { detail: 'Message copied.' })); }
     catch { window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not copy this message on this device.' })); }
@@ -167,17 +188,32 @@ export default function MessageBubble({
       }}
       onTouchStart={() => {
         clearLongPress();
+        longPressTriggeredRef.current = false;
         longPressTimer.current = setTimeout(() => {
+          longPressTriggeredRef.current = true;
           onToggleContextMenu(message.id);
           onLongPress(message.id, {} as React.MouseEvent);
         }, 520);
       }}
-      onTouchEnd={clearLongPress}
-      onTouchMove={clearLongPress}
-      onTouchCancel={clearLongPress}
-      onDoubleClick={() => onReact(message.id, '❤️')}
+      onTouchEnd={() => {
+        clearLongPress();
+        if (longPressTriggeredRef.current) {
+          longPressTriggeredRef.current = false;
+          lastTapAtRef.current = 0;
+          return;
+        }
+        const now = Date.now();
+        if (now - lastTapAtRef.current < 320) {
+          setShowReactionPicker(true);
+          lastTapAtRef.current = 0;
+        } else lastTapAtRef.current = now;
+      }}
+      onTouchMove={() => { clearLongPress(); lastTapAtRef.current = 0; }}
+      onTouchCancel={() => { clearLongPress(); lastTapAtRef.current = 0; }}
+      onDoubleClick={(event) => { event.preventDefault(); setShowReactionPicker(true); }}
       onContextMenu={(e) => {
         e.preventDefault();
+        longPressTriggeredRef.current = true;
         onToggleContextMenu(message.id);
         onLongPress(message.id, e);
       }}
@@ -208,7 +244,7 @@ export default function MessageBubble({
           <div
             className={`relative rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
               isMe
-                ? 'bg-gradient-to-r from-violet-600 via-[#8B5CF6] to-pink-500 text-white rounded-tr-none'
+                ? 'bg-gradient-to-r from-violet-600 via-[#8B5CF6] to-[#4B10F2] text-white rounded-tr-none'
                 : 'bg-[#0e0a29]/95 text-violet-100 border border-white/10 rounded-tl-none'
             } ${isLastInGroup ? (isMe ? 'rounded-br-sm' : 'rounded-bl-sm') : ''} shadow-lg relative group/item`}
           >
@@ -527,12 +563,29 @@ export default function MessageBubble({
           </div>
         </div>
       </div>
+      {showReactionPicker && (
+        <div className={`absolute z-40 ${isMe ? 'right-2' : 'left-10'} bottom-full mb-2 w-[min(320px,calc(100vw-3rem))] rounded-2xl border border-violet-300/20 bg-[#0b0920]/[.98] p-2 shadow-2xl backdrop-blur-xl`} role="dialog" aria-label="Choose a message reaction">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-violet-200">Choose a reaction</span>
+            <button type="button" onClick={() => setShowReactionPicker(false)} aria-label="Close reaction picker" className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {MESSAGE_REACTION_OPTIONS.map(emoji => (
+              <button key={emoji} type="button" onClick={() => { onReact(message.id, emoji); setShowReactionPicker(false); }} aria-label={`React with ${emoji}`} className="flex min-h-10 items-center justify-center rounded-lg text-xl transition-colors hover:bg-violet-500/20 active:scale-95">{emoji}</button>
+            ))}
+          </div>
+        </div>
+      )}
       {activeContextMessageId === message.id && (
         <div className={`absolute z-30 ${isMe ? 'right-3' : 'left-12'} top-full mt-2 w-[min(310px,calc(100vw-5rem))] rounded-2xl border border-violet-300/15 bg-[#0b0920] p-2 shadow-2xl`} role="menu" aria-label="Message actions">
+          <div className="mb-1 flex items-center justify-between px-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-violet-200">Message actions</span>
+            <button type="button" onClick={() => onToggleContextMenu(null)} aria-label="Close message actions" className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></button>
+          </div>
           <div className="grid grid-cols-4 gap-1">
-            <button type="button" role="menuitem" onClick={() => onReply(message)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Quote className="h-4 w-4"/><span className="text-[10px]">Reply</span></button>
-            <button type="button" role="menuitem" onClick={() => void copyMessage()} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Copy className="h-4 w-4"/><span className="text-[10px]">Copy</span></button>
-            <button type="button" role="menuitem" onClick={() => { onReact(message.id, '❤️'); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><span className="text-lg">❤️</span><span className="text-[10px]">React</span></button>
+            <button type="button" role="menuitem" onClick={() => { onReply(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Quote className="h-4 w-4"/><span className="text-[10px]">Reply</span></button>
+            <button type="button" role="menuitem" onClick={() => { void copyMessage(); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Copy className="h-4 w-4"/><span className="text-[10px]">Copy</span></button>
+            <button type="button" role="menuitem" onClick={() => { setShowReactionPicker(true); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><span className="text-lg">😊</span><span className="text-[10px]">React</span></button>
             <button type="button" role="menuitem" onClick={() => { onStar?.(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Star className="h-4 w-4"/><span className="text-[10px]">{message.isStarred ? 'Unstar' : 'Star'}</span></button>
             {isMe && !message.mediaStoragePath && message.customMediaType !== 'sticker' && <button type="button" role="menuitem" onClick={() => { onEdit(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Edit className="h-4 w-4"/><span className="text-[10px]">Edit</span></button>}
             <button type="button" role="menuitem" onClick={() => { onPin(message); onToggleContextMenu(null); }} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Pin className="h-4 w-4"/><span className="text-[10px]">{isPinned ? 'Unpin' : 'Pin'}</span></button>

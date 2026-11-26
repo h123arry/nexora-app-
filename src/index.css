@@ -1895,11 +1895,13 @@ body {
 
 /* NEXORA INBOX — premium two-pane messaging workspace. */
 .nx-inbox-shell {
-  min-height: min(760px,calc(100dvh - 110px));
-  border: 1px solid rgba(151,119,220,.16);
-  border-radius: 24px;
+  height: calc(100dvh - 110px);
+  min-height: 0;
+  padding-bottom: 0 !important;
+  border: 0;
+  border-radius: 0;
   background: #07050f;
-  box-shadow: 0 22px 65px rgba(0,0,0,.22);
+  box-shadow: none;
   isolation: isolate;
 }
 .nx-inbox-sidebar {
@@ -2067,10 +2069,38 @@ body {
 }
 @media (max-width: 767px) {
   .nx-inbox-shell {
-    min-height: calc(100dvh - 78px);
+    min-height: 0;
     height: calc(100dvh - 78px);
-    border-radius: 18px;
+    padding-bottom: 0 !important;
+    border-radius: 0;
     border-inline: 0;
+  }
+  .nx-inbox-shell[data-chat-open="true"] {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    width: 100vw;
+    height: 100dvh;
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    background: #07050f;
+  }
+  body:has(.nx-inbox-shell[data-chat-open="true"]) #nexora-unified-bottom-nav {
+    display: none !important;
+  }
+  body:has(.nx-inbox-shell[data-chat-open="true"]) .nx-app-shell {
+    padding-bottom: 0 !important;
+  }
+  .nx-inbox-shell[data-chat-open="true"] .nx-inbox-chat {
+    height: 100%;
+    min-height: 0;
+  }
+  .nx-inbox-shell[data-chat-open="true"] .nx-inbox-chat > div:nth-child(2) {
+    padding: 12px 10px;
+  }
+  .nx-inbox-shell[data-chat-open="true"] .nx-inbox-chat > div:last-child {
+    padding-bottom: 13px;
   }
   .nx-inbox-sidebar {
     width: 100%;

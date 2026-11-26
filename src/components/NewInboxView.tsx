@@ -131,6 +131,24 @@ export default function NewInboxView({
   const [activeContextMessageId, setActiveContextMessageId] = useState<string | null>(null);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   useEffect(() => { setSelectedMessageIds([]); setActiveContextMessageId(null); setMessageSearchQuery(''); setShowMessageSearch(false); }, [activeChatId]);
+
+  // Android/system Back should unwind the active chat before leaving the inbox route.
+  useEffect(() => {
+    const handleInboxEscape = (event: Event) => {
+      if (event.defaultPrevented) return;
+      if (showMediaGallery) { setShowMediaGallery(false); event.preventDefault(); return; }
+      if (showVoiceRecorder) { setShowVoiceRecorder(false); event.preventDefault(); return; }
+      if (showEmojiPicker) { setShowEmojiPicker(false); event.preventDefault(); return; }
+      if (showAttachmentMenu) { setShowAttachmentMenu(false); event.preventDefault(); return; }
+      if (showMessageSearch) { setShowMessageSearch(false); setMessageSearchQuery(''); event.preventDefault(); return; }
+      const messageEscape = new CustomEvent('nexora-message-escape', { cancelable: true });
+      window.dispatchEvent(messageEscape);
+      if (messageEscape.defaultPrevented) { event.preventDefault(); return; }
+      if (activeChatId) { setActiveChatId(null); event.preventDefault(); }
+    };
+    window.addEventListener('nexora-escape', handleInboxEscape);
+    return () => window.removeEventListener('nexora-escape', handleInboxEscape);
+  }, [activeChatId, showMediaGallery, showVoiceRecorder, showEmojiPicker, showAttachmentMenu, showMessageSearch]);
   const [replyQuoteText, setReplyQuoteText] = useState<string | null>(null);
   const [replyMessageId, setReplyMessageId] = useState<string | null>(null);
 
@@ -744,7 +762,7 @@ export default function NewInboxView({
   };
 
   return (
-    <div className="nx-page-shell nx-inbox-shell flex flex-col md:flex-row h-full w-full text-white font-sans overflow-hidden relative">
+    <div data-chat-open={activeChatId ? 'true' : 'false'} className="nx-page-shell nx-inbox-shell flex flex-col md:flex-row h-full w-full text-white font-sans overflow-hidden relative">
       
       {/* LEFT COLUMN: Conversation List */}
       <div className={`nx-inbox-sidebar w-full md:w-96 border-r border-[var(--nx-edge)] flex flex-col h-full bg-[var(--nx-surface)] ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
@@ -900,7 +918,7 @@ export default function NewInboxView({
         {activeChat ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#0D0A20]/90 backdrop-blur-md z-10">
+            <div className="p-3 sm:p-4 border-b border-white/10 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-[#0D0A20]/90 backdrop-blur-md z-10">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setActiveChatId(null)}
@@ -937,13 +955,14 @@ export default function NewInboxView({
                 </div>
               </div>
 
+              <div className="flex min-w-0 items-center justify-between gap-2">
               {/* Conversation organisation controls; saved per account on this device. */}
-              <div className="flex items-center gap-1.5">
-                <button type="button" aria-pressed={pinnedChats.includes(activeChat.id)} onClick={() => { const pinned = !pinnedChats.includes(activeChat.id); setPinnedChats(previous => pinned ? [activeChat.id, ...previous].slice(0, 500) : previous.filter(id => id !== activeChat.id)); void setInboxChatPreference(currentUser.id, activeChat.id, { pinned }).catch(error => console.warn('[NEXORA inbox] Could not sync pin:', error)); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" title={pinnedChats.includes(activeChat.id) ? 'Unpin conversation' : 'Pin conversation'}><Pin className="w-4 h-4" /></button>
-                <button type="button" aria-pressed={archivedChats.includes(activeChat.id)} onClick={() => { const isArchived = archivedChats.includes(activeChat.id); setArchivedChats(previous => isArchived ? previous.filter(id => id !== activeChat.id) : [...previous, activeChat.id].slice(-500)); void setInboxChatPreference(currentUser.id, activeChat.id, { archived: !isArchived }).catch(error => console.warn('[NEXORA inbox] Could not sync archive:', error)); if (!isArchived) setActiveChatId(null); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" title={archivedChats.includes(activeChat.id) ? 'Restore conversation' : 'Archive conversation'}><Archive className="w-4 h-4" /></button>
+              <div className="flex shrink-0 items-center gap-1">
+                <button type="button" aria-pressed={pinnedChats.includes(activeChat.id)} onClick={() => { const pinned = !pinnedChats.includes(activeChat.id); setPinnedChats(previous => pinned ? [activeChat.id, ...previous].slice(0, 500) : previous.filter(id => id !== activeChat.id)); void setInboxChatPreference(currentUser.id, activeChat.id, { pinned }).catch(error => console.warn('[NEXORA inbox] Could not sync pin:', error)); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" aria-label={pinnedChats.includes(activeChat.id) ? 'Unpin conversation' : 'Pin conversation'} title={pinnedChats.includes(activeChat.id) ? 'Unpin conversation' : 'Pin conversation'}><Pin className="w-4 h-4" /></button>
+                <button type="button" aria-pressed={archivedChats.includes(activeChat.id)} onClick={() => { const isArchived = archivedChats.includes(activeChat.id); setArchivedChats(previous => isArchived ? previous.filter(id => id !== activeChat.id) : [...previous, activeChat.id].slice(-500)); void setInboxChatPreference(currentUser.id, activeChat.id, { archived: !isArchived }).catch(error => console.warn('[NEXORA inbox] Could not sync archive:', error)); if (!isArchived) setActiveChatId(null); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" aria-label={archivedChats.includes(activeChat.id) ? 'Restore conversation' : 'Archive conversation'} title={archivedChats.includes(activeChat.id) ? 'Restore conversation' : 'Archive conversation'}><Archive className="w-4 h-4" /></button>
               </div>
               {/* Call & Media Buttons */}
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                 <button
                   type="button"
                   aria-label="Search messages in this conversation"
@@ -985,6 +1004,7 @@ export default function NewInboxView({
                   <ImageIcon className="w-4 h-4" />
                 </button>
               </div>
+              </div>
             </div>
 
             {showMessageSearch && (
@@ -1010,6 +1030,13 @@ export default function NewInboxView({
               ref={messagesScrollRef}
               onScroll={(event) => {
                 if (event.currentTarget.scrollTop < 120) void loadOlderMessages();
+              }}
+              onClick={(event) => {
+                const target = event.target as HTMLElement;
+                if (!target.closest('[role="menu"], [role="dialog"]')) {
+                  setActiveContextMessageId(null);
+                  window.dispatchEvent(new CustomEvent('nexora-message-escape', { cancelable: true }));
+                }
               }}
               className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-950/15 via-black to-black"
             >
@@ -1057,11 +1084,11 @@ export default function NewInboxView({
                       onPin={handlePinMessage}
                       onTranslate={() => {}}
                       searchQuery={messageSearchQuery}
-                      onToggleContextMenu={(messageId) => setActiveContextMessageId(previous => previous === messageId ? null : messageId)}
+                      onToggleContextMenu={(messageId) => setActiveContextMessageId(messageId)}
                       activeContextMessageId={activeContextMessageId}
                       onTogglePlayVoice={() => {}}
                       onResolveVoiceMedia={resolvePrivateChatMedia}
-                      onLongPress={() => {}}
+                      onLongPress={(messageId) => setActiveContextMessageId(messageId)}
                       playingVoiceId={null}
                       voiceProgress={0}
                       voicePlaybackSpeed={1}
