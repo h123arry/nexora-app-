@@ -53,3 +53,12 @@ test('comment actions use persisted comment, reply and reaction flows', async ()
   assert.match(push, /if \(type === 'comment_reply'\)/);
   assert.match(push, /users\/\{userId\}\/notifications\/\{notificationId\}/);
 });
+
+
+test('failed comment submissions remain visible, preserve the draft, and clear feedback while editing', async () => {
+  const feed = await readFile(new URL('../src/components/FeedView.tsx', import.meta.url), 'utf8');
+  assert.match(feed, /if \(saved === false\)[\s\S]*?Your draft is still here/);
+  assert.match(feed, /role="status" aria-live="polite"/);
+  assert.match(feed, /setCommentInputs\(prev => \(\{ \.\.\.prev, \[post\.id\]: e\.target\.value \}\)\)/);
+  assert.match(feed, /delete next\[post\.id\]/);
+});
