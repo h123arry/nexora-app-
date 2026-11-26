@@ -938,6 +938,7 @@ export default function App() {
   // Global scroll position memory across all destination tabs
   const pageScrollPositionsRef = useRef<Record<string, number>>({});
   const prevPageRef = useRef<string>('feed');
+  const hasBackHistoryEntryRef = useRef(false);
 
   useEffect(() => {
     pageScrollPositionsRef.current[prevPageRef.current] = window.scrollY || document.documentElement.scrollTop || 0;
@@ -1095,7 +1096,12 @@ export default function App() {
 
   // Unified navigation custom event listeners & PopState handler
   useEffect(() => {
-    window.history.pushState({ nexora: true }, '', window.location.href);
+    // This component effect rebinds listeners as navigation state changes.
+    // Add only one browser-history sentinel per mounted app, not one per rebind.
+    if (!hasBackHistoryEntryRef.current) {
+      window.history.pushState({ nexora: true }, '', window.location.href);
+      hasBackHistoryEntryRef.current = true;
+    }
 
     const onPopState = (e: PopStateEvent) => {
       e.preventDefault();
