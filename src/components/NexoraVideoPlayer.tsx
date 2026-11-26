@@ -1408,7 +1408,7 @@ export default function NexoraVideoPlayer({
                    <span className="min-w-0">
                      <span className="flex items-center gap-1 text-xs font-bold text-white drop-shadow-md">
                        <span className="truncate">{post.name || post.username}</span>
-                       {post.isVerified && <PurpleVerifiedBadge className="h-4 w-4 shrink-0" type="default" />}
+                       {post.isVerified && <PurpleVerifiedBadge className="h-3.5 w-3.5 shrink-0" type="default" />}
                      </span>
                      <span className="block truncate text-[10px] text-white/75">@{post.username}</span>
                    </span>
