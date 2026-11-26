@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { acceptedWatchCredit, shouldCountPublicVideoView } from '../functions/src/videoWatchAnalyticsPolicy';
+import { getPublicVideoViewRetryDelayMs } from '../src/services/videoViewRetryPolicy';
 
 test('credits plausible forward playback using server elapsed time',()=>{
  assert.equal(acceptedWatchCredit({elapsedSeconds:5,previousPositionSeconds:10,nextPositionSeconds:15}),5);
@@ -24,4 +25,14 @@ test('counts only qualified public views from other accounts once per daily mark
  assert.equal(shouldCountPublicVideoView({...base,audience:'followers'}),false);
  assert.equal(shouldCountPublicVideoView({...base,creditedSeconds:0}),false);
  assert.equal(shouldCountPublicVideoView({...base,alreadyCounted:true}),false);
+});
+
+
+test('backs off failed public view writes and caps the retry delay', () => {
+  assert.equal(getPublicVideoViewRetryDelayMs(1), 15_000);
+  assert.equal(getPublicVideoViewRetryDelayMs(2), 30_000);
+  assert.equal(getPublicVideoViewRetryDelayMs(3), 60_000);
+  assert.equal(getPublicVideoViewRetryDelayMs(6), 5 * 60_000);
+  assert.equal(getPublicVideoViewRetryDelayMs(100), 5 * 60_000);
+  assert.equal(getPublicVideoViewRetryDelayMs(Number.NaN), 15_000);
 });

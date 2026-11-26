@@ -19,6 +19,7 @@ import { hasAnalyticsObservationConsent, trackClientObservation } from '../servi
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
 import { playNexoraSound } from '../services/soundExperience';
+import { getPublicVideoViewRetryDelayMs } from '../services/videoViewRetryPolicy';
 
 interface NexoraMediaPlugin {
   saveVideo(options: { filename: string; mimeType: string; base64Data: string }): Promise<{ saved: boolean; uri?: string }>;
@@ -295,6 +296,8 @@ export default function NexoraVideoPlayer({
   const viewLoggedRef = useRef(false);
   const publicViewRequestInFlightRef = useRef(false);
   const lastPublicViewAttemptAtRef = useRef(0);
+  const publicViewRetryAttemptRef = useRef(0);
+  const publicViewRetryAfterRef = useRef(0);
   const watchCompletedRef = useRef(false);
   const playStartedTimeRef = useRef<number>(0);
   const lastObservedMediaTimeRef = useRef<number | null>(null);
@@ -477,6 +480,8 @@ export default function NexoraVideoPlayer({
     viewLoggedRef.current = false;
     publicViewRequestInFlightRef.current = false;
     lastPublicViewAttemptAtRef.current = 0;
+    publicViewRetryAttemptRef.current = 0;
+    publicViewRetryAfterRef.current = 0;
     watchCompletedRef.current = false;
   }, [finalVideoUrl, post.id]);
 
@@ -633,7 +638,8 @@ export default function NexoraVideoPlayer({
     if (creditedWatchSecondsRef.current >= 3
       && !viewLoggedRef.current
       && !publicViewRequestInFlightRef.current
-      && Date.now() - lastPublicViewAttemptAtRef.current >= 10_000) {
+      && Date.now() - lastPublicViewAttemptAtRef.current >= 10_000
+      && Date.now() >= publicViewRetryAfterRef.current) {
       logToWatchHistory();
       recordReelSignal(post.id, { watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
       // Public view totals are essential product metrics, not optional analytics.
@@ -652,7 +658,10 @@ export default function NexoraVideoPlayer({
             }));
           }
         }).catch(() => {
-          // Retry on a later playback tick, with a ten-second backoff to avoid request storms.
+          // Use bounded exponential backoff so offline playback or a missing callable
+          // cannot turn every playback tick into another failed request.
+          publicViewRetryAttemptRef.current = Math.min(6, publicViewRetryAttemptRef.current + 1);
+          publicViewRetryAfterRef.current = Date.now() + getPublicVideoViewRetryDelayMs(publicViewRetryAttemptRef.current);
         }).finally(() => {
           publicViewRequestInFlightRef.current = false;
         });
