@@ -86,9 +86,9 @@ export async function eraseUserCommentsFromPosts(
             return [];
           }
           return [{
-            id: comment.id,
-            ...(typeof comment.postId === 'string' ? { postId: comment.postId } : {}),
-            timestamp: comment.timestamp,
+            ...(comment.id !== undefined ? { id: comment.id } : {}),
+            ...(comment.postId !== undefined ? { postId: comment.postId } : {}),
+            ...(comment.timestamp !== undefined ? { timestamp: comment.timestamp } : {}),
             likes: Number.isSafeInteger(comment.likes) ? comment.likes : 0,
             userId: '',
             username: 'deleted_account',
