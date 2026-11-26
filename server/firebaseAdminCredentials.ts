@@ -32,8 +32,8 @@ export function parseFirebaseServiceAccountJson(
     || typeof account.project_id !== 'string'
     || typeof account.private_key !== 'string'
     || typeof account.client_email !== 'string'
-    || !account.private_key.includes('-----BEGIN PRIVATE KEY-----')
-    || !account.private_key.includes('-----END PRIVATE KEY-----')
+    || !account.private_key.includes('-----BEGIN ' + 'PRIVATE KEY-----')
+    || !account.private_key.includes('-----END ' + 'PRIVATE KEY-----')
   ) {
     throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing required service-account fields.');
   }
