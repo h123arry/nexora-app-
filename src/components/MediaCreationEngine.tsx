@@ -1823,6 +1823,11 @@ export default function MediaCreationEngine({
       // This composer owns its nested navigation. Prevent the app shell from
       // closing the entire Create experience during the same Back event.
       event.preventDefault();
+      const focusedElement = document.activeElement;
+      if (focusedElement instanceof HTMLElement && focusedElement.matches('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
+        focusedElement.blur();
+        return;
+      }
       if (showExitConfirm) { setShowExitConfirm(false); return; }
       if (permissionTarget) {
         setPermissionTarget(null);
