@@ -200,6 +200,7 @@ export default function ImmersiveVideoViewer({
   useEffect(() => {
     const handleEscape = (e: Event) => {
       e.preventDefault();
+      e.stopImmediatePropagation();
       if (isCommentsOpen) {
         setIsCommentsOpen(false);
       } else {
