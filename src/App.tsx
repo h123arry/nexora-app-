@@ -1051,11 +1051,22 @@ export default function App() {
     if (isLogoutConfirming) { setIsLogoutConfirming(false); return true; }
     if (verificationModalDetail) { setVerificationModalDetail(null); return true; }
     if (showPublicAccountSetup) { dismissPublicAccountSetup(); return true; }
+    if (showEmailAuth) {
+      setShowEmailAuth(false);
+      if (requiresPublicAccountSetup) setShowPublicAccountSetup(true);
+      else setShowAuthChoice(true);
+      return true;
+    }
+    if (showAuthChoice) { setShowAuthChoice(false); setPendingAuthAction(null); return true; }
     if (isAiCommandCenterOpen) { setIsAiCommandCenterOpen(false); return true; }
+    if (isNexoraStudioOpen) { setIsNexoraStudioOpen(false); setStudioInitialMedia([]); return true; }
     if (isCreatePostModalOpen) { setIsCreatePostModalOpen(false); return true; }
     if (isCreateMenuOpen) { setIsCreateMenuOpen(false); return true; }
     if (isSystemHubOpen) { setIsSystemHubOpen(false); return true; }
-    if (isUniversalSearchOpen) { setIsUniversalSearchOpen(false); return true; }
+    if (isUniversalSearchOpen) { setIsUniversalSearchOpen(false); setUniversalSearchInitialQuery(''); return true; }
+    if (showPWAInstallPrompt) { handleMaybeLaterPWA(); return true; }
+    if (showOnboarding) { completeOnboarding(); return true; }
+    if (showDiagnosticsOverlay) { setShowDiagnosticsOverlay(false); return true; }
 
     // 4. Return from viewed profile / nested user screen
     if (viewedUser !== null) {
@@ -1180,7 +1191,7 @@ export default function App() {
       window.removeEventListener('openUniversalSearch', handleOpenUniversalSearch);
       window.removeEventListener('nexora-view-profile', handleViewProfileEvent);
     };
-  }, [isCreatePostModalOpen, isCreateMenuOpen, isSystemHubOpen, isUniversalSearchOpen, isNavMenuOpen, isLogoutConfirming, verificationModalDetail, showPublicAccountSetup, isAiCommandCenterOpen, viewedUser, historyStack, activeTab]);
+  }, [isCreatePostModalOpen, isCreateMenuOpen, isNexoraStudioOpen, isSystemHubOpen, isUniversalSearchOpen, isNavMenuOpen, isLogoutConfirming, verificationModalDetail, showPublicAccountSetup, showAuthChoice, showEmailAuth, isAiCommandCenterOpen, showPWAInstallPrompt, showOnboarding, showDiagnosticsOverlay, viewedUser, historyStack, activeTab]);
 
   // Sync System Hub options to local storage and browser document settings
   useEffect(() => {
