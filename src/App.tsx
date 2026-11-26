@@ -1127,7 +1127,10 @@ export default function App() {
     // same ordered navigation policy for Android, browser Escape and web Back.
     const onNativeBack = (event: Event) => {
       if (event.defaultPrevented) return;
-      if (backNavigationRef.current()) event.preventDefault();
+      if (backNavigationRef.current()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
     };
 
     const handleToggleNav = () => {
