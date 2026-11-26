@@ -87,7 +87,7 @@ export async function eraseUserCommentsFromPosts(
           }
           return [{
             id: comment.id,
-            postId: comment.postId,
+            ...(typeof comment.postId === 'string' ? { postId: comment.postId } : {}),
             timestamp: comment.timestamp,
             likes: Number.isSafeInteger(comment.likes) ? comment.likes : 0,
             userId: '',
