@@ -1,5 +1,6 @@
 package com.voiceofharrison.nexora;
 
+import com.getcapacitor.Bridge;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
@@ -9,17 +10,31 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
     }
 
+    /**
+     * Route Android system Back through the same navigation stack used by the
+     * web application. Only move the task to the background when NEXORA reports
+     * that there is no keyboard, overlay, nested screen, or prior app route left.
+     */
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
-        com.getcapacitor.Bridge currentBridge = getBridge();
-        if (NexoraMediaPlugin.isCreateExperienceActive() && currentBridge != null && currentBridge.getWebView() != null) {
-            currentBridge.getWebView().evaluateJavascript(
-                "window.dispatchEvent(new Event('nexora:android-back'))",
-                null
-            );
+        Bridge currentBridge = getBridge();
+        if (currentBridge == null || currentBridge.getWebView() == null) {
+            moveTaskToBack(true);
             return;
         }
-        super.onBackPressed();
+
+        currentBridge.getWebView().evaluateJavascript(
+            "(function(){"
+                + "var event = new Event('nexora:android-back', { cancelable: true });"
+                + "window.dispatchEvent(event);"
+                + "return event.defaultPrevented;"
+                + "})()",
+            handled -> {
+                if (!"true".equals(handled)) {
+                    runOnUiThread(() -> moveTaskToBack(true));
+                }
+            }
+        );
     }
 }
