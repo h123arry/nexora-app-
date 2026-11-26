@@ -219,3 +219,11 @@ test('does not load posters for released cards even if marked nearby', () => {
     isReleased: true,
   }), false);
 });
+
+
+test('profile video tiles prefer the uploaded post cover image before opening a video fallback', async () => {
+  const profile = await readFile(new URL('../src/components/ProfileView.tsx', import.meta.url), 'utf8');
+  assert.ok(profile.includes('|| post.image\n            || post.images?.find(Boolean)'));
+  assert.ok(profile.includes('if (!repairVideoPosters) return;'));
+  assert.ok(profile.includes('const savedPoster = (post as any).videoThumbnailUrl || (post as any).posterUrl || post.image'));
+});
