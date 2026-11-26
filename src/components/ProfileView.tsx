@@ -349,12 +349,21 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
                       onError={(event) => { event.currentTarget.style.display = 'none'; }}
                     />
                   ) : (
-                    <NexoraVideo 
-                      src={videoSource ? `${videoSource}#t=0.001` : ''} 
-                      className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity relative z-10" 
-                      preload="metadata" 
-                      muted 
+                    <video
+                      src={videoSource ? normalizeMediaDeliveryUrl(videoSource) : undefined}
+                      className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity relative z-10"
+                      preload="metadata"
+                      muted
                       playsInline
+                      controls={false}
+                      disablePictureInPicture
+                      aria-hidden="true"
+                      onLoadedMetadata={(event) => {
+                        const video = event.currentTarget;
+                        if (Number.isFinite(video.duration) && video.duration > 0) {
+                          try { video.currentTime = Math.min(0.12, video.duration * 0.02); } catch { /* frame preview only */ }
+                        }
+                      }}
                     />
                   )}
                   <div className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md rounded-full z-20">
