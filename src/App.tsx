@@ -3766,11 +3766,21 @@ export default function App() {
       /></Suspense>}
 
       {showAuthChoice && !isLoggedIn && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050914]/95 p-4 backdrop-blur-xl">
-          <div className="relative w-full max-w-sm rounded-3xl border border-violet-400/20 bg-[#0B1424] p-6 text-center shadow-2xl">
+        <div
+          role="presentation"
+          onClick={() => { setShowAuthChoice(false); setPendingAuthAction(null); }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050914]/95 p-4 backdrop-blur-xl"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="nexora-auth-choice-title"
+            onClick={(event) => event.stopPropagation()}
+            className="relative w-full max-w-sm rounded-3xl border border-violet-400/20 bg-[#0B1424] p-6 text-center shadow-2xl"
+          >
             <button type="button" aria-label="Close" onClick={() => { setShowAuthChoice(false); setPendingAuthAction(null); }} className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-white/10">×</button>
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15 text-2xl text-violet-200">N</div>
-            <h2 className="text-xl font-bold text-white">Join the conversation</h2>
+            <h2 id="nexora-auth-choice-title" className="text-xl font-bold text-white">Join the conversation</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">Sign in or create a NEXORA account to follow people, post and connect.</p>
             <button type="button" onClick={() => { setEmailAuthInitialMode('login'); setShowAuthChoice(false); setShowEmailAuth(true); }} className="mt-6 w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white hover:bg-violet-500">Log in</button>
             <button type="button" onClick={() => { setEmailAuthInitialMode('signup'); setShowAuthChoice(false); setShowEmailAuth(true); }} className="mt-3 w-full rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-white hover:bg-white/5">Create account</button>
