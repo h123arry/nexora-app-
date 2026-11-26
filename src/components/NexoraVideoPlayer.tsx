@@ -4,6 +4,8 @@ import QuickActionsSheet from './QuickActionsSheet';
 import ShareSheet from './ShareSheet';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { useResolvedUrl } from '../utils/indexedDbStorage';
+import { normalizeMediaDeliveryUrl } from '../lib/apiBaseUrl';
+import PurpleVerifiedBadge from './VohVerifiedBadge';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import VideoBottomSheet from './VideoBottomSheet';
 import NexoraLoader from './NexoraLoader';
@@ -77,12 +79,6 @@ const formatPostViews = (views?: number) => {
   if (count >= 1000) return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
   return String(count);
 };
-
-const VerificationBadge = () => (
-  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center border border-white/10 shadow-lg ml-1.5 shrink-0">
-    <Check className="w-2.5 h-2.5 text-white" />
-  </div>
-);
 
 export default function NexoraVideoPlayer({
   post,
@@ -1260,7 +1256,7 @@ export default function NexoraVideoPlayer({
             )}
             <video
               ref={videoRef}
-              src={isReleased ? undefined : ((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)}
+              src={isReleased ? undefined : ((isActive ?? true) || shouldPreload ? finalVideoUrl : undefined)}
               poster={shouldLoadVideoPoster({ isActive, isNearby, shouldPreload, isReleased }) ? (posterUrl || undefined) : undefined}
               playsInline
               preload={isReleased ? "none" : (preloadMode || ((isNearby || shouldPreload) ? "auto" : "none"))}
@@ -1396,11 +1392,23 @@ export default function NexoraVideoPlayer({
                    onClick={(e) => { e.stopPropagation(); if (post.userId) onViewProfile?.(post.userId); }}
                    aria-label={`Open ${post.name}'s profile`}
                    className="flex min-w-0 items-center gap-2 text-left">
-                   <img src={post.avatar} alt="" className="h-8 w-8 shrink-0 rounded-full border border-white/50 object-cover shadow-lg" loading="lazy" />
+                   <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/50 bg-[#211447] shadow-lg">
+                     <img
+                       src={normalizeMediaDeliveryUrl(post.avatar)}
+                       alt=""
+                       className="h-full w-full object-cover"
+                       loading="lazy"
+                       decoding="async"
+                       onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                     />
+                     <span className="absolute inset-0 -z-0 flex items-center justify-center text-[11px] font-bold text-violet-100">
+                       {(post.name || post.username || 'N').trim().charAt(0).toUpperCase()}
+                     </span>
+                   </span>
                    <span className="min-w-0">
                      <span className="flex items-center gap-1 text-xs font-bold text-white drop-shadow-md">
                        <span className="truncate">{post.name || post.username}</span>
-                       {post.isVerified && <VerificationBadge />}
+                       {post.isVerified && <PurpleVerifiedBadge className="h-4 w-4 shrink-0" type="default" />}
                      </span>
                      <span className="block truncate text-[10px] text-white/75">@{post.username}</span>
                    </span>
