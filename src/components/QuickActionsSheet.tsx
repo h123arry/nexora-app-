@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Download, EyeOff, Flag, UserMinus, Bookmark, Link, X, Edit3, Archive, Trash } from 'lucide-react';
+import { Download, EyeOff, Flag, Bookmark, Link, X, Edit3, Archive, Trash, Ban } from 'lucide-react';
 
 interface QuickActionsSheetProps {
   isOpen: boolean;
@@ -18,17 +18,9 @@ export default function QuickActionsSheet({
   isArchived = false,
   compact = false
 }: QuickActionsSheetProps) {
-  // Handle Escape key and Android Back (popstate)
+  // Overlay dismissal is coordinated by the app-level back-navigation controller.
   useEffect(() => {
     if (!isOpen) return;
-
-    // Push history state so Android Back / Escape closes sheet instead of navigating away
-    window.history.pushState({ nexora_sheet_open: true }, '');
-
-    const handlePopState = () => {
-      onClose();
-    };
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -36,29 +28,24 @@ export default function QuickActionsSheet({
       }
     };
 
-    window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
   const actions = [
-    { id: 'download', label: 'Download Video', icon: Download, color: 'text-violet-400' },
-    { id: 'save', label: 'Save to Collection', icon: Bookmark, color: 'text-pink-400' },
-    { id: 'copy-link', label: 'Copy Link', icon: Link, color: 'text-emerald-400' },
+    { id: 'download', label: 'Download Video', icon: Download, color: 'text-violet-300' },
+    { id: 'save', label: 'Save to Collection', icon: Bookmark, color: 'text-violet-200' },
+    { id: 'copy-link', label: 'Copy Link', icon: Link, color: 'text-emerald-300' },
     ...(isOwnPost ? [
-      { id: 'edit-caption', label: 'Edit Caption', icon: Edit3, color: 'text-amber-400' },
-      { id: 'archive', label: isArchived ? 'Restore Post' : 'Archive Post', icon: Archive, color: 'text-fuchsia-400' },
-      { id: 'delete', label: 'Delete Post', icon: Trash, color: 'text-red-400' },
+      { id: 'edit-caption', label: 'Edit Caption', icon: Edit3, color: 'text-amber-300' },
+      { id: 'archive', label: isArchived ? 'Restore Post' : 'Archive Post', icon: Archive, color: 'text-violet-200' },
+      { id: 'delete', label: 'Delete Post', icon: Trash, color: 'text-red-300' },
     ] : [
-      { id: 'not-interested', label: 'Not Interested', icon: EyeOff, color: 'text-zinc-400' },
-      { id: 'report', label: 'Report Post', icon: Flag, color: 'text-red-400' },
-      { id: 'hide-creator', label: 'Hide Creator', icon: UserMinus, color: 'text-cyan-400' },
+      { id: 'hide-post', label: 'Hide Post', icon: EyeOff, color: 'text-zinc-200' },
+      { id: 'not-interested', label: 'Not Interested', icon: Ban, color: 'text-zinc-300' },
+      { id: 'report', label: 'Report Post', icon: Flag, color: 'text-red-300' },
     ]),
   ];
 

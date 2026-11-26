@@ -69,6 +69,8 @@ interface NexoraVideoPlayerProps {
   onCommentToggle?: () => void;
   isCommentsOpen?: boolean;
   onNotInterested?: () => void;
+  onHidePost?: () => void;
+  onReportPost?: () => void;
   onViewProfile?: (userId: string) => void;
   onViewSound?: (soundId: string) => void;
   hideTopRightSoundControl?: boolean;
@@ -96,6 +98,8 @@ export default function NexoraVideoPlayer({
   onCommentToggle,
   isCommentsOpen = false,
   onNotInterested,
+  onHidePost,
+  onReportPost,
   onViewProfile,
   onViewSound,
   hideTopRightSoundControl = false
@@ -890,13 +894,13 @@ export default function NexoraVideoPlayer({
       case 'not-interested':
         recordReelSignal(post.id, { notInterested: true }, currentUser?.id);
         onNotInterested?.();
-        window.dispatchEvent(new CustomEvent('toast', { detail: '👁️ Post marked as not interested. Feed adjusted.' }));
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Post marked as not interested.' }));
+        break;
+      case 'hide-post':
+        onHidePost?.();
         break;
       case 'report':
-        window.dispatchEvent(new CustomEvent('toast', { detail: '🚩 Post reported to moderation team. Thank you.' }));
-        break;
-      case 'hide-creator':
-        window.dispatchEvent(new CustomEvent('toast', { detail: `👤 Creator @${post.username} hidden from your feed.` }));
+        onReportPost?.();
         break;
       default:
         break;

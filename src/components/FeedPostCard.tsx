@@ -35,7 +35,7 @@ interface FeedPostCardProps {
   onSpark: (postId: string) => void;
   onSave: (postId: string) => void;
   onSharePost?: (postId: string) => void;
-  onRepostPost?: (postId: string) => void;
+  onRepostPost?: (postId: string) => void | Promise<boolean>;
   onQuotePost?: (postId: string) => void;
   onVotePoll?: (postId: string, optionId: string) => void;
   onCommentToggle: (postId: string) => void;
@@ -130,6 +130,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   const qualifiedTextViewTimerRef = useRef<number | null>(null);
   const qualifiedTextViewRecordedRef = useRef(false);
   const [originPreviewAssetId, setOriginPreviewAssetId] = useState<string | null>(null);
+  const [isReposting, setIsReposting] = useState(false);
 
   useEffect(() => {
     const target = cardRef.current;
@@ -617,9 +618,14 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             onCommentToggle={() => onCommentToggle(post.id)}
             isCommentsOpen={isCommentsOpen}
             onNotInterested={() => {
-              if (post.userId) setMutedUserIds((prev) => [...prev, post.userId!]);
-              window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Not interested. Creator muted.' }));
+              if (post.userId) setMutedUserIds((prev) => [...new Set([...prev, post.userId!])]);
+              window.dispatchEvent(new CustomEvent('toast', { detail: 'Not interested. Creator muted.' }));
             }}
+            onHidePost={() => {
+              setHiddenPostIds(previous => previous.includes(post.id) ? previous : [...previous, post.id]);
+              window.dispatchEvent(new CustomEvent('toast', { detail: 'Post hidden from your feed.' }));
+            }}
+            onReportPost={() => setReportingPost(post)}
             onViewProfile={(userId) => onViewProfile?.(userId)}
           />
           {!isOwnPost && typeof post.views === 'number' && Number.isFinite(post.views) && post.views >= 0 && (
@@ -803,15 +809,19 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             {/* Repost */}
             <button
               type="button"
-              onClick={() => {
-                if (onRepostPost) void onRepostPost(post.id);
-                else window.dispatchEvent(new CustomEvent('toast', { detail: 'Reposting is unavailable right now.' }));
+              disabled={!onRepostPost || isReposting}
+              onClick={async () => {
+                if (!onRepostPost || isReposting) return;
+                setIsReposting(true);
+                try { await onRepostPost(post.id); }
+                finally { setIsReposting(false); }
               }}
-              className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer"
-              title="Repost"
-              aria-label={`Repost by ${post.name}; ${post.shares || 0} reposts`}
+              className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer disabled:cursor-wait disabled:opacity-60"
+              title={isReposting ? "Reposting…" : "Repost"}
+              aria-label={`${isReposting ? 'Reposting' : 'Repost'} by ${post.name}; ${post.shares || 0} reposts`}
+              aria-busy={isReposting}
             >
-              <Repeat className="w-6 h-6 text-white" />
+              <Repeat className={`w-6 h-6 text-white ${isReposting ? 'animate-spin' : ''}`} />
               <span className="text-[10px] font-mono font-bold">{post.shares || 0}</span>
             </button>
 
