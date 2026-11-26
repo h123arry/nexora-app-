@@ -46,6 +46,10 @@ test('R2 media policy enforces MIME allowlists and size limits', () => {
   assert.equal(validateR2Upload('application/pdf', 1000).kind, 'document');
   assert.equal(validateR2Upload('application/vnd.openxmlformats-officedocument.wordprocessingml.document', 1000).kind, 'document');
   assert.equal(validateR2Upload('audio/mpeg', 1000).kind, 'audio');
+  assert.equal(validateR2Upload('audio/3gpp', 1000).kind, 'audio');
+  assert.equal(validateR2Upload('application/zip', 1000).kind, 'document');
+  assert.equal(validateR2Upload('application/vnd.oasis.opendocument.text', 1000).kind, 'document');
+  assert.equal(validateR2Upload('application/json', 1000).kind, 'document');
   assert.throws(() => validateR2Upload('application/x-msdownload', 1000), /unsupported/);
   assert.throws(() => validateR2Upload('image/jpeg', 13 * 1024 * 1024), /size limit/);
 });
