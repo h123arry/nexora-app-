@@ -135,6 +135,8 @@ describe('NEXORA message interaction experience', () => {
       readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
     ]);
     assert.match(inbox, /data-chat-open=\{activeChatId \? 'true' : 'false'\}/);
+    assert.match(inbox, /flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between/);
+    assert.match(inbox, /aria-label=\{pinnedChats\.includes\(activeChat\.id\) \? 'Unpin conversation' : 'Pin conversation'\}/);
     assert.match(inbox, /window\.addEventListener\('nexora-escape', handleInboxEscape\)/);
     assert.match(inbox, /if \(activeChatId\) \{ setActiveChatId\(null\); event\.preventDefault\(\); \}/);
     assert.match(css, /\.nx-inbox-shell \{[\s\S]*?border: 0;[\s\S]*?border-radius: 0;/);
