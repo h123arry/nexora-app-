@@ -938,6 +938,7 @@ export default function App() {
   // Global scroll position memory across all destination tabs
   const pageScrollPositionsRef = useRef<Record<string, number>>({});
   const prevPageRef = useRef<string>('feed');
+  const hasBackHistoryEntryRef = useRef(false);
 
   useEffect(() => {
     pageScrollPositionsRef.current[prevPageRef.current] = window.scrollY || document.documentElement.scrollTop || 0;
@@ -1024,6 +1025,16 @@ export default function App() {
   });
 
   const handleBackNavigation = () => {
+    // 0. Dismiss the software keyboard before navigating away from the current surface.
+    const focusedElement = document.activeElement;
+    if (focusedElement instanceof HTMLElement) {
+      const isTextEntry = focusedElement.matches('input, textarea, select, [contenteditable="true"], [role="textbox"]');
+      if (isTextEntry) {
+        focusedElement.blur();
+        return true;
+      }
+    }
+
     // 1. Dropdown / Menu FIRST
     if (isNavMenuOpen) {
       setIsNavMenuOpen(false);
@@ -1041,11 +1052,22 @@ export default function App() {
     if (isLogoutConfirming) { setIsLogoutConfirming(false); return true; }
     if (verificationModalDetail) { setVerificationModalDetail(null); return true; }
     if (showPublicAccountSetup) { dismissPublicAccountSetup(); return true; }
+    if (showEmailAuth) {
+      setShowEmailAuth(false);
+      if (requiresPublicAccountSetup) setShowPublicAccountSetup(true);
+      else setShowAuthChoice(true);
+      return true;
+    }
+    if (showAuthChoice) { setShowAuthChoice(false); setPendingAuthAction(null); return true; }
     if (isAiCommandCenterOpen) { setIsAiCommandCenterOpen(false); return true; }
+    if (isNexoraStudioOpen) { setIsNexoraStudioOpen(false); setStudioInitialMedia([]); return true; }
     if (isCreatePostModalOpen) { setIsCreatePostModalOpen(false); return true; }
     if (isCreateMenuOpen) { setIsCreateMenuOpen(false); return true; }
     if (isSystemHubOpen) { setIsSystemHubOpen(false); return true; }
-    if (isUniversalSearchOpen) { setIsUniversalSearchOpen(false); return true; }
+    if (isUniversalSearchOpen) { setIsUniversalSearchOpen(false); setUniversalSearchInitialQuery(''); return true; }
+    if (showPWAInstallPrompt) { handleMaybeLaterPWA(); return true; }
+    if (showOnboarding) { completeOnboarding(); return true; }
+    if (showDiagnosticsOverlay) { setShowDiagnosticsOverlay(false); return true; }
 
     // 4. Return from viewed profile / nested user screen
     if (viewedUser !== null) {
@@ -1072,13 +1094,23 @@ export default function App() {
     return false;
   };
 
+  // Keep the latest state-aware policy available to long-lived native/browser
+  // listeners without making their effect depend on state declared later.
+  const backNavigationRef = useRef<() => boolean>(handleBackNavigation);
+  backNavigationRef.current = handleBackNavigation;
+
   // Unified navigation custom event listeners & PopState handler
   useEffect(() => {
-    window.history.pushState({ nexora: true }, '', window.location.href);
+    // This component effect rebinds listeners as navigation state changes.
+    // Add only one browser-history sentinel per mounted app, not one per rebind.
+    if (!hasBackHistoryEntryRef.current) {
+      window.history.pushState({ nexora: true }, '', window.location.href);
+      hasBackHistoryEntryRef.current = true;
+    }
 
     const onPopState = (e: PopStateEvent) => {
       e.preventDefault();
-      const handled = handleBackNavigation();
+      const handled = backNavigationRef.current();
       if (handled) {
         window.history.pushState({ nexora: true }, '', window.location.href);
       } else {
@@ -1088,7 +1120,16 @@ export default function App() {
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        handleBackNavigation();
+        if (backNavigationRef.current()) e.preventDefault();
+      }
+    };
+    // Capacitor's native Android activity forwards system Back here. Keep the
+    // same ordered navigation policy for Android, browser Escape and web Back.
+    const onNativeBack = (event: Event) => {
+      if (event.defaultPrevented) return;
+      if (backNavigationRef.current()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
       }
     };
 
@@ -1105,6 +1146,7 @@ export default function App() {
     };
     window.addEventListener('popstate', onPopState);
     window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('nexora:android-back', onNativeBack);
     window.addEventListener('toggleNavMenu', handleToggleNav);
     window.addEventListener('changeTab', handleChangeTab);
     const handleOpenSettingsSection = (event: Event) => {
@@ -1157,13 +1199,14 @@ export default function App() {
       navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerPushOpen);
       window.removeEventListener('popstate', onPopState);
       window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('nexora:android-back', onNativeBack);
       window.removeEventListener('toggleNavMenu', handleToggleNav);
       window.removeEventListener('changeTab', handleChangeTab);
       window.removeEventListener('nexora-open-settings', handleOpenSettingsSection);
       window.removeEventListener('openUniversalSearch', handleOpenUniversalSearch);
       window.removeEventListener('nexora-view-profile', handleViewProfileEvent);
     };
-  }, [isCreatePostModalOpen, isCreateMenuOpen, isSystemHubOpen, isUniversalSearchOpen, isNavMenuOpen, viewedUser, historyStack, activeTab]);
+  }, [isCreatePostModalOpen, isCreateMenuOpen, isNexoraStudioOpen, isSystemHubOpen, isUniversalSearchOpen, isNavMenuOpen, isLogoutConfirming, showPublicAccountSetup, showAuthChoice, showEmailAuth, showOnboarding, showDiagnosticsOverlay, requiresPublicAccountSetup, viewedUser, historyStack, activeTab]);
 
   // Sync System Hub options to local storage and browser document settings
   useEffect(() => {
@@ -3720,11 +3763,21 @@ export default function App() {
       /></Suspense>}
 
       {showAuthChoice && !isLoggedIn && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050914]/95 p-4 backdrop-blur-xl">
-          <div className="relative w-full max-w-sm rounded-3xl border border-violet-400/20 bg-[#0B1424] p-6 text-center shadow-2xl">
+        <div
+          role="presentation"
+          onClick={() => { setShowAuthChoice(false); setPendingAuthAction(null); }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050914]/95 p-4 backdrop-blur-xl"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="nexora-auth-choice-title"
+            onClick={(event) => event.stopPropagation()}
+            className="relative w-full max-w-sm rounded-3xl border border-violet-400/20 bg-[#0B1424] p-6 text-center shadow-2xl"
+          >
             <button type="button" aria-label="Close" onClick={() => { setShowAuthChoice(false); setPendingAuthAction(null); }} className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-white/10">×</button>
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/15 text-2xl text-violet-200">N</div>
-            <h2 className="text-xl font-bold text-white">Join the conversation</h2>
+            <h2 id="nexora-auth-choice-title" className="text-xl font-bold text-white">Join the conversation</h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">Sign in or create a NEXORA account to follow people, post and connect.</p>
             <button type="button" onClick={() => { setEmailAuthInitialMode('login'); setShowAuthChoice(false); setShowEmailAuth(true); }} className="mt-6 w-full rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white hover:bg-violet-500">Log in</button>
             <button type="button" onClick={() => { setEmailAuthInitialMode('signup'); setShowAuthChoice(false); setShowEmailAuth(true); }} className="mt-3 w-full rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold text-white hover:bg-white/5">Create account</button>

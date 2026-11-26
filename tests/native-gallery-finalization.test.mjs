@@ -43,11 +43,14 @@ test('native video selection supports Studio multi-clip handoff while photos sup
   assert.match(composer, /Open \$\{nativeGallerySelectedIds\.length\} clips in Studio/);
 });
 
-test('Android hardware back is routed into the active Create navigation stack', () => {
+test('Android system Back routes through shared app navigation and the Create step stack', () => {
   assert.match(native, /setCreateExperienceActive/);
-  assert.match(activity, /isCreateExperienceActive\(\)/);
+  assert.match(activity, /getOnBackPressedDispatcher\(\)\.addCallback/);
   assert.match(activity, /nexora:android-back/);
+  assert.match(activity, /event\.defaultPrevented/);
+  assert.match(activity, /moveTaskToBack\(true\)/);
   assert.match(composer, /addEventListener\('nexora:android-back'/);
+  assert.match(composer, /addEventListener\('nexora-escape'/);
   assert.match(composer, /setShowExitConfirm\(false\)/);
 });
 

@@ -82,14 +82,29 @@ export default function ReportModal({
   };
 
   return (
-    <div id="report-modal-overlay" className="fixed inset-0 bg-black/80 backdrop-blur-md z-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#0d0a1b]/98 border border-red-500/20 rounded-[28px] overflow-hidden shadow-md relative text-left">
+    <div
+      id="report-modal-overlay"
+      role="presentation"
+      className="fixed inset-0 bg-black/80 backdrop-blur-md z-100 flex items-center justify-center p-4"
+      onPointerDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-modal-title"
+        className="w-full max-w-md bg-[#0d0a1b]/98 border border-red-500/20 rounded-[28px] overflow-hidden shadow-md relative text-left"
+        onPointerDown={(event) => event.stopPropagation()}
+      >
         
         {/* Glowing border accents */}
         <span className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-red-500 via-pink-500 to-amber-400" />
 
         <div className="p-6 relative space-y-4">
           <button 
+            type="button"
+            aria-label="Close report dialog"
             onClick={onClose}
             className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-xl text-zinc-400 hover:text-white transition-all cursor-pointer"
           >
@@ -100,7 +115,7 @@ export default function ReportModal({
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="flex items-center gap-2.5 text-red-400">
                 <ShieldAlert className="w-5 h-5 animate-pulse" />
-                <h3 className="text-base font-black uppercase font-mono tracking-wider">
+                <h3 id="report-modal-title" className="text-base font-black uppercase font-mono tracking-wider">
                   Report {targetType}
                 </h3>
               </div>

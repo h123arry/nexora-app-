@@ -1819,14 +1819,42 @@ export default function MediaCreationEngine({
   }, []);
 
   useEffect(() => {
-    const handleAndroidBack = () => {
+    const handleAndroidBack = (event: Event) => {
+      // This composer owns its nested navigation. Prevent the app shell from
+      // closing the entire Create experience during the same Back event.
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const focusedElement = document.activeElement;
+      if (focusedElement instanceof HTMLElement && focusedElement.matches('input, textarea, select, [contenteditable="true"], [role="textbox"]')) {
+        focusedElement.blur();
+        return;
+      }
+      if (postingStatus === 'publishing') {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your post is being published. Please wait for it to finish.' }));
+        return;
+      }
+      if (isRecording || isSavingRecordedVideo || countdownTimer !== null) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Finish or stop the current recording before leaving this screen.' }));
+        return;
+      }
+      if (isTrimmingVideo) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your video is being prepared. Please wait a moment.' }));
+        return;
+      }
       if (showExitConfirm) { setShowExitConfirm(false); return; }
       if (permissionTarget) {
         setPermissionTarget(null);
         pendingPermissionActionRef.current = null;
         return;
       }
+      if (isLensStudioOpen) {
+        setIsLensStudioOpen(false);
+        return;
+      }
+      if (isAdvancedOptionsOpen) { setIsAdvancedOptionsOpen(false); return; }
       if (isMediaPreviewExpanded) { setIsMediaPreviewExpanded(false); return; }
+      if (galleryPreviewIndex !== null) { setGalleryPreviewIndex(null); return; }
+      if (activeEditIndex !== null) { setActiveEditIndex(null); return; }
       if (activeMode === 'carousel') {
         setGalleryPreviewIndex(null);
         if (galleryReturnToCamera) {
@@ -1847,8 +1875,12 @@ export default function MediaCreationEngine({
       handleExitClick();
     };
     window.addEventListener('nexora:android-back', handleAndroidBack);
-    return () => window.removeEventListener('nexora:android-back', handleAndroidBack);
-  }, [activeMode, currentStep, galleryReturnToCamera, isMediaPreviewExpanded, permissionTarget, recordedVideoUrl, showExitConfirm, videoFileUrl, recordedVideoUrl, voiceFileUrl, caption, selectedImages, pollQuestion, onClose, prevStep, handleExitClick]);
+    window.addEventListener('nexora-escape', handleAndroidBack);
+    return () => {
+      window.removeEventListener('nexora:android-back', handleAndroidBack);
+      window.removeEventListener('nexora-escape', handleAndroidBack);
+    };
+  }, [activeMode, activeEditIndex, currentStep, countdownTimer, galleryPreviewIndex, galleryReturnToCamera, isAdvancedOptionsOpen, isLensStudioOpen, isMediaPreviewExpanded, isRecording, isSavingRecordedVideo, isTrimmingVideo, postingStatus, permissionTarget, recordedVideoUrl, showExitConfirm, videoFileUrl, voiceFileUrl, caption, selectedImages, pollQuestion, onClose, prevStep, handleExitClick]);
 
 
   // Accessibility Checks

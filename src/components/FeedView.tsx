@@ -725,26 +725,31 @@ export default function FeedView({
       if (reportingPost) {
         setReportingPost(null);
         customEvent.preventDefault();
+        customEvent.stopImmediatePropagation();
         return;
       }
       if (showSaveToCollectionModalId) {
         setShowSaveToCollectionModalId(null);
         customEvent.preventDefault();
+        customEvent.stopImmediatePropagation();
         return;
       }
       if (composerOpen) {
         setComposerOpen(false);
         customEvent.preventDefault();
+        customEvent.stopImmediatePropagation();
         return;
       }
       if (activeDotsMenuPostId) {
         setActiveDotsMenuPostId(null);
         customEvent.preventDefault();
+        customEvent.stopImmediatePropagation();
         return;
       }
       if (activeCommentsPostId) {
         setActiveCommentsPostId(null);
         customEvent.preventDefault();
+        customEvent.stopImmediatePropagation();
         return;
       }
     };

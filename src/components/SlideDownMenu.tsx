@@ -51,6 +51,7 @@ export default function SlideDownMenu({
     };
     const handleEscape = (e: Event) => {
       e.preventDefault();
+      e.stopImmediatePropagation();
       onClose();
     };
     window.addEventListener('keydown', handleKeyDown);
