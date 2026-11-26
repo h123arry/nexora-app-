@@ -155,6 +155,7 @@ test('feed player prefers the persisted video poster fields', async () => {
   const player = await readFile(new URL('../src/components/NexoraVideoPlayer.tsx', import.meta.url), 'utf8');
   assert.ok(player.includes('const posterUrl = safeMediaDeliveryUrl(normalizeMediaDeliveryUrl((post as any).videoThumbnailUrl || (post as any).posterUrl'));
   assert.ok(player.includes('poster={shouldLoadVideoPoster({ isActive, isNearby, shouldPreload, isReleased }) ? (posterUrl || undefined) : undefined}'));
+  assert.ok(player.includes('className="nx-video-poster z-[3] pointer-events-none"'));
 });
 
 
