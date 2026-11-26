@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 test('production deployment includes critical live messaging, account lifecycle and direct-call functions', async () => {
   const workflow = await readFile(new URL('../.github/workflows/deploy-production-founding-members.yml', import.meta.url), 'utf8');
-  const allowlist = workflow.split('--only ')[1]?.split('\\n')[0] || '';
+  const allowlist = workflow.slice(workflow.indexOf('--only ') + 7).split(String.fromCharCode(10))[0];
   assert.ok(allowlist.startsWith('functions:'), 'production workflow must declare an explicit Firebase deployment allowlist');
   for (const name of [
     'createGroupChat',
