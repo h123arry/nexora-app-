@@ -48,7 +48,7 @@ jobs:
       MEDIA_BUCKET_LOCATION: ${{ vars.MEDIA_BUCKET_LOCATION }}
     steps:
       - name: Check out reviewed release commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Require an isolated staging target and runtime identity
         run: |

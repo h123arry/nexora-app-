@@ -35,7 +35,7 @@ jobs:
       RENDER_SERVICE_ID: srv-dbu403e7bikc73882ivg
     steps:
       - name: Check out reviewed production release
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Require production identities and R2 credentials before changing infrastructure
         shell: bash
