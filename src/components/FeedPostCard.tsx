@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Post, User } from '../types';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
+import PurpleVerifiedBadge from './VohVerifiedBadge';
 import NexoraImagePlayer from './NexoraImagePlayer';
 import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
@@ -268,8 +269,8 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               >
                 {post.name}
               </button>
-              {(post.username === 'voh' || post.userId === 'user-0' || post.username === 'voh_ai' || post.username === 'nexora_ai') && (
-                <CheckCircle className="w-3.5 h-3.5 text-violet-400 fill-current" />
+              {(post.isVerified || post.username === 'voh' || post.userId === 'user-0' || post.username === 'voh_ai' || post.username === 'nexora_ai') && (
+                <PurpleVerifiedBadge className="h-4 w-4 shrink-0" type={post.userId === 'user-0' || post.username === 'voh' ? 'founder' : 'default'} />
               )}
               {post.isBroadcastPost && (
                 <span className="text-[8px] font-mono font-black uppercase text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 tracking-wider">
