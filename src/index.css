@@ -2099,6 +2099,9 @@ body {
   .nx-inbox-shell[data-chat-open="true"] .nx-inbox-chat > div:nth-child(2) {
     padding: 12px 10px;
   }
+  .nx-inbox-shell[data-chat-open="true"] .nx-inbox-chat > div:last-child {
+    padding-bottom: 13px;
+  }
   .nx-inbox-sidebar {
     width: 100%;
     border-right: 0;
