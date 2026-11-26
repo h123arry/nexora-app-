@@ -918,7 +918,7 @@ export default function NewInboxView({
         {activeChat ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#0D0A20]/90 backdrop-blur-md z-10">
+            <div className="p-3 sm:p-4 border-b border-white/10 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-[#0D0A20]/90 backdrop-blur-md z-10">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setActiveChatId(null)}
@@ -955,13 +955,14 @@ export default function NewInboxView({
                 </div>
               </div>
 
+              <div className="flex min-w-0 items-center justify-between gap-2">
               {/* Conversation organisation controls; saved per account on this device. */}
-              <div className="flex items-center gap-1.5">
-                <button type="button" aria-pressed={pinnedChats.includes(activeChat.id)} onClick={() => { const pinned = !pinnedChats.includes(activeChat.id); setPinnedChats(previous => pinned ? [activeChat.id, ...previous].slice(0, 500) : previous.filter(id => id !== activeChat.id)); void setInboxChatPreference(currentUser.id, activeChat.id, { pinned }).catch(error => console.warn('[NEXORA inbox] Could not sync pin:', error)); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" title={pinnedChats.includes(activeChat.id) ? 'Unpin conversation' : 'Pin conversation'}><Pin className="w-4 h-4" /></button>
-                <button type="button" aria-pressed={archivedChats.includes(activeChat.id)} onClick={() => { const isArchived = archivedChats.includes(activeChat.id); setArchivedChats(previous => isArchived ? previous.filter(id => id !== activeChat.id) : [...previous, activeChat.id].slice(-500)); void setInboxChatPreference(currentUser.id, activeChat.id, { archived: !isArchived }).catch(error => console.warn('[NEXORA inbox] Could not sync archive:', error)); if (!isArchived) setActiveChatId(null); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" title={archivedChats.includes(activeChat.id) ? 'Restore conversation' : 'Archive conversation'}><Archive className="w-4 h-4" /></button>
+              <div className="flex shrink-0 items-center gap-1">
+                <button type="button" aria-pressed={pinnedChats.includes(activeChat.id)} onClick={() => { const pinned = !pinnedChats.includes(activeChat.id); setPinnedChats(previous => pinned ? [activeChat.id, ...previous].slice(0, 500) : previous.filter(id => id !== activeChat.id)); void setInboxChatPreference(currentUser.id, activeChat.id, { pinned }).catch(error => console.warn('[NEXORA inbox] Could not sync pin:', error)); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" aria-label={pinnedChats.includes(activeChat.id) ? 'Unpin conversation' : 'Pin conversation'} title={pinnedChats.includes(activeChat.id) ? 'Unpin conversation' : 'Pin conversation'}><Pin className="w-4 h-4" /></button>
+                <button type="button" aria-pressed={archivedChats.includes(activeChat.id)} onClick={() => { const isArchived = archivedChats.includes(activeChat.id); setArchivedChats(previous => isArchived ? previous.filter(id => id !== activeChat.id) : [...previous, activeChat.id].slice(-500)); void setInboxChatPreference(currentUser.id, activeChat.id, { archived: !isArchived }).catch(error => console.warn('[NEXORA inbox] Could not sync archive:', error)); if (!isArchived) setActiveChatId(null); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" aria-label={archivedChats.includes(activeChat.id) ? 'Restore conversation' : 'Archive conversation'} title={archivedChats.includes(activeChat.id) ? 'Restore conversation' : 'Archive conversation'}><Archive className="w-4 h-4" /></button>
               </div>
               {/* Call & Media Buttons */}
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-1 sm:gap-2">
                 <button
                   type="button"
                   aria-label="Search messages in this conversation"
@@ -1002,6 +1003,7 @@ export default function NewInboxView({
                 >
                   <ImageIcon className="w-4 h-4" />
                 </button>
+              </div>
               </div>
             </div>
 
