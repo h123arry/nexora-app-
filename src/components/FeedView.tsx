@@ -460,6 +460,7 @@ export default function FeedView({
 
   // New Comments and Replies drafting state
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [commentErrors, setCommentErrors] = useState<Record<string, string>>({});
   const [submittingComments, setSubmittingComments] = useState<Record<string, boolean>>({});
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [submittingReplies, setSubmittingReplies] = useState<Record<string, boolean>>({});
@@ -1249,7 +1250,11 @@ export default function FeedView({
     setSubmittingComments(prev => ({ ...prev, [postId]: true }));
     try {
       const saved = await onAddComment(postId, content);
-      if (saved === false) return;
+      if (saved === false) {
+        setCommentErrors(prev => ({ ...prev, [postId]: 'NEXORA could not confirm that this comment was saved. Your draft is still here. Please retry.' }));
+        return;
+      }
+      setCommentErrors(prev => { const next = { ...prev }; delete next[postId]; return next; });
       trackClientObservation({ eventType: 'meaningful_interaction', entityType: 'post', entityId: postId, properties: { interaction: 'comment_observed' } });
       const post = localPosts.find(p => p.id === postId);
       if (post) {
@@ -1257,9 +1262,9 @@ export default function FeedView({
       }
       setCommentInputs(prev => ({ ...prev, [postId]: '' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', {
-        detail: getNexoraActionErrorMessage(error, 'Your comment could not be sent. Please try again.'),
-      }));
+      const message = getNexoraActionErrorMessage(error, 'NEXORA could not send this comment. Your draft is still here. Please retry.');
+      setCommentErrors(prev => ({ ...prev, [postId]: message }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     } finally {
       setSubmittingComments(prev => ({ ...prev, [postId]: false }));
     }
@@ -2632,7 +2637,12 @@ export default function FeedView({
                       </div>
 
                       {/* Main comment form */}
-                      <div className="nx-comments-composer sticky bottom-0 z-10 flex w-full items-center gap-2 pt-3 border-t border-white/10 shrink-0">
+                      <div className="nx-comments-composer sticky bottom-0 z-10 flex w-full flex-wrap items-center gap-2 pt-3 border-t border-white/10 shrink-0">
+                        {commentErrors[post.id] && (
+                          <p className="w-full text-left text-[11px] leading-relaxed text-amber-200/90" role="status" aria-live="polite">
+                            {commentErrors[post.id]}
+                          </p>
+                        )}
                         <input
                           ref={commentInputRef}
                           type="text"
@@ -2642,7 +2652,7 @@ export default function FeedView({
                           placeholder="Write your comment..."
                           aria-label={`Write a comment on @${post.username}'s post`}
                           value={commentInputs[post.id] || ''}
-                          onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
+                          onChange={(e) => { setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value })); setCommentErrors(prev => { const next = { ...prev }; delete next[post.id]; return next; }); }}
                           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleAddCommentSubmit(post.id); } }}
                           className="min-w-0 min-h-12 flex-1 bg-slate-950/60 border border-white/10 focus:border-violet-400/60 text-sm text-white placeholder:text-violet-300/70 py-3 px-4 rounded-xl focus:outline-hidden"
                         />
