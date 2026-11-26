@@ -128,11 +128,9 @@ test('releases distant videos and avoids preparing non-video content', () => {
 });
 
 
-import { shouldLoadVideoPoster } from '../src/utils/videoPreloadPolicy';
-
-test('loads posters for active, nearby and preloaded video players', () => {
+test('loads posters for active and preloaded video players, not broad observer neighbors', () => {
   assert.equal(shouldLoadVideoPoster({ isActive: true, isNearby: false, shouldPreload: false }), true);
-  assert.equal(shouldLoadVideoPoster({ isActive: false, isNearby: true, shouldPreload: false }), true);
+  assert.equal(shouldLoadVideoPoster({ isActive: false, isNearby: true, shouldPreload: false }), false);
   assert.equal(shouldLoadVideoPoster({ isActive: false, isNearby: false, shouldPreload: true }), true);
 });
 
@@ -147,7 +145,7 @@ test('profile video posters persist in post fields and are not revoked on effect
   const profile = await readFile(new URL('../src/components/ProfileView.tsx', import.meta.url), 'utf8');
   assert.ok(profile.includes('temporaryPosterUrls = useRef<string[]>([])'));
   assert.ok(profile.includes('temporaryPosterUrls.current.forEach(url => URL.revokeObjectURL(url))'));
-  assert.ok(profile.includes('const savedPoster = (post as any).videoThumbnailUrl || (post as any).posterUrl'));
+  assert.ok(profile.includes('const savedPoster = (post as any).videoThumbnailUrl || (post as any).posterUrl || post.image'));
   assert.ok(profile.includes('videoThumbnailUrl: uploaded.downloadUrl,'));
   assert.ok(profile.includes('posterUrl: uploaded.downloadUrl,'));
   assert.ok(!profile.includes('objectUrls.forEach(url => URL.revokeObjectURL(url))'));
