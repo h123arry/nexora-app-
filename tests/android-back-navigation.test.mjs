@@ -59,6 +59,16 @@ test('Create and Studio nested surfaces consume Back before their parent screens
   assert.match(studio, /event\.target === event\.currentTarget/);
 });
 
+test('a single Back event closes only the topmost nested overlay', async () => {
+  const feed = await read('../src/components/FeedView.tsx');
+  const viewer = await read('../src/components/ImmersiveVideoViewer.tsx');
+  const menu = await read('../src/components/SlideDownMenu.tsx');
+
+  assert.match(feed, /customEvent\.stopImmediatePropagation\(\)/);
+  assert.match(viewer, /e\.stopImmediatePropagation\(\)/);
+  assert.match(menu, /e\.stopImmediatePropagation\(\)/);
+});
+
 test('temporary navigation menu and report dialog support outside dismissal', async () => {
   const menu = await read('../src/components/SlideDownMenu.tsx');
   const report = await read('../src/components/ReportModal.tsx');
