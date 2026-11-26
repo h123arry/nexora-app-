@@ -17,7 +17,7 @@ import ReportModal from './ReportModal';
 import { auth, db } from '../services/firebase/config';
 import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
 import { uploadMediaFile } from '../services/firebase/storageService';
-import { normalizeMediaDeliveryUrl } from '../lib/apiBaseUrl';
+import { normalizeMediaDeliveryUrl, safeMediaDeliveryUrl } from '../lib/apiBaseUrl';
 import { SettingsService } from '../services/firebase/settingsService';
 import { subscribeToFollows } from '../services/dataService';
 import RelativeTimestamp from './RelativeTimestamp';
@@ -229,12 +229,13 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
   }, []);
 
   useEffect(() => {
+    if (!repairVideoPosters) return;
     let active = true;
-    const repairVideoPosters = async () => {
+    const repairMissingPosters = async () => {
       for (const post of gridPosts) {
         const mediaType = String((post as any).mediaType || (post as any).type || '').toLowerCase();
         const videoSource = post.videoUrl || (typeof post.media === 'string' && (mediaType === 'video' || /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media)) ? post.media : '');
-        const savedPoster = (post as any).videoThumbnailUrl || (post as any).posterUrl;
+        const savedPoster = (post as any).videoThumbnailUrl || (post as any).posterUrl || post.image || post.images?.find(Boolean);
         if (!videoSource || savedPoster || attemptedPosterRepairs.current.has(post.id)) continue;
         attemptedPosterRepairs.current.add(post.id);
         try {
@@ -262,9 +263,9 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
         }
       }
     };
-    void repairVideoPosters();
+    void repairMissingPosters();
     return () => { active = false; };
-  }, [posterRepairSignature, ownerId]);
+  }, [posterRepairSignature, ownerId, repairVideoPosters]);
   if (gridPosts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center py-20 px-6 w-full col-span-full">
@@ -292,6 +293,8 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
           ? (post as any).videoThumbnailUrl
             || (post as any).posterUrl
             || repairedPosters[post.id]
+            || post.image
+            || post.images?.find(Boolean)
           : post.image || post.images?.find(Boolean) || (post as any).thumbnailUrl || (post as any).thumbnail || mediaUrl;
         const voiceAudioUrl = post.voiceAudioUrl || (post as any).audioUrl;
         const isMultiImage = !isVideo && (post.images?.filter(Boolean).length || 0) > 1;
@@ -349,12 +352,21 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
                       onError={(event) => { event.currentTarget.style.display = 'none'; }}
                     />
                   ) : (
-                    <NexoraVideo 
-                      src={videoSource ? `${videoSource}#t=0.001` : ''} 
-                      className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity relative z-10" 
-                      preload="metadata" 
-                      muted 
+                    <video
+                      src={videoSource ? safeMediaDeliveryUrl(normalizeMediaDeliveryUrl(videoSource)) : undefined}
+                      className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity relative z-10"
+                      preload="metadata"
+                      muted
                       playsInline
+                      controls={false}
+                      disablePictureInPicture
+                      aria-hidden="true"
+                      onLoadedMetadata={(event) => {
+                        const video = event.currentTarget;
+                        if (Number.isFinite(video.duration) && video.duration > 0) {
+                          try { video.currentTime = Math.min(0.12, video.duration * 0.02); } catch { /* frame preview only */ }
+                        }
+                      }}
                     />
                   )}
                   <div className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md rounded-full z-20">

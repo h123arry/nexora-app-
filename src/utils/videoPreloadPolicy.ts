@@ -71,5 +71,7 @@ export interface VideoPosterLoadInput {
 /** Avoid fetching poster assets for released/offscreen video players. */
 export function shouldLoadVideoPoster(input: VideoPosterLoadInput): boolean {
   if (input.isReleased) return false;
-  return (input.isActive ?? true) || input.isNearby || input.shouldPreload;
+  // The parent feed's preload window is authoritative. Intersection visibility
+  // alone must not fan out poster requests for every mounted feed card.
+  return (input.isActive ?? true) || input.shouldPreload;
 }

@@ -46,6 +46,26 @@ export function apiRequestUrl(path: string): string {
  * origin. Browser builds remain same-origin; Capacitor builds must use the
  * explicit API base URL instead of the WebView's local origin.
  */
+/**
+ * Accept only browser-safe media URLs before they reach DOM media attributes.
+ * Persisted media URLs are untrusted input; javascript:, data:, and credentialed
+ * URLs must never be attached to image/video elements.
+ */
+export function safeMediaDeliveryUrl(value: string | undefined | null): string {
+  if (!value || typeof window === 'undefined') return '';
+  try {
+    const url = new URL(value, window.location.origin);
+    if (url.username || url.password) return '';
+    if (url.protocol === 'https:') return url.href;
+    if (url.protocol === 'blob:' && url.origin === window.location.origin) return url.href;
+    if (url.protocol === 'http:' && url.origin === window.location.origin
+      && ['localhost', '127.0.0.1'].includes(window.location.hostname)) return url.href;
+    return '';
+  } catch {
+    return '';
+  }
+}
+
 export function normalizeMediaDeliveryUrl(value: string | undefined | null): string {
   if (!value) return '';
   const path = value.split(/[?#]/, 1)[0];

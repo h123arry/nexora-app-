@@ -1958,8 +1958,32 @@ export default function App() {
       return false;
     }
     try {
-      const commentId = `comment-${crypto.randomUUID()}`;
-      const result = await addPublicPostCommentDb(currentUser.id, postId, commentContent, commentId);
+      if (isOffline || !navigator.onLine) {
+        throw new Error('You are offline. Reconnect and retry your comment. Your draft will remain in the composer.');
+      }
+      // Reuse one idempotency key across retries so a timed-out response cannot
+      // create duplicate comments if Firestore committed the first request.
+      const commentId = `comment-${typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
+      let result: Awaited<ReturnType<typeof addPublicPostCommentDb>> | null = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          result = await addPublicPostCommentDb(currentUser.id, postId, commentContent, commentId);
+          break;
+        } catch (requestError) {
+          const code = String((requestError as { code?: unknown })?.code || '').toLowerCase();
+          const retryable = [
+            'unavailable', 'functions/unavailable',
+            'deadline-exceeded', 'functions/deadline-exceeded',
+            'internal', 'functions/internal',
+            'aborted', 'functions/aborted',
+          ].includes(code);
+          if (!retryable || attempt === 2 || !navigator.onLine) throw requestError;
+          await new Promise(resolve => window.setTimeout(resolve, 500 * (attempt + 1)));
+        }
+      }
+      if (!result) throw new Error('NEXORA could not confirm that your comment was saved. Please retry.');
       if (result.created) {
         const targetPost = posts.find(post => post.id === postId);
         if (targetPost) void addHelpfulCommentDb(currentUser.id, result.comment.id, targetPost.userId);
