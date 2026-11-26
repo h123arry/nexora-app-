@@ -158,3 +158,30 @@ test('feed player prefers the persisted video poster fields', async () => {
   assert.ok(player.includes('const posterUrl = (post as any).videoThumbnailUrl || (post as any).posterUrl'));
   assert.ok(player.includes('poster={shouldLoadVideoPoster({ isActive, isNearby, shouldPreload, isReleased }) ? (posterUrl || undefined) : undefined}'));
 });
+
+
+test('feed player only attaches video sources inside the parent preload window', async () => {
+  const player = await readFile(new URL('../src/components/NexoraVideoPlayer.tsx', import.meta.url), 'utf8');
+  assert.ok(player.includes('((isActive ?? true) || shouldPreload ? finalVideoUrl : undefined)'));
+  assert.ok(!player.includes('((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)'));
+});
+
+test('feed uploader uses the shared verified badge and honors verified creator state', async () => {
+  const feedCard = await readFile(new URL('../src/components/FeedPostCard.tsx', import.meta.url), 'utf8');
+  assert.ok(feedCard.includes("import PurpleVerifiedBadge from './VohVerifiedBadge';"));
+  assert.ok(feedCard.includes('post.isVerified || post.username ==='));
+  assert.ok(feedCard.includes('<PurpleVerifiedBadge className="h-4 w-4 shrink-0"'));
+});
+
+test('video creator avatar resolves delivery URLs and has a deterministic fallback', async () => {
+  const player = await readFile(new URL('../src/components/NexoraVideoPlayer.tsx', import.meta.url), 'utf8');
+  assert.ok(player.includes('normalizeMediaDeliveryUrl(post.avatar)'));
+  assert.ok(player.includes("(post.name || post.username || 'N').trim().charAt(0).toUpperCase()"));
+  assert.ok(player.includes('<PurpleVerifiedBadge className="h-4 w-4 shrink-0"'));
+});
+
+test('profile video grid fallback is a clean frame preview without player controls', async () => {
+  const profile = await readFile(new URL('../src/components/ProfileView.tsx', import.meta.url), 'utf8');
+  assert.ok(profile.includes('src={videoSource ? normalizeMediaDeliveryUrl(videoSource) : undefined}'));
+  assert.ok(profile.includes('controls={false}'));
+});
