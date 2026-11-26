@@ -169,17 +169,16 @@ export default function MessageBubble({
         clearLongPress();
         longPressTimer.current = setTimeout(() => {
           onToggleContextMenu(message.id);
-          onLongPress(message.id, {} as React.MouseEvent);
-        }, 520);
+        }, 480);
       }}
       onTouchEnd={clearLongPress}
       onTouchMove={clearLongPress}
       onTouchCancel={clearLongPress}
-      onDoubleClick={() => onReact(message.id, '❤️')}
+      onDoubleClick={() => onToggleContextMenu(message.id)}
       onContextMenu={(e) => {
         e.preventDefault();
+        clearLongPress();
         onToggleContextMenu(message.id);
-        onLongPress(message.id, e);
       }}
     >
       <div className={`flex items-start gap-2 max-w-[85%] ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -528,7 +527,12 @@ export default function MessageBubble({
         </div>
       </div>
       {activeContextMessageId === message.id && (
-        <div className={`absolute z-30 ${isMe ? 'right-3' : 'left-12'} top-full mt-2 w-[min(310px,calc(100vw-5rem))] rounded-2xl border border-violet-300/15 bg-[#0b0920] p-2 shadow-2xl`} role="menu" aria-label="Message actions">
+        <div className={`absolute z-30 ${isMe ? 'right-3' : 'left-12'} top-full mt-2 w-[min(310px,calc(100vw-2rem))] rounded-2xl border border-violet-300/20 bg-[#0b0920] p-2.5 shadow-2xl`} role="menu" aria-label="Message actions">
+          <div className="mb-2 flex items-center justify-between gap-1 rounded-xl bg-white/[0.04] p-1" aria-label="Quick reactions">
+            {['❤️', '😂', '😮', '😢', '🙏', '👍'].map(emoji => (
+              <button key={emoji} type="button" role="menuitem" aria-label={`React ${emoji}`} onClick={() => { onReact(message.id, emoji); onToggleContextMenu(null); }} className="grid h-10 min-w-0 flex-1 place-items-center rounded-lg text-xl transition-colors hover:bg-violet-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300">{emoji}</button>
+            ))}
+          </div>
           <div className="grid grid-cols-4 gap-1">
             <button type="button" role="menuitem" onClick={() => onReply(message)} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Quote className="h-4 w-4"/><span className="text-[10px]">Reply</span></button>
             <button type="button" role="menuitem" onClick={() => void copyMessage()} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-violet-200 hover:bg-violet-500/15"><Copy className="h-4 w-4"/><span className="text-[10px]">Copy</span></button>
