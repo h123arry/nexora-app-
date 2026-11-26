@@ -165,6 +165,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish, initialM
       if (!templateLibraryOpen) return;
       setTemplateLibraryOpen(false);
       event.preventDefault();
+      event.stopImmediatePropagation();
     };
     window.addEventListener('nexora-escape', handleEscape);
     return () => window.removeEventListener('nexora-escape', handleEscape);
