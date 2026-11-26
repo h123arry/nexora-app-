@@ -56,6 +56,9 @@ test('Create and Studio nested surfaces consume Back before their parent screens
   assert.match(create, /window\.addEventListener\('nexora:android-back', handleAndroidBack\)/);
   assert.match(create, /window\.addEventListener\('nexora-escape', handleAndroidBack\)/);
   assert.match(create, /event\.preventDefault\(\)/);
+  assert.match(create, /postingStatus === 'publishing'/);
+  assert.match(create, /isRecording \|\| isSavingRecordedVideo \|\| countdownTimer !== null/);
+  assert.match(create, /if \(isTrimmingVideo\)/);
   assert.match(studio, /window\.addEventListener\('nexora-escape', handleEscape\)/);
   assert.match(studio, /event\.target === event\.currentTarget/);
 });
