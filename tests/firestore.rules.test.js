@@ -499,7 +499,7 @@ const publicProfile = (uid) => ({
     await seed(async (db) => {
       await setDoc(doc(db, 'users', 'alice'), { ...profile('alice'), isVerified: false });
       await setDoc(doc(db, 'users', 'bob'), { ...profile('bob'), isVerified: true });
-      await setDoc(doc(db, 'publicProfiles', 'alice'), { ...publicProfile('alice'), interestDNA: { AI: 0.9 } });
+      await setDoc(doc(db, 'publicProfiles', 'alice'), { ...publicProfile('alice'), interestDNA: { AI: 0.9 }, dateOfBirth: '2000-01-01' });
     });
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { bio: 'updated by owner' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { role: 'admin' }));
@@ -509,14 +509,21 @@ const publicProfile = (uid) => ({
     await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { isVerified: true }));
     await assertFails(updateDoc(doc(dbFor('bob'), 'publicProfiles', 'bob'), { isVerified: false }));
     await assertFails(updateDoc(doc(dbFor('bob'), 'users', 'alice'), { bio: 'intrusion' }));
+    await assertFails(getDoc(doc(guestDb(), 'publicProfiles', 'alice')));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), {
+      interestDNA: deleteField(), dateOfBirth: deleteField()
+    }, { merge: true }));
+    await assertSucceeds(getDoc(doc(guestDb(), 'publicProfiles', 'alice')));
+    await assertSucceeds(getDocs(query(collection(guestDb(), 'publicProfiles'), where('username', '==', 'alice'))));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { bio: 'public bio' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { email: 'leak@example.test' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { interestDNA: { AI: 0.1 } }));
-    await assertSucceeds(setDoc(
-      doc(dbFor('alice'), 'publicProfiles', 'alice'),
-      { interestDNA: deleteField() },
-      { merge: true }
-    ));
+    await seed(async (db) => {
+      await setDoc(doc(db, 'users', 'new-profile'), profile('new-profile'));
+    });
+    await assertFails(setDoc(doc(dbFor('alice'), 'publicProfiles', 'new-profile'), {
+      ...publicProfile('new-profile'), dateOfBirth: '2000-01-01'
+    }));
   });
 
   it('denies cross-account user-directory queries against private account documents', async () => {
