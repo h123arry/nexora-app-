@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { aggregateMessageReactions, isSupportedOutgoingMediaType, normalizeMessageReactionUsers, omitUndefinedFields, serializeOutgoingMessage, toggleMessageReaction } from '../src/utils/messageSerialization';
 
 describe('Firestore message serialization', () => {
@@ -102,5 +103,42 @@ describe('message reaction persistence model', () => {
     assert.deepEqual(toggleMessageReaction(initial, undefined, 'alice', '🔥'), {
       charlie: ['😂'], alice: ['🔥'],
     });
+  });
+});
+
+
+describe('NEXORA message interaction experience', () => {
+  it('keeps long-press actions open idempotently and exposes the supported reaction picker', async () => {
+    const [bubble, inbox, rules] = await Promise.all([
+      readFile(new URL('../src/components/MessageBubble.tsx', import.meta.url), 'utf8'),
+      readFile(new URL('../src/components/NewInboxView.tsx', import.meta.url), 'utf8'),
+      readFile(new URL('../firestore.rules', import.meta.url), 'utf8'),
+    ]);
+    assert.match(bubble, /longPressTriggeredRef/);
+    assert.match(bubble, /onTouchStart=/);
+    assert.match(bubble, /onTouchEnd=/);
+    assert.match(bubble, /onDoubleClick=\{\(event\) => \{ event\.preventDefault\(\); setShowReactionPicker\(true\); \}\}/);
+    assert.match(bubble, /Choose a message reaction/);
+    assert.match(bubble, /nexora-message-escape/);
+    assert.match(inbox, /onToggleContextMenu=\{\(messageId\) => setActiveContextMessageId\(messageId\)\}/);
+    assert.match(inbox, /onLongPress=\{\(messageId\) => setActiveContextMessageId\(messageId\)\}/);
+    assert.doesNotMatch(inbox, /onLongPress=\{\(\) => \{\}\}/);
+    const options = bubble.match(/const MESSAGE_REACTION_OPTIONS = \[(.*?)\] as const/s)?.[1] || '';
+    const emojis = [...options.matchAll(/'([^']+)'/g)].map(match => match[1]);
+    assert.ok(emojis.length >= 30);
+    for (const emoji of emojis) assert.ok(rules.includes(emoji), `Firestore rules must allow ${emoji}`);
+  });
+
+  it('opens active chats edge-to-edge and unwinds the conversation before route navigation', async () => {
+    const [inbox, css] = await Promise.all([
+      readFile(new URL('../src/components/NewInboxView.tsx', import.meta.url), 'utf8'),
+      readFile(new URL('../src/index.css', import.meta.url), 'utf8'),
+    ]);
+    assert.match(inbox, /data-chat-open=\{activeChatId \? 'true' : 'false'\}/);
+    assert.match(inbox, /window\.addEventListener\('nexora-escape', handleInboxEscape\)/);
+    assert.match(inbox, /if \(activeChatId\) \{ setActiveChatId\(null\); event\.preventDefault\(\); \}/);
+    assert.match(css, /\.nx-inbox-shell \{[\s\S]*?border: 0;[\s\S]*?border-radius: 0;/);
+    assert.match(css, /\.nx-inbox-shell\[data-chat-open="true"\] \{[\s\S]*?position: fixed;[\s\S]*?height: 100dvh;/);
+    assert.match(css, /body:has\(\.nx-inbox-shell\[data-chat-open="true"\]\) #nexora-unified-bottom-nav/);
   });
 });
