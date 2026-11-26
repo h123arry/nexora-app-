@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
-import { getVideoPreloadPlan } from '../src/utils/videoPreloadPolicy';
+import { getVideoPreloadPlan, shouldLoadVideoPoster } from '../src/utils/videoPreloadPolicy';
 
 const base = {
   isVideo: true,
@@ -184,4 +184,38 @@ test('profile video grid fallback is a clean frame preview without player contro
   const profile = await readFile(new URL('../src/components/ProfileView.tsx', import.meta.url), 'utf8');
   assert.ok(profile.includes('src={videoSource ? normalizeMediaDeliveryUrl(videoSource) : undefined}'));
   assert.ok(profile.includes('controls={false}'));
+});
+
+
+test('does not eagerly load posters just because a distant card intersects the broad observer', () => {
+  assert.equal(shouldLoadVideoPoster({
+    isActive: false,
+    isNearby: true,
+    shouldPreload: false,
+    isReleased: false,
+  }), false);
+});
+
+test('loads posters for the active card and the explicit preload window', () => {
+  assert.equal(shouldLoadVideoPoster({
+    isActive: true,
+    isNearby: false,
+    shouldPreload: false,
+    isReleased: false,
+  }), true);
+  assert.equal(shouldLoadVideoPoster({
+    isActive: false,
+    isNearby: false,
+    shouldPreload: true,
+    isReleased: false,
+  }), true);
+});
+
+test('does not load posters for released cards even if marked nearby', () => {
+  assert.equal(shouldLoadVideoPoster({
+    isActive: false,
+    isNearby: true,
+    shouldPreload: true,
+    isReleased: true,
+  }), false);
 });
