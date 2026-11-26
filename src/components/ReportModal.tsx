@@ -82,8 +82,25 @@ export default function ReportModal({
   };
 
   return (
-    <div id="report-modal-overlay" className="fixed inset-0 bg-black/80 backdrop-blur-md z-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#0d0a1b]/98 border border-red-500/20 rounded-[28px] overflow-hidden shadow-md relative text-left">
+    <div
+      id="report-modal-overlay"
+      role="presentation"
+      className="fixed inset-0 bg-black/80 backdrop-blur-md z-100 flex items-center justify-center p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      onTouchEnd={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="report-modal-title"
+        className="w-full max-w-md bg-[#0d0a1b]/98 border border-red-500/20 rounded-[28px] overflow-hidden shadow-md relative text-left"
+        onMouseDown={(event) => event.stopPropagation()}
+        onTouchEnd={(event) => event.stopPropagation()}
+      >
         
         {/* Glowing border accents */}
         <span className="absolute top-0 inset-x-0 h-[1.5px] bg-gradient-to-r from-red-500 via-pink-500 to-amber-400" />
