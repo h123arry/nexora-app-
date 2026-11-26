@@ -1250,7 +1250,7 @@ export default function NexoraVideoPlayer({
                 aria-hidden="true"
                 loading={(isActive || shouldPreload) ? 'eager' : 'lazy'}
                 decoding="async"
-                className="nx-video-poster z-[1]"
+                className="nx-video-poster z-[3] pointer-events-none"
                 style={{ opacity: isReady ? 0 : 1 }}
               />
             )}
