@@ -180,7 +180,7 @@ test('video creator avatar resolves delivery URLs and has a deterministic fallba
 
 test('profile video grid fallback is a clean frame preview without player controls', async () => {
   const profile = await readFile(new URL('../src/components/ProfileView.tsx', import.meta.url), 'utf8');
-  assert.ok(profile.includes('src={videoSource ? normalizeMediaDeliveryUrl(videoSource) : undefined}'));
+  assert.ok(profile.includes('src={videoSource ? safeMediaDeliveryUrl(normalizeMediaDeliveryUrl(videoSource)) : undefined}'));
   assert.ok(profile.includes('controls={false}'));
 });
 
