@@ -16,6 +16,7 @@ test('Android system Back is routed through the app navigation policy', async ()
   assert.match(app, /window\.addEventListener\('nexora:android-back', onNativeBack\)/);
   assert.match(app, /window\.removeEventListener\('nexora:android-back', onNativeBack\)/);
   assert.match(app, /backNavigationRef\.current/);
+  assert.match(app, /event\.stopImmediatePropagation\(\)/);
   assert.match(app, /new CustomEvent\('nexora-escape', \{ cancelable: true \}\)/);
   assert.match(app, /if \(!hasBackHistoryEntryRef\.current\)/);
 });
