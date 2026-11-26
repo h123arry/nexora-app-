@@ -722,7 +722,12 @@ export default function App() {
       feedCursorRef.current = page.nextCursor;
       feedHasMoreRef.current = page.hasMore;
       setHasMoreFeedPosts(page.hasMore);
-      setPosts(previousPosts => page.posts.length > 0 ? mergeRealtimePosts(previousPosts, page.posts) : []);
+      // An empty refresh response can be transient (for example, during a
+      // reconnect or an inconsistent first read). Never erase an already
+      // populated feed solely because this refresh returned no documents.
+      setPosts(previousPosts => page.posts.length > 0
+        ? mergeRealtimePosts(previousPosts, page.posts)
+        : previousPosts);
     } finally {
       feedLoadingRef.current = false;
     }
