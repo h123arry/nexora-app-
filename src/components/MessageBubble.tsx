@@ -244,7 +244,7 @@ export default function MessageBubble({
           <div
             className={`relative rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
               isMe
-                ? 'bg-gradient-to-r from-violet-600 via-[#8B5CF6] to-pink-500 text-white rounded-tr-none'
+                ? 'bg-gradient-to-r from-violet-600 via-[#8B5CF6] to-[#4B10F2] text-white rounded-tr-none'
                 : 'bg-[#0e0a29]/95 text-violet-100 border border-white/10 rounded-tl-none'
             } ${isLastInGroup ? (isMe ? 'rounded-br-sm' : 'rounded-bl-sm') : ''} shadow-lg relative group/item`}
           >
