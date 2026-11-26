@@ -231,7 +231,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
   useEffect(() => {
     if (!repairVideoPosters) return;
     let active = true;
-    const repairVideoPosters = async () => {
+    const repairMissingPosters = async () => {
       for (const post of gridPosts) {
         const mediaType = String((post as any).mediaType || (post as any).type || '').toLowerCase();
         const videoSource = post.videoUrl || (typeof post.media === 'string' && (mediaType === 'video' || /\.(mp4|m4v|mov|webm|m3u8)(?:$|[?#])/i.test(post.media)) ? post.media : '');
@@ -263,7 +263,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
         }
       }
     };
-    void repairVideoPosters();
+    void repairMissingPosters();
     return () => { active = false; };
   }, [posterRepairSignature, ownerId, repairVideoPosters]);
   if (gridPosts.length === 0) {
