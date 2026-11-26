@@ -1396,12 +1396,12 @@ export default function NexoraVideoPlayer({
                      <img
                        src={normalizeMediaDeliveryUrl(post.avatar)}
                        alt=""
-                       className="h-full w-full object-cover"
+                       className="relative z-10 h-full w-full object-cover"
                        loading="lazy"
                        decoding="async"
                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
                      />
-                     <span className="absolute inset-0 -z-0 flex items-center justify-center text-[11px] font-bold text-violet-100">
+                     <span className="absolute inset-0 z-0 flex items-center justify-center text-[11px] font-bold text-violet-100">
                        {(post.name || post.username || 'N').trim().charAt(0).toUpperCase()}
                      </span>
                    </span>
