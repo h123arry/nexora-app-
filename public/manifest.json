@@ -8,6 +8,12 @@
   "background_color": "#000000",
   "theme_color": "#000000",
   "scope": "/",
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.voiceofharrison.nexora"
+    }
+  ],
   "categories": [
     "social",
     "communication",
