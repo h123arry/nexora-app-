@@ -1819,14 +1819,26 @@ export default function MediaCreationEngine({
   }, []);
 
   useEffect(() => {
-    const handleAndroidBack = () => {
+    const handleAndroidBack = (event: Event) => {
+      // This composer owns its nested navigation. Prevent the app shell from
+      // closing the entire Create experience during the same Back event.
+      event.preventDefault();
       if (showExitConfirm) { setShowExitConfirm(false); return; }
       if (permissionTarget) {
         setPermissionTarget(null);
         pendingPermissionActionRef.current = null;
         return;
       }
+      if (isLensStudioOpen) {
+        if (isRecording || isSavingRecordedVideo || countdownTimer !== null) return;
+        setIsLensStudioOpen(false);
+        return;
+      }
+      if (isAdvancedOptionsOpen) { setIsAdvancedOptionsOpen(false); return; }
       if (isMediaPreviewExpanded) { setIsMediaPreviewExpanded(false); return; }
+      if (galleryPreviewIndex !== null) { setGalleryPreviewIndex(null); return; }
+      if (activeEditIndex !== null) { setActiveEditIndex(null); return; }
+      if (isTrimmingVideo) { setIsTrimmingVideo(false); return; }
       if (activeMode === 'carousel') {
         setGalleryPreviewIndex(null);
         if (galleryReturnToCamera) {
@@ -1847,8 +1859,12 @@ export default function MediaCreationEngine({
       handleExitClick();
     };
     window.addEventListener('nexora:android-back', handleAndroidBack);
-    return () => window.removeEventListener('nexora:android-back', handleAndroidBack);
-  }, [activeMode, currentStep, galleryReturnToCamera, isMediaPreviewExpanded, permissionTarget, recordedVideoUrl, showExitConfirm, videoFileUrl, recordedVideoUrl, voiceFileUrl, caption, selectedImages, pollQuestion, onClose, prevStep, handleExitClick]);
+    window.addEventListener('nexora-escape', handleAndroidBack);
+    return () => {
+      window.removeEventListener('nexora:android-back', handleAndroidBack);
+      window.removeEventListener('nexora-escape', handleAndroidBack);
+    };
+  }, [activeMode, activeEditIndex, currentStep, countdownTimer, galleryPreviewIndex, galleryReturnToCamera, isAdvancedOptionsOpen, isLensStudioOpen, isMediaPreviewExpanded, isRecording, isSavingRecordedVideo, isTrimmingVideo, permissionTarget, recordedVideoUrl, showExitConfirm, videoFileUrl, voiceFileUrl, caption, selectedImages, pollQuestion, onClose, prevStep, handleExitClick]);
 
 
   // Accessibility Checks
