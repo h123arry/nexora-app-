@@ -131,6 +131,11 @@ jobs:
       - name: Build production artifacts
         run: npm run build
 
+      # Native navigation changes must compile in the Android host as well as
+      # pass the web type-check and unit tests.
+      - name: Build Android debug APK
+        run: npm run mobile:build:android
+
       # Keep this strict release-readiness check hard-failing, but run it after
       # independent CI checks so missing owner-verified metadata does not hide them.
       - name: Validate deployment metadata
