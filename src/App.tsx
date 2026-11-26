@@ -1094,6 +1094,11 @@ export default function App() {
     return false;
   };
 
+  // Keep the latest state-aware policy available to long-lived native/browser
+  // listeners without making their effect depend on state declared later.
+  const backNavigationRef = useRef<() => boolean>(handleBackNavigation);
+  backNavigationRef.current = handleBackNavigation;
+
   // Unified navigation custom event listeners & PopState handler
   useEffect(() => {
     // This component effect rebinds listeners as navigation state changes.
@@ -1105,7 +1110,7 @@ export default function App() {
 
     const onPopState = (e: PopStateEvent) => {
       e.preventDefault();
-      const handled = handleBackNavigation();
+      const handled = backNavigationRef.current();
       if (handled) {
         window.history.pushState({ nexora: true }, '', window.location.href);
       } else {
@@ -1115,25 +1120,14 @@ export default function App() {
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (handleBackNavigation()) e.preventDefault();
+        if (backNavigationRef.current()) e.preventDefault();
       }
     };
     // Capacitor's native Android activity forwards system Back here. Keep the
     // same ordered navigation policy for Android, browser Escape and web Back.
     const onNativeBack = (event: Event) => {
       if (event.defaultPrevented) return;
-      // MediaCreationEngine owns its multi-step camera/editor history. Give
-      // its shared Escape handler first refusal, with a safe shell fallback if
-      // the lazy-loaded composer has not mounted its listener yet.
-      if (isCreatePostModalOpen) {
-        const createEscape = new CustomEvent('nexora-escape', { cancelable: true });
-        window.dispatchEvent(createEscape);
-        if (createEscape.defaultPrevented) {
-          event.preventDefault();
-          return;
-        }
-      }
-      if (handleBackNavigation()) event.preventDefault();
+      if (backNavigationRef.current()) event.preventDefault();
     };
 
     const handleToggleNav = () => {
@@ -1209,7 +1203,7 @@ export default function App() {
       window.removeEventListener('openUniversalSearch', handleOpenUniversalSearch);
       window.removeEventListener('nexora-view-profile', handleViewProfileEvent);
     };
-  }, [isCreatePostModalOpen, isCreateMenuOpen, isNexoraStudioOpen, isSystemHubOpen, isUniversalSearchOpen, isNavMenuOpen, isLogoutConfirming, verificationModalDetail, showPublicAccountSetup, showAuthChoice, showEmailAuth, isAiCommandCenterOpen, showPWAInstallPrompt, showOnboarding, showDiagnosticsOverlay, requiresPublicAccountSetup, viewedUser, historyStack, activeTab]);
+  }, [isCreatePostModalOpen, isCreateMenuOpen, isNexoraStudioOpen, isSystemHubOpen, isUniversalSearchOpen, isNavMenuOpen, isLogoutConfirming, showPublicAccountSetup, showAuthChoice, showEmailAuth, showOnboarding, showDiagnosticsOverlay, requiresPublicAccountSetup, viewedUser, historyStack, activeTab]);
 
   // Sync System Hub options to local storage and browser document settings
   useEffect(() => {
