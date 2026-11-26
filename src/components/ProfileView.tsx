@@ -17,7 +17,7 @@ import ReportModal from './ReportModal';
 import { auth, db } from '../services/firebase/config';
 import { collection, doc, limit, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore';
 import { uploadMediaFile } from '../services/firebase/storageService';
-import { normalizeMediaDeliveryUrl } from '../lib/apiBaseUrl';
+import { normalizeMediaDeliveryUrl, safeMediaDeliveryUrl } from '../lib/apiBaseUrl';
 import { SettingsService } from '../services/firebase/settingsService';
 import { subscribeToFollows } from '../services/dataService';
 import RelativeTimestamp from './RelativeTimestamp';
@@ -350,7 +350,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost, repairVi
                     />
                   ) : (
                     <video
-                      src={videoSource ? normalizeMediaDeliveryUrl(videoSource) : undefined}
+                      src={videoSource ? safeMediaDeliveryUrl(normalizeMediaDeliveryUrl(videoSource)) : undefined}
                       className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity relative z-10"
                       preload="metadata"
                       muted
