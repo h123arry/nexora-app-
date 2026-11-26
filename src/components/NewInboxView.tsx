@@ -16,6 +16,7 @@ import CreateGroupChatModal from './CreateGroupChatModal';
 import { getTranslations } from '../utils/translations';
 import { uploadPrivateChatMediaFile, resolvePrivateChatMedia } from '../services/firebase/storageService';
 import { aggregateMessageReactions, isSupportedOutgoingMediaType, serializeOutgoingMessage, toggleMessageReaction } from '../utils/messageSerialization';
+import { normalizeChatAttachmentContentType, voiceRecordingExtension } from '../utils/chatMediaPolicy';
 import { 
   collection, 
   doc, 
@@ -121,6 +122,7 @@ export default function NewInboxView({
   const sendingMessageRef = useRef(false);
   const attachmentUploadRef = useRef(false);
   const [attachmentProgress, setAttachmentProgress] = useState(0);
+  const [pendingAttachmentRetry, setPendingAttachmentRetry] = useState<{ chatId: string; files: File[]; forcedType?: 'image' | 'video' | 'audio' | 'document'; error: string } | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -444,7 +446,7 @@ export default function NewInboxView({
       customMediaData: mediaData?.type === 'sticker' ? { emoji: mediaData.url, label: mediaData.name || 'NEXORA sticker' } : undefined,
       mediaContentType: mediaData?.contentType,
       fileSize: typeof mediaData?.size === 'number' ? String(mediaData.size) : undefined,
-      voiceAudioUrl: undefined,
+      voiceAudioUrl: mediaData?.type === 'voice' ? mediaData.url : undefined,
       voiceDuration: mediaData?.type === 'voice' && typeof mediaData.duration === 'number' ? `${mediaData.duration}s` : undefined,
       fileName: mediaData?.name
     };
@@ -519,42 +521,46 @@ export default function NewInboxView({
     }
   };
 
-  const sendAttachmentFiles = async (fileList: FileList | null, forcedType?: 'image' | 'video' | 'audio' | 'document') => {
+  const sendAttachmentFiles = async (fileList: FileList | File[] | null, forcedType?: 'image' | 'video' | 'audio' | 'document') => {
     if (!fileList?.length || !activeChatId || attachmentUploadRef.current) return;
     attachmentUploadRef.current = true;
     const files = Array.from(fileList);
+    let nextFileIndex = 0;
+    setPendingAttachmentRetry(null);
     setIsUploadingAttachment(true);
     try {
-      for (const file of files) {
-        const detectedType = forcedType || (file.type.startsWith('image/') ? 'image'
-          : file.type.startsWith('video/') ? 'video'
-          : file.type.startsWith('audio/') ? 'audio' : 'document');
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        const contentType = normalizeChatAttachmentContentType(file.name, file.type);
+        const detectedType = forcedType || (contentType.startsWith('image/') ? 'image'
+          : contentType.startsWith('video/') ? 'video'
+          : contentType.startsWith('audio/') ? 'audio' : 'document');
         setAttachmentProgress(0);
-        const extension = file.name.split('.').pop()?.toLowerCase() || '';
-        const mimeByExtension: Record<string, string> = {
-          jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif',
-          mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', ogg: 'audio/ogg', aac: 'audio/aac', opus: 'audio/opus', flac: 'audio/flac',
-          pdf: 'application/pdf', doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          ppt: 'application/vnd.ms-powerpoint', pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-          txt: 'text/plain', csv: 'text/csv', rtf: 'application/rtf',
-        };
-        const normalizedFile = !file.type || file.type === 'application/octet-stream'
-          ? new File([file], file.name, { type: mimeByExtension[extension] || file.type || 'application/octet-stream' })
+        const normalizedFile = file.type !== contentType
+          ? new File([file], file.name, { type: contentType, lastModified: file.lastModified })
           : file;
         const uploaded = await uploadPrivateChatMediaFile({
           file: normalizedFile, userId: currentUser.id, chatId: activeChatId, fileName: file.name,
           onProgress: setAttachmentProgress,
         });
+        if (sendingMessageRef.current) throw new Error('Another message is still being sent. Please retry this attachment.');
         const sent = await handleSendMessage('', {
           type: detectedType, url: uploaded.storagePath, name: file.name,
           contentType: uploaded.contentType, size: uploaded.size,
         });
-        if (!sent) throw new Error('The attachment uploaded, but its message was not saved. Tap Retry on the pending message.');
+        // The failed message bubble already retains this uploaded storage path and has its own Retry action.
+        nextFileIndex = index + 1;
+        if (!sent) throw new Error('The attachment uploaded, but its message could not be saved. Use Retry on that message.');
       }
+      setPendingAttachmentRetry(null);
       window.dispatchEvent(new CustomEvent('toast', { detail: files.length > 1 ? 'Attachments sent.' : 'Attachment sent.' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Attachment could not be sent. Please retry.' }));
+      const message = error instanceof Error ? error.message : 'Attachment could not be sent. Please retry.';
+      const remainingFiles = files.slice(nextFileIndex);
+      if (remainingFiles.length > 0) {
+        setPendingAttachmentRetry({ chatId: activeChatId, files: remainingFiles, forcedType, error: message });
+      }
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     } finally {
       attachmentUploadRef.current = false;
       setIsUploadingAttachment(false);
@@ -1125,6 +1131,17 @@ export default function NewInboxView({
               </div>
             )}
 
+            {pendingAttachmentRetry?.chatId === activeChatId && (
+              <div className="mx-3 mb-2 flex items-center gap-3 rounded-xl border border-rose-400/20 bg-rose-500/[0.06] px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11px] font-medium text-white">Couldn't send {pendingAttachmentRetry.files.length === 1 ? pendingAttachmentRetry.files[0].name : `${pendingAttachmentRetry.files.length} attachments`}</p>
+                  <p className="truncate text-[10px] text-zinc-400">{pendingAttachmentRetry.error}</p>
+                </div>
+                <button type="button" onClick={() => { const retry = pendingAttachmentRetry; setPendingAttachmentRetry(null); void sendAttachmentFiles(retry.files, retry.forcedType); }} className="rounded-lg bg-violet-600 px-3 py-2 text-[11px] font-semibold text-white">Retry</button>
+                <button type="button" onClick={() => setPendingAttachmentRetry(null)} className="rounded-lg p-2 text-zinc-400 hover:text-white" aria-label="Dismiss attachment retry"><X className="h-4 w-4" /></button>
+              </div>
+            )}
+
             {/* Reply Preview Bar */}
             {replyQuoteText && (
               <div className="px-4 py-2 bg-violet-950/40 border-t border-white/10 flex items-center justify-between">
@@ -1304,7 +1321,7 @@ export default function NewInboxView({
       <input ref={galleryInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files); event.currentTarget.value = ''; }} />
       <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'image'); event.currentTarget.value = ''; }} />
       <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'video'); event.currentTarget.value = ''; }} />
-      <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,text/csv,application/rtf" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'document'); event.currentTarget.value = ''; }} />
+      <input ref={documentInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.txt,.csv,.rtf,.md,.json,.xml,.zip,.7z,.rar,.tar,.gz,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,text/plain,text/csv,application/rtf,application/json,application/xml,application/zip" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'document'); event.currentTarget.value = ''; }} />
       <input ref={audioInputRef} type="file" accept="audio/*" className="hidden" onChange={event => { void sendAttachmentFiles(event.target.files, 'audio'); event.currentTarget.value = ''; }} />
 
       {/* ATTACHMENT MENU */}
@@ -1325,23 +1342,26 @@ export default function NewInboxView({
       {showVoiceRecorder && (
         <VoiceRecorder
           onSendMessage={async (audioBlob, duration) => {
-            try {
-              if (!activeChatId) throw new Error('Open a conversation before sending a voice note.');
-              const uploaded = await uploadPrivateChatMediaFile({
-                file: audioBlob,
-                userId: currentUser.id,
-                chatId: activeChatId,
-                fileName: `voice-note-${Date.now()}.webm`,
-              });
-              await handleSendMessage('', {
-                type: 'voice', url: uploaded.storagePath,
-                name: `Voice Note (${duration}s)`, duration, contentType: uploaded.contentType, size: uploaded.size
-              });
-              setShowVoiceRecorder(false);
-            } catch {
-              console.warn('[Inbox] Voice note could not be sent.');
-              window.dispatchEvent(new CustomEvent('toast', { detail: 'Voice note could not be sent. Check your connection and try again.' }));
-            }
+            if (!activeChatId) throw new Error('Open a conversation before sending a voice note.');
+            const extension = voiceRecordingExtension(audioBlob.type);
+            const contentType = normalizeChatAttachmentContentType(`voice.${extension}`, audioBlob.type);
+            const uploadBlob = audioBlob.type.split(';')[0].trim().toLowerCase() === contentType
+              ? audioBlob
+              : new Blob([audioBlob], { type: contentType });
+            const uploaded = await uploadPrivateChatMediaFile({
+              file: uploadBlob,
+              userId: currentUser.id,
+              chatId: activeChatId,
+              fileName: `voice-note-${Date.now()}.${extension}`,
+            });
+            if (sendingMessageRef.current) throw new Error('Another message is still being sent. Please retry your voice note.');
+            const sent = await handleSendMessage('', {
+              type: 'voice', url: uploaded.storagePath,
+              name: `Voice Note (${duration}s)`, duration, contentType: uploaded.contentType, size: uploaded.size
+            });
+            // A failed Firestore write leaves a retryable message bubble with the uploaded path.
+            if (!sent) { setShowVoiceRecorder(false); return; }
+            setShowVoiceRecorder(false);
           }}
           onCancel={() => setShowVoiceRecorder(false)}
         />

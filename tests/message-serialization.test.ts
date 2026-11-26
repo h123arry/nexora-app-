@@ -54,6 +54,19 @@ describe('Firestore message serialization', () => {
     });
   });
 
+  it('persists the private voice media path so the recipient can resolve playback', () => {
+    const path = 'chats/chat-1/media/alice/voice-1';
+    assert.deepEqual(serializeOutgoingMessage({
+      id: 'voice-1', chatId: 'chat-1', senderId: 'alice', content: '[VOICE]', timestamp: '2026-11-20T00:00:00.000Z',
+      status: 'sending', customMediaType: 'voice', mediaType: 'audio', mediaStoragePath: path,
+      voiceAudioUrl: path, voiceDuration: '8s', mediaContentType: 'audio/webm',
+    }), {
+      id: 'voice-1', chatId: 'chat-1', senderId: 'alice', content: '[VOICE]', timestamp: '2026-11-20T00:00:00.000Z',
+      status: 'sent', customMediaType: 'voice', mediaType: 'audio', mediaStoragePath: path,
+      voiceAudioUrl: path, voiceDuration: '8s', mediaContentType: 'audio/webm',
+    });
+  });
+
   it('whitelists persisted message fields so local retry flags never reach Firestore', () => {
     assert.deepEqual(serializeOutgoingMessage({
       id: 'message-3', chatId: 'chat-1', senderId: 'alice', content: '[IMAGE]', timestamp: '2026-11-20T00:00:00.000Z',

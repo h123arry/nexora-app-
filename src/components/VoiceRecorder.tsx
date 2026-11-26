@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Mic, Trash2, Send, Lock, Unlock, Play, Pause, X, AlertCircle } from 'lucide-react';
+import { selectVoiceRecordingMimeType } from '../utils/chatMediaPolicy';
 
 interface VoiceRecorderProps {
-  onSendMessage: (audioBlob: Blob, duration: number) => void;
+  onSendMessage: (audioBlob: Blob, duration: number) => Promise<void> | void;
   onCancel: () => void;
 }
 
@@ -15,6 +16,10 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
   const [waveform, setWaveform] = useState<number[]>([]);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isTrashAnimating, setIsTrashAnimating] = useState(false);
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+  const [recordedDuration, setRecordedDuration] = useState(0);
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState('');
   const discardRef = useRef(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -48,27 +53,54 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
     if (timerRef.current) clearInterval(timerRef.current);
   };
 
+  const sendRecordedAudio = async (audioBlob: Blob, duration: number) => {
+    setIsSending(true);
+    setSendError('');
+    try {
+      await onSendMessage(audioBlob, duration);
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : 'Voice note could not be sent. Please retry.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const startRecording = async () => {
+    if (mediaRecorderRef.current?.state === 'recording' || isSending) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      const selectedMimeType = typeof MediaRecorder.isTypeSupported === 'function'
+        ? selectVoiceRecordingMimeType(type => MediaRecorder.isTypeSupported(type))
+        : undefined;
+      const recorder = new MediaRecorder(stream, selectedMimeType ? { mimeType: selectedMimeType } : undefined);
+      mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
       discardRef.current = false;
+      setRecordedBlob(null);
+      setRecordedDuration(0);
+      setSendError('');
       
-      mediaRecorderRef.current.ondataavailable = (e) => {
+      recorder.ondataavailable = (e) => {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
 
-      mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current?.mimeType || 'audio/webm' });
-        mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+      recorder.onstop = () => {
+        const actualMimeType = recorder.mimeType || audioChunksRef.current.find(chunk => chunk.type)?.type || selectedMimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
+        recorder.stream.getTracks().forEach(track => track.stop());
         const finalSeconds = Math.ceil(recordedTenthsRef.current / 10);
         if (discardRef.current) { discardRef.current = false; return; }
-        if (audioBlob.size > 0) void Promise.resolve(onSendMessage(audioBlob, finalSeconds)).catch(() => window.dispatchEvent(new CustomEvent('toast', { detail: 'Voice note could not be sent. Please retry.' })));
-        else window.dispatchEvent(new CustomEvent('toast', { detail: 'No audio was recorded. Please try again.' }));
+        if (audioBlob.size > 0) {
+          setRecordedBlob(audioBlob);
+          setRecordedDuration(finalSeconds);
+          void sendRecordedAudio(audioBlob, finalSeconds);
+        } else {
+          setSendError('No audio was recorded. Please try again.');
+          window.dispatchEvent(new CustomEvent('toast', { detail: 'No audio was recorded. Please try again.' }));
+        }
       };
 
-      mediaRecorderRef.current.start();
+      recorder.start();
       setIsRecording(true);
       setIsPaused(false);
       setIsLocked(false);
@@ -159,7 +191,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
   };
 
   return (
-    <div className="relative flex items-center gap-3 px-4 py-2 bg-slate-950/95 border border-white/10 rounded-2xl shadow-md min-w-[280px] max-w-full z-30 select-none">
+    <div className="relative flex items-center gap-3 px-4 py-2 bg-[#090714]/95 border border-white/10 rounded-2xl shadow-md min-w-[280px] max-w-full z-30 select-none">
       
       {/* Live Waveform or Trashing Visualizer */}
       <div className="flex-1 flex items-center gap-2 overflow-hidden">
@@ -193,7 +225,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
                   key={i} 
                   style={{ height: `${h}px` }} 
                   className={`w-[2px] rounded-full transition-all duration-75 ${
-                    isPaused ? 'bg-zinc-600' : 'bg-gradient-to-t from-pink-500 to-violet-400'
+                    isPaused ? 'bg-zinc-600' : 'bg-gradient-to-t from-[#7138FF] to-[#A855F7]'
                   }`}
                 />
               ))}
@@ -211,7 +243,16 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
       )}
 
       {/* Hands-free / Locked Mode controls */}
-      {isLocked ? (
+      {recordedBlob && !isRecording && !isTrashAnimating ? (
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="min-w-0 flex-1 truncate text-xs text-violet-100">Voice note · {recordedDuration}s</span>
+          <button type="button" onClick={() => void sendRecordedAudio(recordedBlob, recordedDuration)} disabled={isSending} className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">
+            {isSending ? <><span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Sending…</> : <><Send className="h-3.5 w-3.5" /> {sendError ? 'Retry' : 'Send'}</>}
+          </button>
+          <button type="button" onClick={discardRecording} disabled={isSending} className="rounded-xl p-2 text-zinc-400 hover:text-red-300 disabled:opacity-50" aria-label="Discard voice note"><Trash2 className="h-4 w-4" /></button>
+          {sendError && <span role="status" className="absolute -top-8 left-2 right-2 truncate text-[10px] text-rose-300">{sendError}</span>}
+        </div>
+      ) : isLocked ? (
         <div className="flex items-center gap-2">
           {/* Pause / Resume */}
           <button 
@@ -235,7 +276,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
           <button 
             type="button"
             onClick={stopAndSend}
-            className="p-2 rounded-xl bg-gradient-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white transition-all shadow-md cursor-pointer"
+            className="p-2 rounded-xl bg-gradient-to-r from-[#7138FF] to-[#4B10F2] hover:brightness-110 text-white transition-all shadow-md cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
           </button>
@@ -274,14 +315,13 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
           >
             <button
               type="button"
-              onMouseDown={startRecording}
-              onMouseUp={handleMouseRelease}
-              onTouchStart={startRecording}
-              onTouchEnd={handleMouseRelease}
+              onPointerDown={startRecording}
+              onPointerUp={handleMouseRelease}
+              onPointerCancel={discardRecording}
               className={`p-3 rounded-xl shadow-lg transition-colors cursor-pointer ${
                 isRecording 
                   ? 'bg-red-600 hover:bg-red-500 animate-pulse' 
-                  : 'bg-gradient-to-r from-violet-600 to-pink-600 hover:brightness-115'
+                  : 'bg-gradient-to-r from-[#7138FF] to-[#4B10F2] hover:brightness-115'
               } text-white`}
             >
               <Mic className="w-4 h-4" />
