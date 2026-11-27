@@ -15,13 +15,10 @@ export interface TextPostViewEligibilityInput {
 }
 
 export function isEligiblePublicTextPostView(input: TextPostViewEligibilityInput): boolean {
-  const hasImage = (typeof input.image === 'string' && input.image.length > 0)
-    || (Array.isArray(input.images) && input.images.length > 0);
   const hasVideo = (typeof input.videoUrl === 'string' && input.videoUrl.length > 0)
     || input.mediaType === 'video';
   return Boolean(input.viewerId && input.creatorId && input.viewerId !== input.creatorId)
     && input.audience === 'public'
-    && !hasImage
     && !hasVideo
     && input.mediaType !== 'image'
     && input.mediaType !== 'audio'
