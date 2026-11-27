@@ -31,7 +31,7 @@ interface FeedPostCardProps {
   activeDotsMenuPostId: string | null;
   setActiveDotsMenuPostId: (id: string | null) => void;
   onImpression?: (postId: string) => void;
-  onQualifiedTextView?: (postId: string, visibleSeconds: number) => void | Promise<boolean>;
+  onQualifiedPostView?: (postId: string, visibleSeconds: number) => void | Promise<boolean>;
   onSpark: (postId: string) => void;
   onSave: (postId: string) => void;
   onSharePost?: (postId: string) => void;
@@ -84,7 +84,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   activeDotsMenuPostId,
   setActiveDotsMenuPostId,
   onImpression,
-  onQualifiedTextView,
+  onQualifiedPostView,
   onSpark,
   onSave,
   onSharePost,
@@ -164,9 +164,9 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
   useEffect(() => {
     const target = cardRef.current;
-    const isTextPost = !post.videoUrl && !post.image && !(post.images && post.images.length > 0)
+    const isViewablePost = !post.videoUrl
       && !post.isVoice && !post.voiceAudioUrl && !post.opportunityType && !post.isBroadcastPost;
-    if (!onQualifiedTextView || !target || !isTextPost || typeof IntersectionObserver === 'undefined') return;
+    if (!onQualifiedPostView || !target || !isViewablePost || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(entries => {
       for (const entry of entries) {
         if (entry.target !== target) continue;
@@ -181,7 +181,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                 qualifiedTextViewRecordedRef.current = false;
                 return;
               }
-              void Promise.resolve(onQualifiedTextView(post.id, 3)).then(accepted => {
+              void Promise.resolve(onQualifiedPostView(post.id, 3)).then(accepted => {
                 if (accepted === false) qualifiedTextViewRecordedRef.current = false;
               });
             }, 3000);
@@ -198,7 +198,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       if (qualifiedTextViewTimerRef.current !== null) window.clearTimeout(qualifiedTextViewTimerRef.current);
       qualifiedTextViewTimerRef.current = null;
     };
-  }, [post.id, post.videoUrl, post.image, post.images, post.isVoice, post.voiceAudioUrl, post.opportunityType, post.isBroadcastPost, onQualifiedTextView]);
+  }, [post.id, post.videoUrl, post.image, post.images, post.isVoice, post.voiceAudioUrl, post.opportunityType, post.isBroadcastPost, onQualifiedPostView]);
 
   return (
     <div
@@ -872,7 +872,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 export const FeedPostCard = React.memo(FeedPostCardImpl, (prev, next) => {
   if (prev.post.id !== next.post.id) return false;
   if (prev.onImpression !== next.onImpression) return false;
-  if (prev.onQualifiedTextView !== next.onQualifiedTextView) return false;
+  if (prev.onQualifiedPostView !== next.onQualifiedPostView) return false;
   if (prev.isActive !== next.isActive) return false;
   if (prev.shouldPreload !== next.shouldPreload) return false;
   if (prev.shouldPreloadImage !== next.shouldPreloadImage) return false;
