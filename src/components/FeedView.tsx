@@ -509,7 +509,7 @@ export default function FeedView({
   const [postViewAnalytics, setPostViewAnalytics] = useState<{ points: Array<{ day: string; views: number; uniqueViewers: number }>; totalViews: number } | null>(null);
   const [postViewAnalyticsLoading, setPostViewAnalyticsLoading] = useState(false);
   const [postViewAnalyticsError, setPostViewAnalyticsError] = useState(false);
-  const qualifiedTextViewsInFlightRef = useRef(new Set<string>());
+  const qualifiedPostViewsInFlightRef = useRef(new Set<string>());
 
   useEffect(() => {
     const isTextAnalyticsPost = Boolean(analyticsPost
@@ -582,10 +582,10 @@ export default function FeedView({
     });
   }, []);
 
-  const handleQualifiedTextView = useCallback(async (postId: string, visibleSeconds: number): Promise<boolean> => {
+  const handleQualifiedPostView = useCallback(async (postId: string, visibleSeconds: number): Promise<boolean> => {
     const user = auth.currentUser;
-    if (!postId || !user || user.uid !== currentUser.id || qualifiedTextViewsInFlightRef.current.has(postId)) return false;
-    qualifiedTextViewsInFlightRef.current.add(postId);
+    if (!postId || !user || user.uid !== currentUser.id || qualifiedPostViewsInFlightRef.current.has(postId)) return false;
+    qualifiedPostViewsInFlightRef.current.add(postId);
     try {
       const callable = httpsCallable(functions, 'recordPublicTextPostView');
       const response = await callable({ postId, visibleSeconds });
@@ -597,7 +597,7 @@ export default function FeedView({
       return true;
     } catch {
       // Release the local guard so a later qualified visibility can retry.
-      qualifiedTextViewsInFlightRef.current.delete(postId);
+      qualifiedPostViewsInFlightRef.current.delete(postId);
       return false;
     }
   }, [currentUser.id]);
@@ -2437,7 +2437,7 @@ export default function FeedView({
                 activeDotsMenuPostId={activeDotsMenuPostId}
                 setActiveDotsMenuPostId={setActiveDotsMenuPostId}
                 onImpression={handlePostImpression}
-                onQualifiedTextView={handleQualifiedTextView}
+                onQualifiedPostView={handleQualifiedPostView}
                 onSpark={handleSpark}
                 onSave={handleSave}
                 onSharePost={onSharePost}
