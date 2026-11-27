@@ -164,7 +164,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
   useEffect(() => {
     const target = cardRef.current;
-    const isViewablePost = !post.videoUrl && post.mediaType !== 'video'
+    const isViewablePost = !post.videoUrl
       && !post.isVoice && !post.voiceAudioUrl && !post.opportunityType && !post.isBroadcastPost;
     if (!onQualifiedPostView || !target || !isViewablePost || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(entries => {
