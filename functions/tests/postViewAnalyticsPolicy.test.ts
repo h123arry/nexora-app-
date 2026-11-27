@@ -13,12 +13,13 @@ const base = {
   audience: 'public',
 };
 
-test('qualifies only public text posts viewed by another account', () => {
+test('qualifies public text and image posts viewed by another account', () => {
   assert.equal(isEligiblePublicTextPostView(base), true);
   assert.equal(isEligiblePublicTextPostView({ ...base, viewerId: 'creator-1' }), false);
   assert.equal(isEligiblePublicTextPostView({ ...base, audience: 'followers' }), false);
-  assert.equal(isEligiblePublicTextPostView({ ...base, image: 'image.jpg' }), false);
-  assert.equal(isEligiblePublicTextPostView({ ...base, images: ['image.jpg'] }), false);
+  assert.equal(isEligiblePublicTextPostView({ ...base, image: 'image.jpg' }), true);
+  assert.equal(isEligiblePublicTextPostView({ ...base, images: ['image.jpg'] }), true);
+  assert.equal(isEligiblePublicTextPostView({ ...base, mediaType: 'image' }), true);
   assert.equal(isEligiblePublicTextPostView({ ...base, videoUrl: 'video.mp4' }), false);
   assert.equal(isEligiblePublicTextPostView({ ...base, mediaType: 'video' }), false);
   assert.equal(isEligiblePublicTextPostView({ ...base, mediaType: 'audio' }), false);
