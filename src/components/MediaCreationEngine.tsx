@@ -1086,7 +1086,10 @@ export default function MediaCreationEngine({
       }
       context.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
       const snapUrl = canvas.toDataURL('image/jpeg', 0.92);
-      setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+      setSelectedImages(prev => prev.length >= 20
+        ? prev
+        : [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+      setActiveEditIndex(selectedImages.length);
       window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Photo captured.' }));
     });
   };
