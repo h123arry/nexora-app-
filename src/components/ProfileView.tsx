@@ -1179,8 +1179,8 @@ export default function ProfileView({
   };
 
   // Dynamic status presets
-  const [statusText, setStatusText] = useState(() => localStorage.getItem(`nexora_status_text_${currentUser.id}`) || 'Exploring...');
-  const [statusEmoji, setStatusEmoji] = useState(() => localStorage.getItem(`nexora_status_emoji_${currentUser.id}`) || '🌌');
+  const [statusText, setStatusText] = useState(() => currentUser.statusText ?? localStorage.getItem(`nexora_status_text_${currentUser.id}`) ?? 'Exploring...');
+  const [statusEmoji, setStatusEmoji] = useState(() => currentUser.statusEmoji ?? localStorage.getItem(`nexora_status_emoji_${currentUser.id}`) ?? '🌌');
 
   // Social Stats follow action toggle
   const [isFollowing, setIsFollowing] = useState(isFollowingField);
@@ -1206,6 +1206,8 @@ export default function ProfileView({
     setEditCreatorType(currentUser.creatorType || 'Premium creator');
     setEditSocialTwitter(currentUser.socialTwitter || '');
     setEditSocialInsta(currentUser.socialInstagram || '');
+    setStatusText(currentUser.statusText ?? localStorage.getItem(`nexora_status_text_${currentUser.id}`) ?? 'Exploring...');
+    setStatusEmoji(currentUser.statusEmoji ?? localStorage.getItem(`nexora_status_emoji_${currentUser.id}`) ?? '🌌');
     setEditAvatar(currentUser.avatar);
     setEditCover(currentUser.coverImage || '');
   }, [currentUser.id]);
@@ -1344,6 +1346,8 @@ export default function ProfileView({
         website: editWebsite,
         pronouns: editPronouns.trim(), profileCategory: editCategory, creatorType: editCreatorType,
         socialTwitter: editSocialTwitter.trim(), socialInstagram: editSocialInsta.trim(),
+        statusText: statusText.trim(),
+        statusEmoji,
         avatar: persistedAvatar,
         coverImage: persistedCover,
       });
@@ -1505,6 +1509,8 @@ export default function ProfileView({
     editCreatorType !== (currentUser.creatorType || 'Premium creator') ||
     editSocialTwitter !== (currentUser.socialTwitter || '') ||
     editSocialInsta !== (currentUser.socialInstagram || '') ||
+    statusText !== (currentUser.statusText ?? localStorage.getItem(`nexora_status_text_${currentUser.id}`) ?? 'Exploring...') ||
+    statusEmoji !== (currentUser.statusEmoji ?? localStorage.getItem(`nexora_status_emoji_${currentUser.id}`) ?? '🌌') ||
     editAvatar !== currentUser.avatar ||
     editCover !== (currentUser.coverImage || '') ||
     !!pendingCoverFile;
@@ -1521,6 +1527,8 @@ export default function ProfileView({
     setEditCreatorType(currentUser.creatorType || 'Premium creator');
     setEditSocialTwitter(currentUser.socialTwitter || '');
     setEditSocialInsta(currentUser.socialInstagram || '');
+    setStatusText(currentUser.statusText ?? localStorage.getItem(`nexora_status_text_${currentUser.id}`) ?? 'Exploring...');
+    setStatusEmoji(currentUser.statusEmoji ?? localStorage.getItem(`nexora_status_emoji_${currentUser.id}`) ?? '🌌');
     setEditAvatar(currentUser.avatar);
     setEditCover(currentUser.coverImage || '');
     setPendingCoverFile(null);
